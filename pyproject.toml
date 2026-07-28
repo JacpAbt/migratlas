@@ -109,6 +109,15 @@ ignore = [
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
+# Pydantic resolves annotations at runtime to build validators, so moving a type used in
+# a model field into a TYPE_CHECKING block breaks validation at import. Telling ruff
+# which bases are runtime-evaluated is the fix; per-line noqa would just hide it.
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "pydantic_settings.BaseSettings",
+]
+
 # ---------------------------------------------------------------------------
 # Types
 # ---------------------------------------------------------------------------

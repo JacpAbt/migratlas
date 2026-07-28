@@ -18,7 +18,16 @@ import pytest
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "migratlas"
 
-GUARDED_PACKAGES = ("evidence", "metrics", "tiles", "lake", "drivers", "features")
+GUARDED_PACKAGES = (
+    "catalog",
+    "drivers",
+    "evidence",
+    "features",
+    "lake",
+    "metrics",
+    "taxonomy",
+    "tiles",
+)
 GUARDED_MODULES = ("redact.py", "config.py")
 
 # Word-level, not substring: "bat" must not match "probability", and "fish" must

@@ -8,6 +8,8 @@ from typing import Annotated
 import typer
 
 from migratlas import __version__
+from migratlas.catalog import loader as catalog
+from migratlas.catalog import provenance
 from migratlas.config import get_settings
 from migratlas.taxonomy import index as taxon_index
 
@@ -24,6 +26,24 @@ taxonomy_app = typer.Typer(help="Resolve names against the GBIF Backbone.", no_a
 app.add_typer(catalog_app, name="catalog")
 app.add_typer(ingest_app, name="ingest")
 app.add_typer(taxonomy_app, name="taxonomy")
+
+
+@catalog_app.command("list")
+def list_sources() -> None:
+    """Show every registered source."""
+    for source in catalog.load().values():
+        print(f"{source.id:<14} {source.evidence_type:<18} {source.realm:<12} {source.licence}")
+
+
+@catalog_app.command("provenance")
+def write_provenance(
+    out: Annotated[Path, typer.Option(help="Destination Markdown file.")] = Path(
+        "docs/data/PROVENANCE.md"
+    ),
+) -> None:
+    """Regenerate the credit and provenance document from the registry."""
+    size = provenance.write(out)
+    print(f"{len(catalog.load())} sources -> {out} ({size / 1024:.1f} KiB)")
 
 
 @taxonomy_app.command("build-index")

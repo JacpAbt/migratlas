@@ -1,0 +1,68 @@
+# The source registry. Nothing may be ingested that is not described here.
+#
+# Every entry needs a licence recorded verbatim, a citation, and a sensitivity
+# classification. Individual-granularity sources additionally need per-taxon
+# classifications -- a source-wide default cannot speak for the most sensitive species
+# in the set. See docs/ETHICS.md.
+
+sources:
+  - id: darkecology
+    title: The Dark Ecology Dataset — vertical profiles of aerial biomass
+    evidence_type: flux
+    realm: aerial
+    # Not "birds". The radar cannot separate birds from bats from insects, and saying
+    # otherwise would be attributing a signal we have not attributed.
+    taxon_scope: unattributed
+    landing_page: https://darkecology.github.io/dataset/
+    doi: 10.5281/zenodo.18436874
+    download_uri: https://zenodo.org/records/18436874
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      Dark Ecology project. The Dark Ecology Dataset: measurements of aerial biomass
+      over the United States, 1995–2025. Zenodo. https://doi.org/10.5281/zenodo.18436874
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: CC BY permits redistribution of derived products with attribution.
+    # Aggregate passage intensity past fixed public infrastructure, with no taxon and
+    # no individual. There is nothing here for anyone to hunt.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      Measures aerial biomass, not birds: MistNet removes precipitation, not insects or
+      bats. Coverage begins 1995 but station histories are uneven, and the NEXRAD
+      dual-polarisation upgrade around 2011–2013 is a step change in the instrument
+      that must be modelled as a break rather than read as a biological trend.
+    added: 2026-07-28
+
+  - id: megamove
+    title: MegaMove — global space use of marine megafauna
+    evidence_type: abundance_surface
+    realm: marine
+    taxon_scope: exact
+    landing_page: https://datadryad.org/dataset/doi:10.5061/dryad.x95x69ptv
+    doi: 10.5061/dryad.x95x69ptv
+    licence: CC0 1.0
+    licence_url: https://creativecommons.org/publicdomain/zero/1.0/
+    citation: >-
+      Sequeira, A. M. M. et al. (2025) Global tracking of marine megafauna space use
+      reveals how to achieve conservation targets. Science.
+      Data: https://doi.org/10.5061/dryad.x95x69ptv
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        CC0 waives rights, but citation is an academic obligation regardless and the
+        authors asked for it. One component (anthropogenic threats) is hosted
+        separately under different terms and is not ingested.
+    # Published as 1-degree grid counts, so the aggregation the ethics gate would
+    # otherwise impose has already been applied upstream by the authors.
+    default_sensitivity: low
+    caveats: >-
+      Derived products only — 1-degree gridded space use, not raw tracks. Grid cell
+      counts of tracked individuals reflect research effort as much as animal
+      distribution; the published bias-testing datasets must be used alongside them.
+      Covers 1985–2018, so it does not speak to the last several years.
+    added: 2026-07-28
