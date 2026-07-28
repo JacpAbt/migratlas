@@ -2,7 +2,15 @@ import type { ExpressionSpecification, Map as MapLibreMap } from "maplibre-gl";
 
 import { COOL_RAMP } from "../globe/flavor";
 
-import { attributionFor, fetchLayer, type LayerMeta, type LoadedLayer } from "./types";
+import {
+  attributionFor,
+  fetchLayer,
+  gridToFeatures,
+  meanPosition,
+  type GridPayload,
+  type LayerMeta,
+  type LoadedLayer,
+} from "./types";
 
 const SOURCE_PREFIX = "surface-";
 
@@ -72,7 +80,13 @@ export async function addSurface(
   meta: LayerMeta,
   baseUrl: string,
 ): Promise<LoadedLayer> {
-  const [data, terms] = await fetchLayer<GeoJSON.FeatureCollection>(baseUrl, meta.name);
+  const isGrid = meta.format === "grid";
+  const [payload, terms] = await fetchLayer<GridPayload | GeoJSON.FeatureCollection>(
+    baseUrl,
+    meta.name,
+    isGrid ? "grid.json" : "geojson",
+  );
+  const data = isGrid ? gridToFeatures(payload as GridPayload) : (payload as GeoJSON.FeatureCollection);
 
   const maxValue = data.features.reduce(
     (best, feature) => Math.max(best, Number(feature.properties?.value ?? 0)),
@@ -102,6 +116,8 @@ export async function addSurface(
   return {
     meta,
     terms,
+    cells: data.features.length,
+    center: meanPosition(data),
     setVisible: (visible) => {
       if (map.getLayer(sourceId)) {
         map.setLayoutProperty(sourceId, "visibility", visible ? "visible" : "none");

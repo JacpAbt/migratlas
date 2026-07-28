@@ -16,6 +16,8 @@ import { expect, test, type Page } from "@playwright/test";
 interface ReadyReport {
   basemap: "detail" | "outline";
   layers: string[];
+  cells: Record<string, number>;
+  centers: Record<string, [number, number]>;
 }
 
 interface Hook {
@@ -65,27 +67,20 @@ const mapLayerFor = (page: Page, name: string): Promise<string> =>
  * Point the camera at a layer's data.
  *
  * On a globe only the facing hemisphere renders, so a layer covering one continent is
- * legitimately invisible from the default view. The centroid comes from the published file
- * rather than from MapLibre's internals, so the helper cannot break on a library refactor.
+ * legitimately invisible from the default view. The centre comes from the app's ready report
+ * rather than from a second HTTP fetch of the layer file -- re-downloading what the page already
+ * has cost six extra requests per run and reset the connection often enough to redden the suite.
  */
-async function focusOn(page: Page, name: string, layerId: string): Promise<void> {
-  const collection = await page
-    .request.get(`/layers/${name}.geojson`)
-    .then((response) => response.json() as Promise<GeoJSON.FeatureCollection>);
-
-  const points = collection.features
-    .map((feature) => feature.geometry)
-    .filter((geometry): geometry is GeoJSON.Point => geometry.type === "Point")
-    .map((geometry) => geometry.coordinates);
-  const mean = (index: number): number =>
-    points.reduce((sum, point) => sum + point[index], 0) / points.length;
-
+async function focusOn(page: Page, report: ReadyReport, name: string, layerId: string): Promise<void> {
+  const center = report.centers[name];
+  expect(center, `no centre reported for ${name}`).toBeDefined();
   await page.evaluate(
-    ({ center }) => (window as unknown as Hook).migratlas.map.jumpTo({ center, zoom: 2.2 }),
-    { center: [mean(0), mean(1)] as [number, number] },
+    (at) => (window as unknown as Hook).migratlas.map.jumpTo({ center: at, zoom: 2.2 }),
+    center as [number, number],
   );
   await expectDrawn(page, layerId);
 }
+
 
 test("the globe reaches a usable style with coastlines", async ({ page }) => {
   const report = await ready(page);
@@ -103,7 +98,7 @@ test("every manifest layer draws features", async ({ page }) => {
     const id = await mapLayerFor(page, name);
     expect(id, `no map layer for manifest entry ${name}`).not.toBe("");
     // The assertion the last failure needed: not "the layer exists" but "it drew something".
-    await focusOn(page, name, id);
+    await focusOn(page, report, name, id);
   }
 });
 
@@ -118,9 +113,9 @@ test("the layer panel publishes its generalisation statement", async ({ page }) 
 });
 
 test("advancing the clock re-times the series layer without rebuilding it", async ({ page }) => {
-  await ready(page);
+  const report = await ready(page);
   const id = "series-aerial-passage";
-  await focusOn(page, "aerial-passage", id);
+  await focusOn(page, report, "aerial-passage", id);
 
   // The week lives inside the filter expression, which is the whole point of the design: the
   // clock moves an index, it never touches the source.
@@ -146,8 +141,8 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
 });
 
 test("a station popup states the caveat with the number", async ({ page }) => {
-  await ready(page);
-  await focusOn(page, "aerial-passage", "series-aerial-passage");
+  const report = await ready(page);
+  await focusOn(page, report, "aerial-passage", "series-aerial-passage");
 
   const point = await page.evaluate(() => {
     const { map } = (window as unknown as Hook).migratlas;
@@ -165,6 +160,82 @@ test("a station popup states the caveat with the number", async ({ page }) => {
   await expect(popup).toContainText("aerial biomass, not birds");
 });
 
+/**
+ * The README commits to a heap ceiling and a load time. Until this test existed they were
+ * aspirations, and a task got opened on the belief that a 2.9 MB layer was blowing the budget
+ * when it measured 33.5 MB against 150. Numbers with headroom over what is measured today: the
+ * point is to catch a layer that changes the order of magnitude, not to freeze the current
+ * figure.
+ */
+const BUDGET = {
+  heapMb: 150,
+  readyMs: 4000,
+  /**
+   * Compressed layer bytes, which is what a visitor actually pays. Measured at 172 KiB for the
+   * three published layers -- 858 KiB on disk, served gzipped. Headroom for roughly a tripling.
+   */
+  layerBytesGzipped: 600_000,
+};
+
+test("the published layers stay inside the performance budget", async ({ page }) => {
+  // request.sizes(), not response.body() and not content-length. content-length is absent on
+  // the chunked grid responses, so reading the header measured 94 KiB of an 858 KiB payload --
+  // and reading the bodies instead made Chromium retain them, which pushed the measured heap
+  // from 45 MB to 141 MB. An instrument that perturbs its subject is worse than none.
+  const sizes: Promise<number>[] = [];
+  page.on("response", (response) => {
+    if (!/\/layers\/.*\.(geojson|json)$/.test(response.url())) return;
+    sizes.push(
+      response
+        .request()
+        .sizes()
+        .then(({ responseBodySize }) => responseBodySize)
+        .catch(() => 0),
+    );
+  });
+
+  const started = Date.now();
+  const report = await ready(page);
+  const readyMs = Date.now() - started;
+  await focusOn(page, report, "aerial-passage", "series-aerial-passage");
+
+  const heapMb = await page.evaluate(() => {
+    const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
+    return memory ? memory.usedJSHeapSize / 1_048_576 : 0;
+  });
+
+  const layerBytes = (await Promise.all(sizes)).reduce((sum, n) => sum + n, 0);
+
+  expect(report.layers.length, "no layers means the budget proves nothing").toBeGreaterThan(0);
+  expect(layerBytes, "measured no layer bytes at all, so the budget proves nothing").toBeGreaterThan(
+    100_000,
+  );
+  expect(heapMb, `heap ${heapMb.toFixed(1)} MB`).toBeLessThan(BUDGET.heapMb);
+  expect(readyMs, `ready in ${readyMs} ms`).toBeLessThan(BUDGET.readyMs);
+  expect(layerBytes, `layers total ${(layerBytes / 1024).toFixed(0)} KiB compressed`).toBeLessThan(
+    BUDGET.layerBytesGzipped,
+  );
+  console.log(
+    `budget: heap ${heapMb.toFixed(1)} MB, ready ${readyMs} ms, ` +
+      `layers ${(layerBytes / 1024).toFixed(0)} KiB compressed`,
+  );
+});
+
+test("a gridded layer decodes to the cell count its sidecar declares", async ({ page }) => {
+  // The grid format is an 8x compaction, which is only safe if it is exact. The Python side
+  // pins the encoding; this pins the decoding against the same recorded cell count.
+  const report = await ready(page);
+  for (const name of ["marine-space-use", "marine-taxa-recorded"]) {
+    const meta = await page.request
+      .get(`/layers/${name}.meta.json`)
+      .then((r) => r.json() as Promise<{ cells: number; format: string }>);
+    expect(meta.format).toBe("grid");
+
+    const decoded = report.cells[name];
+    expect(decoded, `${name} decoded ${decoded} of ${meta.cells} cells`).toBe(meta.cells);
+  }
+});
+
 test("the default build requests nothing off-origin", async ({ page }) => {
   // The defect this pins: the default basemap used to be Protomaps' demo bucket, which refuses
   // the CORS preflight for ranged requests, so every visitor met a basemap error on a globe with
@@ -174,7 +245,7 @@ test("the default build requests nothing off-origin", async ({ page }) => {
     if (!request.url().startsWith("http://localhost")) external.push(request.url());
   });
 
-  await ready(page);
-  await focusOn(page, "aerial-passage", "series-aerial-passage");
+  const report = await ready(page);
+  await focusOn(page, report, "aerial-passage", "series-aerial-passage");
   expect(external, `off-origin requests: ${external.join(", ")}`).toHaveLength(0);
 });

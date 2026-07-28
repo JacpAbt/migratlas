@@ -21,7 +21,11 @@ from migratlas.redact import (
     clear_for_publication,
     snap_to_grid,
 )
-from migratlas.tiles.export import apply_generalization, export_surface, snap_expr
+from migratlas.tiles.export import (
+    apply_generalization,
+    export_surface,
+    snap_expr,
+)
 
 NOW = datetime(2026, 7, 28, tzinfo=UTC)
 
@@ -120,29 +124,90 @@ def test_aggregate_clearance_leaves_coordinates_alone() -> None:
 # --- Export ----------------------------------------------------------------
 def test_export_writes_geojson_and_a_terms_sidecar(tmp_path: Path) -> None:
     """A published layer must never be separable from the terms it was published under."""
-    destination = tmp_path / "layer.geojson"
-    result = export_surface(_surface(), _clearance(), destination, now=NOW)
+    result = export_surface(_surface(), _clearance(), tmp_path, "layer", now=NOW)
 
-    payload = json.loads(destination.read_text(encoding="utf-8"))
+    assert result.format == "geojson"
+    assert result.path.endswith("layer.geojson")
+    payload = json.loads(Path(result.path).read_text(encoding="utf-8"))
     assert payload["type"] == "FeatureCollection"
     assert len(payload["features"]) == result.rows_out
 
-    meta = json.loads(destination.with_suffix(".meta.json").read_text(encoding="utf-8"))
+    meta = json.loads((tmp_path / "layer.meta.json").read_text(encoding="utf-8"))
     assert meta["source_id"] == "test"
+    assert meta["format"] == "geojson"
     assert meta["dwc:dataGeneralizations"] == result.generalization
     assert meta["cleared_at"] == NOW.isoformat()
+
+
+def _gridded() -> pl.DataFrame:
+    """A surface whose coordinates really are one-degree cell centres."""
+    return _surface().with_columns(
+        cell_longitude=pl.Series([10.5, 11.5, -3.5, 100.5]),
+        cell_latitude=pl.Series([20.5, 21.5, -30.5, 0.5]),
+    )
+
+
+def test_a_grid_export_decodes_to_the_same_cells_as_geojson(tmp_path: Path) -> None:
+    """The compaction must be exact: same cells, same values, 8x smaller.
+
+    This is the whole justification for a second format, so it is pinned rather than trusted.
+    """
+    points = export_surface(_gridded(), _clearance(), tmp_path / "a", "layer", now=NOW)
+    grid = export_surface(
+        _gridded(), _clearance(), tmp_path / "b", "layer", cell_size_deg=1.0, now=NOW
+    )
+    assert grid.format == "grid"
+    assert grid.path.endswith("layer.grid.json")
+
+    expected = {
+        (
+            round(f["geometry"]["coordinates"][0], 6),
+            round(f["geometry"]["coordinates"][1], 6),
+            f["properties"]["value"],
+        )
+        for f in json.loads(Path(points.path).read_text(encoding="utf-8"))["features"]
+    }
+
+    payload = json.loads(Path(grid.path).read_text(encoding="utf-8"))
+    size = payload["cell_size_deg"]
+    decoded = {
+        (
+            round((x + 0.5) * size - 180.0, 6),
+            round((y + 0.5) * size - 90.0, 6),
+            v,
+        )
+        for x, y, v in zip(payload["x"], payload["y"], payload["v"], strict=True)
+    }
+    assert decoded == expected
+
+
+def test_a_grid_file_is_never_named_geojson(tmp_path: Path) -> None:
+    """A grid in a .geojson file is a trap; the extension follows the format."""
+    result = export_surface(_gridded(), _clearance(), tmp_path, "layer", cell_size_deg=1.0, now=NOW)
+    assert not result.path.endswith(".geojson")
+    assert not (tmp_path / "layer.geojson").exists()
+
+
+def test_a_coarsening_clearance_forces_the_grid_size_it_imposed(tmp_path: Path) -> None:
+    """Publishing generalised cells at the source's finer size would overstate the resolution."""
+    clearance = _clearance(evidence_type=EvidenceType.TRACK, sensitivity=Sensitivity.MODERATE)
+    assert clearance.generalization.grid_deg == 1.0
+    result = export_surface(_surface(), clearance, tmp_path, "layer", cell_size_deg=0.1, now=NOW)
+    payload = json.loads(Path(result.path).read_text(encoding="utf-8"))
+    assert payload["cell_size_deg"] == 1.0
 
 
 def test_coarsening_merges_cells_by_summing_not_duplicating(tmp_path: Path) -> None:
     """Snapping two cells together must combine their values, or the total inflates."""
     clearance = _clearance(evidence_type=EvidenceType.TRACK, sensitivity=Sensitivity.MODERATE)
-    destination = tmp_path / "merged.geojson"
     # Only the three old rows survive the 90-day delay at MODERATE.
-    result = export_surface(_surface(), clearance, destination, now=NOW)
+    result = export_surface(_surface(), clearance, tmp_path, "merged", now=NOW)
     assert result.rows_out < result.rows_in
+    # A clearance that snaps to a grid produces a grid, whatever the caller asked for.
+    assert result.format == "grid"
 
-    payload = json.loads(destination.read_text(encoding="utf-8"))
-    total = sum(feature["properties"]["value"] for feature in payload["features"])
+    payload = json.loads(Path(result.path).read_text(encoding="utf-8"))
+    total = sum(payload["v"])
     # 1 + 2 + 4 from the surviving rows; the 8 was withheld as too recent.
     assert total == pytest.approx(7.0)
 

@@ -31,6 +31,10 @@ const ready = new Promise<ReadyReport>((resolve) => (announceReady = resolve));
 interface ReadyReport {
   basemap: BasemapState;
   layers: string[];
+  /** Features per layer, so a test can check a decode against the sidecar's cell count. */
+  cells: Record<string, number>;
+  /** Where each layer's data actually is, so a camera can be pointed at it. */
+  centers: Record<string, [number, number]>;
 }
 
 if (new URLSearchParams(location.search).has("debug")) {
@@ -47,8 +51,13 @@ const visibleLayers = new Set<string>();
 void (async () => {
   const basemap = await styleReady(map);
   addNightShade();
-  const layers = await addDataLayers();
-  announceReady({ basemap, layers });
+  const loaded = await addDataLayers();
+  announceReady({
+    basemap,
+    layers: loaded.map(({ meta }) => meta.name),
+    cells: Object.fromEntries(loaded.map(({ meta, cells }) => [meta.name, cells])),
+    centers: Object.fromEntries(loaded.map(({ meta, center }) => [meta.name, center])),
+  });
 })();
 
 function addNightShade(): void {
@@ -74,7 +83,7 @@ function addNightShade(): void {
   });
 }
 
-async function addDataLayers(): Promise<string[]> {
+async function addDataLayers(): Promise<LoadedLayer[]> {
   const manifest = await loadManifest(import.meta.env.BASE_URL);
   if (manifest.length === 0) {
     layerList.replaceChildren(emptyItem("No layers built yet — run make build-layers"));
@@ -103,7 +112,7 @@ async function addDataLayers(): Promise<string[]> {
       for (const layer of timed) layer.showWeek?.(clock.week);
     });
   }
-  return loaded.map(({ meta }) => meta.name);
+  return loaded;
 }
 
 function emptyItem(text: string): HTMLLIElement {

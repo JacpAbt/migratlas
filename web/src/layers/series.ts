@@ -2,7 +2,13 @@ import { Popup, type ExpressionSpecification, type Map as MapLibreMap } from "ma
 
 import { WARM_RAMP } from "../globe/flavor";
 
-import { attributionFor, fetchLayer, type LayerMeta, type LoadedLayer } from "./types";
+import {
+  attributionFor,
+  fetchLayer,
+  meanPosition,
+  type LayerMeta,
+  type LoadedLayer,
+} from "./types";
 
 interface SeriesProperties {
   station: string;
@@ -118,6 +124,8 @@ export async function addSeries(
   return {
     meta,
     terms,
+    cells: data.features.length,
+    center: meanPosition(data),
     showWeek,
     setVisible: (visible) => {
       if (map.getLayer(id)) {

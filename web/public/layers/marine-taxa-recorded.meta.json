@@ -1,11 +1,11 @@
 {
- "source_id": "megamove",
+ "source_id": "obis_speciesgrids",
  "evidence_type": "abundance_surface",
  "realm": "marine",
  "sensitivity": "low",
  "dwc:dataGeneralizations": "Published at source resolution.",
  "permission_reference": null,
- "cleared_at": "2026-07-28T19:34:46.120879+00:00",
- "cells": 29304,
+ "cleared_at": "2026-07-28T19:34:49.356988+00:00",
+ "cells": 46809,
  "format": "grid"
 }

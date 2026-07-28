@@ -6,6 +6,7 @@ that clearance to the exporter. There is no path from lake to web that skips the
 
 import logging
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import TYPE_CHECKING, Final
 
 import polars as pl
@@ -16,7 +17,7 @@ from migratlas.evidence import EvidenceType, Realm, TaxonScope, spec_for
 from migratlas.lake.reader import scan
 from migratlas.metrics.phenology import NORTHERN_AUTUMN, passage_quantiles, passage_trends
 from migratlas.redact import clear_for_publication
-from migratlas.tiles.export import ExportResult, export_surface
+from migratlas.tiles.export import ExportResult, export_surface, snap_expr
 from migratlas.tiles.station_series import SeriesExport, export_station_series
 
 if TYPE_CHECKING:
@@ -24,9 +25,11 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-# A globe layer is a single fetch, so it has to stay small. MegaMove's one-degree grid is
-# ~29k cells and fits comfortably; anything at H3 resolution needs aggregating first.
-MAX_FEATURES: Final = 60_000
+# A soft ceiling, logged not enforced. The real budget is measured in the browser
+# ("the published layers stay inside the performance budget"): 45 MB heap and 172 KiB
+# compressed for three layers totalling 76k cells. This number only catches an order-of-
+# magnitude mistake before anyone opens a browser.
+MAX_FEATURES: Final = 100_000
 
 # A night the radar only watched part of is not comparable to a full one, and a weekly median
 # built from a mix of both is biased toward whenever coverage happened to be good.
@@ -36,6 +39,16 @@ MIN_COVERAGE: Final = 0.9
 # apply looser ones than the report it derives from.
 MIN_NIGHTS_PER_SEASON: Final = 40
 MIN_YEARS_FOR_TREND: Final = 15
+
+
+class Pooling(StrEnum):
+    """How a source's rows become one pooled surface."""
+
+    AGGREGATE_ROWS = "aggregate_rows"
+    """The source publishes its own pooled total; use those rows and ignore the per-taxon ones."""
+
+    COUNT_TAXA = "count_taxa"
+    """No pooled rows exist, so pool by counting the distinct taxa recorded in each cell."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +61,12 @@ class LayerSpec:
     realm: Realm
     title: str
     description: str
+    cell_size_deg: float | None = None
+    """Set for a regular grid, which is then published as a grid rather than as points."""
+    pool: Pooling = Pooling.AGGREGATE_ROWS
+    """How to reduce a per-taxon source to one surface."""
+    value_kind: str | None = None
+    """What the numbers are, when pooling produces a quantity the source itself does not hold."""
 
 
 SERIES_LAYERS: Final[tuple[LayerSpec, ...]] = (
@@ -78,20 +97,58 @@ LAYERS: Final[tuple[LayerSpec, ...]] = (
             "Tracked individuals per one-degree cell, 1985-2018, pooled across 121 species. "
             "Reflects research effort as much as animal distribution."
         ),
+        cell_size_deg=1.0,
+    ),
+    LayerSpec(
+        name="marine-taxa-recorded",
+        source_id="obis_speciesgrids",
+        evidence_type=EvidenceType.ABUNDANCE_SURFACE,
+        realm=Realm.MARINE,
+        title="Marine taxa recorded",
+        description=(
+            "Distinct moving marine taxa with at least one record in each one-degree cell, "
+            "from OBIS. Not species richness: it counts what has been observed and reported, "
+            "so it maps survey effort and coastal accessibility at least as much as biology."
+        ),
+        # OBIS is H3 level 7, roughly 5 km, which is far finer than anything a globe shows and
+        # far finer than the effort behind it justifies. Pooled onto a one-degree grid, stated.
+        cell_size_deg=1.0,
+        pool=Pooling.COUNT_TAXA,
+        value_kind="taxa_recorded",
     ),
 )
 
 
-def _surface_for(source_id: str, *, taxon_key: int | None = None) -> pl.DataFrame:
-    """Read one source's abundance surface from the lake."""
-    frame = scan(EvidenceType.ABUNDANCE_SURFACE, source_id=source_id)
-    if taxon_key is not None:
-        frame = frame.filter(pl.col("taxon_key") == taxon_key)
-    else:
-        # Pooling across taxa: only the aggregate rows, or every species would be counted
-        # once per taxon *and* once in its group total.
-        frame = frame.filter(pl.col("taxon_scope") == TaxonScope.AGGREGATE.value)
-    return frame.collect()
+def _surface_for(layer: LayerSpec) -> pl.DataFrame:
+    """Read one layer's pooled surface from the lake."""
+    frame = scan(EvidenceType.ABUNDANCE_SURFACE, source_id=layer.source_id)
+
+    if layer.pool is Pooling.AGGREGATE_ROWS:
+        # Only the source's own aggregate rows, or every species would be counted once per
+        # taxon *and* once in its group total.
+        return frame.filter(pl.col("taxon_scope") == TaxonScope.AGGREGATE.value).collect()
+
+    # No aggregate rows to use, so the pooled quantity is a count of taxa per cell. Summing
+    # per-taxon values instead would add occurrence counts across species, which is a number
+    # with no meaning -- one whale record plus a thousand plankton records is not "1001".
+    #
+    # Snapped to the layer's grid first: H3 cells have no lat/lon alignment, so counting
+    # distinct taxa has to happen after the cells are pooled or the same taxon is counted once
+    # per H3 cell it occupies.
+    grid = layer.cell_size_deg or 1.0
+    return (
+        frame.filter(pl.col("taxon_key").is_not_null(), pl.col("value") > 0)
+        .select(
+            cell_longitude=snap_expr("cell_longitude", grid),
+            cell_latitude=snap_expr("cell_latitude", grid),
+            taxon_key=pl.col("taxon_key"),
+        )
+        .unique()
+        .group_by("cell_longitude", "cell_latitude")
+        .agg(value=pl.len())
+        .with_columns(period_start=pl.lit(None, dtype=pl.Datetime("us", "UTC")))
+        .collect()
+    )
 
 
 def build(layer: LayerSpec, destination_root: Path | None = None) -> ExportResult:
@@ -101,7 +158,7 @@ def build(layer: LayerSpec, destination_root: Path | None = None) -> ExportResul
     sensitivity changes cannot keep publishing at the old resolution.
     """
     source = catalog.get(layer.source_id)
-    frame = _surface_for(layer.source_id)
+    frame = _surface_for(layer)
     if frame.is_empty():
         msg = f"No rows in the lake for {layer.source_id!r}. Ingest it first."
         raise ValueError(msg)
@@ -117,7 +174,7 @@ def build(layer: LayerSpec, destination_root: Path | None = None) -> ExportResul
     )
 
     root = destination_root or (get_settings().tiles_dir / "layers")
-    result = export_surface(frame, clearance, root / f"{layer.name}.geojson")
+    result = export_surface(frame, clearance, root, layer.name, cell_size_deg=layer.cell_size_deg)
 
     if result.rows_out > MAX_FEATURES:
         log.warning(
@@ -214,9 +271,9 @@ def manifest() -> list[dict[str, object]]:
                 "realm": str(layer.realm),
                 "evidence_type": str(layer.evidence_type),
                 "kind": "series" if layer in SERIES_LAYERS else "surface",
-                "value_kind": _value_kind(layer.source_id)
-                if layer in LAYERS
-                else "reflectivity_traffic",
+                "format": "grid" if layer.cell_size_deg else "geojson",
+                "value_kind": layer.value_kind
+                or (_value_kind(layer.source_id) if layer in LAYERS else "reflectivity_traffic"),
                 "attribution": source.citation.strip(),
                 "licence": source.licence,
                 "landing_page": str(source.landing_page),
