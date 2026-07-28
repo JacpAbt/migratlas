@@ -103,7 +103,10 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "PLR2004", "ANN201", "SLF001"]
+# TC001-003 want typing-only imports moved into a TYPE_CHECKING block, which exists to
+# cut import cost and avoid runtime dependencies. Neither matters in a test module, and
+# the block is pure ceremony around `tmp_path: Path`.
+"tests/**" = ["S101", "PLR2004", "ANN201", "SLF001", "TC001", "TC002", "TC003"]
 "src/migratlas/cli.py" = ["T20"]  # the CLI is where printing belongs
 
 [tool.ruff.lint.flake8-tidy-imports]

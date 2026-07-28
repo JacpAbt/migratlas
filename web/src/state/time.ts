@@ -27,6 +27,9 @@ export class Clock {
       ...fromUrl,
       ...initial,
     };
+    // Publish the initial state too, or a freshly loaded view is unshareable until the
+    // user happens to move a slider.
+    writeUrl(this.#state);
   }
 
   get state(): TimeState {

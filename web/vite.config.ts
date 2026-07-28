@@ -8,6 +8,10 @@ export default defineConfig(({ mode }) => {
     base: env.VITE_BASE ?? "/",
     build: {
       target: "es2023",
+      // MapLibre alone is ~940 kB raw / ~245 kB gzipped and cannot be code-split
+      // meaningfully -- it is one WebGL engine. It sits in its own chunk below, so it is
+      // fetched once and cached across deploys. Warning at 500 kB would fire forever.
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
           // MapLibre is large and changes far less often than our code, so it gets
