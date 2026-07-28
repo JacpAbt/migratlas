@@ -1,0 +1,59 @@
+# ---------------------------------------------------------------------------
+# Data. Never committed -- not for size reasons alone, but because the ethics
+# gate governs what may leave this machine and git history is not revocable.
+# ---------------------------------------------------------------------------
+data/
+*.parquet
+*.zarr/
+*.nc
+*.grib
+*.tif
+*.tiff
+*.pmtiles
+*.mbtiles
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+
+# Node
+node_modules/
+web/dist/
+web/.vite/
+*.tsbuildinfo
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+R/renv/library/
+R/renv/staging/
+
+# Secrets and machine-local config
+.env
+.env.local
+*.key
+*.pem
+credentials.json
+
+# Notebook outputs are stripped, but guard against checkpoints anyway
+.ipynb_checkpoints/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
