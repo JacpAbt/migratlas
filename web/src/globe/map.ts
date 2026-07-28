@@ -5,10 +5,24 @@ import {
   NavigationControl,
   ScaleControl,
   addProtocol,
+  setWorkerUrl,
 } from "maplibre-gl";
+// MapLibre computes its own worker URL at runtime from a template string --
+// `new URL(`./${name}`, import.meta.url)` -- which no bundler can statically analyse, so the
+// worker is never emitted and 404s. MapLibre then fails *silently*: sources never finish
+// loading, no tiles are requested, and the canvas stays empty at a healthy 60 fps with no
+// console error. setWorkerUrl is the sanctioned way to take over.
+//
+// `?worker&url` and not `?url`: the worker imports maplibre-gl-shared.mjs, which a plain
+// file copy leaves dangling. A dev server's SPA fallback then answers that import with
+// index.html and a 200, so the worker parses HTML as JavaScript and dies. ?worker bundles
+// the dependency in.
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Protocol } from "pmtiles";
 
 import "maplibre-gl/dist/maplibre-gl.css";
+
+setWorkerUrl(workerUrl);
 
 const ASSETS = "https://protomaps.github.io/basemaps-assets";
 
@@ -42,7 +56,14 @@ export function createGlobe(container: HTMLElement): MapLibreMap {
             '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>',
         },
       },
-      layers: layers("protomaps", namedFlavor("dark"), { lang: "en" }),
+      layers: [
+        // Drawn beneath everything, so the globe still reads as a globe when the basemap
+        // tiles are unavailable -- a self-hosted tileset may not be configured yet, and the
+        // data layers are useful without it. Without this the sphere is invisible and the
+        // failure looks like the whole app being broken.
+        { id: "ocean", type: "background", paint: { "background-color": "#0b1a2b" } },
+        ...layers("protomaps", namedFlavor("dark"), { lang: "en" }),
+      ],
     },
     center: [10, 30],
     zoom: 1.4,

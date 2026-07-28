@@ -1,0 +1,14 @@
+[
+ {
+  "name": "marine-space-use",
+  "title": "Marine megafauna space use",
+  "description": "Tracked individuals per one-degree cell, 1985-2018, pooled across 121 species. Reflects research effort as much as animal distribution.",
+  "realm": "marine",
+  "evidence_type": "abundance_surface",
+  "value_kind": "tracked_individuals",
+  "attribution": "Sequeira, A. M. M. et al. (2025) Global tracking of marine megafauna space use reveals how to achieve conservation targets. Science. Data: https://doi.org/10.5061/dryad.x95x69ptv",
+  "licence": "CC0 1.0",
+  "landing_page": "https://datadryad.org/dataset/doi:10.5061/dryad.x95x69ptv",
+  "caveats": "Derived products only \u2014 1-degree gridded space use, not raw tracks. Grid cell counts of tracked individuals reflect research effort as much as animal distribution; the published bias-testing datasets must be used alongside them. Covers 1985\u20132018, so it does not speak to the last several years."
+ }
+]

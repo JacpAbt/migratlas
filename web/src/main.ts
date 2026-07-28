@@ -1,6 +1,7 @@
 import type { GeoJSONSource } from "maplibre-gl";
 
 import { createGlobe } from "./globe/map";
+import { addSurface, loadManifest, setSurfaceVisible, type LoadedLayer } from "./layers/surface";
 import { nightPolygon } from "./layers/terminator";
 import { TaxonIndex, type TaxonHit } from "./search/taxon";
 import { Clock, formatInstant } from "./state/time";
@@ -36,6 +37,80 @@ map.once("style.load", () => {
     source?.setData(nightPolygon(instant));
   });
 });
+
+// Exposed only under ?debug=1, so the map can be inspected from a console or a test
+// harness. MapLibre creates its GL context without preserveDrawingBuffer, which makes pixel
+// readback useless -- queryRenderedFeatures is the only reliable way to assert a layer draws.
+if (new URLSearchParams(location.search).has("debug")) {
+  (window as unknown as { migratlas: unknown }).migratlas = { map, clock };
+}
+
+// --- Published layers -------------------------------------------------------
+// Each layer carries the generalisation the ethics gate applied. Showing it is required, so
+// it lives next to the toggle rather than buried in an about page.
+const layerList = el<HTMLUListElement>("layer-list");
+const layerTerms = el("layer-terms");
+const visibleLayers = new Set<string>();
+
+map.once("style.load", () => {
+  void (async () => {
+    const manifest = await loadManifest(import.meta.env.BASE_URL);
+    if (manifest.length === 0) {
+      layerList.innerHTML = "<li class=\"empty\">No layers built yet — run make build-layers</li>";
+      return;
+    }
+
+    const loaded: LoadedLayer[] = [];
+    for (const meta of manifest) {
+      try {
+        loaded.push(await addSurface(map, meta, import.meta.env.BASE_URL));
+      } catch (error) {
+        notice(`Layer ${meta.name}: ${String(error)}`);
+      }
+    }
+    renderLayerList(loaded);
+  })();
+});
+
+function renderLayerList(loaded: LoadedLayer[]): void {
+  layerList.replaceChildren(
+    ...loaded.map(({ meta, terms }) => {
+      const item = document.createElement("li");
+      const label = document.createElement("label");
+      const toggle = document.createElement("input");
+      toggle.type = "checkbox";
+      toggle.checked = true;
+      visibleLayers.add(meta.name);
+      toggle.addEventListener("change", () => {
+        setSurfaceVisible(map, meta.name, toggle.checked);
+        if (toggle.checked) visibleLayers.add(meta.name);
+        else visibleLayers.delete(meta.name);
+        showTerms(loaded.filter((entry) => visibleLayers.has(entry.meta.name)));
+      });
+
+      const text = document.createElement("span");
+      text.textContent = meta.title;
+      text.title = `${meta.description}
+
+${meta.caveats}`;
+
+      const kind = document.createElement("em");
+      kind.textContent = meta.value_kind.replace(/_/g, " ");
+
+      label.append(toggle, text, kind);
+      item.append(label);
+      return item;
+    }),
+  );
+  showTerms(loaded);
+}
+
+function showTerms(loaded: LoadedLayer[]): void {
+  layerTerms.textContent = loaded
+    .map(({ terms }) => terms["dwc:dataGeneralizations"])
+    .filter((value, index, all) => all.indexOf(value) === index)
+    .join(" ");
+}
 
 // --- Time controls ----------------------------------------------------------
 const daySlider = el<HTMLInputElement>("time-slider");
@@ -109,6 +184,12 @@ const noticeEl = el("notice");
 // the Node overload returning Timeout.
 let noticeTimer: ReturnType<typeof setTimeout> | undefined;
 
+function persistentNotice(message: string): void {
+  noticeEl.textContent = message;
+  noticeEl.hidden = false;
+  clearTimeout(noticeTimer);
+}
+
 function notice(message: string): void {
   noticeEl.textContent = message;
   noticeEl.hidden = false;
@@ -116,9 +197,25 @@ function notice(message: string): void {
   noticeTimer = setTimeout(() => (noticeEl.hidden = true), 6000);
 }
 
+// A failed basemap is a persistent condition, not a transient one: it must not scroll away
+// after a few seconds, and it must be distinguishable from the app being broken. The data
+// layers stay usable on the plain ocean background underneath.
+let basemapFailed = false;
 map.on("error", (event) => {
   const message = event.error?.message ?? "unknown map error";
-  notice(`Basemap: ${message}`);
+  // sourceId is present on source-related error events but absent from the base ErrorEvent
+  // type, so it is read defensively rather than asserted.
+  const sourceId = (event as { sourceId?: string }).sourceId ?? "";
+  const isBasemap = /pmtiles|protomaps|tile/i.test(message) || sourceId === "protomaps";
+  if (isBasemap && !basemapFailed) {
+    basemapFailed = true;
+    persistentNotice(
+      "Basemap tiles unavailable — the demo tileset could not be reached. Data layers " +
+        "still work; set VITE_BASEMAP_PMTILES to a self-hosted tileset for coastlines.",
+    );
+    return;
+  }
+  if (!isBasemap) notice(message);
 });
 
 // --- Performance budget -----------------------------------------------------

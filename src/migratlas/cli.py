@@ -1,6 +1,7 @@
 """CLI: one entry point per job, so every pipeline stage is reproducible as a single
 command rather than a notebook cell someone ran once."""
 
+import json
 import logging
 from collections import Counter
 from pathlib import Path
@@ -16,6 +17,7 @@ from migratlas.ingest import darkecology, megamove, obis
 from migratlas.lake import check as lake_check
 from migratlas.reports import phase1, phase1_robustness
 from migratlas.taxonomy import index as taxon_index
+from migratlas.tiles import layers as tile_layers
 
 DRIFT_SAMPLE = 5
 """How many drifted files to name before summarising the rest."""
@@ -68,6 +70,26 @@ def ingest_obis() -> None:
     result = obis.ingest()
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
+
+
+@app.command("build-layers")
+def build_layers(
+    out: Annotated[Path, typer.Option(help="Destination directory for layer files.")] = Path(
+        "web/public/layers"
+    ),
+) -> None:
+    """Export the globe's published layers from the lake, through the ethics gate."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    results = tile_layers.build_all(out)
+    for result in results:
+        size = Path(result.path).stat().st_size / 1024
+        print(f"{result.rows_out:>7,} features  {size:>8.0f} KiB  {result.path}")
+        print(f"          {result.generalization}")
+
+    manifest_path = out / "manifest.json"
+    payload = json.dumps(tile_layers.manifest(), indent=1)
+    manifest_path.write_text(payload + "\n", encoding="utf-8")
+    print(f"manifest -> {manifest_path}")
 
 
 @report_app.command("phase1")

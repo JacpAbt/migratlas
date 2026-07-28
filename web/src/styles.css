@@ -116,6 +116,65 @@ body {
   letter-spacing: 0.04em;
 }
 
+.panel--layers {
+  top: 7.5rem;
+  left: 1rem;
+  width: min(17rem, calc(100vw - 2rem));
+}
+
+.panel--layers h2 {
+  margin: 0 0 0.4rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+#layer-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#layer-list label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 0.45rem;
+  align-items: baseline;
+  padding: 0.2rem 0;
+  cursor: pointer;
+}
+
+#layer-list input {
+  accent-color: var(--accent);
+}
+
+#layer-list em {
+  grid-column: 2;
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#layer-list .empty {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+/* The generalisation statement is a requirement, not a footnote -- it sits with the
+   toggle so a viewer can always tell degraded data from precise data. */
+.terms {
+  margin: 0.5rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
 .panel--time {
   bottom: 1rem;
   left: 50%;

@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Final
 import numpy as np
 import polars as pl
 
-from migratlas.config import get_settings
 from migratlas.evidence import EvidenceType, spec_for
+from migratlas.lake.reader import scan
 from migratlas.metrics.phenology import Season, passage_quantiles
 
 if TYPE_CHECKING:
@@ -36,6 +36,10 @@ FLYWAYS: Final[tuple[tuple[str, float, float], ...]] = (
     ("central", -104.0, -90.0),
     ("eastern", -90.0, 0.0),
 )
+
+# Named explicitly. `flux` holds one source today, so pooling would be invisible now and
+# would silently change every number the day a second radar network is ingested.
+SOURCE_ID: Final = "darkecology_daily"
 
 MIN_COVERAGE: Final = 0.9
 MIN_NIGHTS: Final = 40
@@ -72,9 +76,8 @@ def load_conus_traffic(window_kind: str = "night") -> pl.DataFrame:
     ``window_kind="day"`` gives the placebo series: nocturnal migration does not happen by
     day, so a trend there points at the instrument or the processing rather than at birds.
     """
-    lake = get_settings().lake_dir / "flux"
     return (
-        pl.scan_parquet(f"{lake}/**/*.parquet")
+        scan(EvidenceType.FLUX, source_id=SOURCE_ID)
         .filter(
             pl.col("window_kind") == window_kind,
             pl.col("quantity") == "reflectivity_traffic",

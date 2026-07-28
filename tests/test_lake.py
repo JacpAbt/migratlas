@@ -6,6 +6,7 @@ from string.templatelib import Template
 
 import pyarrow as pa
 import pyarrow.dataset as ds
+import pyarrow.parquet as pq
 import pytest
 
 from migratlas.evidence import EvidenceType, Realm, TaxonScope, spec_for
@@ -122,10 +123,36 @@ def test_claiming_the_wrong_source_is_refused(tmp_path: Path) -> None:
         )
 
 
+def test_writing_into_a_drifted_directory_is_refused(tmp_path: Path) -> None:
+    """The incident this guard exists for: a schema change plus an un-reingested source
+    makes DuckDB intersect schemas, so newer columns vanish with no error."""
+    spec = spec_for(EvidenceType.FLUX)
+    write_evidence(_flux_table("oldsource"), spec, source_id="oldsource", root=tmp_path)
+
+    # Simulate the older source predating a column by dropping it from its files.
+    for parquet in (tmp_path / str(spec.evidence_type)).rglob("*.parquet"):
+        table = pq.read_table(parquet)
+        pq.write_table(table.drop_columns(["coverage_fraction"]), parquet)
+
+    with pytest.raises(ValueError, match="do not match the current schema"):
+        write_evidence(_flux_table("newsource"), spec, source_id="newsource", root=tmp_path)
+
+
+def test_rewriting_the_same_source_is_not_blocked_by_its_own_files(tmp_path: Path) -> None:
+    """Only *other* sources block a write; re-ingesting a drifted source is the fix."""
+    spec = spec_for(EvidenceType.FLUX)
+    write_evidence(_flux_table(), spec, source_id="darkecology", root=tmp_path)
+    for parquet in (tmp_path / str(spec.evidence_type)).rglob("*.parquet"):
+        table = pq.read_table(parquet)
+        pq.write_table(table.drop_columns(["coverage_fraction"]), parquet)
+    # Re-ingesting the same source must be allowed, or drift is unrecoverable.
+    write_evidence(_flux_table(), spec, source_id="darkecology", root=tmp_path)
+
+
 def test_manifest_records_the_run(tmp_path: Path) -> None:
     spec = spec_for(EvidenceType.FLUX)
     result = write_evidence(_flux_table(), spec, source_id="darkecology", root=tmp_path)
-    manifest = tmp_path / str(spec.evidence_type) / "_manifests" / f"{result.run_id}.json"
+    manifest = tmp_path / "_manifests" / str(spec.evidence_type) / f"{result.run_id}.json"
     assert manifest.is_file()
     assert result.run_id in manifest.read_text(encoding="utf-8")
 
