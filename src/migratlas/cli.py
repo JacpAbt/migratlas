@@ -13,6 +13,7 @@ from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
 from migratlas.ingest import darkecology, megamove
+from migratlas.reports import phase1
 from migratlas.taxonomy import index as taxon_index
 
 app = typer.Typer(
@@ -25,9 +26,11 @@ app = typer.Typer(
 catalog_app = typer.Typer(help="Inspect the source registry.", no_args_is_help=True)
 ingest_app = typer.Typer(help="Land a source in the lake.", no_args_is_help=True)
 taxonomy_app = typer.Typer(help="Resolve names against the GBIF Backbone.", no_args_is_help=True)
+report_app = typer.Typer(help="Reproducible analysis reports.", no_args_is_help=True)
 app.add_typer(catalog_app, name="catalog")
 app.add_typer(ingest_app, name="ingest")
 app.add_typer(taxonomy_app, name="taxonomy")
+app.add_typer(report_app, name="report")
 
 
 @ingest_app.command("darkecology")
@@ -52,6 +55,13 @@ def ingest_megamove() -> None:
     result = megamove.ingest()
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
+
+
+@report_app.command("phase1")
+def report_phase1() -> None:
+    """Replicate Horton et al. 2020 passage phenology, then extend to 2025."""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
+    print(phase1.render())
 
 
 @catalog_app.command("list")

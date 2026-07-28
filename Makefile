@@ -98,6 +98,10 @@ ingest-darkecology:  ## Dark Ecology radar profiles -> lake (FLUX, aerial)
 ingest-megamove:  ## MegaMove 1-degree grids -> lake (ABUNDANCE_SURFACE, marine)
 	$(RUN) migratlas ingest megamove
 
+.PHONY: phase1-report
+phase1-report:  ## Replicate Horton et al. 2020 phenology, then extend
+	$(RUN) migratlas report phase1
+
 .PHONY: gpu-check
 gpu-check:  ## Confirm a CUDA device is visible from inside the venv
 	$(RUN) python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"
