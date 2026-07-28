@@ -1,8 +1,10 @@
 import type { GeoJSONSource } from "maplibre-gl";
 
-import { createGlobe } from "./globe/map";
-import { addSurface, loadManifest, setSurfaceVisible, type LoadedLayer } from "./layers/surface";
+import { createGlobe, styleReady, type BasemapState } from "./globe/map";
+import { addSeries } from "./layers/series";
+import { addSurface } from "./layers/surface";
 import { nightPolygon } from "./layers/terminator";
+import { loadManifest, type LoadedLayer } from "./layers/types";
 import { TaxonIndex, type TaxonHit } from "./search/taxon";
 import { Clock, formatInstant } from "./state/time";
 
@@ -14,10 +16,42 @@ const el = <T extends HTMLElement>(id: string): T => {
   return node as T;
 };
 
-const map = createGlobe(el("globe"));
+const map = createGlobe(el("globe"), import.meta.env.BASE_URL);
 const clock = new Clock();
 
-map.once("style.load", () => {
+// Exposed only under ?debug=1, so the map can be inspected from a console or a test harness.
+// MapLibre creates its GL context without preserveDrawingBuffer, which makes pixel readback
+// useless -- queryRenderedFeatures is the only reliable way to assert a layer draws.
+//
+// `ready` is the important part: a test that polls isStyleLoaded cannot tell "still fetching"
+// from "gave up and rendered nothing", which is how a blank globe shipped once already.
+let announceReady: (report: ReadyReport) => void = () => {};
+const ready = new Promise<ReadyReport>((resolve) => (announceReady = resolve));
+
+interface ReadyReport {
+  basemap: BasemapState;
+  layers: string[];
+}
+
+if (new URLSearchParams(location.search).has("debug")) {
+  (window as unknown as { migratlas: unknown }).migratlas = { map, clock, ready };
+}
+
+// --- Layers, once the style is usable ---------------------------------------
+// Each layer carries the generalisation the ethics gate applied. Showing it is required, so
+// it lives next to the toggle rather than buried in an about page.
+const layerList = el<HTMLUListElement>("layer-list");
+const layerTerms = el("layer-terms");
+const visibleLayers = new Set<string>();
+
+void (async () => {
+  const basemap = await styleReady(map);
+  addNightShade();
+  const layers = await addDataLayers();
+  announceReady({ basemap, layers });
+})();
+
+function addNightShade(): void {
   map.addSource("night", { type: "geojson", data: nightPolygon(clock.instant) });
 
   // Under the labels, so place names stay legible on the dark side.
@@ -27,7 +61,9 @@ map.once("style.load", () => {
       id: "night-shade",
       type: "fill",
       source: "night",
-      paint: { "fill-color": "#04070f", "fill-opacity": 0.45 },
+      // A cool dusk veil, not a blackout: on a parchment basemap a dark fill reads as a hole,
+      // and the night side still has to show its coastlines and its data.
+      paint: { "fill-color": "#41566b", "fill-opacity": 0.17 },
     },
     firstSymbol,
   );
@@ -36,45 +72,50 @@ map.once("style.load", () => {
     const source = map.getSource("night") as GeoJSONSource | undefined;
     source?.setData(nightPolygon(instant));
   });
-});
-
-// Exposed only under ?debug=1, so the map can be inspected from a console or a test
-// harness. MapLibre creates its GL context without preserveDrawingBuffer, which makes pixel
-// readback useless -- queryRenderedFeatures is the only reliable way to assert a layer draws.
-if (new URLSearchParams(location.search).has("debug")) {
-  (window as unknown as { migratlas: unknown }).migratlas = { map, clock };
 }
 
-// --- Published layers -------------------------------------------------------
-// Each layer carries the generalisation the ethics gate applied. Showing it is required, so
-// it lives next to the toggle rather than buried in an about page.
-const layerList = el<HTMLUListElement>("layer-list");
-const layerTerms = el("layer-terms");
-const visibleLayers = new Set<string>();
+async function addDataLayers(): Promise<string[]> {
+  const manifest = await loadManifest(import.meta.env.BASE_URL);
+  if (manifest.length === 0) {
+    layerList.replaceChildren(emptyItem("No layers built yet — run make build-layers"));
+    return [];
+  }
 
-map.once("style.load", () => {
-  void (async () => {
-    const manifest = await loadManifest(import.meta.env.BASE_URL);
-    if (manifest.length === 0) {
-      layerList.innerHTML = "<li class=\"empty\">No layers built yet — run make build-layers</li>";
-      return;
+  const loaded: LoadedLayer[] = [];
+  for (const meta of manifest) {
+    try {
+      loaded.push(
+        meta.kind === "series"
+          ? await addSeries(map, meta, import.meta.env.BASE_URL, clock.week)
+          : await addSurface(map, meta, import.meta.env.BASE_URL),
+      );
+    } catch (error) {
+      notice(`Layer ${meta.name}: ${String(error)}`);
     }
+  }
+  renderLayerList(loaded);
 
-    const loaded: LoadedLayer[] = [];
-    for (const meta of manifest) {
-      try {
-        loaded.push(await addSurface(map, meta, import.meta.env.BASE_URL));
-      } catch (error) {
-        notice(`Layer ${meta.name}: ${String(error)}`);
-      }
-    }
-    renderLayerList(loaded);
-  })();
-});
+  // One subscription for every time-indexed layer. Each ignores a repeat of its current
+  // week, so a playing clock at 60 fps costs nothing between week boundaries.
+  const timed = loaded.filter((layer) => layer.showWeek);
+  if (timed.length > 0) {
+    clock.subscribe(() => {
+      for (const layer of timed) layer.showWeek?.(clock.week);
+    });
+  }
+  return loaded.map(({ meta }) => meta.name);
+}
+
+function emptyItem(text: string): HTMLLIElement {
+  const item = document.createElement("li");
+  item.className = "empty";
+  item.textContent = text;
+  return item;
+}
 
 function renderLayerList(loaded: LoadedLayer[]): void {
   layerList.replaceChildren(
-    ...loaded.map(({ meta, terms }) => {
+    ...loaded.map(({ meta, setVisible }) => {
       const item = document.createElement("li");
       const label = document.createElement("label");
       const toggle = document.createElement("input");
@@ -82,7 +123,7 @@ function renderLayerList(loaded: LoadedLayer[]): void {
       toggle.checked = true;
       visibleLayers.add(meta.name);
       toggle.addEventListener("change", () => {
-        setSurfaceVisible(map, meta.name, toggle.checked);
+        setVisible(toggle.checked);
         if (toggle.checked) visibleLayers.add(meta.name);
         else visibleLayers.delete(meta.name);
         showTerms(loaded.filter((entry) => visibleLayers.has(entry.meta.name)));
@@ -198,24 +239,24 @@ function notice(message: string): void {
 }
 
 // A failed basemap is a persistent condition, not a transient one: it must not scroll away
-// after a few seconds, and it must be distinguishable from the app being broken. The data
-// layers stay usable on the plain ocean background underneath.
+// after a few seconds, and it must be distinguishable from the app being broken. It is also
+// reported once rather than per tile, because a dead tileset emits an error for every request.
 let basemapFailed = false;
 map.on("error", (event) => {
   const message = event.error?.message ?? "unknown map error";
   // sourceId is present on source-related error events but absent from the base ErrorEvent
   // type, so it is read defensively rather than asserted.
   const sourceId = (event as { sourceId?: string }).sourceId ?? "";
-  const isBasemap = /pmtiles|protomaps|tile/i.test(message) || sourceId === "protomaps";
-  if (isBasemap && !basemapFailed) {
+  if (/pmtiles|protomaps|sprite|glyph|tile/i.test(message) || sourceId === "protomaps") {
+    if (basemapFailed) return;
     basemapFailed = true;
     persistentNotice(
-      "Basemap tiles unavailable — the demo tileset could not be reached. Data layers " +
-        "still work; set VITE_BASEMAP_PMTILES to a self-hosted tileset for coastlines.",
+      "Detailed basemap unavailable — the configured tileset could not be reached. " +
+        "Coastlines and the data layers are served from this app and are unaffected.",
     );
     return;
   }
-  if (!isBasemap) notice(message);
+  notice(message);
 });
 
 // --- Performance budget -----------------------------------------------------

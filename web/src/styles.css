@@ -1,13 +1,15 @@
 :root {
-  --bg: #06080d;
-  --panel: rgb(12 16 24 / 82%);
-  --border: rgb(255 255 255 / 10%);
-  --text: #e8ecf2;
-  --muted: #8b95a5;
-  --accent: #6fd3c7;
+  --bg: #e8eef0;
+  --panel: rgb(250 246 238 / 88%);
+  --border: rgb(124 98 74 / 20%);
+  --text: #4a3c31;
+  --muted: #8b7a68;
+  --accent: #b9743f;
+  --sunken: rgb(124 98 74 / 7%);
+  --hover: rgb(124 98 74 / 13%);
   --radius: 10px;
   --pad: 0.7rem 0.85rem;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * {
@@ -68,7 +70,7 @@ body {
   width: 100%;
   padding: 0.45rem 0.6rem;
   color: var(--text);
-  background: rgb(255 255 255 / 6%);
+  background: var(--sunken);
   border: 1px solid var(--border);
   border-radius: 7px;
   font: inherit;
@@ -97,7 +99,7 @@ body {
 }
 
 #taxon-results li:hover {
-  background: rgb(255 255 255 / 7%);
+  background: var(--sunken);
 }
 
 #taxon-results em {
@@ -176,7 +178,7 @@ body {
 }
 
 .panel--time {
-  bottom: 1rem;
+  bottom: 2.3rem;
   left: 50%;
   width: min(30rem, calc(100vw - 2rem));
   transform: translateX(-50%);
@@ -208,7 +210,7 @@ input[type="range"] {
   flex: 0 0 4.2rem;
   padding: 0.3rem 0;
   color: var(--text);
-  background: rgb(255 255 255 / 8%);
+  background: var(--sunken);
   border: 1px solid var(--border);
   border-radius: 6px;
   font: inherit;
@@ -216,12 +218,12 @@ input[type="range"] {
 }
 
 #play:hover {
-  background: rgb(255 255 255 / 14%);
+  background: var(--hover);
 }
 
 .panel--perf {
   right: 1rem;
-  bottom: 1rem;
+  bottom: 2.3rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   font-size: 0.75rem;
@@ -229,12 +231,12 @@ input[type="range"] {
 
 .notice {
   position: absolute;
-  bottom: 7.5rem;
+  bottom: 9.5rem;
   left: 50%;
   z-index: 3;
   max-width: min(32rem, calc(100vw - 2rem));
   padding: 0.55rem 0.8rem;
-  background: rgb(12 16 24 / 92%);
+  background: rgb(250 246 238 / 96%);
   border: 1px solid var(--border);
   border-left: 2px solid var(--accent);
   border-radius: 8px;
@@ -251,7 +253,7 @@ input[type="range"] {
   white-space: nowrap;
 }
 
-/* MapLibre's default controls are too bright against a night globe. */
+/* MapLibre's controls default to plain white, which floats off a parchment basemap. */
 .maplibregl-ctrl-group {
   background: var(--panel) !important;
   border: 1px solid var(--border);
@@ -262,12 +264,12 @@ input[type="range"] {
 }
 
 .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
-  filter: invert(1) brightness(1.6);
+  filter: sepia(0.3) saturate(0.7) brightness(0.85);
 }
 
 .maplibregl-ctrl-attrib,
 .maplibregl-ctrl-scale {
-  background: rgb(12 16 24 / 70%) !important;
+  background: rgb(250 246 238 / 82%) !important;
   color: var(--muted) !important;
   font-size: 0.7rem;
 }
@@ -276,11 +278,56 @@ input[type="range"] {
   color: var(--muted);
 }
 
+.maplibregl-popup-content {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: rgb(251 247 240 / 97%);
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.maplibregl-popup-content table {
+  margin: 0.4rem 0 0;
+  border-collapse: collapse;
+}
+
+.maplibregl-popup-content th {
+  padding: 0.1rem 0.7rem 0.1rem 0;
+  color: var(--muted);
+  font-weight: 400;
+  text-align: left;
+}
+
+.maplibregl-popup-content td {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.maplibregl-popup-content .caveat {
+  margin: 0.5rem 0 0;
+  max-width: 22rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: rgb(251 247 240 / 97%) !important;
+  border-bottom-color: rgb(251 247 240 / 97%) !important;
+}
+
+.maplibregl-popup-close-button {
+  padding: 0 0.3rem;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
 @media (width <= 40rem) {
   .panel--search {
     top: auto;
     right: 1rem;
-    bottom: 8.5rem;
+    bottom: 10rem;
     left: 1rem;
     width: auto;
   }

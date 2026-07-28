@@ -10,7 +10,9 @@
     "build": "vite build && node scripts/check-build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "check:build": "node scripts/check-build.mjs"
+    "check:build": "node scripts/check-build.mjs",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui"
   },
   "dependencies": {
     "@protomaps/basemaps": "^5.7.2",
@@ -18,6 +20,7 @@
     "pmtiles": "^4.4.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
     "@types/node": "^26.1.2",
     "typescript": "^7.0.2",
     "vite": "^8.1.5"

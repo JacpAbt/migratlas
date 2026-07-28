@@ -5,10 +5,24 @@
   "description": "Tracked individuals per one-degree cell, 1985-2018, pooled across 121 species. Reflects research effort as much as animal distribution.",
   "realm": "marine",
   "evidence_type": "abundance_surface",
+  "kind": "surface",
   "value_kind": "tracked_individuals",
   "attribution": "Sequeira, A. M. M. et al. (2025) Global tracking of marine megafauna space use reveals how to achieve conservation targets. Science. Data: https://doi.org/10.5061/dryad.x95x69ptv",
   "licence": "CC0 1.0",
   "landing_page": "https://datadryad.org/dataset/doi:10.5061/dryad.x95x69ptv",
   "caveats": "Derived products only \u2014 1-degree gridded space use, not raw tracks. Grid cell counts of tracked individuals reflect research effort as much as animal distribution; the published bias-testing datasets must be used alongside them. Covers 1985\u20132018, so it does not speak to the last several years."
+ },
+ {
+  "name": "aerial-passage",
+  "title": "Nightly aerial passage",
+  "description": "Weekly median of nightly reflectivity traffic past US weather radars, pooled across 1995-2025, with each station's shift in autumn passage date. Aerial biomass, not birds: the radar does not separate birds from bats from insects. The autumn window is a northern-hemisphere one, so the shift means little at the tropical stations.",
+  "realm": "aerial",
+  "evidence_type": "flux",
+  "kind": "series",
+  "value_kind": "reflectivity_traffic",
+  "attribution": "Dark Ecology project (2026). Dark Ecology Dataset: Measurements of Biological Activity in US Weather Radar \u2014 Time Series Data from 1995\u20132025, v1.1.0. Zenodo. https://doi.org/10.5281/zenodo.18433334",
+  "licence": "CC BY 4.0",
+  "landing_page": "https://darkecology.github.io/dataset/",
+  "caveats": "Measures aerial biomass, not birds: MistNet separates precipitation from biology, not birds from bats from insects. `traffic` is vertically and temporally integrated, so it carries no height information \u2014 use the profiles product for flight altitude. Station histories are uneven across 1995\u20132025 and the NEXRAD dual-polarisation upgrade around 2011\u20132013 is a step change in the instrument that must be modelled as a break rather than read as a biological trend; the daily product does not label hardware generation, so upgrade dates have to come from elsewhere. Nights with a high `fraction_missing` must be excluded before computing passage quantiles."
  }
 ]

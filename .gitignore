@@ -33,6 +33,8 @@ node_modules/
 web/dist/
 web/.vite/
 *.tsbuildinfo
+web/test-results/
+web/playwright-report/
 
 # R
 .Rhistory
@@ -59,3 +61,4 @@ credentials.json
 .DS_Store
 Thumbs.db
 desktop.ini
+.claude/

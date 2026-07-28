@@ -83,7 +83,7 @@ def build_layers(
     results = tile_layers.build_all(out)
     for result in results:
         size = Path(result.path).stat().st_size / 1024
-        print(f"{result.rows_out:>7,} features  {size:>8.0f} KiB  {result.path}")
+        print(f"{result.features:>7,} features  {size:>8.0f} KiB  {result.path}")
         print(f"          {result.generalization}")
 
     manifest_path = out / "manifest.json"

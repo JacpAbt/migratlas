@@ -1,31 +1,8 @@
 import type { ExpressionSpecification, Map as MapLibreMap } from "maplibre-gl";
 
-/** One entry of the build-layers manifest. */
-export interface LayerMeta {
-  name: string;
-  title: string;
-  description: string;
-  realm: string;
-  evidence_type: string;
-  value_kind: string;
-  attribution: string;
-  licence: string;
-  landing_page: string;
-  caveats: string;
-}
+import { COOL_RAMP } from "../globe/flavor";
 
-/** The generalisation statement written beside each layer by the ethics gate. */
-interface LayerTerms {
-  "dwc:dataGeneralizations": string;
-  sensitivity: string;
-  cells: number;
-}
-
-export interface LoadedLayer {
-  meta: LayerMeta;
-  terms: LayerTerms;
-  maxValue: number;
-}
+import { attributionFor, fetchLayer, type LayerMeta, type LoadedLayer } from "./types";
 
 const SOURCE_PREFIX = "surface-";
 
@@ -39,6 +16,7 @@ const SOURCE_PREFIX = "surface-";
 function paint(maxValue: number): {
   color: ExpressionSpecification;
   radius: ExpressionSpecification;
+  opacity: ExpressionSpecification;
 } {
   // Counts are heavily skewed: a handful of well-sampled cells dwarf the rest, so the ramp
   // is placed on log10 to keep the typical cell visible rather than uniformly dark.
@@ -50,14 +28,10 @@ function paint(maxValue: number): {
       "interpolate",
       ["linear"],
       ["log10", ["max", ["get", "value"], 1]],
-      0,
-      "#2b3a5c",
-      logMax * 0.35,
-      "#3f7fa6",
-      logMax * 0.65,
-      "#6fd3c7",
-      logMax,
-      "#f6f5b4",
+      ...COOL_RAMP.flatMap((colour, index) => [
+        (logMax * index) / (COOL_RAMP.length - 1),
+        colour,
+      ]),
     ] as ExpressionSpecification,
     radius: [
       "interpolate",
@@ -67,6 +41,21 @@ function paint(maxValue: number): {
       ["interpolate", ["linear"], ["get", "value"], 1, 1.2, stop(1), 3.5],
       6,
       ["interpolate", ["linear"], ["get", "value"], 1, 3, stop(1), 11],
+    ] as ExpressionSpecification,
+    // Fading the sparse end rather than colouring it pale. A 29,000-cell global grid drawn at
+    // uniform opacity reads as a halftone screen over the ocean: the eye sees a texture instead
+    // of a quantity, and a cell with one tracked individual claims as much attention as a
+    // hotspot with hundreds.
+    opacity: [
+      "interpolate",
+      ["linear"],
+      ["log10", ["max", ["get", "value"], 1]],
+      0,
+      0.3,
+      logMax * 0.5,
+      0.7,
+      logMax,
+      0.9,
     ] as ExpressionSpecification,
   };
 }
@@ -83,16 +72,7 @@ export async function addSurface(
   meta: LayerMeta,
   baseUrl: string,
 ): Promise<LoadedLayer> {
-  const [data, terms] = await Promise.all([
-    fetch(`${baseUrl}layers/${meta.name}.geojson`).then((r) => {
-      if (!r.ok) throw new Error(`${meta.name}: ${r.status}`);
-      return r.json() as Promise<GeoJSON.FeatureCollection>;
-    }),
-    fetch(`${baseUrl}layers/${meta.name}.meta.json`).then((r) => {
-      if (!r.ok) throw new Error(`${meta.name} terms: ${r.status}`);
-      return r.json() as Promise<LayerTerms>;
-    }),
-  ]);
+  const [data, terms] = await fetchLayer<GeoJSON.FeatureCollection>(baseUrl, meta.name);
 
   const maxValue = data.features.reduce(
     (best, feature) => Math.max(best, Number(feature.properties?.value ?? 0)),
@@ -103,12 +83,10 @@ export async function addSurface(
   map.addSource(sourceId, {
     type: "geojson",
     data,
-    attribution:
-      `<a href="${meta.landing_page}">${meta.title}</a> (${meta.licence}) — ` +
-      terms["dwc:dataGeneralizations"],
+    attribution: attributionFor(meta, terms),
   });
 
-  const { color, radius } = paint(maxValue);
+  const { color, radius, opacity } = paint(maxValue);
   map.addLayer({
     id: sourceId,
     type: "circle",
@@ -116,23 +94,18 @@ export async function addSurface(
     paint: {
       "circle-color": color,
       "circle-radius": radius,
-      "circle-opacity": 0.85,
+      "circle-opacity": opacity,
       "circle-blur": 0.35,
     },
   });
 
-  return { meta, terms, maxValue };
-}
-
-export function setSurfaceVisible(map: MapLibreMap, name: string, visible: boolean): void {
-  const id = `${SOURCE_PREFIX}${name}`;
-  if (map.getLayer(id)) {
-    map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
-  }
-}
-
-export async function loadManifest(baseUrl: string): Promise<LayerMeta[]> {
-  const response = await fetch(`${baseUrl}layers/manifest.json`);
-  if (!response.ok) return [];
-  return (await response.json()) as LayerMeta[];
+  return {
+    meta,
+    terms,
+    setVisible: (visible) => {
+      if (map.getLayer(sourceId)) {
+        map.setLayoutProperty(sourceId, "visibility", visible ? "visible" : "none");
+      }
+    },
+  };
 }

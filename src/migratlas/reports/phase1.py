@@ -13,7 +13,7 @@ import polars as pl
 
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan
-from migratlas.metrics.phenology import Season, passage_quantiles
+from migratlas.metrics.phenology import Season, passage_quantiles, passage_trends
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -116,32 +116,19 @@ def station_slopes(nights: pl.DataFrame, *, max_year: int) -> pl.DataFrame:
     sites = nights.group_by("station_id").agg(
         pl.col("station_latitude").first(), pl.col("station_longitude").first()
     )
-    usable = quantiles.filter(pl.col("q50_doy").is_not_null()).join(sites, on="station_id")
+    slopes = passage_trends(
+        quantiles,
+        columns=[f"q{int(q * 100)}_doy" for q in QUANTILES],
+        min_years=MIN_YEARS,
+    )
+    if slopes.is_empty():
+        return slopes
 
-    columns = [f"q{int(q * 100)}_doy" for q in QUANTILES]
-    rows: list[dict[str, object]] = []
-    for (station, season), group in usable.group_by(["station_id", "season"], maintain_order=True):
-        if group.height < MIN_YEARS:
-            continue
-        year = group["year"].to_numpy().astype(float)
-        centred = year - year.mean()
-        denominator = float((centred**2).sum())
-        if denominator == 0:
-            continue
-        for column in columns:
-            passage = group[column].to_numpy().astype(float)
-            slope = float((centred * (passage - passage.mean())).sum() / denominator)
-            rows.append(
-                {
-                    "station_id": station,
-                    "season": season,
-                    "quantile": column,
-                    "days_per_decade": slope * 10,
-                    "latitude": float(group["station_latitude"][0]),
-                    "flyway": flyway_of(float(group["station_longitude"][0])),
-                }
-            )
-    return pl.DataFrame(rows)
+    return slopes.join(sites, on="station_id").select(
+        pl.exclude("station_latitude", "station_longitude"),
+        pl.col("station_latitude").alias("latitude"),
+        pl.col("station_longitude").map_elements(flyway_of, return_dtype=pl.String).alias("flyway"),
+    )
 
 
 def _trend(label: str, values: pl.Series) -> Trend | None:

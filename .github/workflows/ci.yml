@@ -53,3 +53,15 @@ jobs:
       # build runs check-build, which asserts no bundle names an asset that was never
       # emitted. Both typecheck and build passed while the globe rendered nothing at all.
       - run: npm run build
+
+      - run: npx playwright install --with-deps chromium
+      # The only check that asks the map what it actually drew. Everything above passed during
+      # the release that rendered an empty canvas.
+      - run: npm test
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/test-results/
+          retention-days: 7

@@ -1,4 +1,4 @@
-import { layers, namedFlavor } from "@protomaps/basemaps";
+import { layers } from "@protomaps/basemaps";
 import {
   GlobeControl,
   Map as MapLibreMap,
@@ -6,6 +6,9 @@ import {
   ScaleControl,
   addProtocol,
   setWorkerUrl,
+  type LayerSpecification,
+  type SourceSpecification,
+  type StyleSpecification,
 } from "maplibre-gl";
 // MapLibre computes its own worker URL at runtime from a template string --
 // `new URL(`./${name}`, import.meta.url)` -- which no bundler can statically analyse, so the
@@ -20,6 +23,8 @@ import {
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Protocol } from "pmtiles";
 
+import { BORDER, COAST, EARTH_FLAVOR, LAND, OCEAN_COLOUR } from "./flavor";
+
 import "maplibre-gl/dist/maplibre-gl.css";
 
 setWorkerUrl(workerUrl);
@@ -27,15 +32,78 @@ setWorkerUrl(workerUrl);
 const ASSETS = "https://protomaps.github.io/basemaps-assets";
 
 /**
- * Protomaps' public demo tileset by default. Production self-hosts on object storage;
- * see ADR 0001 for why not on a Pages product.
+ * Optional detailed basemap, self-hosted.
+ *
+ * There is deliberately no default. Protomaps' public demo bucket refuses the CORS preflight
+ * for ranged requests -- a verified 403 `AccessForbidden` -- so it cannot load in any browser
+ * from any origin, and shipping it as the default meant every visitor met a basemap error. Set
+ * this to your own PMTiles URL on object storage; see ADR 0001.
  */
-const BASEMAP =
-  import.meta.env.VITE_BASEMAP_PMTILES ?? "https://demo-bucket.protomaps.com/v4.pmtiles";
+const DETAIL_PMTILES: string | undefined = import.meta.env.VITE_BASEMAP_PMTILES;
+
+/** Whether the globe has street-level detail, or only its own coastlines. */
+export type BasemapState = "detail" | "outline";
+
+/**
+ * Coastlines and borders, served from this app.
+ *
+ * Natural Earth 1:110m, ~210 KiB of geometry with every attribute stripped. It is the right
+ * resolution for a globe, and it removes the entire class of failure where a third-party tile
+ * host decides whether the map draws at all. Public domain, so it can simply be bundled.
+ */
+function outlineSources(baseUrl: string): Record<string, SourceSpecification> {
+  const attribution = '<a href="https://www.naturalearthdata.com/">Natural Earth</a>';
+  return {
+    land: { type: "geojson", data: `${baseUrl}basemap/land.geojson`, attribution },
+    borders: { type: "geojson", data: `${baseUrl}basemap/borders.geojson` },
+  };
+}
+
+function outlineLayers(): LayerSpecification[] {
+  return [
+    // Drawn beneath everything, so the sphere reads as a globe even before any data lands.
+    { id: "ocean", type: "background", paint: { "background-color": OCEAN_COLOUR } },
+    { id: "land", type: "fill", source: "land", paint: { "fill-color": LAND } },
+    {
+      id: "coast",
+      type: "line",
+      source: "land",
+      paint: { "line-color": COAST, "line-width": 0.7 },
+    },
+    {
+      id: "borders",
+      type: "line",
+      source: "borders",
+      paint: { "line-color": BORDER, "line-width": 0.5, "line-dasharray": [3, 2] },
+    },
+  ];
+}
+
+function style(baseUrl: string): StyleSpecification {
+  const base: StyleSpecification = {
+    version: 8,
+    projection: { type: "globe" },
+    sources: outlineSources(baseUrl),
+    layers: outlineLayers(),
+  };
+  if (!DETAIL_PMTILES) return base;
+
+  return {
+    ...base,
+    glyphs: `${ASSETS}/fonts/{fontstack}/{range}.pbf`,
+    sprite: `${ASSETS}/sprites/v4/light`,
+    sources: {
+      ...base.sources,
+      protomaps: { type: "vector", url: `pmtiles://${DETAIL_PMTILES}` },
+    },
+    // Above the outline, which then shows through only where detail tiles have not arrived.
+    layers: [...base.layers, ...layers("protomaps", EARTH_FLAVOR, { lang: "en" })],
+  };
+}
 
 let protocolRegistered = false;
 
-export function createGlobe(container: HTMLElement): MapLibreMap {
+export function createGlobe(container: HTMLElement, baseUrl: string): MapLibreMap {
   // The protocol is global to maplibre, so registering twice throws under HMR.
   if (!protocolRegistered) {
     addProtocol("pmtiles", new Protocol().tile);
@@ -44,28 +112,10 @@ export function createGlobe(container: HTMLElement): MapLibreMap {
 
   const map = new MapLibreMap({
     container,
-    style: {
-      version: 8,
-      glyphs: `${ASSETS}/fonts/{fontstack}/{range}.pbf`,
-      sprite: `${ASSETS}/sprites/v4/dark`,
-      sources: {
-        protomaps: {
-          type: "vector",
-          url: `pmtiles://${BASEMAP}`,
-          attribution:
-            '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>',
-        },
-      },
-      layers: [
-        // Drawn beneath everything, so the globe still reads as a globe when the basemap
-        // tiles are unavailable -- a self-hosted tileset may not be configured yet, and the
-        // data layers are useful without it. Without this the sphere is invisible and the
-        // failure looks like the whole app being broken.
-        { id: "ocean", type: "background", paint: { "background-color": "#0b1a2b" } },
-        ...layers("protomaps", namedFlavor("dark"), { lang: "en" }),
-      ],
-    },
-    center: [10, 30],
+    style: style(baseUrl),
+    // Facing the Atlantic: the Americas and western Europe/Africa are both in view, so the
+    // published layers are visible on the first frame rather than on the far side.
+    center: [-45, 25],
     zoom: 1.4,
     // Nothing here needs sub-metre detail, and capping zoom bounds tile memory.
     maxZoom: 12,
@@ -79,10 +129,18 @@ export function createGlobe(container: HTMLElement): MapLibreMap {
   map.addControl(new GlobeControl(), "bottom-right");
   map.addControl(new ScaleControl({ unit: "metric" }), "bottom-left");
 
-  // setProjection before the style loads throws, so it has to wait for the event.
-  map.once("style.load", () => {
-    map.setProjection({ type: "globe" });
-  });
-
   return map;
+}
+
+/**
+ * Resolve when the style is loaded, reporting how much basemap there is.
+ *
+ * Exists so the data layers wait in one place rather than in several `map.once` handlers, and
+ * so a test can tell "still loading" from "loaded and drew nothing" -- the distinction a
+ * blank-globe release once turned on.
+ */
+export function styleReady(map: MapLibreMap): Promise<BasemapState> {
+  const state: BasemapState = DETAIL_PMTILES ? "detail" : "outline";
+  if (map.isStyleLoaded()) return Promise.resolve(state);
+  return new Promise((resolve) => map.once("style.load", () => resolve(state)));
 }

@@ -141,6 +141,55 @@ def passage_quantiles(  # noqa: PLR0913 -- each argument is a distinct analysis 
     )
 
 
+def passage_trends(
+    quantiles: pl.DataFrame,
+    *,
+    group_by: Sequence[str] = ("station_id",),
+    columns: Sequence[str] = ("q50_doy",),
+    min_years: int = 15,
+) -> pl.DataFrame:
+    """Least-squares trend in passage date per series, season and quantile, in days per decade.
+
+    Ordinary least squares per series, deliberately: it is what Horton et al. fit, and a
+    replication that improves the estimator is no longer a replication. Pooling these slopes
+    across stations is the report's job, and a hierarchical model belongs there rather than
+    here.
+
+    Args:
+        quantiles: Output of :func:`passage_quantiles`.
+        group_by: Columns identifying a series.
+        columns: Which quantile columns to fit.
+        min_years: Series with fewer usable years yield no row at all. A slope over a handful
+            of years is dominated by whichever years happened to be observed.
+    """
+    keys = [*group_by, "season"]
+    usable = quantiles.filter(*(pl.col(column).is_not_null() for column in columns))
+    if usable.is_empty():
+        return pl.DataFrame()
+
+    rows: list[dict[str, object]] = []
+    for key_values, group in usable.group_by(keys, maintain_order=True):
+        if group.height < min_years:
+            continue
+        year = group["year"].to_numpy().astype(float)
+        centred = year - year.mean()
+        denominator = float((centred**2).sum())
+        if denominator == 0:
+            continue
+        for column in columns:
+            passage = group[column].to_numpy().astype(float)
+            slope = float((centred * (passage - passage.mean())).sum() / denominator)
+            rows.append(
+                {
+                    **dict(zip(keys, key_values, strict=True)),
+                    "quantile": column,
+                    "days_per_decade": slope * 10,
+                    "years": group.height,
+                }
+            )
+    return pl.DataFrame(rows)
+
+
 def _interpolated_crossing(doy: np.ndarray, magnitude: np.ndarray, quantile: float) -> float:
     """Day of year at which the cumulative curve reaches ``quantile`` of its total.
 

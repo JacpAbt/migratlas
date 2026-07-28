@@ -32,6 +32,11 @@ class ExportResult:
     generalization: str
     """The dwc:dataGeneralizations statement written alongside the data."""
 
+    @property
+    def features(self) -> int:
+        """Features written, so callers can report any export uniformly."""
+        return self.rows_out
+
 
 def snap_expr(column: str, grid_deg: float) -> pl.Expr:
     """Vectorised equivalent of :func:`migratlas.redact.snap_to_grid`.

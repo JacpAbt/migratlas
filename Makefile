@@ -137,6 +137,10 @@ web-dev:  ## Vite dev server
 web-build:  ## Production build
 	cd web && npm run build
 
+.PHONY: web-test
+web-test:  ## Browser smoke test -- asks the map what it actually drew
+	cd web && npm test
+
 .PHONY: clean
 clean:  ## Remove build/test caches (never touches the data lake)
 	rm -rf .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov dist
