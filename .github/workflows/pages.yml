@@ -30,6 +30,13 @@ jobs:
     defaults:
       run:
         working-directory: web
+    # Job-level, not per-step. A project site is served from /<repo>/, so every asset URL has to
+    # be rewritten -- and the smoke-test step runs `vite build` again through its webServer, which
+    # silently overwrote the subpath build with a root-path one and uploaded that. The live page
+    # then asked for /assets/index.js instead of /migratlas/assets/index.js and rendered nothing,
+    # with a green deploy. One variable for the whole job removes the possibility.
+    env:
+      VITE_BASE: /${{ github.event.repository.name }}/
     steps:
       - uses: actions/checkout@v5
 
@@ -41,16 +48,9 @@ jobs:
 
       - run: npm ci
 
-      # A project site is served from /<repo>/, so every asset and layer URL has to be
-      # rewritten. The app reads BASE_URL everywhere rather than hard-coding "/", so this one
-      # variable is the whole difference between local and deployed.
-      - name: Build for the project subpath
-        run: npm run build
-        env:
-          VITE_BASE: /${{ github.event.repository.name }}/
-
-      # The same suite CI runs, against the built bundle at the path it will be served from.
-      # The failure that shipped a blank globe was a bundling one, invisible until runtime.
+      # The same suite CI runs, against a build at the path it will be served from -- the suite's
+      # own webServer does the build, so this is the artifact that gets uploaded. The failure that
+      # shipped a blank globe was a bundling one, invisible until runtime.
       - run: npx playwright install --with-deps chromium
       - run: npm test
 

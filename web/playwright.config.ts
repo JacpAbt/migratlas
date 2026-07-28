@@ -13,7 +13,9 @@ const ORIGIN = `http://localhost:${PORT}`;
  * one that only exists locally — a subpath is otherwise exactly the kind of thing that passes in
  * CI and 404s in production.
  */
-const BASE = process.env.VITE_BASE ?? "/";
+// Trimmed for the same reason check-build trims it: `set VAR=x && cmd` on Windows
+// carries the trailing space into the value.
+const BASE = (process.env.VITE_BASE ?? "/").trim();
 
 export default defineConfig({
   testDir: "tests",

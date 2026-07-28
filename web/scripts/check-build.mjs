@@ -14,6 +14,14 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
 
+/**
+ * Where this build expects to be served from. Must match the deploy's VITE_BASE.
+ *
+ * Trimmed: `set VAR=value && cmd` on Windows puts the space before `&&` into the value, and a
+ * base of "/migratlas/ " fails in ways that look nothing like a stray space.
+ */
+const BASE = (process.env.VITE_BASE ?? "/").trim();
+
 const DIST = "dist";
 const ASSETS = join(DIST, "assets");
 
@@ -80,6 +88,28 @@ for (const worker of workers) {
   const external = imports.filter((target) => target.startsWith(".") || target.startsWith("/"));
   if (external.length > 0) {
     fail(`${worker} still imports ${external.join(", ")} — use ?worker&url so deps are bundled`);
+  }
+}
+
+// 4. index.html must reference its assets at the base it was built for. A subpath deploy that
+//    rebuilds without VITE_BASE emits /assets/index.js instead of /migratlas/assets/index.js:
+//    every asset 404s, the page is blank, and the deploy is green. That shipped once.
+const html = readFileSync(join(DIST, "index.html"), "utf8");
+const referenced = [...html.matchAll(/(?:src|href)="([^"]+)"/g)]
+  .map(([, url]) => url)
+  .filter((url) => url.includes("/assets/"));
+
+if (referenced.length === 0) {
+  fail("index.html references no assets at all");
+} else {
+  const wrong = referenced.filter((url) => !url.startsWith(`${BASE}assets/`));
+  if (wrong.length > 0) {
+    fail(
+      `index.html references ${wrong.join(", ")} but this build is based at "${BASE}". ` +
+        "Every asset would 404 and the page would render nothing. Set VITE_BASE for the build.",
+    );
+  } else {
+    console.log(`check-build: ${referenced.length} asset references match base "${BASE}"`);
   }
 }
 

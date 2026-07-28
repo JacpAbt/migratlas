@@ -5,7 +5,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
 
   return {
-    base: env.VITE_BASE ?? "/",
+    // Trimmed: `set VAR=value && cmd` on Windows carries the trailing space into the value.
+    base: (env.VITE_BASE ?? "/").trim(),
     // MapLibre must not be pre-bundled. Its ESM worker is referenced relatively, and the dep
     // optimiser rewrites the import so maplibre-gl-worker.mjs 404s in dev. MapLibre then
     // silently does nothing: sources never finish loading, no tiles are requested, and the
