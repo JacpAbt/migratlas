@@ -13,7 +13,7 @@ from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
 from migratlas.ingest import darkecology, megamove
-from migratlas.reports import phase1
+from migratlas.reports import phase1, phase1_robustness
 from migratlas.taxonomy import index as taxon_index
 
 app = typer.Typer(
@@ -62,6 +62,13 @@ def report_phase1() -> None:
     """Replicate Horton et al. 2020 passage phenology, then extend to 2025."""
     logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
     print(phase1.render())
+
+
+@report_app.command("phase1-robustness")
+def report_phase1_robustness() -> None:
+    """Break-specification sensitivity, daytime placebo and permutation null."""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
+    print(phase1_robustness.render())
 
 
 @catalog_app.command("list")

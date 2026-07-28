@@ -66,13 +66,17 @@ class Trend:
         )
 
 
-def load_conus_nights() -> pl.DataFrame:
-    """Nightly filtered reflectivity traffic for contiguous-US stations."""
+def load_conus_traffic(window_kind: str = "night") -> pl.DataFrame:
+    """Filtered reflectivity traffic for contiguous-US stations, for one window kind.
+
+    ``window_kind="day"`` gives the placebo series: nocturnal migration does not happen by
+    day, so a trend there points at the instrument or the processing rather than at birds.
+    """
     lake = get_settings().lake_dir / "flux"
     return (
         pl.scan_parquet(f"{lake}/**/*.parquet")
         .filter(
-            pl.col("window_kind") == "night",
+            pl.col("window_kind") == window_kind,
             pl.col("quantity") == "reflectivity_traffic",
             pl.col("station_latitude").is_between(*CONUS_LAT),
             pl.col("station_longitude").is_between(*CONUS_LON),
@@ -179,7 +183,7 @@ def summarise(slopes: pl.DataFrame, *, bands: Sequence[tuple[int, int]]) -> list
 
 def render() -> str:
     """Run both windows and render the comparison."""
-    nights = load_conus_nights()
+    nights = load_conus_traffic()
     bands = ((24, 32), (32, 37), (37, 42), (42, 50))
 
     out = [

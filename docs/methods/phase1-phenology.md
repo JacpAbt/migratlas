@@ -1,6 +1,6 @@
 # Phase 1a — nocturnal passage phenology from weather radar
 
-**Status:** replication complete, extension provisional · 2026-07-28
+**Status:** replication complete; extension robustness-tested · 2026-07-28
 
 Reproduce a published continental result first, then extend it. The published result is
 [Horton et al. 2020, *Phenology of nocturnal avian migration has shifted at the continental
@@ -58,33 +58,79 @@ reproduce. The most likely cause is the data product: `traffic` is reflectivity-
 so it responds to the size distribution of scatterers as well as their number, and autumn
 carries proportionally more insect biomass than spring.
 
-## Extension to 2025, and why it is provisional
+## Extension to 2025
 
 | | 1995–2018 | 1995–2025 |
 | --- | --- | --- |
 | Spring q50 | −0.48 ± 0.32 | **−0.11 ± 0.22** |
 | Autumn q50 | −0.23 ± 0.31 | **−0.46 ± 0.25** |
 
-Adding seven years attenuates the spring advance and strengthens the autumn one. That is a
-genuinely new observation, and it is the reason for extending a published analysis at all.
-It is **not yet a finding**, for reasons that are all fixable and none of which are
-cosmetic:
+Adding seven years attenuates the spring advance and strengthens the autumn one.
 
-1. **The dual-polarisation break is unmodelled.** Every NEXRAD station was upgraded between
-   March 2011 and June 2013. That is an instrument change in the middle of the series which
-   can manufacture or mask a trend. The daily product does not label hardware generation, so
-   per-station upgrade dates have to come from NOAA's Radar Operations Center. Until that
-   term is in the model, any trend spanning 2011–2013 is confounded.
-2. **Station coverage is not constant.** Reporting stations rise from 104 in 1995 to 159 by
-   2017. Per-station OLS is robust to this in the sense that each station is its own series,
-   but the *average across stations* changes composition over time.
-3. **No hierarchical model.** Averaging per-station slopes weights a station with 15 usable
-   years the same as one with 31, and discards the latitude structure the paper models with
-   a GAMM. Station random effects and a latitude interaction are needed.
-4. **The extension is not blind.** An exploratory pass over the full 1995–2025 series was
-   run *before* the target method was known, so the extension result was seen before the
-   analysis was frozen. The 1995–2018 replication is unaffected — its target was published
-   in advance — but the extension carries this caveat permanently and honestly.
+## Robustness (`make phase1-robustness`)
+
+The dual-polarisation upgrade dates are not publicly available per station. NOAA's Radar
+Operations Center hosts the deployment schedule behind a login, and the site refuses
+anonymous connections. So rather than assert dates, the analysis reports the trend under
+**four treatments of the break** and asks whether the answer depends on the choice.
+
+Upgrade dates were also *recovered* from data-availability gaps — each radar went offline
+for roughly a week to be fitted, and detecting that uses only whether records exist, never
+their values, so it cannot import the trend it controls for. This matched the one
+documented non-beta station exactly (KBGM, detected 2012-04-02 against a documented week of
+2–7 April 2012), produced a median 7-day outage, and gave a fleet-wide distribution peaking
+across 2011Q4–2013Q1 as documented. **But it could not be validated**: the five documented
+beta sites show *no* gap near their published modification dates, so those dates evidently
+refer to something other than an archive outage. The detected dates are therefore treated
+as one specification among four, never as ground truth.
+
+| Specification | Spring | Autumn |
+| --- | --- | --- |
+| No break term | −0.11 ± 0.22 | −0.46 ± 0.25 |
+| Break at detected outage | +0.15 ± 0.40 | −1.10 ± 0.36 |
+| Common break at 2012 | +0.26 ± 0.41 | −1.08 ± 0.35 |
+| Transition 2011–2013 dropped | −0.13 ± 0.22 | −0.51 ± 0.21 |
+
+| Falsification test | Result | Reading |
+| --- | --- | --- |
+| Permutation null (year labels shuffled within station) | spring [−0.16, +0.18], autumn [−0.18, +0.19] | autumn is outside; **spring is inside** |
+| Placebo: daytime window | spring +0.00 ± 0.58, autumn −0.69 ± 0.65 | autumn **not clean** — but see below |
+| Placebo: mid-winter nights (doy 1–45) | −0.21 ± 0.35 | pipeline does **not** manufacture large trends |
+
+## What this supports
+
+**Spring: no detectable trend over 1995–2025.** The estimate sits inside the permutation
+null and flips sign depending on the break specification. The 1995–2018 advance that
+replicates Horton et al. does not persist when 2019–2025 is added. That is a statement about
+the extended window, not a contradiction of their result.
+
+**Autumn: an advance that survives every specification, with uncertain magnitude.** All four
+break treatments are negative with intervals excluding zero, the estimate lies outside the
+permutation null, and the mid-winter placebo is clean. Magnitude is genuinely uncertain,
+−0.46 to −1.10 d/decade: adding a break term roughly doubles it, which suggests the upgrade
+imposed a level shift that partly *masked* the underlying trend.
+
+The daytime placebo is the weak point. Autumn daytime passage trends at −0.69 ± 0.65, as
+large as the night signal. That would be damning if daytime aerial biomass were zero — but
+it is not. Diurnal migrants exist, and insect biomass is substantial and strongly diurnal,
+especially in autumn. So the daytime trend may be real biology rather than an instrument
+artefact, and this test cannot currently distinguish the two. That is why the mid-winter
+placebo was added: it holds the instrument and pipeline fixed while removing the migration
+entirely, and it comes back clean.
+
+## Remaining limitations
+
+1. **No hierarchical model.** Averaging per-station slopes weights a station with 15 usable
+   years the same as one with 31 and discards the latitude structure the paper models with a
+   GAMM. R is unavailable on the development machine (no `sudo`, and `glmmTMB` needs a system
+   R), so this will use `statsmodels` mixed models — weaker than a GAMM, and to be labelled
+   as such.
+2. **Station composition changes.** Reporting stations rise from 104 in 1995 to 159 by 2017.
+3. **The extension is not blind.** An exploratory pass over the full series ran *before* the
+   target method was known. The 1995–2018 replication is unaffected — its target was
+   published in advance — but the extension carries this permanently.
+4. **Insects are not separable.** The single largest interpretive limit, and the reason the
+   daytime placebo is ambiguous.
 
 ## What the signal is, and is not
 
@@ -96,11 +142,9 @@ on any biological interpretation.
 
 ## Next, in order
 
-1. Per-station dual-polarisation upgrade dates, as a break term.
-2. Hierarchical model: station random effects, latitude interaction, coverage weighting.
-3. Falsification tests — the day-window placebo (a trend in *daytime* passage indicates the
-   instrument, not migration) and year-shuffled nulls.
-4. Independent cross-check against eBird Status & Trends phenology.
+1. Hierarchical model: station random effects, latitude interaction, coverage weighting.
+2. Independent cross-check against eBird Status & Trends phenology, which would also help
+   adjudicate the insect question — eBird is birds only.
 
 ## Reproduce
 
