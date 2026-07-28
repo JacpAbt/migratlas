@@ -68,6 +68,8 @@ class TrendFit:
     """Extra days per decade for each degree of latitude north, if latitude was included."""
     break_shift: Estimate | None
     """Level shift in days attributed to the instrument change, if a break was modelled."""
+    curvature: Estimate | None
+    """Quadratic term in decades, if one was fitted. Nonzero means the trend is not linear."""
     site_sd: float
     """Between-site spread in baseline passage date, in days."""
     converged: bool
@@ -80,6 +82,8 @@ class TrendFit:
         ]
         if self.per_decade_per_degree:
             lines.append(f"  {self.per_decade_per_degree}")
+        if self.curvature:
+            lines.append(f"  {self.curvature}")
         if self.break_shift:
             lines.append(f"  {self.break_shift}")
         lines.append(f"  between-site sd {self.site_sd:.1f} d")
@@ -96,6 +100,7 @@ def fit_passage_trend(  # noqa: PLR0913 -- every argument is an analysis choice 
     response: str = "q50_doy",
     latitude: str | None = "station_latitude",
     break_year: int | None = None,
+    curvature: bool = False,
     random_slopes: bool = True,
 ) -> TrendFit:
     """Fit ``response ~ year (x latitude) (+ break)`` with site random effects.
@@ -112,6 +117,10 @@ def fit_passage_trend(  # noqa: PLR0913 -- every argument is an analysis choice 
             instrument change that raises measured passage everywhere would otherwise be read
             as a trend. Its coefficient is reported so a reader can see how much the fit
             attributes to hardware rather than to animals.
+        curvature: Add a quadratic in time. Worth fitting whenever a break term is large,
+            because a linear-plus-step model fitted to a curved series parks a spurious step
+            near the middle of the record -- and a mid-record break year is exactly where an
+            instrument-upgrade dummy tends to sit.
         random_slopes: Let each site have its own trend as well as its own baseline. On by
             default: without it, a site whose timing genuinely moved differently is forced to
             share the population slope, and the population standard error comes out too small.
@@ -148,6 +157,9 @@ def fit_passage_trend(  # noqa: PLR0913 -- every argument is an analysis choice 
     if latitude is not None:
         design = design.with_columns(lat=pl.col(latitude) - LATITUDE_ORIGIN)
         terms += ["lat", "decade:lat"]
+    if curvature:
+        design = design.with_columns(decade2=pl.col("decade") ** 2)
+        terms.append("decade2")
     if break_year is not None:
         design = design.with_columns(post=(pl.col("year") >= break_year).cast(pl.Float64))
         terms.append("post")
@@ -194,6 +206,7 @@ def fit_passage_trend(  # noqa: PLR0913 -- every argument is an analysis choice 
         per_decade=per_decade,
         per_decade_per_degree=estimate("decade:lat", "d/decade per degree N"),
         break_shift=estimate("post", "instrument shift (days)"),
+        curvature=estimate("decade2", "curvature (d/decade^2)"),
         # Variance of the random intercept, reported as a standard deviation in days.
         site_sd=float(np.sqrt(max(result.cov_re.iloc[0, 0], 0.0))),
         converged=bool(result.converged),

@@ -20,6 +20,7 @@ from migratlas.metrics import breaks
 from migratlas.metrics.phenology import Season, passage_quantiles
 from migratlas.reports.phase1 import (
     AUTUMN,
+    LATITUDE_BANDS,
     MIN_COVERAGE,
     MIN_NIGHTS,
     MIN_YEARS,
@@ -45,6 +46,10 @@ PERMUTATIONS: Final = 200
 # have a phenology. A trend here of comparable size would mean the pipeline manufactures
 # trends, which is decisive in a way the daytime placebo is not.
 MIDWINTER: Final = Season("midwinter", 1, 45)
+
+# How close to the window edge counts as clipped. A week: passage-date quantiles move a few
+# days per decade, so anything nearer than that is uninformative about timing.
+EDGE_DAYS: Final = 7
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,6 +104,57 @@ def seasonal_series(
     )
     sites = nights.group_by("station_id").agg(pl.col("station_latitude").first())
     return quantiles.filter(pl.col("q50_doy").is_not_null()).join(sites, on="station_id")
+
+
+def window_truncation(nights: pl.DataFrame, *, max_year: int) -> list[str]:
+    """Test whether the autumn window clips passage at low latitudes.
+
+    The hierarchical model's break coefficient is +2.2 days at 24-32N and +0.0 at 42-50N. A
+    hardware upgrade cannot do that, so something else is riding on the 2012 dummy in the
+    south, and the obvious candidate is the window: 213-334 doy was chosen for northern
+    passage, and if southern autumn passage runs past day 334 the q90 has nowhere to go.
+
+    A clipped series shows up as q90 piling up against the window edge. Result: it does not --
+    0.0% in every band and era -- so the window is NOT the explanation, and this function stays
+    as the record of a refuted hypothesis. The panel-composition test in phase1_hierarchical is
+    the one that found the cause.
+    """
+    quantiles = passage_quantiles(
+        nights.filter(pl.col("timestamp").dt.year() <= max_year),
+        spec_for(EvidenceType.FLUX),
+        seasons=[AUTUMN],
+        quantiles=[0.9],
+        min_coverage=MIN_COVERAGE,
+        min_observations=MIN_NIGHTS,
+    )
+    sites = nights.group_by("station_id").agg(pl.col("station_latitude").first())
+    frame = (
+        quantiles.filter(pl.col("q90_doy").is_not_null())
+        .join(sites, on="station_id")
+        .with_columns(
+            clipped=pl.col("q90_doy") >= AUTUMN.end_doy - EDGE_DAYS,
+            era=pl.when(pl.col("year") >= FLEET_MIDPOINT_YEAR)
+            .then(pl.lit("post"))
+            .otherwise(pl.lit("pre")),
+        )
+    )
+
+    lines = [
+        f"  q90 within {EDGE_DAYS} d of the window end (day {AUTUMN.end_doy}), by band and era:",
+        "    band       pre-2012   2012+   n",
+    ]
+    for low, high in LATITUDE_BANDS:
+        band = frame.filter(pl.col("station_latitude").is_between(low, high, closed="left"))
+        if band.is_empty():
+            continue
+        shares = {
+            era: band.filter(pl.col("era") == era)["clipped"].to_numpy().mean()
+            for era in ("pre", "post")
+        }
+        lines.append(
+            f"    {low}-{high}N     {shares['pre']:>6.1%}  {shares['post']:>6.1%}  {band.height:>5}"
+        )
+    return lines
 
 
 def specification_estimates(
@@ -208,6 +264,16 @@ def render(max_year: int = 2025) -> str:
         out += ["", "=" * 74, f"{season}: dual-polarisation break sensitivity", "=" * 74]
         for estimate in specification_estimates(night_series, break_dates, season):
             out.append(f"  {estimate}")
+
+    out += [
+        "",
+        "=" * 74,
+        "autumn window truncation, by latitude",
+        "=" * 74,
+        "  Why: the hierarchical fit puts a +2.2 d instrument break at 24-32N and +0.0 d at",
+        "  42-50N. Hardware cannot do that, so something else rides on the 2012 dummy there.",
+    ]
+    out += window_truncation(nights, max_year=max_year)
 
     # Placebo 1: the daytime window. Weaker than it first appears -- daytime aerial biomass
     # is not zero (diurnal migrants, and insects especially in autumn), so a daytime trend

@@ -155,22 +155,46 @@ shifted measured autumn passage about a day *later*, which had been masking the 
 break coefficient is the same size in both windows, which is what a real hardware step should
 look like.
 
-**But the break is not latitude-invariant, and that is a problem.** Fitting the same model
-inside each latitude band (extension window, autumn):
+**But the break is not latitude-invariant.** Fitting the same model inside each latitude band
+(extension window, autumn), and again with a quadratic in time added:
 
-| Band | d/decade | Break |
-| --- | --- | --- |
-| 24–32°N | −0.99 ± 1.02 | +2.16 |
-| 32–37°N | −1.53 ± 0.70 | +1.80 |
-| 37–42°N | −0.74 ± 0.59 | +0.68 |
-| 42–50°N | −0.64 ± 0.65 | +0.01 |
+| Band | d/decade | Break | + curvature | Break |
+| --- | --- | --- | --- | --- |
+| 24–32°N | −0.99 ± 1.02 | +2.16 | −0.96 | +2.07 |
+| 32–37°N | −1.53 ± 0.70 | +1.80 | −1.53 | +1.75 |
+| 37–42°N | −0.74 ± 0.59 | +0.68 | −0.72 | +0.60 |
+| 42–50°N | −0.64 ± 0.65 | +0.01 | −0.65 | +0.04 |
 
-A hardware upgrade should not move passage date by two days in Florida and not at all in
-Minnesota. In the southern bands that dummy is absorbing something else, most likely season
-truncation: 213–334 doy is a northern-migration window, and at 24–32°N autumn passage runs
-past its end, so any change in how that tail is captured lands on a year-2012 step. **The
-defensible claim is therefore an autumn advance of roughly 0.6–0.7 d/decade at 37–50°N, where
-the break coefficient is near zero — not the continent-wide −1.03.**
+A hardware upgrade cannot move passage date by two days in Florida and not at all in Minnesota,
+so three explanations were tested. **All three failed**, and the failures are the useful part:
+
+1. **Window truncation — refuted.** The obvious candidate: 213–334 doy is a northern-migration
+   window, so if southern autumn passage ran past its end the q90 would have nowhere to go.
+   `make phase1-robustness` reports the share of station-years whose autumn q90 falls within a
+   week of the window edge, by band and era. It is **0.0% everywhere**, pre- and post-2012. The
+   window does not clip. This explanation was asserted in this document before it was tested,
+   and was wrong.
+2. **Panel composition — refuted.** A site whose record begins after 2012 contributes to the
+   post era only, so the dummy could be identified off which sites were present rather than off
+   change at the ones that were — and the network grew from 104 stations to 159. Restricting to
+   sites reporting on both sides of 2012 drops 0–1 stations per band and moves the break from
+   +2.16 to +2.17.
+3. **Curvature — refuted on the full record, decisive on the short one.** A linear-plus-step
+   model fitted to a curved series parks a spurious step near the middle of the record, and 2012
+   is almost exactly the midpoint of 1995–2025. Adding a quadratic changes the extension-window
+   estimates by less than 0.1 d, as the table shows. On the **1995–2018** window the same test
+   is catastrophic: the 24–32°N break goes +2.04 → −1.45 and its trend flips −0.58 → +1.13.
+   With 24 years the step and the quadratic are not separately identified, so *no* band-level
+   number from the replication window should be read.
+
+On the full record the latitude-graded step therefore survives every explanation available. That
+means **calling it "the instrument" is not justified** — it may be a real step in southern autumn
+passage. It is not attributable either way, and a coefficient that is not attributable cannot be
+adjusted away.
+
+**The defensible claim is an autumn advance of roughly 0.6–0.7 d/decade at 37–50°N**, where the
+step is near zero and the estimate is stable across break specification, curvature and panel
+balance. The continent-wide −1.03 rests on southern bands whose step is unexplained.
 
 The linear `decade:latitude` interaction is null in every fit (p 0.29–0.59). That is a
 statement about functional form rather than about latitude: the band fits are non-monotonic —
@@ -183,9 +207,10 @@ about the error structure, which a panel of 145 spatially correlated stations pl
 
 ## Remaining limitations
 
-1. **The southern autumn trend is not separable from the instrument.** See the band table
-   above. Resolving it needs a season window defined per latitude, which is a change to the
-   pre-registered method and so belongs in a fresh pre-registration rather than a patch.
+1. **The southern autumn step is unexplained.** Not truncation, not composition, not
+   curvature. Distinguishing a hardware step from a biological one needs an independent
+   measurement of the same seasons, which is what the eBird cross-check is for — there is no
+   NEXRAD in eBird.
 2. **Station composition changes.** Reporting stations rise from 104 in 1995 to 159 by 2017.
 3. **The extension is not blind.** An exploratory pass over the full series ran *before* the
    target method was known. The 1995–2018 replication is unaffected — its target was
