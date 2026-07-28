@@ -28,9 +28,15 @@ interface Hook {
   };
 }
 
-/** Load the app and wait for it to declare its layers added. */
+/**
+ * Load the app and wait for it to declare its layers added.
+ *
+ * Relative, not "/?debug=1": a leading slash replaces the whole path of baseURL, which lands on
+ * the origin root instead of the project subpath. `vite preview` happens to redirect the root to
+ * its base, so an absolute path passes locally and would fetch somebody else's site on Pages.
+ */
 async function ready(page: Page): Promise<ReadyReport> {
-  await page.goto("/?debug=1");
+  await page.goto("?debug=1");
   return page.evaluate(() => (window as unknown as Hook).migratlas.ready);
 }
 
@@ -199,10 +205,17 @@ test("the published layers stay inside the performance budget", async ({ page })
   const readyMs = Date.now() - started;
   await focusOn(page, report, "aerial-passage", "series-aerial-passage");
 
+  // Collect first. usedJSHeapSize counts garbage that simply has not been swept yet, and the
+  // same run measured 45 MB and 141 MB on consecutive attempts -- a gate that bimodal fails at
+  // random, which is worse than no gate. What the README promises is steady-state retained heap,
+  // and that is what a collection makes observable.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("HeapProfiler.collectGarbage");
   const heapMb = await page.evaluate(() => {
     const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
     return memory ? memory.usedJSHeapSize / 1_048_576 : 0;
   });
+  await cdp.detach();
 
   const layerBytes = (await Promise.all(sizes)).reduce((sum, n) => sum + n, 0);
 
@@ -227,7 +240,7 @@ test("a gridded layer decodes to the cell count its sidecar declares", async ({ 
   const report = await ready(page);
   for (const name of ["marine-space-use", "marine-taxa-recorded"]) {
     const meta = await page.request
-      .get(`/layers/${name}.meta.json`)
+      .get(`layers/${name}.meta.json`)
       .then((r) => r.json() as Promise<{ cells: number; format: string }>);
     expect(meta.format).toBe("grid");
 

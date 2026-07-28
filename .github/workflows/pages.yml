@@ -1,0 +1,62 @@
+name: Deploy the globe
+
+# Only after CI has passed on main. A deploy that races the test suite can publish a globe
+# that renders nothing, which this project has already done once.
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, and never cancel one mid-flight: a half-published site is worse than
+# an out-of-date one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      # A project site is served from /<repo>/, so every asset and layer URL has to be
+      # rewritten. The app reads BASE_URL everywhere rather than hard-coding "/", so this one
+      # variable is the whole difference between local and deployed.
+      - name: Build for the project subpath
+        run: npm run build
+        env:
+          VITE_BASE: /${{ github.event.repository.name }}/
+
+      # The same suite CI runs, against the built bundle at the path it will be served from.
+      # The failure that shipped a blank globe was a bundling one, invisible until runtime.
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: web/dist
+      - id: deploy
+        uses: actions/deploy-pages@v4
