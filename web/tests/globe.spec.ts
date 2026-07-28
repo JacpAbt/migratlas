@@ -124,11 +124,11 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
   await focusOn(page, report, "aerial-passage", id);
 
   // The week lives inside the filter expression, which is the whole point of the design: the
-  // clock moves an index, it never touches the source.
+  // clock swaps which property the layer reads, it never touches the source.
   const weekIndex = (): Promise<string> =>
     page.evaluate((layer) => {
       const filter = (window as unknown as Hook).migratlas.map.getFilter(layer);
-      return JSON.stringify(filter).match(/"at",(\d+)/)?.[1] ?? "";
+      return JSON.stringify(filter).match(/"w(\d+)"/)?.[1] ?? "";
     }, id);
   // Counting requests rather than inspecting MapLibre's internals: the requirement is that a
   // week change costs no fetch, and that is exactly what the network says.

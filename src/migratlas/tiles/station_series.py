@@ -4,6 +4,13 @@ The globe animates by changing a MapLibre filter or paint expression, never by r
 layer (ADR 0002). That dictates the shape: a station is one feature, and its 52 weekly values
 are properties on it, so a week change is an expression evaluation rather than a fetch.
 
+One scalar property per week -- ``w0`` to ``w51`` -- rather than a single array. MapLibre hands
+array-valued properties to the paint path natively and to the query path as a JSON string, so an
+``["at", week, ["get", "weeks"]]`` filter passed while drawing and failed while querying: the
+layer rendered 161 stations that queryRenderedFeatures could not see. Scalars round-trip
+identically in both paths. A week with no data omits its key entirely, which makes the filter a
+plain ``["has", "w30"]`` and removes any need to encode null at all.
+
 Thirty years of nightly values would be ~11,000 properties per station, so the series is
 reduced to a weekly climatology. That is a deliberate loss: the globe shows the seasonal
 cycle, and anyone wanting a specific night should be querying the lake, not a map layer.
@@ -123,8 +130,13 @@ def export_station_series(  # noqa: PLR0913 -- the clearance and column roles ar
         ordered = group.sort("week")
         weeks = np.full(WEEKS, np.nan)
         weeks[ordered["week"].to_numpy()] = ordered["median"].to_numpy()
-        # Nulls survive as JSON nulls so a gap reads as "no data" rather than as zero passage.
-        values = [None if np.isnan(v) else round(float(v), 1) for v in weeks]
+        # A missing week omits its key rather than carrying a null, so "no data" and "no
+        # passage" cannot be confused by a reader or by a MapLibre expression.
+        values = {
+            f"w{index}": round(float(value), 1)
+            for index, value in enumerate(weeks)
+            if not np.isnan(value)
+        }
         observed = ordered["years"].to_numpy()
         features.append(
             {
@@ -138,8 +150,9 @@ def export_station_series(  # noqa: PLR0913 -- the clearance and column roles ar
                 },
                 "properties": {
                     "station": station,
-                    "weeks": values,
-                    "peak": max((v for v in values if v is not None), default=None),
+                    **values,
+                    "weeks_present": len(values),
+                    "peak": max(values.values(), default=None),
                     "years": int(observed.max()) if observed.size else 0,
                     **{name: ordered[name].to_list()[0] for name in extra},
                 },

@@ -10,38 +10,41 @@ import {
   type LoadedLayer,
 } from "./types";
 
+/**
+ * A station feature. Weekly values arrive as scalar `w0`..`w51` properties, present only for
+ * weeks that have data.
+ */
 interface SeriesProperties {
   station: string;
-  /** 52 weekly values; null where the instrument has no data for that week of year. */
-  weeks: (number | null)[];
   peak: number | null;
   years: number;
+  weeks_present: number;
   autumn_shift_days_per_decade?: number | null;
   trend_years?: number | null;
+  [week: `w${number}`]: number | undefined;
 }
+
+const WEEKS = 52;
+const weekKey = (week: number): string => `w${week}`;
 
 const SOURCE_PREFIX = "series-";
 
+/** The value at the clock's week. A plain property lookup, evaluated per feature per frame. */
+const valueAt = (week: number): ExpressionSpecification => ["to-number", ["get", weekKey(week)]];
+
 /**
- * The value at the clock's week, as a MapLibre expression.
+ * A gap must read as "not measured", so the station is not drawn rather than drawn at zero.
  *
- * `to-number` rather than the raw lookup because a gap is published as JSON null, which is not
- * a number MapLibre can interpolate. Stations at a gap are filtered out entirely instead, so
- * the coercion to 0 never reaches a paint property.
+ * `has` on a scalar key, not a lookup into an array property: MapLibre hands arrays to the paint
+ * path natively and to the query path as a JSON string, so an array-based filter drew 161
+ * stations that queryRenderedFeatures reported as zero.
  */
-const valueAt = (week: number): ExpressionSpecification => [
-  "to-number",
-  ["at", week, ["get", "weeks"]],
-];
+const hasValueAt = (week: number): ExpressionSpecification => ["has", weekKey(week)];
 
-/** A gap must read as "not measured", so the station is not drawn rather than drawn at zero. */
-const hasValueAt = (week: number): ExpressionSpecification => [
-  "!=",
-  ["to-string", ["at", week, ["get", "weeks"]]],
-  "",
-];
-
-function paint(maxValue: number): {
+function paint(
+  maxValue: number,
+  atWeek: number,
+): {
   color: ExpressionSpecification;
   radius: ExpressionSpecification;
 } {
@@ -54,7 +57,7 @@ function paint(maxValue: number): {
     color: [
       "interpolate",
       ["linear"],
-      week(0),
+      week(atWeek),
       ...WARM_RAMP.flatMap((colour, index) => [
         (logMax * index) / (WARM_RAMP.length - 1),
         colour,
@@ -65,9 +68,9 @@ function paint(maxValue: number): {
       ["linear"],
       ["zoom"],
       1,
-      ["interpolate", ["linear"], week(0), 0, 2, logMax, 7],
+      ["interpolate", ["linear"], week(atWeek), 0, 2, logMax, 7],
       6,
-      ["interpolate", ["linear"], week(0), 0, 5, logMax, 22],
+      ["interpolate", ["linear"], week(atWeek), 0, 5, logMax, 22],
     ] as ExpressionSpecification,
   };
 }
@@ -87,10 +90,10 @@ export async function addSeries(
 ): Promise<LoadedLayer> {
   const [data, terms] = await fetchLayer<GeoJSON.FeatureCollection>(baseUrl, meta.name);
 
-  const maxValue = data.features.reduce((best, feature) => {
-    const weeks = (feature.properties as SeriesProperties | null)?.weeks ?? [];
-    return Math.max(best, ...weeks.map((value) => value ?? 0));
-  }, 1);
+  const maxValue = data.features.reduce(
+    (best, feature) => Math.max(best, Number((feature.properties as SeriesProperties)?.peak ?? 0)),
+    1,
+  );
 
   const id = `${SOURCE_PREFIX}${meta.name}`;
   map.addSource(id, { type: "geojson", data, attribution: attributionFor(meta, terms) });
@@ -108,14 +111,14 @@ export async function addSeries(
     },
   });
 
-  const template = paint(maxValue);
   let current = -1;
   const showWeek = (week: number): void => {
     if (week === current) return;
     current = week;
+    const { color, radius } = paint(maxValue, week);
     map.setFilter(id, hasValueAt(week));
-    map.setPaintProperty(id, "circle-color", substitute(template.color, week));
-    map.setPaintProperty(id, "circle-radius", substitute(template.radius, week));
+    map.setPaintProperty(id, "circle-color", color);
+    map.setPaintProperty(id, "circle-radius", radius);
   };
   showWeek(initialWeek);
 
@@ -135,22 +138,6 @@ export async function addSeries(
   };
 }
 
-/**
- * Rewrite a template expression's week index.
- *
- * The alternative is rebuilding the expression per week, which means re-deriving the colour
- * stops from the data every time the clock ticks. The template is built once and only the
- * index moves.
- */
-function substitute(expression: ExpressionSpecification, week: number): ExpressionSpecification {
-  const walk = (node: unknown): unknown => {
-    if (!Array.isArray(node)) return node;
-    if (node[0] === "at" && typeof node[1] === "number") return ["at", week, node[2]];
-    return node.map(walk);
-  };
-  return walk(expression) as ExpressionSpecification;
-}
-
 function attachPopup(
   map: MapLibreMap,
   id: string,
@@ -163,10 +150,7 @@ function attachPopup(
     const feature = event.features?.[0];
     if (!feature) return;
     const properties = feature.properties as unknown as SeriesProperties;
-    // GeoJSON arrays survive a MapLibre round-trip as JSON strings.
-    const weeks: (number | null)[] =
-      typeof properties.weeks === "string" ? JSON.parse(properties.weeks) : properties.weeks;
-    popup.setLngLat(event.lngLat).setHTML(summary(properties, weeks, week(), meta)).addTo(map);
+    popup.setLngLat(event.lngLat).setHTML(summary(properties, week(), meta)).addTo(map);
   });
 
   map.on("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer"));
@@ -180,17 +164,15 @@ function weekLabel(week: number): string {
   return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}`;
 }
 
-function summary(
-  properties: SeriesProperties,
-  weeks: (number | null)[],
-  week: number,
-  meta: LayerMeta,
-): string {
-  const value = weeks[week];
-  const peakWeek = weeks.reduce<number>(
-    (best, candidate, index) => ((candidate ?? -1) > (weeks[best] ?? -1) ? index : best),
-    0,
-  );
+function summary(properties: SeriesProperties, week: number, meta: LayerMeta): string {
+  const at = (index: number): number | undefined =>
+    properties[weekKey(index) as `w${number}`];
+  const value = at(week);
+
+  let peakWeek = 0;
+  for (let index = 1; index < WEEKS; index++) {
+    if ((at(index) ?? -1) > (at(peakWeek) ?? -1)) peakWeek = index;
+  }
   const shift = properties.autumn_shift_days_per_decade;
 
   const rows = [

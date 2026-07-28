@@ -74,19 +74,22 @@ def test_export_writes_one_feature_per_station(tmp_path: Path) -> None:
     payload = json.loads((tmp_path / "aerial.geojson").read_text(encoding="utf-8"))
     assert {f["properties"]["station"] for f in payload["features"]} == {"KBGM", "KDOX"}
     for feature in payload["features"]:
-        # The whole animation depends on this being a fixed-length array MapLibre can index.
-        assert len(feature["properties"]["weeks"]) == WEEKS
+        # One scalar property per week, which is what MapLibre reads identically in its paint
+        # and query paths -- an array property is a JSON string on the query side.
+        assert sum(1 for key in feature["properties"] if key.startswith("w")) == WEEKS + 1
 
 
-def test_missing_weeks_are_null_not_zero(tmp_path: Path) -> None:
+def test_missing_weeks_are_absent_not_zero(tmp_path: Path) -> None:
     """A gap in coverage must not read as "no animals passed"."""
     frame = nights().filter(pl.col("timestamp").dt.ordinal_day() > 40)
     export_station_series(frame, clearance(), tmp_path / "aerial.geojson")
-    weeks = json.loads((tmp_path / "aerial.geojson").read_text(encoding="utf-8"))["features"][0][
-        "properties"
-    ]["weeks"]
-    assert weeks[0] is None
-    assert weeks[20] is not None
+    properties = json.loads((tmp_path / "aerial.geojson").read_text(encoding="utf-8"))["features"][
+        0
+    ]["properties"]
+    # Absent, not null and not zero: the frontend filters on the key existing at all.
+    assert "w0" not in properties
+    assert "w20" in properties
+    assert properties["weeks_present"] < WEEKS
 
 
 def coordinates(path: Path) -> list[float]:
