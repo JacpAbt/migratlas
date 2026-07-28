@@ -7,9 +7,10 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/check-build.mjs",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:build": "node scripts/check-build.mjs"
   },
   "dependencies": {
     "@protomaps/basemaps": "^5.7.2",

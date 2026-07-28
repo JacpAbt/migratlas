@@ -50,4 +50,6 @@ jobs:
 
       - run: npm ci
       - run: npm run typecheck
+      # build runs check-build, which asserts no bundle names an asset that was never
+      # emitted. Both typecheck and build passed while the globe rendered nothing at all.
       - run: npm run build
