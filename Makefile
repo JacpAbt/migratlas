@@ -13,7 +13,10 @@ SHELL := /bin/bash
 
 export UV_PROJECT_ENVIRONMENT ?= $(HOME)/.venvs/migratlas
 export UV_LINK_MODE ?= copy
-export MIGRATLAS_DATA_DIR ?= $(HOME)/migratlas-data
+
+# Data locations deliberately live in .env and config.py, not here. Exporting
+# MIGRATLAS_DATA_DIR from make would silently outrank .env, since real environment
+# variables beat dotenv values -- one source of truth is worth more than the shortcut.
 
 UV := $(HOME)/.local/bin/uv
 RUN := $(UV) run --
@@ -27,11 +30,14 @@ help:  ## Show this help
 # Environment
 # ---------------------------------------------------------------------------
 .PHONY: sync
-sync:  ## Create/update the venv from the lockfile
+sync:  ## Create/update the venv from the lockfile and the data directories
 	$(UV) sync --all-extras --group dev
-	@mkdir -p "$(MIGRATLAS_DATA_DIR)"
 	@echo "venv: $(UV_PROJECT_ENVIRONMENT)"
-	@echo "data: $(MIGRATLAS_DATA_DIR)"
+	@$(RUN) migratlas init
+
+.PHONY: paths
+paths:  ## Show where data actually lives, as resolved from .env and defaults
+	$(RUN) migratlas paths
 
 .PHONY: lock
 lock:  ## Refresh uv.lock

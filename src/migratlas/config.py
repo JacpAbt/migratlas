@@ -35,15 +35,23 @@ class Settings(BaseSettings):
     # gigabytes and the repo may sit on a slower mount.
     data_dir: Path = Field(default=Path.home() / "migratlas-data")
 
-    @field_validator("data_dir")
+    # Raw archives can live somewhere bulkier and slower than the working set, because
+    # they are written once and read sequentially. See ADR 0004.
+    raw_data_dir: Path | None = Field(default=None)
+
+    @field_validator("data_dir", "raw_data_dir")
     @classmethod
-    def _expand(cls, value: Path) -> Path:
-        return value.expanduser()
+    def _expand(cls, value: Path | None) -> Path | None:
+        return value.expanduser() if value else value
 
     @property
     def raw_dir(self) -> Path:
-        """Downloads exactly as the provider served them; never read by analysis."""
-        return self.data_dir / "raw"
+        """Downloads exactly as the provider served them; never read by analysis.
+
+        Separately configurable via ``MIGRATLAS_RAW_DATA_DIR`` so bulk archives can sit
+        on a big slow disk while the lake stays on fast local storage.
+        """
+        return self.raw_data_dir or (self.data_dir / "raw")
 
     @property
     def lake_dir(self) -> Path:
