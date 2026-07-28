@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Migratlas</title>
+    <meta
+      name="description"
+      content="A globe of animal movement, and why it's changing."
+    />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div id="globe" role="application" aria-label="Interactive globe"></div>
+
+    <header class="panel panel--title">
+      <h1>Migratlas</h1>
+      <p class="phase">Phase 0 — no data layers published yet</p>
+    </header>
+
+    <div class="panel panel--search">
+      <label class="sr-only" for="taxon-search">Search for an animal</label>
+      <input
+        id="taxon-search"
+        type="search"
+        placeholder="Search any animal…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <ul id="taxon-results" role="listbox" hidden></ul>
+    </div>
+
+    <div class="panel panel--time">
+      <output id="time-label" for="time-slider"></output>
+      <input
+        id="time-slider"
+        type="range"
+        min="0"
+        max="365"
+        step="1"
+        value="0"
+        aria-label="Day of year"
+      />
+      <div class="time-row">
+        <input id="utc-slider" type="range" min="0" max="1439" step="10" value="720"
+               aria-label="Time of day, UTC" />
+        <button id="play" type="button" aria-pressed="false">Play</button>
+      </div>
+    </div>
+
+    <div id="perf" class="panel panel--perf" hidden></div>
+    <div id="notice" class="notice" hidden></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

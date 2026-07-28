@@ -1,0 +1,228 @@
+:root {
+  --bg: #06080d;
+  --panel: rgb(12 16 24 / 82%);
+  --border: rgb(255 255 255 / 10%);
+  --text: #e8ecf2;
+  --muted: #8b95a5;
+  --accent: #6fd3c7;
+  --radius: 10px;
+  --pad: 0.7rem 0.85rem;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+#globe {
+  position: absolute;
+  inset: 0;
+}
+
+.panel {
+  position: absolute;
+  z-index: 2;
+  padding: var(--pad);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(10px);
+}
+
+.panel--title {
+  top: 1rem;
+  left: 1rem;
+}
+
+.panel--title h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.phase {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.panel--search {
+  top: 1rem;
+  right: 1rem;
+  width: min(19rem, calc(100vw - 2rem));
+  padding: 0.5rem;
+}
+
+#taxon-search {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  color: var(--text);
+  background: rgb(255 255 255 / 6%);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font: inherit;
+}
+
+#taxon-search:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+#taxon-results {
+  max-height: 15rem;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+#taxon-results li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#taxon-results li:hover {
+  background: rgb(255 255 255 / 7%);
+}
+
+#taxon-results em {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+#taxon-results span {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+  color: var(--accent);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.panel--time {
+  bottom: 1rem;
+  left: 50%;
+  width: min(30rem, calc(100vw - 2rem));
+  transform: translateX(-50%);
+}
+
+#time-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+
+.time-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 0.4rem;
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 1.1rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+#play {
+  flex: 0 0 4.2rem;
+  padding: 0.3rem 0;
+  color: var(--text);
+  background: rgb(255 255 255 / 8%);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+#play:hover {
+  background: rgb(255 255 255 / 14%);
+}
+
+.panel--perf {
+  right: 1rem;
+  bottom: 1rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+}
+
+.notice {
+  position: absolute;
+  bottom: 7.5rem;
+  left: 50%;
+  z-index: 3;
+  max-width: min(32rem, calc(100vw - 2rem));
+  padding: 0.55rem 0.8rem;
+  background: rgb(12 16 24 / 92%);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: 8px;
+  transform: translateX(-50%);
+  font-size: 0.82rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* MapLibre's default controls are too bright against a night globe. */
+.maplibregl-ctrl-group {
+  background: var(--panel) !important;
+  border: 1px solid var(--border);
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--border);
+}
+
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(1.6);
+}
+
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-scale {
+  background: rgb(12 16 24 / 70%) !important;
+  color: var(--muted) !important;
+  font-size: 0.7rem;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--muted);
+}
+
+@media (width <= 40rem) {
+  .panel--search {
+    top: auto;
+    right: 1rem;
+    bottom: 8.5rem;
+    left: 1rem;
+    width: auto;
+  }
+}

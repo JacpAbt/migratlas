@@ -41,9 +41,11 @@ web/.vite/
 R/renv/library/
 R/renv/staging/
 
-# Secrets and machine-local config
+# Secrets and machine-local config. Anything *.local.md documents one particular
+# machine -- paths, hardware, OS quirks -- and is nobody else's business.
 .env
 .env.local
+*.local.md
 *.key
 *.pem
 credentials.json

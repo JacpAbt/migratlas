@@ -1,0 +1,47 @@
+# Starter species for the search index, deliberately spread across every realm and
+# several very different body plans. This is the smallest set that would break a
+# bird-shaped design, which is the point of it.
+#
+# Names are resolved against the GBIF Backbone at build time, so a synonym or a
+# recent reclassification here is corrected rather than baked in.
+#
+# group:  human-facing label shown in search results.
+# realm:  must match migratlas.evidence.Realm.
+# common: optional override, for the cases where GBIF's vernacular field is wrong.
+
+- { name: Ciconia ciconia, group: Birds, realm: aerial }
+- { name: Hirundo rustica, group: Birds, realm: aerial }
+- { name: Sterna paradisaea, group: Birds, realm: aerial }
+- { name: Setophaga ruticilla, group: Birds, realm: aerial }
+- { name: Numenius americanus, group: Birds, realm: aerial }
+- { name: Buteo swainsoni, group: Birds, realm: aerial }
+- { name: Spatula discors, group: Birds, realm: aerial }
+- { name: Scolopax minor, group: Birds, realm: aerial }
+- { name: Grus grus, group: Birds, realm: aerial }
+- { name: Calidris canutus, group: Birds, realm: aerial }
+
+- { name: Carcharodon carcharias, group: Sharks and rays, realm: marine }
+- { name: Rhincodon typus, group: Sharks and rays, realm: marine }
+- { name: Prionace glauca, group: Sharks and rays, realm: marine }
+- { name: Chelonia mydas, group: Sea turtles, realm: marine }
+- { name: Dermochelys coriacea, group: Sea turtles, realm: marine, common: Leatherback Turtle }
+- { name: Megaptera novaeangliae, group: Whales, realm: marine }
+- { name: Balaenoptera musculus, group: Whales, realm: marine }
+- { name: Thunnus thynnus, group: Fish, realm: marine }
+
+- { name: Loxodonta africana, group: Land mammals, realm: terrestrial }
+- { name: Rangifer tarandus, group: Land mammals, realm: terrestrial }
+- { name: Connochaetes taurinus, group: Land mammals, realm: terrestrial }
+- { name: Equus hemionus, group: Land mammals, realm: terrestrial }
+
+# GBIF tags this taxon's German name as English, so no heuristic can rescue it.
+- { name: Lasiurus cinereus, group: Bats, realm: aerial, common: Hoary Bat }
+- { name: Tadarida brasiliensis, group: Bats, realm: aerial }
+
+- { name: Danaus plexippus, group: Insects, realm: aerial, common: Monarch }
+- { name: Pantala flavescens, group: Insects, realm: aerial }
+- { name: Vanessa cardui, group: Insects, realm: aerial }
+
+- { name: Anguilla anguilla, group: Fish, realm: freshwater }
+- { name: Salmo salar, group: Fish, realm: freshwater }
+- { name: Oncorhynchus nerka, group: Fish, realm: freshwater, common: Sockeye Salmon }

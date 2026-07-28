@@ -31,8 +31,8 @@ class Settings(BaseSettings):
         extra="forbid",
     )
 
-    # Defaults to the ext4 home, not the repo: the repo is on /mnt/c, where a 49 GB
-    # download and a DuckDB working directory would dominate every runtime.
+    # Under $HOME rather than the working tree: the raw data runs to tens of
+    # gigabytes and the repo may sit on a slower mount.
     data_dir: Path = Field(default=Path.home() / "migratlas-data")
 
     @field_validator("data_dir")

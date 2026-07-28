@@ -1,0 +1,212 @@
+[
+ {
+  "key": 5218544,
+  "scientific": "Lasiurus cinereus",
+  "vernacular": "Hoary Bat",
+  "group": "Bats",
+  "realm": "aerial"
+ },
+ {
+  "key": 2433011,
+  "scientific": "Tadarida brasiliensis",
+  "vernacular": "Mexican Free-tailed Bat",
+  "group": "Bats",
+  "realm": "aerial"
+ },
+ {
+  "key": 2489985,
+  "scientific": "Setophaga ruticilla",
+  "vernacular": "American Redstart",
+  "group": "Birds",
+  "realm": "aerial"
+ },
+ {
+  "key": 2481695,
+  "scientific": "Scolopax minor",
+  "vernacular": "American Woodcock",
+  "group": "Birds",
+  "realm": "aerial"
+ },
+ {
+  "key": 5229230,
+  "scientific": "Sterna paradisaea",
+  "vernacular": "Arctic Tern",
+  "group": "Birds",
+  "realm": "aerial"
+ },
+ {
+  "key": 9515886,
+  "scientific": "Hirundo rustica",
+  "vernacular": "Barn Swallow",
+  "group": "Birds",
+  "realm": "aerial"
+ },
+ {
+  "key": 9422220,
+  "scientific": "Spatula discors",
+  "vernacular": "Blue-winged Teal",
+  "group": "Birds",
+  "realm": "aerial"
+ },
+ {
+  "key": 2474950,
+  "scientific": "Grus grus",
+  "vernacular": "Common Crane",
+  "group": "Birds",
+  "realm": "aerial"
+ },
+ {
+  "key": 2481794,
+  "scientific": "Numenius americanus",
+  "vernacular": "Long-billed Curlew",
+  "group": "Birds",
+  "realm": "aerial"
+ },
+ {
+  "key": 2481765,
+  "scientific": "Calidris canutus",
+  "vernacular": "Red Knot",
+  "group": "Birds",
+  "realm": "aerial"
+ },
+ {
+  "key": 2480562,
+  "scientific": "Buteo swainsoni",
+  "vernacular": "Swainson's Hawk",
+  "group": "Birds",
+  "realm": "aerial"
+ },
+ {
+  "key": 2481912,
+  "scientific": "Ciconia ciconia",
+  "vernacular": "White Stork",
+  "group": "Birds",
+  "realm": "aerial"
+ },
+ {
+  "key": 2373980,
+  "scientific": "Thunnus thynnus",
+  "vernacular": "Atlantic Bluefin Tuna",
+  "group": "Fish",
+  "realm": "marine"
+ },
+ {
+  "key": 7595433,
+  "scientific": "Salmo salar",
+  "vernacular": "Atlantic Salmon",
+  "group": "Fish",
+  "realm": "freshwater"
+ },
+ {
+  "key": 5212973,
+  "scientific": "Anguilla anguilla",
+  "vernacular": "European Eel",
+  "group": "Fish",
+  "realm": "freshwater"
+ },
+ {
+  "key": 5204039,
+  "scientific": "Oncorhynchus nerka",
+  "vernacular": "Sockeye Salmon",
+  "group": "Fish",
+  "realm": "freshwater"
+ },
+ {
+  "key": 1427855,
+  "scientific": "Pantala flavescens",
+  "vernacular": "Globe Skimmer",
+  "group": "Insects",
+  "realm": "aerial"
+ },
+ {
+  "key": 5133088,
+  "scientific": "Danaus plexippus",
+  "vernacular": "Monarch",
+  "group": "Insects",
+  "realm": "aerial"
+ },
+ {
+  "key": 4299368,
+  "scientific": "Vanessa cardui",
+  "vernacular": "Painted Lady",
+  "group": "Insects",
+  "realm": "aerial"
+ },
+ {
+  "key": 2435350,
+  "scientific": "Loxodonta africana",
+  "vernacular": "African Elephant",
+  "group": "Land mammals",
+  "realm": "terrestrial"
+ },
+ {
+  "key": 2441105,
+  "scientific": "Connochaetes taurinus",
+  "vernacular": "Blue Wildebeest",
+  "group": "Land mammals",
+  "realm": "terrestrial"
+ },
+ {
+  "key": 2440893,
+  "scientific": "Equus hemionus",
+  "vernacular": "Onager",
+  "group": "Land mammals",
+  "realm": "terrestrial"
+ },
+ {
+  "key": 5220114,
+  "scientific": "Rangifer tarandus",
+  "vernacular": "Reindeer",
+  "group": "Land mammals",
+  "realm": "terrestrial"
+ },
+ {
+  "key": 2442225,
+  "scientific": "Chelonia mydas",
+  "vernacular": "Green Turtle",
+  "group": "Sea turtles",
+  "realm": "marine"
+ },
+ {
+  "key": 9789983,
+  "scientific": "Dermochelys coriacea",
+  "vernacular": "Leatherback Turtle",
+  "group": "Sea turtles",
+  "realm": "marine"
+ },
+ {
+  "key": 2417940,
+  "scientific": "Prionace glauca",
+  "vernacular": "Blue Shark",
+  "group": "Sharks and rays",
+  "realm": "marine"
+ },
+ {
+  "key": 2420694,
+  "scientific": "Carcharodon carcharias",
+  "vernacular": "Great White Shark",
+  "group": "Sharks and rays",
+  "realm": "marine"
+ },
+ {
+  "key": 2417522,
+  "scientific": "Rhincodon typus",
+  "vernacular": "Whale Shark",
+  "group": "Sharks and rays",
+  "realm": "marine"
+ },
+ {
+  "key": 2440735,
+  "scientific": "Balaenoptera musculus",
+  "vernacular": "Blue Whale",
+  "group": "Whales",
+  "realm": "marine"
+ },
+ {
+  "key": 5220086,
+  "scientific": "Megaptera novaeangliae",
+  "vernacular": "Humpback Whale",
+  "group": "Whales",
+  "realm": "marine"
+ }
+]

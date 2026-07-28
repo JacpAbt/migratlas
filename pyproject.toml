@@ -23,7 +23,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Raster/vector IO and cloud-native formats. Wheel-only on purpose: nothing here
-# may require `apt install`, because sudo is not available in the dev WSL.
+# may need a system package or a build-from-source step.
 geo = [
     "fsspec>=2024.9",
     "pyogrio>=0.10",

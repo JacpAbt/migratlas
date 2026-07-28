@@ -1,17 +1,12 @@
-# Migratlas task runner.
+# Migratlas task runner. Run `make help` for the target list.
 #
-# Every Python job runs inside WSL Ubuntu, even though the repo lives on the
-# Windows filesystem. Two consequences are baked in below:
+# The environment and the data lake both live outside the working tree, under
+# $HOME. Repos are often checked out on a mount that is slower than the local
+# disk and does not support cross-filesystem hardlinks, and the raw data runs to
+# tens of gigabytes, so neither belongs next to the source.
 #
-#   * The virtualenv lives on ext4, NOT next to the source. Creating a venv on
-#     the /mnt/c 9p mount is slow and hardlinking across the mount boundary
-#     fails, so UV_PROJECT_ENVIRONMENT relocates it and UV_LINK_MODE=copy stops
-#     uv from retrying hardlinks it cannot make.
-#   * The data lake also lives on ext4. The Dark Ecology download alone is
-#     ~49 GB and would be painful over 9p.
-#
-# From WSL:      make lint
-# From Windows:  wsl -d Ubuntu -- bash -lc 'cd "$(pwd)" && make lint'
+# Always go through make rather than calling uv directly: a bare `uv run` will
+# create a ./.venv in the working tree instead of using the one below.
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
@@ -81,6 +76,10 @@ coverage:  ## Tests with coverage report
 provenance:  ## Regenerate docs/data/PROVENANCE.md from the source registry
 	$(RUN) migratlas catalog provenance
 
+.PHONY: taxon-index
+taxon-index:  ## Rebuild the frontend species index from the GBIF Backbone
+	$(RUN) migratlas taxonomy build-index --out web/public/taxon-index.json
+
 .PHONY: ingest-darkecology
 ingest-darkecology:  ## Dark Ecology radar profiles -> lake (FLUX, aerial)
 	$(RUN) migratlas ingest darkecology
@@ -90,7 +89,7 @@ ingest-megamove:  ## MegaMove 1-degree grids -> lake (ABUNDANCE_SURFACE, marine)
 	$(RUN) migratlas ingest megamove
 
 .PHONY: gpu-check
-gpu-check:  ## Confirm the RTX 3090 is visible from inside the venv
+gpu-check:  ## Confirm a CUDA device is visible from inside the venv
 	$(RUN) python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"
 
 # ---------------------------------------------------------------------------

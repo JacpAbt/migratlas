@@ -1,10 +1,15 @@
 """CLI: one entry point per job, so every pipeline stage is reproducible as a single
 command rather than a notebook cell someone ran once."""
 
+from collections import Counter
+from pathlib import Path
+from typing import Annotated
+
 import typer
 
 from migratlas import __version__
 from migratlas.config import get_settings
+from migratlas.taxonomy import index as taxon_index
 
 app = typer.Typer(
     name="migratlas",
@@ -15,8 +20,33 @@ app = typer.Typer(
 
 catalog_app = typer.Typer(help="Inspect the source registry.", no_args_is_help=True)
 ingest_app = typer.Typer(help="Land a source in the lake.", no_args_is_help=True)
+taxonomy_app = typer.Typer(help="Resolve names against the GBIF Backbone.", no_args_is_help=True)
 app.add_typer(catalog_app, name="catalog")
 app.add_typer(ingest_app, name="ingest")
+app.add_typer(taxonomy_app, name="taxonomy")
+
+
+@taxonomy_app.command("build-index")
+def build_taxon_index(
+    out: Annotated[Path, typer.Option(help="Destination JSON file.")] = Path(
+        "web/public/taxon-index.json"
+    ),
+    limit: Annotated[int | None, typer.Option(help="Resolve only the first N seed taxa.")] = None,
+) -> None:
+    """Build the static species index the frontend searches."""
+    report = taxon_index.build(limit=limit)
+    size = taxon_index.write(report, out)
+
+    by_realm = Counter(entry.realm for entry in report.entries)
+    print(f"{len(report.entries)} taxa -> {out} ({size / 1024:.1f} KiB)")
+    for realm, count in sorted(by_realm.items()):
+        print(f"  {realm:<12} {count}")
+
+    if report.unresolved:
+        print(f"\n{len(report.unresolved)} unresolved:")
+        for name, reason in report.unresolved:
+            print(f"  {name}: {reason}")
+        raise typer.Exit(1)
 
 
 @app.command()
