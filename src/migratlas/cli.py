@@ -13,8 +13,12 @@ from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
 from migratlas.ingest import darkecology, megamove, obis
+from migratlas.lake import check as lake_check
 from migratlas.reports import phase1, phase1_robustness
 from migratlas.taxonomy import index as taxon_index
+
+DRIFT_SAMPLE = 5
+"""How many drifted files to name before summarising the rest."""
 
 app = typer.Typer(
     name="migratlas",
@@ -151,6 +155,26 @@ def init_lake() -> None:
     settings = get_settings()
     settings.ensure_dirs()
     print(f"lake ready at {settings.data_dir}")
+
+
+@app.command("lake-check")
+def lake_check_command() -> None:
+    """Report schema drift in the lake.
+
+    A schema change must be followed by re-ingesting affected sources; a mixed directory
+    is read by silently intersecting schemas, so new columns vanish without an error.
+    """
+    drifts = lake_check.check_all()
+    if not drifts:
+        print("lake schemas consistent")
+        return
+    for evidence_type, items in drifts.items():
+        print(f"{evidence_type}: {len(items)} file(s) drifted")
+        for drift in items[:DRIFT_SAMPLE]:
+            print(f"  {drift}")
+        if len(items) > DRIFT_SAMPLE:
+            print(f"  ... and {len(items) - DRIFT_SAMPLE} more")
+    raise typer.Exit(1)
 
 
 if __name__ == "__main__":  # pragma: no cover

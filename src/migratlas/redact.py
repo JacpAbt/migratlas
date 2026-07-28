@@ -10,6 +10,7 @@ Occurrence Data* and the TDWG Sensitive Species Extension, reported via
 ``dwc:dataGeneralizations``.
 """
 
+import math
 from dataclasses import InitVar, dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
@@ -263,11 +264,32 @@ def _coarser_grid(default_grid: float | None, permitted_grid: float | None) -> f
     return max(default_grid, permitted_grid)
 
 
+def delay_cutoff(generalization: Generalization, now: datetime) -> datetime | None:
+    """Newest timestamp that may be published, or ``None`` when nothing is withheld.
+
+    The single definition of the delay rule. A vectorised filter wants the boundary and a
+    scalar check wants a predicate; both come from here so they cannot drift apart.
+    """
+    if not generalization.delay_days:
+        return None
+    return now - timedelta(days=generalization.delay_days)
+
+
 def is_within_delay(timestamp: datetime, generalization: Generalization, now: datetime) -> bool:
     """Whether ``timestamp`` falls in the withheld recent window and must be dropped."""
-    if not generalization.delay_days:
-        return False
-    return timestamp > now - timedelta(days=generalization.delay_days)
+    cutoff = delay_cutoff(generalization, now)
+    return cutoff is not None and timestamp > cutoff
+
+
+GRID_QUOTIENT_PRECISION: Final = 9
+"""Decimal places the cell index is rounded to before flooring.
+
+Grid sizes like 0.1 are not exactly representable, so ``value / 0.1`` can land a hair below
+an integer and floor to the cell beneath -- putting a point in the wrong cell, at the finest
+and most-used grid. Real coordinates carry nowhere near nine decimal digits of meaningful
+precision, so rounding the quotient first removes the representation noise without moving
+any genuine boundary.
+"""
 
 
 def snap_to_grid(value: float, grid_deg: float | None) -> float:
@@ -280,4 +302,5 @@ def snap_to_grid(value: float, grid_deg: float | None) -> float:
     """
     if grid_deg is None:
         return value
-    return (value // grid_deg) * grid_deg + grid_deg / 2
+    index = math.floor(round(value / grid_deg, GRID_QUOTIENT_PRECISION))
+    return index * grid_deg + grid_deg / 2

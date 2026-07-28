@@ -90,6 +90,10 @@ provenance:  ## Regenerate docs/data/PROVENANCE.md from the source registry
 taxon-index:  ## Rebuild the frontend species index from the GBIF Backbone
 	$(RUN) migratlas taxonomy build-index --out web/public/taxon-index.json
 
+.PHONY: lake-check
+lake-check:  ## Report schema drift between the lake and the canonical schemas
+	$(RUN) migratlas lake-check
+
 .PHONY: ingest-darkecology
 ingest-darkecology:  ## Dark Ecology radar profiles -> lake (FLUX, aerial)
 	$(RUN) migratlas ingest darkecology

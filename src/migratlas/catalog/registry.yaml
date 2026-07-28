@@ -137,4 +137,8 @@ sources:
       because it adds 27k species each needing a Backbone lookup. Upstream keys species by
       WoRMS AphiaID, so names are resolved through the GBIF Backbone and any species that
       fails to resolve is dropped and logged rather than published without a key.
+      Finally, "marine" here is generous: because OBIS aggregates coastal and estuarine
+      records from GBIF, the vertebrate slice includes plainly non-marine birds — mallard,
+      killdeer and great blue heron are among the widest-ranging species by cell count.
+      Any genuinely marine analysis needs a further filter on top of this ingest.
     added: 2026-07-28
