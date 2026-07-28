@@ -139,4 +139,4 @@ def test_pinned_zenodo_record_still_matches_the_registry() -> None:
     record = zenodo.record(darkecology.RECORD_ID)
     assert record.version_doi == get(darkecology.SOURCE_ID).doi
     assert darkecology.DAILY_ARCHIVE in record.files
-    assert record.files[darkecology.DAILY_ARCHIVE].md5
+    assert record.files[darkecology.DAILY_ARCHIVE].checksum

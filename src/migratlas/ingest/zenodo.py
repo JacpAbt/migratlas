@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx
 
-from migratlas.ingest.http import USER_AGENT, RemoteFile
+from migratlas.ingest.http import USER_AGENT, Checksum, RemoteFile
 
 API = "https://zenodo.org/api"
 
@@ -40,7 +40,7 @@ def record(record_id: str) -> Record:
             url=entry["links"]["self"],
             name=entry["key"],
             size=entry.get("size"),
-            md5=_md5_of(entry),
+            checksum=_checksum_of(entry),
         )
         for entry in payload.get("files", [])
     }
@@ -56,8 +56,10 @@ def record(record_id: str) -> Record:
     )
 
 
-def _md5_of(entry: dict[str, Any]) -> str | None:
-    """Zenodo reports checksums as ``md5:<hex>``."""
-    checksum = str(entry.get("checksum", ""))
-    prefix = "md5:"
-    return checksum[len(prefix) :] if checksum.startswith(prefix) else None
+def _checksum_of(entry: dict[str, Any]) -> Checksum | None:
+    """Zenodo reports checksums as ``<algorithm>:<hex>``."""
+    raw = str(entry.get("checksum", ""))
+    algorithm, _, hexdigest = raw.partition(":")
+    if not algorithm or not hexdigest:
+        return None
+    return Checksum(algorithm=algorithm, hexdigest=hexdigest)

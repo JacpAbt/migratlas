@@ -38,6 +38,10 @@ class EvidenceSpec(NamedTuple):
     time_column: str | None
     """Column phenology metrics read. ``None`` for paired-event types."""
 
+    value_column: str | None
+    """Column holding the measurement. ``None`` for types that record a presence rather
+    than a quantity, so a metric can refuse them instead of inventing a value of 1."""
+
     def validate(self, table: pa.Table) -> None:
         """Raise if ``table`` does not conform.
 
@@ -68,12 +72,14 @@ def _spec(
     *,
     partition_by: tuple[str, ...],
     time_column: str | None,
+    value_column: str | None = None,
 ) -> EvidenceSpec:
     return EvidenceSpec(
         evidence_type=evidence_type,
         schema=pa.schema([*_CORE_FIELDS, *fields]),
         partition_by=partition_by,
         time_column=time_column,
+        value_column=value_column,
     )
 
 
@@ -130,6 +136,7 @@ ABUNDANCE_SURFACE = _spec(
     ),
     partition_by=("source_id", "year"),
     time_column="period_start",
+    value_column="value",
 )
 
 FLUX = _spec(
@@ -165,6 +172,7 @@ FLUX = _spec(
     ),
     partition_by=("source_id", "year"),
     time_column="timestamp",
+    value_column="magnitude",
 )
 
 DETECTION = _spec(
@@ -181,6 +189,7 @@ DETECTION = _spec(
     ),
     partition_by=("source_id", "year"),
     time_column="timestamp",
+    value_column="detection_count",
 )
 
 MARK_RECAPTURE = _spec(
@@ -218,6 +227,7 @@ SURVEY_INDEX = _spec(
     ),
     partition_by=("source_id", "year"),
     time_column="period_start",
+    value_column="count",
 )
 
 
