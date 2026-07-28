@@ -10,11 +10,12 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 
 from migratlas.config import get_settings
-from migratlas.evidence import EvidenceSpec
 from migratlas.lake.identifiers import new_run_id
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from migratlas.evidence import EvidenceSpec
 
 UNDATED = "undated"
 """Partition value for records with no usable date, e.g. a museum record with only a
