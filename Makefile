@@ -114,6 +114,10 @@ build-layers:  ## Export the globe's layers from the lake, through the ethics ga
 phase1-report:  ## Replicate Horton et al. 2020 phenology, then extend
 	$(RUN) migratlas report phase1
 
+.PHONY: phase1-hierarchical
+phase1-hierarchical:  ## Station random effects rather than averaged per-station OLS
+	$(RUN) migratlas report phase1-hierarchical
+
 .PHONY: phase1-robustness
 phase1-robustness:  ## Break sensitivity, daytime placebo and permutation null
 	$(RUN) migratlas report phase1-robustness

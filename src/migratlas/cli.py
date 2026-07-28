@@ -15,7 +15,7 @@ from migratlas.catalog import provenance
 from migratlas.config import get_settings
 from migratlas.ingest import darkecology, megamove, obis
 from migratlas.lake import check as lake_check
-from migratlas.reports import phase1, phase1_robustness
+from migratlas.reports import phase1, phase1_hierarchical, phase1_robustness
 from migratlas.taxonomy import index as taxon_index
 from migratlas.tiles import layers as tile_layers
 
@@ -97,6 +97,13 @@ def report_phase1() -> None:
     """Replicate Horton et al. 2020 passage phenology, then extend to 2025."""
     logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
     print(phase1.render())
+
+
+@report_app.command("phase1-hierarchical")
+def report_phase1_hierarchical() -> None:
+    """Station random effects rather than averaged per-station OLS."""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
+    print(phase1_hierarchical.render())
 
 
 @report_app.command("phase1-robustness")

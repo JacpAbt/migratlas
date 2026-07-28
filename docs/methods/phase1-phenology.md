@@ -118,13 +118,74 @@ artefact, and this test cannot currently distinguish the two. That is why the mi
 placebo was added: it holds the instrument and pipeline fixed while removing the migration
 entirely, and it comes back clean.
 
+## Hierarchical model
+
+Averaging per-station OLS slopes is what the paper did, so the replication does it too, but it
+weights a station with 15 usable years the same as one with 31 and treats each slope as if it
+carried no uncertainty of its own. `make phase1-hierarchical` fits the population trend
+directly:
+
+```
+q50_doy ~ decade * (latitude - 40) + 1[year >= 2012]
+          + (1 + decade | station)
+```
+
+`statsmodels` `MixedLM`, not a GAMM: R is unavailable on the development machine (no `sudo`,
+and `glmmTMB` needs a system R). Weaker than the paper's GAMM and labelled as such. Random
+slopes as well as random intercepts, because forcing every station onto one slope understates
+the population standard error. Seasons are fitted separately — spring and autumn passage are
+different phenomena with different drivers.
+
+**It corroborates the replication.** Spring 1995–2018 comes to −0.44 ± 0.33 d/decade against
+the averaged −0.48 ± 0.32; autumn to −0.23 ± 0.37 against −0.23 ± 0.31. The two estimators
+agree, so the averaged number was not carried by a subset of stations.
+
+**The instrument break matters more than expected, and in the opposite direction for the two
+seasons.** With a 2012 level shift in the model:
+
+| Window | Season | No break | With break | Break coefficient |
+| --- | --- | --- | --- | --- |
+| 1995–2018 | spring | −0.44 ± 0.33 | −0.22 ± 0.48 | −0.39 ± 0.62 |
+| 1995–2018 | autumn | −0.23 ± 0.37 | **−0.80 ± 0.48** | **+1.04 ± 0.62** |
+| 1995–2025 | spring | −0.19 ± 0.23 | +0.08 ± 0.36 | −0.54 ± 0.56 |
+| 1995–2025 | autumn | −0.51 ± 0.23 | **−1.03 ± 0.36** | **+1.05 ± 0.57** |
+
+Spring does not survive the break term in either window. Autumn strengthens: the upgrade
+shifted measured autumn passage about a day *later*, which had been masking the advance. The
+break coefficient is the same size in both windows, which is what a real hardware step should
+look like.
+
+**But the break is not latitude-invariant, and that is a problem.** Fitting the same model
+inside each latitude band (extension window, autumn):
+
+| Band | d/decade | Break |
+| --- | --- | --- |
+| 24–32°N | −0.99 ± 1.02 | +2.16 |
+| 32–37°N | −1.53 ± 0.70 | +1.80 |
+| 37–42°N | −0.74 ± 0.59 | +0.68 |
+| 42–50°N | −0.64 ± 0.65 | +0.01 |
+
+A hardware upgrade should not move passage date by two days in Florida and not at all in
+Minnesota. In the southern bands that dummy is absorbing something else, most likely season
+truncation: 213–334 doy is a northern-migration window, and at 24–32°N autumn passage runs
+past its end, so any change in how that tail is captured lands on a year-2012 step. **The
+defensible claim is therefore an autumn advance of roughly 0.6–0.7 d/decade at 37–50°N, where
+the break coefficient is near zero — not the continent-wide −1.03.**
+
+The linear `decade:latitude` interaction is null in every fit (p 0.29–0.59). That is a
+statement about functional form rather than about latitude: the band fits are non-monotonic —
+weakest in the far south and far north, strongest at 32–37°N — and a straight line through
+latitude cannot represent that shape.
+
+Model-based p-values here are optimistic against the permutation null in
+`phase1-robustness`. Where they disagree, prefer the permutation null: it assumes nothing
+about the error structure, which a panel of 145 spatially correlated stations plainly violates.
+
 ## Remaining limitations
 
-1. **No hierarchical model.** Averaging per-station slopes weights a station with 15 usable
-   years the same as one with 31 and discards the latitude structure the paper models with a
-   GAMM. R is unavailable on the development machine (no `sudo`, and `glmmTMB` needs a system
-   R), so this will use `statsmodels` mixed models — weaker than a GAMM, and to be labelled
-   as such.
+1. **The southern autumn trend is not separable from the instrument.** See the band table
+   above. Resolving it needs a season window defined per latitude, which is a change to the
+   pre-registered method and so belongs in a fresh pre-registration rather than a patch.
 2. **Station composition changes.** Reporting stations rise from 104 in 1995 to 159 by 2017.
 3. **The extension is not blind.** An exploratory pass over the full series ran *before* the
    target method was known. The 1995–2018 replication is unaffected — its target was
@@ -142,12 +203,15 @@ on any biological interpretation.
 
 ## Next, in order
 
-1. Hierarchical model: station random effects, latitude interaction, coverage weighting.
-2. Independent cross-check against eBird Status & Trends phenology, which would also help
-   adjudicate the insect question — eBird is birds only.
+1. Independent cross-check against eBird Status & Trends phenology, which would also help
+   adjudicate the insect question — eBird is birds only. Needs an API key.
+2. A latitude-aware season window, pre-registered separately, to settle whether the southern
+   autumn advance is real.
 
 ## Reproduce
 
 ```bash
 make phase1-report
+make phase1-hierarchical
+make phase1-robustness
 ```

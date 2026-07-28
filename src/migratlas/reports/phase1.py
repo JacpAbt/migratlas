@@ -41,6 +41,10 @@ FLYWAYS: Final[tuple[tuple[str, float, float], ...]] = (
 # would silently change every number the day a second radar network is ingested.
 SOURCE_ID: Final = "darkecology_daily"
 
+# Their Fig. 2 latitude bands. Named here rather than inline so the hierarchical report can
+# fit inside the same bands and be read against this one.
+LATITUDE_BANDS: Final[tuple[tuple[int, int], ...]] = ((24, 32), (32, 37), (37, 42), (42, 50))
+
 MIN_COVERAGE: Final = 0.9
 MIN_NIGHTS: Final = 40
 MIN_YEARS: Final = 15
@@ -174,7 +178,7 @@ def summarise(slopes: pl.DataFrame, *, bands: Sequence[tuple[int, int]]) -> list
 def render() -> str:
     """Run both windows and render the comparison."""
     nights = load_conus_traffic()
-    bands = ((24, 32), (32, 37), (37, 42), (42, 50))
+    bands = LATITUDE_BANDS
 
     out = [
         "Phase 1a -- nocturnal passage phenology",
