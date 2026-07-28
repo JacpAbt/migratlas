@@ -122,6 +122,9 @@ def test_grid_geometry_is_recorded() -> None:
     frame = pl.from_arrow(megamove.to_evidence(species, taxa, RESOLVED, KEYS))
     assert isinstance(frame, pl.DataFrame)
     assert set(frame["cell_size_deg"]) == {1.0}
+    assert set(frame["cell_system"]) == {"degree_1"}
+    # A plain degree grid has no native cell identifier.
+    assert frame["cell_id"].null_count() == frame.height
     assert set(frame["realm"]) == {Realm.MARINE.value}
     # Counts of tracked individuals, never to be summed against relative abundance.
     assert set(frame["value_kind"]) == {"tracked_individuals"}

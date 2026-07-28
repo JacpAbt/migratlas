@@ -122,9 +122,18 @@ OCCURRENCE = _spec(
 ABUNDANCE_SURFACE = _spec(
     EvidenceType.ABUNDANCE_SURFACE,
     (
+        # Cell centre. Always populated, whatever the grid system, so a consumer that only
+        # wants a point does not need to understand H3 or geohash.
         pa.field("cell_longitude", pa.float64(), nullable=False),
         pa.field("cell_latitude", pa.float64(), nullable=False),
-        pa.field("cell_size_deg", pa.float64(), nullable=False),
+        # Nullable: only meaningful for a degree grid. H3 hexagons and geohashes have no
+        # single degree size, and inventing one would misstate the geometry.
+        pa.field("cell_size_deg", pa.float64(), nullable=True),
+        # Native cell identifier and the system that issued it, e.g. "h3_7". Assuming every
+        # gridded product is a degree grid would be the same kind of baked-in assumption
+        # this core exists to avoid.
+        pa.field("cell_id", pa.string(), nullable=True),
+        pa.field("cell_system", pa.string(), nullable=True),
         pa.field("period_start", _TS, nullable=False),
         pa.field("period_end", _TS, nullable=False),
         pa.field("value", pa.float64(), nullable=False),

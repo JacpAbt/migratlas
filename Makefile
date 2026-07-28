@@ -98,6 +98,10 @@ ingest-darkecology:  ## Dark Ecology radar profiles -> lake (FLUX, aerial)
 ingest-megamove:  ## MegaMove 1-degree grids -> lake (ABUNDANCE_SURFACE, marine)
 	$(RUN) migratlas ingest megamove
 
+.PHONY: ingest-obis
+ingest-obis:  ## OBIS speciesgrids -> lake (ABUNDANCE_SURFACE, marine)
+	$(RUN) migratlas ingest obis
+
 .PHONY: phase1-report
 phase1-report:  ## Replicate Horton et al. 2020 phenology, then extend
 	$(RUN) migratlas report phase1

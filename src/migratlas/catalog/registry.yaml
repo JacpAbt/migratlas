@@ -103,3 +103,38 @@ sources:
       distribution; the published bias-testing datasets must be used alongside them.
       Covers 1985–2018, so it does not speak to the last several years.
     added: 2026-07-28
+
+  - id: obis_speciesgrids
+    title: OBIS speciesgrids — gridded marine species distributions (H3 level 7)
+    evidence_type: abundance_surface
+    realm: marine
+    taxon_scope: exact
+    landing_page: https://github.com/iobis/speciesgrids
+    download_uri: https://obis-products.s3.amazonaws.com/speciesgrids/h3_7/
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      OBIS (2026). speciesgrids: WoRMS-aligned gridded marine species distributions derived
+      from OBIS and GBIF occurrence snapshots. Ocean Biodiversity Information System.
+      https://github.com/iobis/speciesgrids
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        Derived from OBIS and GBIF occurrence snapshots, whose contributing datasets carry
+        their own terms; cite OBIS and GBIF as well as this product.
+    # Occurrence records aggregated to ~5 km hexagons over decades. Coarse, historical and
+    # already summarised over individuals.
+    default_sensitivity: low
+    caveats: >-
+      Occurrence records per H3 cell, not individuals and not abundance — this measures
+      sampling effort as much as distribution, and must never be summed against a
+      relative-abundance or tracked-individual surface. Not a movement product: there is no
+      within-year timing, only a min/max year per cell. Ingest is deliberately bounded to
+      vertebrate and cephalopod classes; the full product is 257k species and 43M cells
+      dominated by gastropods, crustaceans and diatoms, and Teleostei is excluded for now
+      because it adds 27k species each needing a Backbone lookup. Upstream keys species by
+      WoRMS AphiaID, so names are resolved through the GBIF Backbone and any species that
+      fails to resolve is dropped and logged rather than published without a key.
+    added: 2026-07-28

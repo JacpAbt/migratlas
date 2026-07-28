@@ -270,6 +270,9 @@ def to_evidence(
         cell_longitude=pl.col("Longitude").cast(pl.Float64),
         cell_latitude=pl.col("Latitude").cast(pl.Float64),
         cell_size_deg=pl.lit(CELL_SIZE_DEG, dtype=pl.Float64),
+        # A plain degree grid, so there is no native cell identifier to carry.
+        cell_id=pl.lit(None, dtype=pl.String),
+        cell_system=pl.lit("degree_1"),
         period_start=pl.lit(PERIOD_START).cast(pl.Datetime("ms", time_zone="UTC")),
         period_end=pl.lit(PERIOD_END).cast(pl.Datetime("ms", time_zone="UTC")),
         value=pl.col("value").cast(pl.Float64),

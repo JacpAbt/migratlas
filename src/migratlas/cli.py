@@ -12,7 +12,7 @@ from migratlas import __version__
 from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
-from migratlas.ingest import darkecology, megamove
+from migratlas.ingest import darkecology, megamove, obis
 from migratlas.reports import phase1, phase1_robustness
 from migratlas.taxonomy import index as taxon_index
 
@@ -53,6 +53,15 @@ def ingest_megamove() -> None:
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     result = megamove.ingest()
+    print(f"{result.rows:,} rows -> {result.path}")
+    print(f"run {result.run_id}")
+
+
+@ingest_app.command("obis")
+def ingest_obis() -> None:
+    """Land the OBIS speciesgrids marine slice (ABUNDANCE_SURFACE, marine)."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    result = obis.ingest()
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
 
