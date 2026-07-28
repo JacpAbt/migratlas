@@ -47,6 +47,26 @@ const rendered = (page: Page, layer: string): Promise<number> =>
     layer,
   );
 
+/** Camera and layer state, for a failure message that does not need a second CI run to read. */
+async function diagnose(page: Page, layer: string): Promise<string> {
+  return page.evaluate((id) => {
+    const { map } = (window as unknown as Hook).migratlas;
+    const spec = map.getStyle().layers.find((l) => l.id === id);
+    const centre = map.getCenter();
+    return JSON.stringify({
+      centre: [Number(centre.lng.toFixed(2)), Number(centre.lat.toFixed(2))],
+      zoom: Number(map.getZoom().toFixed(2)),
+      visibility: spec?.layout?.visibility ?? "visible",
+      filter: JSON.stringify(spec?.filter),
+      sourceLoaded: map.isSourceLoaded(id),
+      allLayers: map.queryRenderedFeatures().length,
+    });
+  }, layer);
+}
+
+/** Per-layer patience. Three of these must still fit inside a test's own timeout. */
+const DRAW_TIMEOUT_MS = 8000;
+
 /**
  * Assert a layer draws, polling rather than waiting on a single event.
  *
@@ -54,9 +74,16 @@ const rendered = (page: Page, layer: string): Promise<number> =>
  * reliably fire on a map with no tile sources — so the honest primitive is to keep asking.
  */
 async function expectDrawn(page: Page, layer: string): Promise<void> {
-  await expect
-    .poll(() => rendered(page, layer), { message: `${layer} never drew a feature`, timeout: 15_000 })
-    .toBeGreaterThan(0);
+  try {
+    await expect.poll(() => rendered(page, layer), { timeout: DRAW_TIMEOUT_MS }).toBeGreaterThan(0);
+  } catch (error) {
+    // Reports state, not a cause. An earlier version asserted "never drew a feature" for any
+    // failure here, including Playwright's own test deadline -- which sent one investigation
+    // through two wrong hypotheses before a screenshot showed the layer drawing perfectly.
+    throw new Error(`${layer} had 0 rendered features. State: ${await diagnose(page, layer)}`, {
+      cause: error,
+    });
+  }
 }
 
 const mapLayerFor = (page: Page, name: string): Promise<string> =>
@@ -99,6 +126,9 @@ test("the globe reaches a usable style with coastlines", async ({ page }) => {
 test("every manifest layer draws features", async ({ page }) => {
   const report = await ready(page);
   expect(report.layers.length).toBeGreaterThan(0);
+  // Each layer gets its own patience, so the test's budget has to cover all of them plus the
+  // load. Leaving it at the 30 s default meant the third layer was blamed for the deadline.
+  test.setTimeout(20_000 + report.layers.length * (DRAW_TIMEOUT_MS + 4000));
 
   for (const name of report.layers) {
     const id = await mapLayerFor(page, name);

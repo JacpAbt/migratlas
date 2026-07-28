@@ -54,6 +54,15 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm test
 
+      # A deploy that fails its own smoke test must leave the evidence behind; a screenshot of
+      # what the map actually drew is what made the last such failure diagnosable.
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-playwright-report
+          path: web/test-results/
+          retention-days: 7
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
