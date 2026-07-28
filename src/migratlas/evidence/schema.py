@@ -143,6 +143,19 @@ FLUX = _spec(
         pa.field("height_max_m", pa.float64(), nullable=True),
         pa.field("magnitude", pa.float64(), nullable=False),
         pa.field("quantity", pa.string(), nullable=False),
+        # Null for an instantaneous measurement; set when `magnitude` is integrated over
+        # a window. Night length varies with latitude and season, so a nightly total is
+        # uninterpretable without it.
+        pa.field("integration_hours", pa.float64(), nullable=True),
+        # Which window: "night", "day", "utc_calendar_day". Orthogonal to `quantity`,
+        # which names the physical measurement -- and the day window is a useful placebo,
+        # since a trend in daytime passage points at the instrument, not migration.
+        # Not called `window`: that is a reserved word in DuckDB and would need quoting
+        # in every query, ad-hoc ones included.
+        pa.field("window_kind", pa.string(), nullable=True),
+        # How complete the measurement was, 0-1. Nights with sparse coverage have to be
+        # excluded from phenology or they drag passage-date quantiles around.
+        pa.field("coverage_fraction", pa.float64(), nullable=True),
         pa.field("direction_deg", pa.float64(), nullable=True),
         pa.field("speed_ms", pa.float64(), nullable=True),
         # Instrument upgrades masquerade as biological trends. Carrying a hardware

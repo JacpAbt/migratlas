@@ -6,34 +6,71 @@
 # in the set. See docs/ETHICS.md.
 
 sources:
-  - id: darkecology
-    title: The Dark Ecology Dataset — vertical profiles of aerial biomass
+  - id: darkecology_daily
+    title: Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
     evidence_type: flux
     realm: aerial
     # Not "birds". The radar cannot separate birds from bats from insects, and saying
     # otherwise would be attributing a signal we have not attributed.
     taxon_scope: unattributed
     landing_page: https://darkecology.github.io/dataset/
-    doi: 10.5281/zenodo.18436874
-    download_uri: https://zenodo.org/records/18436874
+    # Version DOI, not the concept DOI (10.5281/zenodo.13345265). The concept DOI floats
+    # to whatever is newest, which would make a published figure unreproducible.
+    doi: 10.5281/zenodo.18433334
+    download_uri: https://zenodo.org/records/18433334
     licence: CC BY 4.0
     licence_url: https://creativecommons.org/licenses/by/4.0/
     citation: >-
-      Dark Ecology project. The Dark Ecology Dataset: measurements of aerial biomass
-      over the United States, 1995–2025. Zenodo. https://doi.org/10.5281/zenodo.18436874
+      Dark Ecology project (2026). Dark Ecology Dataset: Measurements of Biological
+      Activity in US Weather Radar — Time Series Data from 1995–2025, v1.1.0. Zenodo.
+      https://doi.org/10.5281/zenodo.18433334
     redistribution:
       allowed: true
       attribution_required: true
       commercial_use: true
       notes: CC BY permits redistribution of derived products with attribution.
-    # Aggregate passage intensity past fixed public infrastructure, with no taxon and
-    # no individual. There is nothing here for anyone to hunt.
+    # Aggregate passage past fixed public infrastructure, no taxon and no individual.
+    # There is nothing here for anyone to hunt.
     default_sensitivity: not_sensitive
     caveats: >-
-      Measures aerial biomass, not birds: MistNet removes precipitation, not insects or
-      bats. Coverage begins 1995 but station histories are uneven, and the NEXRAD
-      dual-polarisation upgrade around 2011–2013 is a step change in the instrument
-      that must be modelled as a break rather than read as a biological trend.
+      Measures aerial biomass, not birds: MistNet separates precipitation from biology,
+      not birds from bats from insects. `traffic` is vertically and temporally
+      integrated, so it carries no height information — use the profiles product for
+      flight altitude. Station histories are uneven across 1995–2025 and the NEXRAD
+      dual-polarisation upgrade around 2011–2013 is a step change in the instrument that
+      must be modelled as a break rather than read as a biological trend; the daily
+      product does not label hardware generation, so upgrade dates have to come from
+      elsewhere. Nights with a high `fraction_missing` must be excluded before computing
+      passage quantiles.
+    added: 2026-07-28
+
+  - id: darkecology_profiles
+    title: Dark Ecology Dataset — vertical profiles of aerial biomass, 1995–2025
+    evidence_type: flux
+    realm: aerial
+    taxon_scope: unattributed
+    landing_page: https://darkecology.github.io/dataset/
+    # Concept DOI of the 1995–1999 block; the product spans seven records of five-year
+    # blocks, each with its own version DOI, pinned at ingest time.
+    doi: 10.5281/zenodo.13345173
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      Dark Ecology project (2026). Dark Ecology Dataset: Measurements of Biological
+      Activity in US Weather Radar — Vertical Profiles, v1.1.0. Zenodo.
+      https://doi.org/10.5281/zenodo.13345173
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: CC BY permits redistribution of derived products with attribution.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      Not yet ingested. Roughly 220 GiB across seven Zenodo records in five-year blocks,
+      one CSV per radar volume scan under profiles/YYYY/MM/DD/STATION/. Height-resolved,
+      so it is the source for flight-altitude questions — but for seasonal passage timing
+      the daily product answers the same question from 159 MiB, so this stays unfetched
+      until altitude is actually the question.
     added: 2026-07-28
 
   - id: megamove

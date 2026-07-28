@@ -66,13 +66,13 @@ def test_unregistered_source_is_refused() -> None:
 
 
 def test_admit_returns_the_source_for_a_good_entry() -> None:
-    assert admit("darkecology").id == "darkecology"
+    assert admit("darkecology_daily").id == "darkecology_daily"
 
 
 def test_radar_source_is_unattributed() -> None:
     """It measures aerial biomass. Claiming a taxon would be claiming an attribution
     the instrument cannot make."""
-    assert get("darkecology").taxon_scope is TaxonScope.UNATTRIBUTED
+    assert get("darkecology_daily").taxon_scope is TaxonScope.UNATTRIBUTED
 
 
 # --- Individual-granularity sources need per-taxon rules ---------------------

@@ -1,6 +1,7 @@
 """CLI: one entry point per job, so every pipeline stage is reproducible as a single
 command rather than a notebook cell someone ran once."""
 
+import logging
 from collections import Counter
 from pathlib import Path
 from typing import Annotated
@@ -11,6 +12,7 @@ from migratlas import __version__
 from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
+from migratlas.ingest import darkecology
 from migratlas.taxonomy import index as taxon_index
 
 app = typer.Typer(
@@ -26,6 +28,18 @@ taxonomy_app = typer.Typer(help="Resolve names against the GBIF Backbone.", no_a
 app.add_typer(catalog_app, name="catalog")
 app.add_typer(ingest_app, name="ingest")
 app.add_typer(taxonomy_app, name="taxonomy")
+
+
+@ingest_app.command("darkecology")
+def ingest_darkecology(
+    *,
+    force: Annotated[bool, typer.Option(help="Re-download even if already present.")] = False,
+) -> None:
+    """Land the Dark Ecology daily time series (FLUX, aerial)."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    result = darkecology.ingest(force=force)
+    print(f"{result.rows:,} rows -> {result.path}")
+    print(f"run {result.run_id}")
 
 
 @catalog_app.command("list")
