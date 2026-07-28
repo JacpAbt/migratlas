@@ -88,10 +88,17 @@ def require_local(
     Raises:
         FileNotPlacedError: if the file is absent, or present but fails its checksum.
     """
-    path = raw_path(source_id, name)
-    if not path.exists():
-        msg = f"{name} is not present. Place it at:\n  {path}\n{instructions}".rstrip()
+    expected = raw_path(source_id, name)
+    # Searched recursively, because repositories name their download folders however they
+    # like -- Dryad nests everything under doi_10_5061_dryad_xxxxx__vYYYYMMDD -- and making
+    # the operator flatten that by hand is friction for no gain.
+    candidates = [expected] if expected.exists() else sorted(expected.parent.rglob(name))
+    if not candidates:
+        msg = (
+            f"{name} is not present. Place it anywhere under:\n  {expected.parent}\n{instructions}"
+        ).rstrip()
         raise FileNotPlacedError(msg)
+    path = candidates[0]
 
     if checksum and not checksum.matches(path):
         msg = (

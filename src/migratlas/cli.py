@@ -12,7 +12,7 @@ from migratlas import __version__
 from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
-from migratlas.ingest import darkecology
+from migratlas.ingest import darkecology, megamove
 from migratlas.taxonomy import index as taxon_index
 
 app = typer.Typer(
@@ -38,6 +38,18 @@ def ingest_darkecology(
     """Land the Dark Ecology daily time series (FLUX, aerial)."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     result = darkecology.ingest(force=force)
+    print(f"{result.rows:,} rows -> {result.path}")
+    print(f"run {result.run_id}")
+
+
+@ingest_app.command("megamove")
+def ingest_megamove() -> None:
+    """Land the MegaMove 1-degree grids (ABUNDANCE_SURFACE, marine).
+
+    Requires operator-placed archives; the command names the path if they are absent.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    result = megamove.ingest()
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
 

@@ -106,7 +106,9 @@ ignore = [
 # TC001-003 want typing-only imports moved into a TYPE_CHECKING block, which exists to
 # cut import cost and avoid runtime dependencies. Neither matters in a test module, and
 # the block is pure ceremony around `tmp_path: Path`.
-"tests/**" = ["S101", "PLR2004", "ANN201", "SLF001", "TC001", "TC002", "TC003"]
+# RUF001 flags visually ambiguous unicode -- but a test for apostrophe and accent folding
+# has to contain the real characters, or it is testing nothing.
+"tests/**" = ["S101", "PLR2004", "ANN201", "SLF001", "TC001", "TC002", "TC003", "RUF001"]
 "src/migratlas/cli.py" = ["T20"]  # the CLI is where printing belongs
 
 [tool.ruff.lint.flake8-tidy-imports]
@@ -146,6 +148,7 @@ testpaths = ["tests"]
 addopts = "-ra --strict-markers --strict-config"
 markers = [
     "network: hits a real remote source; skipped unless --run-network is passed",
+    "localdata: needs operator-placed raw files; skipped unless --run-localdata is passed",
     "slow: takes more than a few seconds",
 ]
 filterwarnings = ["error"]

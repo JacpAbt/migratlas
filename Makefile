@@ -71,6 +71,10 @@ test:  ## Unit tests (no network)
 test-network:  ## Tests that hit real remote sources
 	$(RUN) pytest -m network --run-network
 
+.PHONY: test-localdata
+test-localdata:  ## Tests that need operator-placed raw files
+	$(RUN) pytest -m localdata --run-localdata
+
 .PHONY: coverage
 coverage:  ## Tests with coverage report
 	$(RUN) pytest --cov --cov-report=term-missing
