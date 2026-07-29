@@ -15,7 +15,7 @@ one survey instead of all of them.
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import polars as pl
 
@@ -28,6 +28,8 @@ from migratlas.lake.writer import WriteResult, write_evidence
 from migratlas.taxonomy import gbif
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     import pyarrow as pa
 
 log = logging.getLogger(__name__)
@@ -140,6 +142,29 @@ class SurveyRead:
     years: tuple[int, int]
 
 
+def _read_rdata(path: Path, survey: str, *, force_latin1: bool) -> dict[str, Any]:
+    """The pure-Python reader, which is the only one that can be told an encoding.
+
+    Called with ``force_latin1=False`` it retries itself with the encoding forced, because
+    forcing Latin-1 on a file that is really UTF-8 turns accented species and vessel names into
+    mojibake -- silently, and in a column used as a join key.
+
+    Raises:
+        SurveyUnreadableError: if neither encoding works.
+    """
+    import rdata  # noqa: PLC0415 -- an optional extra, and only this module needs it
+
+    options = {"default_encoding": "latin1", "force_default_encoding": True} if force_latin1 else {}
+    try:
+        return rdata.read_rda(path, **options)  # type: ignore[arg-type]
+    except Exception as error:
+        if not force_latin1:
+            log.info("  %s: retrying the slow reader with a forced Latin-1 encoding", survey)
+            return _read_rdata(path, survey, force_latin1=True)
+        msg = f"{survey}: unreadable: {type(error).__name__}: {str(error)[:90]}"
+        raise SurveyUnreadableError(msg) from None
+
+
 def read_survey(survey: str) -> object:
     """Fetch and read one survey's cleaned file.
 
@@ -148,27 +173,29 @@ def read_survey(survey: str) -> object:
     series. The pure-Python reader accepts a forced encoding and took 12.7 s for GSL-N's 94,000
     rows -- too slow to use everywhere, exactly right as a fallback for the one file that needs it.
 
+    pyreadr is an optional extra, so its absence has to be a slow ingest rather than a failed one.
+    It went missing from a synced environment once, and because the import sat above the try block
+    a single missing wheel took all 29 surveys down.
+
     Raises:
         SurveyUnreadableError: if both readers fail, so the caller can skip one survey.
     """
-    import pyreadr  # noqa: PLC0415 -- an optional extra, and only this module needs it
-
     name = f"{survey}_clean.RData"
     path = fetch(RemoteFile(url=f"{BASE}/{name}", name=name), SOURCE_ID)
     try:
-        objects = pyreadr.read_r(str(path))
-    except UnicodeDecodeError:
-        import rdata  # noqa: PLC0415 -- the slow path, imported only when it is needed
-
-        log.info("  %s: not UTF-8, re-reading with a forced Latin-1 encoding", survey)
+        import pyreadr  # noqa: PLC0415 -- an optional extra, and only this module needs it
+    except ImportError:
+        log.warning("%s: pyreadr unavailable, reading with the slow reader", survey)
+        objects: dict[str, Any] = _read_rdata(path, survey, force_latin1=False)
+    else:
         try:
-            objects = rdata.read_rda(path, default_encoding="latin1", force_default_encoding=True)
+            objects = pyreadr.read_r(str(path))
+        except UnicodeDecodeError:
+            log.info("  %s: not UTF-8, re-reading with a forced Latin-1 encoding", survey)
+            objects = _read_rdata(path, survey, force_latin1=True)
         except Exception as error:
-            msg = f"{survey}: both readers failed: {type(error).__name__}: {str(error)[:90]}"
+            msg = f"{survey}: {type(error).__name__}: {str(error)[:120]}"
             raise SurveyUnreadableError(msg) from None
-    except Exception as error:
-        msg = f"{survey}: {type(error).__name__}: {str(error)[:120]}"
-        raise SurveyUnreadableError(msg) from None
 
     frame = next(iter(objects.values()))
     missing = [column for column in NEEDED if column not in frame.columns]
@@ -264,6 +291,32 @@ def taxon_keys(names: list[str]) -> dict[str, int]:
     return known
 
 
+def standardise_effort(frame: pl.DataFrame, survey: str) -> pl.DataFrame:
+    """Put one survey's catch and effort on a footing the centroid metric can use.
+
+    EBS, AI and GOA have `num` and `area_swept` 100% null because AFSC publishes catch per unit
+    area directly. Without this branch those three are lost, and they are the series the Bering
+    Sea distribution-shift literature is built on.
+
+    Effort of 1 is safe because the centroid weights by count/effort, and a weighted mean is
+    invariant to a constant scaling of its weights -- so whether the source's area unit is km2 or
+    hectares cannot reach a centroid. Only a comparison of levels *between* surveys would care,
+    and surveys are never pooled. The unit string records which quantity a row actually holds so
+    that stays checkable rather than remembered.
+
+    Decided per survey rather than per row: a mix within one survey would put two different
+    quantities into one weighted mean.
+    """
+    if frame["num"].is_null().all() and frame["num_cpua"].is_not_null().any():
+        log.info("  %s: no raw catch, using published catch-per-unit-area", survey)
+        return frame.with_columns(
+            num=pl.col("num_cpua"),
+            area_swept=pl.lit(1.0),
+            effort_unit=pl.lit(PRESTANDARDISED_UNIT),
+        )
+    return frame.with_columns(effort_unit=pl.lit(EFFORT_UNIT))
+
+
 def prepare(survey: str) -> pl.DataFrame:
     """One survey as a polars frame with only the columns the evidence rows use."""
     # Typed as object: pandas has no stubs installed and is only ever handed straight to polars,
@@ -275,18 +328,7 @@ def prepare(survey: str) -> pl.DataFrame:
         *[pl.col(c).cast(pl.String) for c in TEXT],
         *[pl.col(c).cast(pl.String) for c in DRIVERS],
     )
-    # Surveys that publish only CPUA get their catch from there, with effort set to 1. Decided per
-    # survey rather than per row: a mix within one survey would mean two different quantities in
-    # one weighted mean.
-    if frame["num"].is_null().all() and frame["num_cpua"].is_not_null().any():
-        log.info("  %s: no raw catch, using published catch-per-unit-area", survey)
-        frame = frame.with_columns(
-            num=pl.col("num_cpua"),
-            area_swept=pl.lit(1.0),
-            effort_unit=pl.lit(PRESTANDARDISED_UNIT),
-        )
-    else:
-        frame = frame.with_columns(effort_unit=pl.lit(EFFORT_UNIT))
+    frame = standardise_effort(frame, survey)
 
     before = frame.height
     # A row with no position, no date or no catch cannot contribute to a distribution centroid.
