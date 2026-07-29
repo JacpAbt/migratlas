@@ -110,6 +110,10 @@ ingest-megamove:  ## MegaMove 1-degree grids -> lake (ABUNDANCE_SURFACE, marine)
 ingest-obis:  ## OBIS speciesgrids -> lake (ABUNDANCE_SURFACE, marine)
 	$(RUN) migratlas ingest obis
 
+.PHONY: ingest-fishglob
+ingest-fishglob:  ## FISHGLOB bottom-trawl surveys -> lake (SURVEY_INDEX, marine)
+	$(RUN) migratlas ingest fishglob
+
 .PHONY: ingest-ebird
 ingest-ebird:  ## eBird Status & Trends weekly abundance -> lake (analysis only, never published)
 	$(RUN) migratlas ingest ebird-st
@@ -133,6 +137,10 @@ phase1-ebird:  ## Radar seasonal cycle vs birds-only eBird abundance (the insect
 .PHONY: phase1-robustness
 phase1-robustness:  ## Break sensitivity, daytime placebo and permutation null
 	$(RUN) migratlas report phase1-robustness
+
+.PHONY: phase1b-report
+phase1b-report:  ## Marine distribution shift from FISHGLOB trawl surveys
+	$(RUN) migratlas report phase1b
 
 .PHONY: gpu-check
 gpu-check:  ## Confirm a CUDA device is visible from inside the venv

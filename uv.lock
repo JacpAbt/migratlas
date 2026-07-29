@@ -404,6 +404,10 @@ geo = [
     { name = "xarray" },
     { name = "zarr" },
 ]
+rdata = [
+    { name = "pyreadr" },
+    { name = "rdata" },
+]
 stats = [
     { name = "scipy" },
     { name = "statsmodels" },
@@ -434,7 +438,9 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.9" },
     { name = "pydantic-settings", specifier = ">=2.5" },
     { name = "pyogrio", marker = "extra == 'geo'", specifier = ">=0.10" },
+    { name = "pyreadr", marker = "extra == 'rdata'", specifier = ">=0.5" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "rdata", marker = "extra == 'rdata'", specifier = ">=0.11" },
     { name = "rioxarray", marker = "extra == 'geo'", specifier = ">=0.17" },
     { name = "scipy", marker = "extra == 'stats'", specifier = ">=1.14" },
     { name = "shapely", marker = "extra == 'geo'", specifier = ">=2.0" },
@@ -443,7 +449,7 @@ requires-dist = [
     { name = "xarray", marker = "extra == 'geo'", specifier = ">=2024.9" },
     { name = "zarr", marker = "extra == 'geo'", specifier = ">=2.18" },
 ]
-provides-extras = ["geo", "tiles", "stats"]
+provides-extras = ["geo", "tiles", "rdata", "stats"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -811,6 +817,22 @@ wheels = [
 ]
 
 [[package]]
+name = "pyreadr"
+version = "0.5.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pandas" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f5/a8/6235ba50870da6b9b5b1d651ff64fdfb36716e1c2d63b347f1abe9c7ce3b/pyreadr-0.5.6.tar.gz", hash = "sha256:ec10bef1798a4d9e91ff75ab69fbcd009a3fad2250c79f5377e19e787c949b8f", size = 1300692, upload-time = "2026-04-13T16:57:32.922Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/53/54/62c6b283184629691843eeb46b513af3c71526a4ece2434ddd94849e4aec/pyreadr-0.5.6-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:dbcad30c223abf3252cc0c0cec383dd197930a7f95791f5c46731b267c09b3a5", size = 325487, upload-time = "2026-04-13T16:57:23.054Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/06/9f3da79939de8b0b372d4279b59a3ae61c4b3bd1715eb15c48d30e0b5654/pyreadr-0.5.6-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:d5229b95f817a539dddf50fa6c59a8f9479bda6612e5289534754b0bdfde11d3", size = 325574, upload-time = "2026-04-13T16:57:24.449Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/b5/ab56fdb5844a14e40b35fe720a3451bc1b78c119b7066365e5788887caa1/pyreadr-0.5.6-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:2dd64f37ef53d25ac8b6f8129fa29c246718d39f35277f20a06dab1be23d0f31", size = 787612, upload-time = "2026-04-13T16:57:25.62Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/07/d1c6da86a33c8df17ea8c0dd459ae73aebecb1816c1a8d07685a2cf3d071/pyreadr-0.5.6-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a35fcfd2343de5ef9afeff1cb127f5bbcc8088bc6281f0b4b18e04d3ad6aba3f", size = 784031, upload-time = "2026-04-13T16:57:27.105Z" },
+    { url = "https://files.pythonhosted.org/packages/81/b5/54b066425ac787931e466244c6102be2c4b3a84d49124154dad5ffbcf82a/pyreadr-0.5.6-cp314-cp314-win_amd64.whl", hash = "sha256:0d22e6806cfd6bb67cd472e78e07ef3efd8e3d49b9a23bdc5174719e86fc17aa", size = 2395789, upload-time = "2026-04-13T16:57:29.874Z" },
+]
+
+[[package]]
 name = "pytest"
 version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -914,6 +936,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/8f/f2/8f706083c6c163054d12c7ed6d5ac4e4ed02252b761288d74e6158871b34/rasterio-1.5.0-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:b9fd87a0b63ab5c6267dfb0bc96f54fdf49d000651b9ee85ed37798141cff046", size = 37714599, upload-time = "2026-01-05T16:06:38.818Z" },
     { url = "https://files.pythonhosted.org/packages/a6/d5/bbca726d5fea5864f7e4bcf3ee893095369e93ad51120495e8c40e2aa1a0/rasterio-1.5.0-cp314-cp314t-win_amd64.whl", hash = "sha256:f459db8953ba30ca04fcef2b5e1260eeeff0eae8158bd9c3d6adbe56289765cc", size = 31233931, upload-time = "2026-01-05T16:06:42.208Z" },
     { url = "https://files.pythonhosted.org/packages/6e/d1/8b017856e63ccaff3cbd0e82490dbb01363a42f3a462a41b1d8a391e1443/rasterio-1.5.0-cp314-cp314t-win_arm64.whl", hash = "sha256:f4b9c2c3b5f10469eb9588f105086e68f0279e62cc9095c4edd245e3f9b88c8a", size = 29418321, upload-time = "2026-01-05T16:06:44.758Z" },
+]
+
+[[package]]
+name = "rdata"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "typing-extensions" },
+    { name = "xarray" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c3/6f/4bf8fc3981569b0fb32815db86aef880b233305353a48d2c1770a29fe9cb/rdata-1.1.0.tar.gz", hash = "sha256:37c8b19e8be82d7d7acb36c6623bfeb7ab1d95d9380ec00a6c063f88b1f50e3a", size = 106564, upload-time = "2026-06-11T18:45:40.187Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/29/ef/acc15553b522a3710837520a76556958d533753d27e5ead18a8600159398/rdata-1.1.0-py3-none-any.whl", hash = "sha256:12efb7597725d6db6cc78d84eb522a9634008f8fce1c2733b7fd42b9013bc41f", size = 287685, upload-time = "2026-06-11T18:45:38.837Z" },
 ]
 
 [[package]]

@@ -227,6 +227,11 @@ SURVEY_INDEX = _spec(
         pa.field("period_end", _TS, nullable=False),
         pa.field("site_longitude", pa.float64(), nullable=False),
         pa.field("site_latitude", pa.float64(), nullable=False),
+        # Depth of the site, where the scheme records it. Nullable because a terrestrial or
+        # aerial survey has no such thing -- but for a marine survey it is not optional detail:
+        # species answer warming by moving deeper about as often as by moving poleward, and a
+        # schema without it would let a real depth response look like no response.
+        pa.field("site_depth_m", pa.float64(), nullable=True),
         pa.field("count", pa.float64(), nullable=False),
         # A count without effort is uninterpretable, but many historical schemes did
         # not record it, so models must handle its absence.

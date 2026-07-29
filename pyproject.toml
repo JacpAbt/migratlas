@@ -33,6 +33,8 @@ geo = [
     "zarr>=2.18",
 ]
 tiles = ["pmtiles>=3.4"]
+# Reading R's serialisation format. FISHGLOB publishes .RData and nothing else.
+rdata = ["pyreadr>=0.5", "rdata>=0.11"]
 stats = ["scipy>=1.14", "statsmodels>=0.14"]
 
 [dependency-groups]
@@ -141,6 +143,8 @@ module = [
     "pmtiles.*",
     "pyarrow.*",
     "pyogrio.*",
+    "pyreadr.*",
+    "rdata.*",
     "rasterio.*",
     "statsmodels.*",
 ]

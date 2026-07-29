@@ -13,9 +13,15 @@ from migratlas import __version__
 from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
-from migratlas.ingest import darkecology, ebird_st, megamove, obis
+from migratlas.ingest import darkecology, ebird_st, fishglob, megamove, obis
 from migratlas.lake import check as lake_check
-from migratlas.reports import phase1, phase1_ebird, phase1_hierarchical, phase1_robustness
+from migratlas.reports import (
+    phase1,
+    phase1_ebird,
+    phase1_hierarchical,
+    phase1_robustness,
+    phase1b,
+)
 from migratlas.taxonomy import index as taxon_index
 from migratlas.tiles import layers as tile_layers
 from migratlas.tiles import species as tile_species
@@ -88,6 +94,18 @@ def ingest_ebird_st(
     print(f"run {result.run_id}")
 
 
+@ingest_app.command("fishglob")
+def ingest_fishglob() -> None:
+    """Land the FISHGLOB bottom-trawl surveys (SURVEY_INDEX, marine).
+
+    The first source where effort is fixed by design rather than corrected after the fact.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    result = fishglob.ingest()
+    print(f"{result.rows:,} rows -> {result.path}")
+    print(f"run {result.run_id}")
+
+
 @app.command("build-layers")
 def build_layers(
     out: Annotated[Path, typer.Option(help="Destination directory for layer files.")] = Path(
@@ -146,6 +164,13 @@ def report_phase1_robustness() -> None:
     """Break-specification sensitivity, daytime placebo and permutation null."""
     logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
     print(phase1_robustness.render())
+
+
+@report_app.command("phase1b")
+def report_phase1b() -> None:
+    """Marine distribution shift from the FISHGLOB bottom-trawl surveys."""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
+    print(phase1b.render())
 
 
 @catalog_app.command("list")

@@ -184,3 +184,40 @@ sources:
       radar traffic must compare timing landmarks or rates of change, never levels. Release
       versions are not comparable to each other; the models change between them.
     added: 2026-07-29
+
+  - id: fishglob
+    title: FISHGLOB — 29 harmonised scientific bottom-trawl surveys
+    evidence_type: survey_index
+    realm: marine
+    taxon_scope: exact
+    landing_page: https://github.com/AquaAuma/FishGlob_data
+    download_uri: https://raw.githubusercontent.com/AquaAuma/FishGlob_data/main/outputs/Cleaned_data/
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      Maureaud, A. A., Palacios-Abrantes, J., Kitchel, Z., Mannocci, L., Pinsky, M. L.,
+      Fredston, A., Beukhof, E., Forrest, D. L., Frelat, R., Palomares, M. L. D., Pecuchet, L.,
+      Thorson, J. T., van Denderen, P. D., Merigot, B. (2024). FISHGLOB_data: an integrated
+      dataset of fish biodiversity sampled with scientific bottom-trawl surveys.
+      Scientific Data 11, 24. https://doi.org/10.1038/s41597-023-02866-w
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        CC BY 4.0 on the compilation. The contributing national surveys carry their own terms and
+        their own citations; the data descriptor's Table 1 lists them and must be credited
+        alongside FISHGLOB for any survey whose data is shown.
+    # Fisheries-independent survey catches of fish, aggregated per haul. Station positions are
+    # published by the survey programmes themselves and there is no individual animal to locate.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      Continental-shelf trawlable ground only — North Atlantic, North Pacific and a few other
+      shelves. No open ocean, no pelagic megafauna, almost nothing in the southern hemisphere, and
+      nothing where a trawl cannot go. Survey footprints change across decades as stations are added
+      and dropped, so any distribution metric must be restricted to consistently sampled cells or
+      it measures where the ship went. Gear changes within several series and is a step change in
+      the instrument, like the NEXRAD dual-polarisation upgrade. Catch in numbers is the standard
+      basis for distribution centroids, but a trawl selects by size and behaviour and is not a
+      census.
+    added: 2026-07-29
