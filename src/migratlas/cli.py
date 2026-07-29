@@ -116,17 +116,26 @@ def ingest_narr(
     months: Annotated[
         str, typer.Option(help="Comma-separated calendar months, or 'all'.")
     ] = "3,4,5,6,8,9,10,11",
+    # A CLI flag, which is what typer builds from a boolean parameter -- the readability
+    # objection FBT guards against does not apply to an argv-facing signature.
+    resume: Annotated[  # noqa: FBT002
+        bool, typer.Option(help="Fetch only the years holding an incomplete month.")
+    ] = False,
 ) -> None:
     """Land NARR night winds at the radar stations (driver samples, gridded).
 
     Months default to the two migration windows the phenology uses, because a month outside them
     costs the same to fetch and answers nothing. See adr/0006 for why this is NARR over OPeNDAP
     rather than ARCO-ERA5.
+
+    `--resume` closes a gap without refetching what already landed. It works by year rather than
+    by month because the lake partitions by year, so a write holding one month would replace that
+    whole year.
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     only = None if months == "all" else tuple(int(part) for part in months.split(","))
     points = narr.stations_from(phase1.load_conus_nights())
-    result = narr.ingest(points, date(start, 1, 1), date(end, 12, 31), only=only)
+    result = narr.ingest(points, date(start, 1, 1), date(end, 12, 31), only=only, resume=resume)
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
 

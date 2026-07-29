@@ -235,6 +235,71 @@ def test_february_length_follows_the_leap_year() -> None:
     assert narr._month_steps(2015, 2)[0] == 28 * narr.STEPS_PER_DAY
 
 
+def test_a_month_short_of_its_own_length_counts_as_incomplete() -> None:
+    """Presence is not completeness, and the difference cost a forty minute re-run.
+
+    The night-label shift means a fetch of month M also writes the last day of M-1, so a month
+    whose own fetch failed still appears in the lake with one day in it. Two months did exactly
+    that, and a presence check called them done.
+    """
+    wanted = [(2007, 9), (2007, 10), (2008, 4)]
+    landed = {(2007, 9): 29, (2007, 10): 30, (2008, 4): 1}
+    assert narr.incomplete(wanted, landed) == [(2008, 4)]
+
+
+def test_a_months_final_day_arriving_with_the_next_month_is_not_a_gap() -> None:
+    """A complete fetch of September writes days 1-29; the 30th comes with October's fetch,
+    which may not be a wanted month. So len(M) - 1 days is complete, not short."""
+    assert narr.incomplete([(2015, 9)], {(2015, 9): 29}) == []
+    assert narr.incomplete([(2015, 9)], {(2015, 9): 28}) == [(2015, 9)]
+
+
+def test_february_completeness_follows_the_leap_year() -> None:
+    assert narr.incomplete([(2016, 2)], {(2016, 2): 28}) == []
+    assert narr.incomplete([(2015, 2)], {(2015, 2): 28}) == []
+    assert narr.incomplete([(2016, 2)], {(2016, 2): 27}) == [(2016, 2)]
+
+
+def test_a_partial_write_refuses_a_year_it_was_not_refetching() -> None:
+    """The failure mode that makes resuming dangerous.
+
+    The lake replaces the partitions a write touches, so one stray row in an unexpected year
+    would replace that entire year with just that row. The night-label shift can produce exactly
+    that: a fetch of January writes into the previous December.
+    """
+    table = narr.to_samples(
+        pl.DataFrame(
+            {
+                "date": [date(2007, 9, 20), date(2006, 12, 31)],
+                "value": [7.5, 8.0],
+                "site_id": ["KBGM", "KBGM"],
+                "variable": ["wind_u_925hPa", "wind_u_925hPa"],
+                "longitude": [-75.9, -75.9],
+                "latitude": [42.0, 42.0],
+            }
+        )
+    )
+    with pytest.raises(ValueError, match=r"year\(s\) \[2006\]"):
+        narr._refuse_unexpected_years(table, {2007})
+
+
+def test_a_full_write_is_not_year_checked() -> None:
+    """A full ingest replaces everything it should, so there is nothing to protect."""
+    table = narr.to_samples(
+        pl.DataFrame(
+            {
+                "date": [date(1995, 3, 2)],
+                "value": [7.5],
+                "site_id": ["KBGM"],
+                "variable": ["wind_u_925hPa"],
+                "longitude": [-75.9],
+                "latitude": [42.0],
+            }
+        )
+    )
+    narr._refuse_unexpected_years(table, None)
+
+
 def test_airspeed_alignment_prefers_the_offset_that_tightens_the_distribution() -> None:
     """The mechanism behind the date convention, on data built so the answer is known.
 

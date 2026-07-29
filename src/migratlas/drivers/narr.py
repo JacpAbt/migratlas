@@ -15,6 +15,7 @@ Two facts about this server shape everything below, both measured rather than as
 import logging
 from calendar import monthrange
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, date, datetime
 from time import sleep
 from typing import TYPE_CHECKING, Final
 
@@ -22,12 +23,14 @@ import numpy as np
 import polars as pl
 
 from migratlas.catalog import loader as catalog
+from migratlas.config import get_settings
 from migratlas.drivers.schema import DRIVER_SAMPLES, DriverKind
 from migratlas.features.annotate import Located, Point, bounding_box, match_report, nearest_cells
+from migratlas.lake.identifiers import new_run_id
 from migratlas.lake.writer import WriteResult, write_table
 
 if TYPE_CHECKING:
-    from datetime import date
+    from pathlib import Path
 
     import pyarrow as pa
 
@@ -339,16 +342,94 @@ def months_between(
     return wanted
 
 
-def ingest(
-    points: list[Point], start: date, end: date, *, only: tuple[int, ...] | None = None
+def landed_days(root: Path | None = None) -> dict[tuple[int, int], int]:
+    """How many distinct night dates the lake already holds, per (year, month).
+
+    Counts days rather than rows, and counts them rather than checking presence, because a
+    month can land *partially*: the night-label shift means a fetch of month M also writes the
+    last day of M-1, so a month whose own fetch failed can still show up with one day in it. Two
+    months did exactly that on the first full run, and a presence check called them complete.
+    """
+    from migratlas.lake.reader import scan_dataset  # noqa: PLC0415 -- avoids an import cycle
+
+    try:
+        frame = (
+            scan_dataset(DRIVER_SAMPLES.name, source_id=SOURCE_ID, root=root)
+            .select(
+                year=pl.col("period_start").dt.year(),
+                month=pl.col("period_start").dt.month(),
+                day=pl.col("period_start").dt.date(),
+            )
+            .group_by("year", "month")
+            .agg(pl.col("day").n_unique().alias("days"))
+            .collect()
+        )
+    except FileNotFoundError, OSError:
+        return {}
+    return {(row["year"], row["month"]): row["days"] for row in frame.iter_rows(named=True)}
+
+
+def incomplete(
+    wanted: list[tuple[int, int]], landed: dict[tuple[int, int], int]
+) -> list[tuple[int, int]]:
+    """Which wanted months are absent or short.
+
+    A complete fetch of month M writes days 1..len(M)-1 of M -- its final day arrives with the
+    fetch of M+1, which may not be a wanted month. So "at least len(M) - 1 days" is the bar.
+    """
+    short = []
+    for year, month in wanted:
+        length = monthrange(year, month)[1]
+        if landed.get((year, month), 0) < length - 1:
+            short.append((year, month))
+    return short
+
+
+def ingest(  # noqa: PLR0913 -- each argument is a distinct scoping choice, not a bundle
+    points: list[Point],
+    start: date,
+    end: date,
+    *,
+    only: tuple[int, ...] | None = None,
+    resume: bool = False,
+    root: Path | None = None,
 ) -> WriteResult:
     """Fetch, reshape and land night winds for a point set over a date range."""
     # Same first step as every evidence ingest. Being unable to name the source in the registry
     # is the cheapest place to stop, and a driver needs it as much as evidence does -- its
     # licence has to be recorded somewhere, and this is where PROVENANCE.md reads from.
     catalog.admit(SOURCE_ID)
-    located = locate(points)
     wanted = months_between(start, end, only=only)
+
+    # Resume by *year*, not by month, because the lake partitions by year: writing a table that
+    # holds only September would replace the whole year=2007 partition and take March to August
+    # with it. Refetching a year's wanted months keeps the write partition-aligned, so every
+    # other year's files are never touched, and no merge logic is needed anywhere.
+    expected_years: set[int] | None = None
+    if resume:
+        short = incomplete(wanted, landed_days(root))
+        if not short:
+            log.info("nothing missing: all %d months already complete", len(wanted))
+            return WriteResult(
+                run_id=new_run_id(),
+                source_id=SOURCE_ID,
+                dataset=DRIVER_SAMPLES.name,
+                rows=0,
+                partitions=DRIVER_SAMPLES.partition_by,
+                path=str((root or get_settings().lake_dir) / DRIVER_SAMPLES.name),
+                written_at=datetime.now(UTC).isoformat(),
+            )
+        expected_years = {year for year, _ in short}
+        log.info(
+            "resuming: %d incomplete month(s) (%s) in %d year(s) %s -- refetching those years",
+            len(short),
+            ", ".join(f"{y}-{m:02d}" for y, m in short),
+            len(expected_years),
+            sorted(expected_years),
+        )
+        wanted = [(year, month) for year, month in wanted if year in expected_years]
+
+    located = locate(points)
     log.info("%d months to fetch, %d requests", len(wanted), len(wanted) * len(COMPONENTS) * 2)
 
     # Confirm the computed time axis against the server once, on the first month asked for. If
@@ -382,13 +463,12 @@ def ingest(
         msg = "no months could be fetched"
         raise RuntimeError(msg)
 
-    # Summarised at the end, not just warned about mid-stream. The first run lost nine months
-    # and the warnings scrolled past under two hundred progress lines -- a coverage hole has to
-    # be the last thing the run says, because a partial re-run cannot patch it: the writer
-    # replaces a source wholesale, so the only fix is another full pass.
+    # Summarised at the end, not only warned about mid-stream. The first full run lost nine
+    # months and those warnings scrolled past under two hundred progress lines. `--resume` makes
+    # a gap cheap to close now, but only if it is noticed.
     if missing:
         log.warning(
-            "INCOMPLETE: %d of %d months missing: %s",
+            "INCOMPLETE: %d of %d months missing: %s. Re-run with --resume to fetch just these.",
             len(missing),
             len(wanted),
             ", ".join(f"{year}-{month:02d}" for year, month in sorted(missing)),
@@ -397,8 +477,36 @@ def ingest(
         log.info("all %d months fetched", len(wanted))
 
     table = to_samples(pl.concat(frames))
+    _refuse_unexpected_years(table, expected_years)
     log.info("%d driver samples", table.num_rows)
     return write_table(table, DRIVER_SAMPLES, source_id=SOURCE_ID)
+
+
+def _refuse_unexpected_years(table: pa.Table, expected: set[int] | None) -> None:
+    """On a partial write, refuse to touch a year that was not being refetched.
+
+    The lake replaces the partitions a write touches, so a single stray row in an unexpected
+    year would replace that whole year with just that row. It is a real possibility rather than
+    a hypothetical: the night-label shift moves a fetch of January into the previous December.
+    January is not currently a wanted month, which is exactly the kind of reason that stops
+    being true quietly.
+
+    Raises:
+        ValueError: if the table carries a year outside the refetch set.
+    """
+    if expected is None:
+        return
+    import pyarrow.compute as pc  # noqa: PLC0415 -- only this guard needs it
+
+    years = {stamp.year for stamp in pc.unique(table.column("period_start")).to_pylist() if stamp}
+    stray = sorted(years - expected)
+    if stray:
+        msg = (
+            f"Refusing a partial write: rows fall in year(s) {stray}, which were not being "
+            f"refetched ({sorted(expected)}). Writing would replace those years with only "
+            f"these rows. Widen the refetch to include them, or run a full ingest."
+        )
+        raise ValueError(msg)
 
 
 def align_offset(
