@@ -196,13 +196,28 @@ adjusted away.
 step is near zero and the estimate is stable across break specification, curvature and panel
 balance. The continent-wide −1.03 rests on southern bands whose step is unexplained.
 
-That claim was audited again in `phase1c-homogeneity.md` and **strengthened**: recomputed on
-`reflectivity_hours`, which measures the same biomass without weighting it by flight speed, the
-37–50°N autumn trend moves by −0.09 ± 0.14 d/decade — indistinguishable from zero change, r=0.86
-station by station. The advance is not an artefact of `traffic`'s speed term. The same note tests
-precipitation screening as the fourth candidate explanation for the southern step and rejects it
-too, while establishing that the screening severity itself steps at 2012 — which does not touch
-the timing result but is a caveat for anything computed from biomass *levels* across that year.
+That claim was audited again in `phase1c-homogeneity.md` and **strengthened three ways**:
+
+1. Recomputed on `reflectivity_hours`, which measures the same biomass without weighting it by
+   flight speed, the 37–50°N autumn trend moves by −0.09 ± 0.14 d/decade — indistinguishable from
+   zero change, r=0.86 station by station. The advance is not an artefact of `traffic`'s speed term,
+   and the reason is now measured rather than assumed: autumn ground speed barely drifted
+   (+0.10 ± 0.08 m s⁻¹ per decade) where spring rose 0.57.
+2. **The composition did not drift.** Airspeed, from the radar velocity against a NARR 925 hPa night
+   wind over 901,083 station-nights, is flat in autumn at −0.063 ± 0.084 m s⁻¹ per decade, and its
+   mean of 8.65 m s⁻¹ sits in the nocturnal-migrant band. This was the pre-registered failure
+   condition for the whole interpretation, and it did not trigger.
+3. **It is not the insects.** Excluding the 293,497 station-nights whose mean airspeed was under
+   5 m s⁻¹, the autumn 37–50°N trend goes −0.56 ± 0.25 → −0.42 ± 0.27. The non-bird nights were not
+   carrying it. This is what the July-share argument could not do: it bounded the annual insect
+   contribution, not the mixture night by night.
+
+The same note rejects precipitation screening as the fourth candidate explanation for the southern
+step, while establishing that the screening severity itself steps at 2012 — which does not touch the
+timing result but is a caveat for anything computed from biomass *levels* across that year. It also
+records one failed prediction, in spring rather than autumn: spring airspeed *rose*
+(+0.501 ± 0.128), which is either real or an artefact of migrants flying higher, and needs the
+vertical profiles to separate. Spring carries no claim here, so nothing in this note changes.
 
 The linear `decade:latitude` interaction is null in every fit (p 0.29–0.59). That is a
 statement about functional form rather than about latitude: the band fits are non-monotonic —

@@ -62,6 +62,9 @@ PANEL_MARGIN: Final = 5
 # dominated by migrating birds. Not a classifier -- a flag on a mixture summary.
 INSECT_AIRSPEED_MAX: Final = 5.0
 
+# The exclusion check needs both the all-nights and bird-nights fits to compare.
+BOTH_FITS: Final = 2
+
 
 class Paired(NamedTuple):
     """One latitude band's trend under both quantities, and the within-station difference."""
@@ -563,6 +566,61 @@ def composition(*, max_year: int = 2025) -> list[str]:
         "\n  The reanalysis control: a trend appearing in both airspeed and NARR wind speed is"
     )
     lines.append("  NARR's observing system changing, not the animals. Read the two rows together.")
+    lines += _without_slow_nights(nights, max_year=max_year)
+    return lines
+
+
+def _without_slow_nights(nights: pl.DataFrame, *, max_year: int) -> list[str]:
+    """The level half of Test C: drop the nights that were not bird-dominated, and refit.
+
+    Separate question from the drift check above. Even with a flat airspeed trend, a passage-date
+    quantile is a cumulative sum over every night in a season, so nights whose traffic was mostly
+    something slower than a bird still contribute mass to it. If the trend is the same without
+    them, they were not carrying it.
+    """
+    slow = nights.filter(pl.col("airspeed") < INSECT_AIRSPEED_MAX).select("station_id", "date")
+    if slow.is_empty():
+        return ["\n  No nights below the airspeed floor, so nothing to exclude."]
+
+    full = load_conus_nights(quantity=CLAIM_QUANTITY)
+    kept = full.with_columns(date=pl.col("timestamp").dt.date()).join(
+        slow, on=("station_id", "date"), how="anti"
+    )
+    lines = [
+        "",
+        f"  Excluding the {slow.height:,} station-nights whose mean airspeed was under "
+        f"{INSECT_AIRSPEED_MAX} m/s:",
+    ]
+
+    baseline = station_slopes(full, max_year=max_year)
+    restricted = station_slopes(kept.drop("date"), max_year=max_year)
+    for season in ("spring", "autumn"):
+        pair = []
+        for label, slopes in (("all nights", baseline), ("bird nights", restricted)):
+            band = slopes.filter(
+                pl.col("season") == season,
+                pl.col("quantile") == "q50_doy",
+                pl.any_horizontal(
+                    [
+                        pl.col("latitude").is_between(low, high, closed="left")
+                        for low, high in CLAIM_BANDS
+                    ]
+                ),
+            )
+            if band.is_empty():
+                continue
+            mean, ci = _mean_ci(band["days_per_decade"].to_numpy().astype(float))
+            pair.append((label, band.height, mean, ci))
+        # Both the all-nights and bird-nights fits, or the comparison has nothing to say.
+        if len(pair) == BOTH_FITS:
+            (_, n_all, all_mean, all_ci), (_, n_bird, bird_mean, bird_ci) = pair
+            moved = abs(bird_mean - all_mean)
+            verdict = "unchanged" if moved < MATERIAL_DIFFERENCE else "CHANGES"
+            lines.append(
+                f"    {season} q50 37-50N: all nights {all_mean:+.2f} +/- {all_ci:.2f} "
+                f"(n={n_all})  ->  bird nights {bird_mean:+.2f} +/- {bird_ci:.2f} "
+                f"(n={n_bird})  {verdict}"
+            )
     return lines
 
 

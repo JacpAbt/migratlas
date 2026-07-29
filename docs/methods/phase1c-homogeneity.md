@@ -242,6 +242,65 @@ should not later be promoted to a result without accounting for that.
 So the tally on the autumn 2012 step is four mechanisms tested and four rejected: window
 truncation, panel composition, curvature, and precipitation screening.
 
+### Test C: autumn holds, and the spring prediction failed
+
+901,083 station-nights matched to a NARR 925 hPa night wind across 145 stations, 1995–2025.
+Airspeed is `|radar velocity − wind|`, traffic-weighted per station-season-year, trends net of the
+2012 break.
+
+| | ground speed | NARR wind | **airspeed** |
+| --- | --- | --- | --- |
+| **spring** mean | 13.42 | 7.49 | **10.58** m s⁻¹ |
+| **spring** trend /decade | +0.577 ± 0.118 | +0.391 ± 0.082 | **+0.501 ± 0.128** |
+| **autumn** mean | 11.36 | 5.94 | **8.65** m s⁻¹ |
+| **autumn** trend /decade | +0.099 ± 0.081 | +0.203 ± 0.080 | **−0.063 ± 0.084** |
+
+**Autumn — the prediction held, and the Phase 1a claim is now defended rather than caveated.**
+Airspeed is flat at −0.063 ± 0.084 m s⁻¹ per decade. The mixture did not drift where the claim
+lives. The pieces are coherent: the wind rose, airspeed did not, and ground speed rose slightly.
+Mean autumn airspeed of 8.65 m s⁻¹ sits in the nocturnal-migrant band and well clear of the insect
+range. **The failure condition for Phase 1a did not trigger.**
+
+The level check settles the other half. Excluding the **293,497 station-nights whose mean airspeed
+was under 5 m s⁻¹** — nights whose traffic was not bird-dominated — the autumn 37–50°N trend moves
+from −0.56 ± 0.25 to **−0.42 ± 0.27** across 75 of 78 stations. Those nights were not carrying the
+result. Spring goes −0.09 → −0.18, both null, as expected of a season with no trend.
+
+Between them, these two answer what the July share could not. That argument bounded the *annual*
+insect contribution; this bounds the mixture night by night, and shows the autumn trend survives
+removing the non-bird nights outright.
+
+**Spring — the prediction failed.** It was written that spring airspeed would be flat while the
+wind carried the ground-speed rise. The wind did rise, +0.391 ± 0.082. But **airspeed rose too, by
++0.501 ± 0.128**, which the pre-registration explicitly named as the outcome meaning "the animals",
+not the weather.
+
+Three candidate explanations, and the data here cannot separate them:
+
+1. **Real.** Spring migrants genuinely fly faster than they did, or the spring mixture shifted
+   towards faster fliers — more birds relative to insects, or larger and faster species.
+2. **Flight altitude.** This is the one that worries me most, because it is invisible here. The
+   wind is sampled at a *fixed* 925 hPa while the radar's velocity is a reflectivity-weighted mean
+   over whatever heights the animals actually used. If spring migrants moved higher across the
+   record, the fixed level increasingly understates the wind they were in, and apparent airspeed
+   rises with no change in the animals at all. Testing it needs the vertical profiles.
+3. **Something in the spring window specific to it** — the window spans doy 60–181 and its early
+   weeks contain little migration, so its traffic weighting is more exposed to whatever else is
+   aloft in March.
+
+What can be ruled out is the reanalysis control, and by an argument worth stating because the
+control's stated form would have got it backwards. Migrants select nights with following winds, so
+the radar velocity and the wind are *positively aligned*. A spuriously inflated wind would
+therefore make `|V − W|` **smaller**, not larger. The observed spring rise runs against the
+direction a drifting wind term would push, so it is not explained by NARR's wind trend — the
+control fires in the opposite direction to the one it was written to catch.
+
+**No published claim changes.** Spring has no Phase 1a trend — it was established as null and
+Test A confirmed the little signal it had was partly speed weighting. So this is a new open
+question rather than a retraction. It is recorded as one, and item 2 of the deferred work is now
+justified by a result rather than by caution: the profiles are what separate a real spring
+airspeed change from a change in flight altitude.
+
 ### The incidental finding worth recording
 
 The screening severity of this dataset is not stationary: it steps by about 17% relative at 2012
