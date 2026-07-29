@@ -144,7 +144,7 @@ def break_diagnosis(frame: pl.DataFrame, season: str) -> list[str]:
 
 
 def render() -> str:
-    nights = phase1.load_conus_traffic()
+    nights = phase1.load_conus_nights()
     out = [
         "Phase 1a -- hierarchical passage-date trend",
         "=" * 70,

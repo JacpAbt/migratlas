@@ -196,6 +196,14 @@ adjusted away.
 step is near zero and the estimate is stable across break specification, curvature and panel
 balance. The continent-wide −1.03 rests on southern bands whose step is unexplained.
 
+That claim was audited again in `phase1c-homogeneity.md` and **strengthened**: recomputed on
+`reflectivity_hours`, which measures the same biomass without weighting it by flight speed, the
+37–50°N autumn trend moves by −0.09 ± 0.14 d/decade — indistinguishable from zero change, r=0.86
+station by station. The advance is not an artefact of `traffic`'s speed term. The same note tests
+precipitation screening as the fourth candidate explanation for the southern step and rejects it
+too, while establishing that the screening severity itself steps at 2012 — which does not touch
+the timing result but is a caveat for anything computed from biomass *levels* across that year.
+
 The linear `decade:latitude` interaction is null in every fit (p 0.29–0.59). That is a
 statement about functional form rather than about latitude: the band fits are non-monotonic —
 weakest in the far south and far north, strongest at 32–37°N — and a straight line through
@@ -208,9 +216,10 @@ about the error structure, which a panel of 145 spatially correlated stations pl
 ## Remaining limitations
 
 1. **The southern autumn step is unexplained.** Not truncation, not composition, not
-   curvature. Distinguishing a hardware step from a biological one needs an independent
-   measurement of the same seasons, which is what the eBird cross-check is for — there is no
-   NEXRAD in eBird.
+   curvature, and not precipitation screening (`phase1c-homogeneity.md`, Test B: correlation
+   between a station's screening step and its phenology step is −0.07). Distinguishing a
+   hardware step from a biological one needs an independent measurement of the same seasons,
+   which is what the eBird cross-check is for — there is no NEXRAD in eBird.
 2. **Station composition changes.** Reporting stations rise from 104 in 1995 to 159 by 2017.
 3. **The extension is not blind.** An exploratory pass over the full series ran *before* the
    target method was known. The 1995–2018 replication is unaffected — its target was

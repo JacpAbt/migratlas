@@ -142,6 +142,10 @@ phase1-robustness:  ## Break sensitivity, daytime placebo and permutation null
 phase1b-report:  ## Marine distribution shift from FISHGLOB trawl surveys
 	$(RUN) migratlas report phase1b
 
+.PHONY: phase1c-report
+phase1c-report:  ## Speed-weighting control and precipitation-screening test
+	$(RUN) migratlas report phase1c
+
 .PHONY: gpu-check
 gpu-check:  ## Confirm a CUDA device is visible from inside the venv
 	$(RUN) python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"

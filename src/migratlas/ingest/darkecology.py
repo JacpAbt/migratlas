@@ -42,12 +42,23 @@ whatever is newest, which would make a published figure unreproducible."""
 DAILY_ARCHIVE: Final = "daily.tar.bz2"
 STATIONS_FILE: Final = "nexrad-stations.csv"
 
-# Source column -> canonical quantity name. Both variants are ingested because comparing
-# them *is* the precipitation sensitivity test: `traffic` has rain-classified volumes
-# removed, `traffic_unfiltered` does not.
+# Source column -> canonical quantity name. Filtered and unfiltered variants are both
+# ingested because comparing them *is* the precipitation sensitivity test: the filtered
+# ones have rain-classified volumes removed, the unfiltered ones do not.
+#
+# Two families, and the difference between them is a confound test rather than a detail.
+# `traffic` integrates RTR = reflectivity x speed x bin height, so it is weighted by how
+# fast the scatterers were moving; `reflectivity_hours` integrates VIR = reflectivity x
+# bin height and carries no speed term. A drift in flight speed -- between years, or
+# across a season -- therefore moves a passage-date quantile computed from `traffic` even
+# with the biomass held constant. Horton et al. used a traffic rate, so `traffic` is the
+# right choice for replication, and `reflectivity_hours` is the control that says whether
+# the trend survives dropping the speed weighting.
 QUANTITIES: Final[dict[str, str]] = {
     "traffic": "reflectivity_traffic",
     "traffic_unfiltered": "reflectivity_traffic_unfiltered",
+    "reflectivity_hours": "reflectivity_hours",
+    "reflectivity_hours_unfiltered": "reflectivity_hours_unfiltered",
 }
 
 
@@ -127,6 +138,7 @@ def to_evidence(daily: pl.DataFrame, stations: dict[str, Station]) -> pa.Table:
             "period",
             "period_length",
             "fraction_missing",
+            "fraction_rain",
             "u",
             "v",
             "direction",
@@ -158,6 +170,7 @@ def to_evidence(daily: pl.DataFrame, stations: dict[str, Station]) -> pa.Table:
         quantity=pl.col("source_column").replace_strict(QUANTITIES),
         integration_hours=pl.col("period_length").cast(pl.Float64),
         coverage_fraction=(1.0 - pl.col("fraction_missing")).cast(pl.Float64),
+        rain_fraction=pl.col("fraction_rain").cast(pl.Float64),
         window_kind=pl.col("period"),
         direction_deg=pl.col("direction").cast(pl.Float64),
         speed_ms=pl.col("speed").cast(pl.Float64),

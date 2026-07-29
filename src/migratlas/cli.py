@@ -21,6 +21,7 @@ from migratlas.reports import (
     phase1_hierarchical,
     phase1_robustness,
     phase1b,
+    phase1c,
 )
 from migratlas.taxonomy import index as taxon_index
 from migratlas.tiles import layers as tile_layers
@@ -164,6 +165,13 @@ def report_phase1_robustness() -> None:
     """Break-specification sensitivity, daytime placebo and permutation null."""
     logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
     print(phase1_robustness.render())
+
+
+@report_app.command("phase1c")
+def report_phase1c() -> None:
+    """Speed-weighting control and screening test on the 1995-2025 radar record."""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
+    print(phase1c.render())
 
 
 @report_app.command("phase1b")

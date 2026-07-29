@@ -177,6 +177,11 @@ FLUX = _spec(
         # How complete the measurement was, 0-1. Nights with sparse coverage have to be
         # excluded from phenology or they drag passage-date quantiles around.
         pa.field("coverage_fraction", pa.float64(), nullable=True),
+        # Share of the instrument's sampled volumes classified as precipitation, 0-1. Not
+        # a property of the animals, and the reason it is carried: how hard the screening
+        # had to work is itself a time series, and a trend in it is a trend in the
+        # instrument's behaviour that would otherwise be read as a trend in biology.
+        pa.field("rain_fraction", pa.float64(), nullable=True),
         pa.field("direction_deg", pa.float64(), nullable=True),
         pa.field("speed_ms", pa.float64(), nullable=True),
         # Instrument upgrades masquerade as biological trends. Carrying a hardware

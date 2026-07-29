@@ -106,6 +106,7 @@ def _minimal_flux_table() -> pa.Table:
             "quantity": ["reflectivity_cm2_km3"],
             "integration_hours": pa.array([None], type=pa.float64()),
             "coverage_fraction": pa.array([None], type=pa.float64()),
+            "rain_fraction": pa.array([None], type=pa.float64()),
             "window_kind": pa.array([None], type=pa.string()),
             "direction_deg": pa.array([None], type=pa.float64()),
             "speed_ms": pa.array([None], type=pa.float64()),

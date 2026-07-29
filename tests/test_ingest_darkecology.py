@@ -36,8 +36,11 @@ def _daily() -> pl.DataFrame:
             "period": ["night", "night", "night"],
             "period_length": [9.5, 11.0, 9.5],
             "fraction_missing": [0.0, 0.25, 0.0],
+            "fraction_rain": [0.05, 0.4, 0.0],
             "traffic": [1000.0, 5000.0, 7.0],
             "traffic_unfiltered": [1200.0, 5200.0, 8.0],
+            "reflectivity_hours": [900.0, 4400.0, 6.0],
+            "reflectivity_hours_unfiltered": [1100.0, 4900.0, 7.0],
             "u": [1.0, -2.0, 0.0],
             "v": [3.0, -4.0, 0.0],
             "direction": [20.0, 200.0, 0.0],
@@ -64,15 +67,22 @@ def test_to_evidence_conforms_to_the_flux_spec(tmp_path: Path) -> None:
 
 
 def test_to_evidence_emits_one_row_per_quantity(tmp_path: Path) -> None:
-    """Both filtered and unfiltered are kept: comparing them is the rain sensitivity test."""
+    """Four quantities, and each pair exists to answer a different question.
+
+    Filtered against unfiltered is the rain sensitivity test. Traffic against
+    reflectivity-hours is the speed-weighting test, because traffic integrates
+    reflectivity x speed x height and reflectivity-hours drops the speed term.
+    """
     table = darkecology.to_evidence(_daily(), _stations(tmp_path))
     quantities = table.column("quantity").to_pylist()
     assert sorted(set(quantities)) == [
+        "reflectivity_hours",
+        "reflectivity_hours_unfiltered",
         "reflectivity_traffic",
         "reflectivity_traffic_unfiltered",
     ]
-    # Two KBGM nights x two quantities. The unplaceable station is gone.
-    assert table.num_rows == 4
+    # Two KBGM nights x four quantities. The unplaceable station is gone.
+    assert table.num_rows == 8
 
 
 def test_to_evidence_drops_stations_without_coordinates(tmp_path: Path) -> None:
@@ -103,6 +113,41 @@ def test_coverage_fraction_is_the_complement_of_fraction_missing(tmp_path: Path)
     assert by_date["2019-09-20"] == pytest.approx(0.75)
 
 
+def test_rain_fraction_survives_the_unpivot(tmp_path: Path) -> None:
+    """How hard the screening worked is a property of the night, not of the quantity.
+
+    It has to come through unchanged on every one of a night's four rows, because the test
+    it exists for compares a station's screening series against its phenology and would
+    silently lose stations if the column arrived null.
+    """
+    frame = pl.from_arrow(darkecology.to_evidence(_daily(), _stations(tmp_path)))
+    assert isinstance(frame, pl.DataFrame)
+    per_night = frame.group_by(pl.col("timestamp").dt.date().cast(pl.String).alias("date")).agg(
+        pl.col("rain_fraction").unique()
+    )
+    by_date = {row["date"]: row["rain_fraction"] for row in per_night.iter_rows(named=True)}
+    assert by_date["2019-05-15"] == [pytest.approx(0.05)]
+    assert by_date["2019-09-20"] == [pytest.approx(0.4)]
+
+
+def test_reflectivity_hours_is_not_a_copy_of_traffic(tmp_path: Path) -> None:
+    """The speed-weighting control is only a control if it carries a different number.
+
+    A mapping bug that pointed both quantities at the same source column would make Test A
+    pass by construction, which is the worst way for a robustness check to fail.
+    """
+    frame = pl.from_arrow(darkecology.to_evidence(_daily(), _stations(tmp_path)))
+    assert isinstance(frame, pl.DataFrame)
+    magnitudes = {
+        row["quantity"]: row["magnitude"]
+        for row in frame.filter(pl.col("timestamp").dt.date() == date(2019, 5, 15)).iter_rows(
+            named=True
+        )
+    }
+    assert magnitudes["reflectivity_traffic"] == pytest.approx(1000.0)
+    assert magnitudes["reflectivity_hours"] == pytest.approx(900.0)
+
+
 def test_integration_hours_carries_period_length(tmp_path: Path) -> None:
     """A nightly total is uninterpretable without knowing how long the night was."""
     table = darkecology.to_evidence(_daily(), _stations(tmp_path))
@@ -123,12 +168,17 @@ def test_instrument_generation_is_left_null(tmp_path: Path) -> None:
 
 
 def test_rows_with_no_measurement_are_dropped(tmp_path: Path) -> None:
+    """Nulled per quantity, not per night: a station-night can be missing one and not another.
+
+    So the first KBGM night loses its two traffic rows and keeps its two reflectivity-hours
+    rows, and the second night keeps all four.
+    """
     daily = _daily().with_columns(
         traffic=pl.Series([None, 5000.0, 7.0], dtype=pl.Float64),
         traffic_unfiltered=pl.Series([None, 5200.0, 8.0], dtype=pl.Float64),
     )
     table = darkecology.to_evidence(daily, _stations(tmp_path))
-    assert table.num_rows == 2
+    assert table.num_rows == 6
     assert table.column("magnitude").null_count == 0
 
 

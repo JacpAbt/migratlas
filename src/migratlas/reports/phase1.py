@@ -74,17 +74,23 @@ class Trend:
         )
 
 
-def load_conus_traffic(window_kind: str = "night") -> pl.DataFrame:
-    """Filtered reflectivity traffic for contiguous-US stations, for one window kind.
+def load_conus_nights(
+    window_kind: str = "night", *, quantity: str = "reflectivity_traffic"
+) -> pl.DataFrame:
+    """One biological quantity for contiguous-US stations, for one window kind.
 
     ``window_kind="day"`` gives the placebo series: nocturnal migration does not happen by
     day, so a trend there points at the instrument or the processing rather than at birds.
+
+    ``quantity`` defaults to the metric Horton et al. used, and every Phase 1a number is on
+    that default. The alternative that matters is ``reflectivity_hours``, which measures the
+    same biomass without weighting it by flight speed -- see phase1c-homogeneity.md.
     """
     return (
         scan(EvidenceType.FLUX, source_id=SOURCE_ID)
         .filter(
             pl.col("window_kind") == window_kind,
-            pl.col("quantity") == "reflectivity_traffic",
+            pl.col("quantity") == quantity,
             pl.col("station_latitude").is_between(*CONUS_LAT),
             pl.col("station_longitude").is_between(*CONUS_LON),
         )
@@ -93,6 +99,7 @@ def load_conus_traffic(window_kind: str = "night") -> pl.DataFrame:
             "timestamp",
             "magnitude",
             "coverage_fraction",
+            "rain_fraction",
             "station_latitude",
             "station_longitude",
         )
@@ -177,7 +184,7 @@ def summarise(slopes: pl.DataFrame, *, bands: Sequence[tuple[int, int]]) -> list
 
 def render() -> str:
     """Run both windows and render the comparison."""
-    nights = load_conus_traffic()
+    nights = load_conus_nights()
     bands = LATITUDE_BANDS
 
     out = [

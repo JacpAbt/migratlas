@@ -150,7 +150,7 @@ def radar_climatology() -> pl.DataFrame:
     reduced to one seasonal shape too. Per-station and per-year structure is the subject of the
     other Phase 1a reports, not this one.
     """
-    nights = phase1.load_conus_traffic()
+    nights = phase1.load_conus_nights()
     return (
         nights.filter(
             pl.col("coverage_fraction").is_null()

@@ -25,7 +25,7 @@ from migratlas.reports.phase1 import (
     MIN_NIGHTS,
     MIN_YEARS,
     SPRING,
-    load_conus_traffic,
+    load_conus_nights,
 )
 
 if TYPE_CHECKING:
@@ -239,7 +239,7 @@ def permutation_null(series: pl.DataFrame, season: str) -> tuple[float, float, f
 
 def render(max_year: int = 2025) -> str:
     """Run the robustness battery and render it."""
-    nights = load_conus_traffic("night")
+    nights = load_conus_nights("night")
 
     night_series = seasonal_series(nights, max_year=max_year)
     outages = breaks.find_outages(
@@ -278,7 +278,7 @@ def render(max_year: int = 2025) -> str:
     # Placebo 1: the daytime window. Weaker than it first appears -- daytime aerial biomass
     # is not zero (diurnal migrants, and insects especially in autumn), so a daytime trend
     # may be real biology rather than an artefact. Suggestive, not decisive.
-    day_series = seasonal_series(load_conus_traffic("day"), max_year=max_year)
+    day_series = seasonal_series(load_conus_nights("day"), max_year=max_year)
     out += ["", "=" * 74, "placebo 1: daytime window, same pipeline", "=" * 74]
     for season in ("spring", "autumn"):
         night = specification_estimates(night_series, break_dates, season)[0]
