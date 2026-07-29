@@ -26,6 +26,29 @@ if TYPE_CHECKING:
     from migratlas.evidence import EvidenceType
 
 
+def scan_dataset(
+    name: str,
+    *,
+    source_id: str | Sequence[str] | None,
+    root: Path | None = None,
+) -> pl.LazyFrame:
+    """Lazily scan any lake table by directory name, restricted to named sources.
+
+    Evidence types go through :func:`scan`; this exists for the driver samples, which live in
+    the lake under the same rules without being evidence about an animal.
+    """
+    base = (root or get_settings().lake_dir) / name
+    if not base.exists():
+        msg = f"{name} has never been written to {base}. Ingest it first."
+        raise FileNotFoundError(msg)
+
+    frame = pl.scan_parquet(f"{base}/**/*.parquet", hive_partitioning=True)
+    if source_id is None:
+        return frame
+    wanted = [source_id] if isinstance(source_id, str) else list(source_id)
+    return frame.filter(pl.col("source_id").is_in(wanted))
+
+
 def scan(
     evidence_type: EvidenceType,
     *,

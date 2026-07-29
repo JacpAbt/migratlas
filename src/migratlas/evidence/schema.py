@@ -42,6 +42,11 @@ class EvidenceSpec(NamedTuple):
     """Column holding the measurement. ``None`` for types that record a presence rather
     than a quantity, so a metric can refuse them instead of inventing a value of 1."""
 
+    @property
+    def name(self) -> str:
+        """Directory name under the lake root, which satisfies ``lake.spec.TableSpec``."""
+        return str(self.evidence_type)
+
     def validate(self, table: pa.Table) -> None:
         """Raise if ``table`` does not conform.
 

@@ -21,6 +21,7 @@ import polars as pl
 
 from migratlas.catalog import loader as catalog
 from migratlas.config import get_settings
+from migratlas.drivers import insitu
 from migratlas.evidence import EvidenceType, Realm, TaxonScope, spec_for
 from migratlas.ingest.http import RemoteFile, fetch
 from migratlas.lake.writer import WriteResult, write_evidence
@@ -88,6 +89,11 @@ NEEDED: Final[tuple[str, ...]] = (
     "num_cpua",
     "gear",
     "accepted_name",
+    # Not evidence about a fish, and not written to SURVEY_INDEX. These are the water the fish
+    # were in, measured at the haul -- a better driver for Phase 2a than any reanalysis sampled
+    # at the same position, because there is no interpolation between the reading and the animal.
+    "sst",
+    "sbt",
 )
 
 # The dates are built from year/month/day and not from the `timestamp` column, which is free text
@@ -105,6 +111,9 @@ NUMERIC: Final[tuple[str, ...]] = (
 )
 INTEGER: Final[tuple[str, ...]] = ("year", "month", "day")
 TEXT: Final[tuple[str, ...]] = ("survey_unit", "haul_id", "gear", "accepted_name")
+
+# Temperatures arrive as strings in some surveys and floats in others, and are parsed downstream.
+DRIVERS: Final[tuple[str, ...]] = ("sst", "sbt")
 
 # Effort. `area_swept` is in square kilometres and is complete, where `haul_dur` is 20% null in
 # the surveys checked -- so swept area is the effort measure and the unit is recorded with it.
@@ -264,6 +273,7 @@ def prepare(survey: str) -> pl.DataFrame:
         *[pl.col(c).cast(pl.Float64, strict=False) for c in NUMERIC],
         *[pl.col(c).cast(pl.String).cast(pl.Int32, strict=False) for c in INTEGER],
         *[pl.col(c).cast(pl.String) for c in TEXT],
+        *[pl.col(c).cast(pl.String) for c in DRIVERS],
     )
     # Surveys that publish only CPUA get their catch from there, with effort set to 1. Decided per
     # survey rather than per row: a mix within one survey would mean two different quantities in
@@ -294,8 +304,30 @@ def prepare(survey: str) -> pl.DataFrame:
     return frame
 
 
+def haul_drivers(frame: pl.DataFrame) -> pl.DataFrame:
+    """One row per haul carrying its measured temperatures.
+
+    Deduplicated to the haul first. FISHGLOB repeats a haul's temperature on every species row,
+    so writing them as they come would multiply the driver table by the length of each catch
+    list -- 2.8 million rows where 220 thousand hauls exist.
+    """
+    return (
+        frame.select(
+            site_id=pl.col("survey_unit") + pl.lit(":") + pl.col("haul_id"),
+            period_start=_haul_date(),
+            longitude=pl.col("longitude"),
+            latitude=pl.col("latitude"),
+            depth=pl.col("depth"),
+            sst=pl.col("sst"),
+            sbt=pl.col("sbt"),
+        )
+        .unique(subset=["site_id"])
+        .sort("site_id")
+    )
+
+
 def ingest(surveys: tuple[str, ...] = SURVEYS) -> WriteResult:
-    """Fetch, reshape and land the surveys. Idempotent."""
+    """Fetch, reshape and land the surveys, and their measured drivers. Idempotent."""
     source = catalog.admit(SOURCE_ID)
     log.info("ingesting %s (%s)", source.title, source.licence)
 
@@ -342,6 +374,12 @@ def ingest(surveys: tuple[str, ...] = SURVEYS) -> WriteResult:
         raise SurveyUnreadableError(msg)
 
     combined = pl.concat(frames, how="vertical_relaxed")
+
+    # Drivers first, so a failure there cannot leave evidence in the lake with no drivers beside
+    # it while the run still reports success.
+    drivers = insitu.write(haul_drivers(combined), SOURCE_ID)
+    log.info("%d driver samples landed", drivers.rows)
+
     keys = taxon_keys(combined["accepted_name"].unique().to_list())
     table = to_evidence(combined, keys)
     log.info(

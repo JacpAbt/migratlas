@@ -20,11 +20,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from migratlas.evidence import EvidenceType
+    from migratlas.lake.spec import TableSpec
 
 
 @dataclass(frozen=True, slots=True)
 class Drift:
-    """One file whose schema differs from its evidence type's canonical schema."""
+    """One file whose schema differs from its dataset's canonical schema."""
 
     path: str
     missing: tuple[str, ...]
@@ -39,14 +40,16 @@ class Drift:
         return f"{self.path}: {'; '.join(parts)}"
 
 
-def check_evidence_type(evidence_type: EvidenceType, root: Path | None = None) -> list[Drift]:
-    """Compare every Parquet file for one evidence type against the canonical schema.
+def check_dataset(spec: TableSpec, root: Path | None = None) -> list[Drift]:
+    """Compare every Parquet file in one dataset against its canonical schema.
 
     Partition columns are excluded: hive partitioning stores them in the path, not the file,
     so their absence is correct rather than drift.
+
+    Takes a ``TableSpec`` rather than an evidence type because drivers live in the lake under
+    the same rules and are not evidence about animals.
     """
-    spec = spec_for(evidence_type)
-    base = (root or get_settings().lake_dir) / str(evidence_type)
+    base = (root or get_settings().lake_dir) / spec.name
     if not base.exists():
         return []
 
@@ -61,10 +64,20 @@ def check_evidence_type(evidence_type: EvidenceType, root: Path | None = None) -
     return drifts
 
 
-def check_all(root: Path | None = None) -> dict[EvidenceType, list[Drift]]:
-    """Check every evidence type present in the lake."""
-    return {
-        evidence_type: drifts
+def check_evidence_type(evidence_type: EvidenceType, root: Path | None = None) -> list[Drift]:
+    """Drift check for one evidence type. A thin wrapper over :func:`check_dataset`."""
+    return check_dataset(spec_for(evidence_type), root)
+
+
+def check_all(root: Path | None = None) -> dict[str, list[Drift]]:
+    """Check every dataset in the lake: the evidence types, and the driver samples."""
+    from migratlas.drivers.schema import DRIVER_SAMPLES  # noqa: PLC0415 -- avoids a cycle
+
+    checked: dict[str, list[Drift]] = {
+        str(evidence_type): drifts
         for evidence_type in SPECS
-        if (drifts := check_evidence_type(evidence_type, root))
+        if (drifts := check_dataset(spec_for(evidence_type), root))
     }
+    if drifts := check_dataset(DRIVER_SAMPLES, root):
+        checked[DRIVER_SAMPLES.name] = drifts
+    return checked
