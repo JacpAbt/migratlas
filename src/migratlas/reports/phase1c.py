@@ -16,7 +16,10 @@ from typing import Final, NamedTuple
 import numpy as np
 import polars as pl
 
+from migratlas.drivers import narr
+from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.evidence import EvidenceType, spec_for
+from migratlas.lake.reader import scan_dataset
 from migratlas.metrics.phenology import passage_quantiles
 from migratlas.reports.phase1 import (
     AUTUMN,
@@ -53,6 +56,11 @@ MIN_STATIONS: Final = 3
 
 # Years a station must have on each side of the break to join the fixed panel.
 PANEL_MARGIN: Final = 5
+
+# Upper end of the insect airspeed range, against 8-15 m/s for nocturnal migrant songbirds
+# (Shi et al. 2025). A reflectivity-weighted mean below this is a night whose traffic was not
+# dominated by migrating birds. Not a classifier -- a flag on a mixture summary.
+INSECT_AIRSPEED_MAX: Final = 5.0
 
 
 class Paired(NamedTuple):
@@ -422,6 +430,142 @@ def screening(*, max_year: int = 2025) -> list[str]:
     return lines
 
 
+def _airspeed_nights(max_year: int) -> pl.DataFrame:
+    """Radar night velocity joined to the NARR night wind, with airspeed.
+
+    The join is a plain equality on station and date because `drivers/narr.py` writes each wind
+    row under the radar night it describes rather than under the UTC day its hours came from.
+    That convention was established by measurement rather than assumed -- see
+    `narr.UTC_DAY_TO_RADAR_NIGHT`.
+    """
+    nights = load_conus_nights(quantity=CLAIM_QUANTITY).filter(
+        pl.col("timestamp").dt.year() <= max_year,
+        pl.col("coverage_fraction") >= MIN_COVERAGE,
+        pl.col("speed_ms").is_not_null(),
+        pl.col("direction_deg").is_not_null(),
+        pl.col("magnitude") > 0,
+    )
+    radar = nights.select(
+        station_id=pl.col("station_id"),
+        date=pl.col("timestamp").dt.date(),
+        year=pl.col("timestamp").dt.year(),
+        doy=pl.col("timestamp").dt.ordinal_day(),
+        magnitude=pl.col("magnitude"),
+        ground_speed=pl.col("speed_ms"),
+        # Compass bearing, degrees clockwise from north, so east is sin and north is cos.
+        u_radar=pl.col("speed_ms") * (pl.col("direction_deg").radians().sin()),
+        v_radar=pl.col("speed_ms") * (pl.col("direction_deg").radians().cos()),
+    )
+
+    winds = (
+        scan_dataset(DRIVER_SAMPLES.name, source_id=narr.SOURCE_ID)
+        .filter(pl.col("variable").str.starts_with("wind_"))
+        .select(
+            station_id=pl.col("site_id"),
+            date=pl.col("period_start").dt.date(),
+            variable=pl.col("variable"),
+            value=pl.col("value"),
+        )
+        .collect()
+        .pivot(on="variable", index=("station_id", "date"), values="value")
+    )
+    u_column = f"wind_u_{narr.LEVEL_HPA}hPa"
+    v_column = f"wind_v_{narr.LEVEL_HPA}hPa"
+    if u_column not in winds.columns or v_column not in winds.columns:
+        return pl.DataFrame()
+
+    joined = radar.join(winds, on=("station_id", "date"), how="inner")
+    return joined.with_columns(
+        airspeed=(
+            (pl.col("u_radar") - pl.col(u_column)) ** 2
+            + (pl.col("v_radar") - pl.col(v_column)) ** 2
+        ).sqrt(),
+        wind_speed=(pl.col(u_column) ** 2 + pl.col(v_column) ** 2).sqrt(),
+    )
+
+
+def composition(*, max_year: int = 2025) -> list[str]:
+    """Test C -- did the mixture drift, once the wind is taken out of the ground speed?
+
+    Predictions were fixed in phase1c-homogeneity.md before the wind data existed, off the back
+    of Test A': spring ground speed rose 0.572 +/- 0.118 m/s per decade and autumn barely moved,
+    so spring airspeed should be flat with the wind carrying the rise, and autumn airspeed flat
+    too. A rising autumn airspeed is the outcome that forces Phase 1a to be re-scoped.
+    """
+    lines = [
+        "TEST C -- composition, from airspeed",
+        "-" * 70,
+        f"  airspeed = |radar velocity - NARR {narr.LEVEL_HPA} hPa night wind|, per station-night.",
+        "  birds cruise 8-15 m/s, insects 0-5 (Shi et al. 2025, Ornithological Applications).",
+    ]
+
+    nights = _airspeed_nights(max_year)
+    if nights.is_empty():
+        lines.append("  no NARR winds in the lake yet -- run `make ingest-narr` first.")
+        return lines
+
+    years = nights["year"].to_numpy()
+    lines.append(
+        f"  {nights.height:,} station-nights matched to a wind, "
+        f"{nights['station_id'].n_unique()} stations, "
+        f"{int(years.min())}-{int(years.max())}"
+    )
+
+    for season in (SPRING, AUTUMN):
+        seasonal = nights.filter(pl.col("doy").is_between(season.start_doy, season.end_doy))
+        if seasonal.is_empty():
+            continue
+        per_station_year = seasonal.group_by("station_id", "year").agg(
+            _weighted_mean(seasonal, "airspeed", "magnitude").alias("airspeed"),
+            _weighted_mean(seasonal, "wind_speed", "magnitude").alias("wind_speed"),
+            _weighted_mean(seasonal, "ground_speed", "magnitude").alias("ground_speed"),
+            pl.len().alias("nights"),
+        )
+        lines.append(f"\n  {season.name}, {per_station_year.height} station-years")
+
+        for column, label in (
+            ("ground_speed", "ground speed"),
+            ("wind_speed", "NARR wind speed"),
+            ("airspeed", "AIRSPEED"),
+        ):
+            slopes = []
+            for (_station,), group in per_station_year.group_by(["station_id"]):
+                if group.height < MIN_YEARS:
+                    continue
+                fit = _fit_break(
+                    group["year"].to_numpy(),
+                    group[column].to_numpy().astype(float),
+                    FLEET_MIDPOINT_YEAR,
+                )
+                if fit is not None:
+                    slopes.append(fit.trend * 10.0)
+            if not slopes:
+                continue
+            mean, ci = _mean_ci(np.asarray(slopes, dtype=float))
+            level = float(per_station_year[column].to_numpy().astype(float).mean())
+            verdict = "flat" if abs(mean) < abs(ci) else "MOVES"
+            lines.append(
+                f"    {label:<18} mean {level:5.2f} m/s   "
+                f"trend {mean:+.3f} +/- {ci:.3f} m/s per decade  "
+                f"({len(slopes)} stations) {verdict}"
+            )
+
+        # The level question, separate from the drift one: how much of the traffic is moving
+        # slowly enough to be something other than a migrating bird?
+        slow = seasonal.filter(pl.col("airspeed") < INSECT_AIRSPEED_MAX)["magnitude"].to_numpy()
+        total = seasonal["magnitude"].to_numpy()
+        share = float(slow.sum() / total.sum()) if total.sum() else 0.0
+        lines.append(
+            f"    traffic on nights with mean airspeed < {INSECT_AIRSPEED_MAX} m/s: {share:.1%}"
+        )
+
+    lines.append(
+        "\n  The reanalysis control: a trend appearing in both airspeed and NARR wind speed is"
+    )
+    lines.append("  NARR's observing system changing, not the animals. Read the two rows together.")
+    return lines
+
+
 def render(max_year: int = 2025) -> str:
     out = [
         "Phase 1c -- homogeneity of the 1995-2025 radar record",
@@ -434,9 +578,6 @@ def render(max_year: int = 2025) -> str:
     out += speed_drift(max_year=max_year)
     out += ["", ""]
     out += screening(max_year=max_year)
-    out += [
-        "",
-        "=" * 70,
-        "Test C (composition, from airspeed) needs a wind field and waits on the driver panel.",
-    ]
+    out += ["", ""]
+    out += composition(max_year=max_year)
     return "\n".join(out)

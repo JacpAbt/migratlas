@@ -138,6 +138,40 @@ of error as reporting a passage-date trend without the dual-pol break term.
 records). It is worth a station-and-season subset only if the cheap tier shows drift, and it would
 then be a validation of this test rather than a replacement for it.
 
+### Test C's prediction, sharpened by Test A′ and fixed before the wind data landed
+
+Test A′ (below, run 2026-07-29) measured what Test A only had to be insensitive to: mean ground
+speed **did** drift, and very differently by season. Spring night ground speed rose
+**+0.572 ± 0.118 m s⁻¹ per decade** on a 13.42 m s⁻¹ base — about 13% over the record — while autumn
+rose only +0.102 ± 0.079 on 11.36. Day speeds rose alongside night in spring (+0.453 ± 0.141) and
+the night-minus-day gap stayed flat in both seasons.
+
+Ground speed is airspeed plus wind, so exactly one of two things produced the spring rise, and
+airspeed separates them:
+
+1. **Wind.** Spring winds over the network strengthened, or the mix of nights birds chose shifted
+   towards stronger tailwinds. Then **airspeed is flat while wind speed rises**, and the ground
+   speed trend says nothing about what is flying.
+2. **The animals.** Either the same taxa flew faster, or the mixture moved towards faster fliers.
+   Then **airspeed rises with the ground speed**, and a composition change is live — which is the
+   failure condition for Phase 1a's interpretation.
+
+The day-speed rise already favours the first, because daytime aerial biomass is insect-dominated
+and insects have no reason to have gained 0.45 m s⁻¹ of self-powered speed in thirty years. But
+"favours" is not "shows", and the wind term is measurable.
+
+**So, pre-registered:** spring airspeed trend indistinguishable from zero while NARR wind speed at
+the same stations and nights rises; autumn airspeed flat, matching its flat ground speed. Any other
+combination needs explaining, and the one that would force a re-scoping of Phase 1a is a rising
+autumn airspeed.
+
+**The control this test cannot skip.** Airspeed is a difference between the radar's velocity and a
+reanalysis wind, and reanalyses are not homogeneous either — NARR's assimilated observing system
+changed over 1995–2025. So the wind trend at the same points is computed and reported alongside,
+and a trend appearing in both is attributed to the reanalysis rather than to the animals. Reporting
+airspeed drift without that check would be the same class of error as reporting a passage-date
+trend without the dual-polarisation break term.
+
 ## Results — Tests A and B, run 2026-07-29
 
 Reproduce with `make phase1c-report`. Test C is not here; it waits on the driver panel.
