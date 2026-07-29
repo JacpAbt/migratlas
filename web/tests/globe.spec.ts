@@ -279,6 +279,42 @@ test("a gridded layer decodes to the cell count its sidecar declares", async ({ 
   }
 });
 
+test("searching a species draws its own surface", async ({ page }) => {
+  // The search box was a stub: thirty hand-listed animals, and selecting one said "no published
+  // layer yet". Every index entry now has a per-taxon surface behind it, so a hit that draws
+  // nothing means the index and the shards have gone out of step.
+  await ready(page);
+
+  const index = await page.request
+    .get("taxon-index.json")
+    .then((r) => r.json() as Promise<{ taxa: { scientific: string; cells: number }[] }>);
+  expect(index.taxa.length).toBeGreaterThan(100);
+
+  // The widest-ranging taxon is first, which makes this deterministic.
+  const target = index.taxa[0]!;
+  await page.locator("#taxon-search").fill(target.scientific.split(" ")[0]!);
+  const results = page.locator("#taxon-results li");
+  await expect(results.first()).toBeVisible();
+  await results.first().click();
+
+  await expectDrawn(page, "selected-species");
+  // The notice names the layer and carries the generalisation statement with it.
+  await expect(page.locator("#notice")).toContainText("occupied cells");
+});
+
+test("a species shard is fetched only when a species is chosen", async ({ page }) => {
+  // 3,523 marine taxa at one degree are 9.1 MiB in total. Loading that for a search box would
+  // blow the budget outright, so shards must stay lazy.
+  const shardRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/species-\d\d\.json/.test(request.url())) shardRequests.push(request.url());
+  });
+
+  await ready(page);
+  await page.locator("#taxon-search").fill("zz-no-such-animal");
+  expect(shardRequests, "no shard should load before a selection").toHaveLength(0);
+});
+
 test("the default build requests nothing off-origin", async ({ page }) => {
   // The defect this pins: the default basemap used to be Protomaps' demo bucket, which refuses
   // the CORS preflight for ranged requests, so every visitor met a basemap error on a globe with

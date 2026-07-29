@@ -18,6 +18,8 @@ from migratlas.lake.reader import scan
 from migratlas.metrics.phenology import NORTHERN_AUTUMN, passage_quantiles, passage_trends
 from migratlas.redact import clear_for_publication
 from migratlas.tiles.export import ExportResult, export_surface, snap_expr
+from migratlas.tiles.species import SpeciesExport
+from migratlas.tiles.species import build as build_species
 from migratlas.tiles.station_series import SeriesExport, export_station_series
 
 if TYPE_CHECKING:
@@ -258,6 +260,11 @@ def build_all(destination_root: Path | None = None) -> list[ExportResult | Serie
     ]
     results += [build_series(layer, destination_root) for layer in SERIES_LAYERS]
     return results
+
+
+def build_all_species(destination_root: Path | None = None) -> SpeciesExport:
+    """Per-taxon surfaces for the searchable layers, each gated on its own species."""
+    return build_species(LAYERS, destination_root)
 
 
 def manifest() -> list[dict[str, object]]:

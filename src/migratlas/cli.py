@@ -18,6 +18,7 @@ from migratlas.lake import check as lake_check
 from migratlas.reports import phase1, phase1_ebird, phase1_hierarchical, phase1_robustness
 from migratlas.taxonomy import index as taxon_index
 from migratlas.tiles import layers as tile_layers
+from migratlas.tiles import species as tile_species
 
 DRIFT_SAMPLE = 5
 """How many drifted files to name before summarising the rest."""
@@ -106,6 +107,18 @@ def build_layers(
     manifest_path.write_text(payload + "\n", encoding="utf-8")
     print(f"manifest -> {manifest_path}")
 
+    # Per-taxon surfaces and the search index that points at them, built here rather than in a
+    # separate command so a search hit can never reference a surface that was not rebuilt.
+    species = tile_layers.build_all_species(out)
+    index = out.parent / "taxon-index.json"
+    size = tile_species.write_index(species, index)
+    print(f"{len(species.entries):,} taxon surfaces across {species.shards} shards")
+    if species.withheld:
+        print(f"  {len(species.withheld)} withheld by the gate")
+    if species.too_small:
+        print(f"  {species.too_small} below the {tile_species.MIN_CELLS}-cell floor")
+    print(f"search index -> {index} ({size / 1024:.0f} KiB)")
+
 
 @report_app.command("phase1")
 def report_phase1() -> None:
@@ -174,6 +187,19 @@ def build_taxon_index(
         for name, reason in report.unresolved:
             print(f"  {name}: {reason}")
         raise typer.Exit(1)
+
+
+@taxonomy_app.command("warm-names")
+def warm_names() -> None:
+    """Resolve common names for every published taxon into the cache. Resumable.
+
+    Separate from build-layers on purpose: this is thousands of GBIF requests, and a build should
+    be offline and deterministic. Run it once, then rebuilds pick the names up from the cache.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    export = tile_layers.build_all_species(Path("web/public/layers"))
+    added = tile_species.warm_vernaculars(sorted({e.taxon_key for e in export.entries}))
+    print(f"{added:,} names resolved; {len(tile_species.vernaculars()):,} cached in total")
 
 
 @app.command()

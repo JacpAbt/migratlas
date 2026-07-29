@@ -90,6 +90,10 @@ provenance:  ## Regenerate docs/data/PROVENANCE.md from the source registry
 taxon-index:  ## Rebuild the frontend species index from the GBIF Backbone
 	$(RUN) migratlas taxonomy build-index --out web/public/taxon-index.json
 
+.PHONY: taxon-names
+taxon-names:  ## Resolve common names for published taxa into the cache (slow, resumable)
+	$(RUN) migratlas taxonomy warm-names
+
 .PHONY: lake-check
 lake-check:  ## Report schema drift between the lake and the canonical schemas
 	$(RUN) migratlas lake-check

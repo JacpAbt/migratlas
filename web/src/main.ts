@@ -5,7 +5,8 @@ import { addSeries } from "./layers/series";
 import { addSurface } from "./layers/surface";
 import { nightPolygon } from "./layers/terminator";
 import { loadManifest, type LoadedLayer } from "./layers/types";
-import { TaxonIndex, type TaxonHit } from "./search/taxon";
+import { SpeciesSelection } from "./layers/selection";
+import { SpeciesSurfaces, TaxonIndex, type TaxonHit } from "./search/taxon";
 import { Clock, formatInstant } from "./state/time";
 
 import "./styles.css";
@@ -122,7 +123,11 @@ function emptyItem(text: string): HTMLLIElement {
   return item;
 }
 
+/** Kept so a species selection can name the layer and terms its surface came from. */
+let loadedLayers: LoadedLayer[] = [];
+
 function renderLayerList(loaded: LoadedLayer[]): void {
+  loadedLayers = loaded;
   layerList.replaceChildren(
     ...loaded.map(({ meta, setVisible }) => {
       const item = document.createElement("li");
@@ -184,12 +189,15 @@ playButton.addEventListener("click", () => {
 });
 
 // --- Species search ---------------------------------------------------------
+// Every entry in the index has a published surface behind it, so a hit is never a dead end.
 const searchInput = el<HTMLInputElement>("taxon-search");
 const resultList = el<HTMLUListElement>("taxon-results");
+const surfaces = new SpeciesSurfaces(import.meta.env.BASE_URL);
+const selection = new SpeciesSelection(map);
 
 TaxonIndex.load(`${import.meta.env.BASE_URL}taxon-index.json`)
   .then((index) => {
-    searchInput.placeholder = `Search ${index.size} animals…`;
+    searchInput.placeholder = `Search ${index.size.toLocaleString()} animals…`;
     searchInput.addEventListener("input", () => render(index.search(searchInput.value)));
   })
   .catch(() => {
@@ -203,23 +211,43 @@ function render(hits: TaxonHit[]): void {
       const item = document.createElement("li");
       item.setAttribute("role", "option");
       item.innerHTML = `<strong></strong><em></em><span></span>`;
-      item.querySelector("strong")!.textContent = hit.vernacular;
-      item.querySelector("em")!.textContent = hit.scientific;
-      item.querySelector("span")!.textContent = hit.group;
-      item.addEventListener("click", () => select(hit));
+      // Scientific name as the heading when GBIF has no English name, rather than an empty row.
+      item.querySelector("strong")!.textContent = hit.vernacular || hit.scientific;
+      item.querySelector("em")!.textContent = hit.vernacular ? hit.scientific : "";
+      item.querySelector("span")!.textContent = `${hit.cells.toLocaleString()} cells`;
+      item.addEventListener("click", () => void select(hit));
       return item;
     }),
   );
   resultList.hidden = hits.length === 0;
 }
 
-function select(hit: TaxonHit): void {
-  searchInput.value = hit.vernacular;
+async function select(hit: TaxonHit): Promise<void> {
+  searchInput.value = hit.vernacular || hit.scientific;
   resultList.hidden = true;
-  // Phase 0 has nothing to show yet. Saying so beats a silent no-op.
+
+  let grid;
+  try {
+    grid = await surfaces.get(hit);
+  } catch (error) {
+    notice(`Could not load ${hit.scientific}: ${String(error)}`);
+    return;
+  }
+  if (!grid) {
+    // Should not happen -- the index is generated from the shards -- so say so plainly rather
+    // than failing silently, because it would mean the two went out of step.
+    notice(`No surface for ${hit.scientific} (GBIF ${hit.key}); the index and shards disagree.`);
+    return;
+  }
+
+  const { center, cells } = selection.show(hit, grid);
+  map.flyTo({ center, zoom: 1.9, speed: 0.9 });
+
+  const layer = loadedLayers.find((entry) => entry.meta.name === grid.layer);
+  const name = hit.vernacular ? `${hit.vernacular} (${hit.scientific})` : hit.scientific;
   notice(
-    `${hit.vernacular} (GBIF ${hit.key}) — no published layer yet. ` +
-      `Data layers arrive in Phase 1.`,
+    `${name} — ${cells.toLocaleString()} occupied cells from ${layer?.meta.title ?? grid.layer}. ` +
+      `${layer?.terms["dwc:dataGeneralizations"] ?? ""}`.trim(),
   );
 }
 
