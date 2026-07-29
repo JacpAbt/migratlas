@@ -26,6 +26,12 @@ dependencies = [
 # may need a system package or a build-from-source step.
 geo = [
     "fsspec>=2024.9",
+    # Reads the NetCDF4/HDF5 files CDS serves. h5netcdf over netCDF4 because it needs only the
+    # h5py wheel and no system HDF5 or libnetcdf, which is the no-sudo constraint in ADR 0003.
+    # h5py is named explicitly: h5netcdf declares it optional, so resolving it alone leaves a
+    # backend that imports and then refuses to open anything.
+    "h5netcdf>=1.4",
+    "h5py>=3.12",
     # OPeNDAP, which is how point drivers are sampled -- see adr/0006. Pure Python, so it
     # needs no system netCDF or HDF5 library, unlike netCDF4's DAP support.
     "pydap>=3.5",

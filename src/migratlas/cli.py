@@ -14,7 +14,7 @@ from migratlas import __version__
 from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
-from migratlas.drivers import narr
+from migratlas.drivers import era5, narr
 from migratlas.ingest import darkecology, ebird_st, fishglob, megamove, obis
 from migratlas.lake import check as lake_check
 from migratlas.reports import (
@@ -136,6 +136,32 @@ def ingest_narr(
     only = None if months == "all" else tuple(int(part) for part in months.split(","))
     points = narr.stations_from(phase1.load_conus_nights())
     result = narr.ingest(points, date(start, 1, 1), date(end, 12, 31), only=only, resume=resume)
+    print(f"{result.rows:,} rows -> {result.path}")
+    print(f"run {result.run_id}")
+
+
+@app.command("ingest-era5")
+def ingest_era5(
+    start: Annotated[int, typer.Option(help="First year, inclusive.")] = 1995,
+    end: Annotated[int, typer.Option(help="Last year, inclusive.")] = 2025,
+    months: Annotated[
+        str, typer.Option(help="Comma-separated calendar months.")
+    ] = "3,4,5,6,8,9,10,11",
+) -> None:
+    """Land ERA5 monthly precipitation at the radar stations (driver samples, gridded).
+
+    An independent precipitation record, which is what separates weather from instrument in the
+    2012 screening step -- see docs/methods/phase1c-homogeneity.md, Test D.
+
+    Needs MIGRATLAS_CRED_CDS_TOKEN and a one-off acceptance of the dataset's `cc-by` licence.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    points = narr.stations_from(phase1.load_conus_nights())
+    result = era5.ingest(
+        points,
+        list(range(start, end + 1)),
+        [int(part) for part in months.split(",")],
+    )
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
 

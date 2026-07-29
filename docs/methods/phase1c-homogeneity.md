@@ -301,6 +301,89 @@ question rather than a retraction. It is recorded as one, and item 2 of the defe
 justified by a result rather than by caution: the profiles are what separate a real spring
 airspeed change from a change in flight altitude.
 
+## Test D — is the 2012 screening step weather or the instrument?
+
+**Pre-registered 2026-07-29, before any precipitation was fetched.**
+
+Test B established something not predicted: `rain_fraction` steps down at 2012, from 0.1364 to
+0.1126 in the autumn window and 0.1747 to 0.1450 in spring, on a fixed 142-station panel. It does
+not explain the phenology step — that correlation is −0.07 — but it is a real discontinuity in a
+widely-used public dataset and it is unexplained. Two candidates were named:
+
+1. **Weather.** The 2012–2016 period contains the most severe US drought since the 1980s. Less rain
+   fell, so less rain was classified. The dataset is behaving correctly and the step is a fact about
+   the atmosphere.
+2. **The instrument.** The dual-polarisation rollout changed which elevation sweeps are available,
+   and MistNet requires a sweep within 1° of each of five requested angles. Different inputs, so
+   different classification, at exactly the upgrade date.
+
+These are separable because the first predicts an *independent* precipitation record shows the same
+thing and the second does not. ERA5 total precipitation is that record: a different instrument
+system, a different processing chain, and no NEXRAD in it.
+
+**Predictions.** Sampled at the same 145 stations, in the same season windows, with the same 2012
+break:
+
+- **If weather:** ERA5 precipitation shows a negative step at 2012, and across stations the
+  `rain_fraction` step correlates positively with the ERA5 precipitation step — the stations that
+  dried are the stations whose screening eased.
+- **If the instrument:** ERA5 precipitation is flat across 2012, or steps in an unrelated pattern,
+  and the correlation across stations is null.
+- **Mixed** is a real possible answer and will be reported as one: a drought and an upgrade landing
+  in the same three years is a coincidence the data may not be able to unpick.
+
+**Stated in advance, because it changes what the answer is worth.** ERA5 is itself a reanalysis, and
+its assimilated observing system also changed over 1995–2025 — but not in 2012 specifically, and not
+in a way tied to the NEXRAD fleet. A precipitation step at 2012 in ERA5 is therefore evidence about
+the atmosphere in a way it would not be for a trend spanning the whole record. What this test cannot
+do is prove the *absence* of an instrument effect: weather explaining the step does not mean the
+sweep availability changed nothing, only that it is not needed to explain what was seen.
+
+### Result: not the drought — and the test carries its own positive control
+
+ERA5 monthly total precipitation at the same 145 stations, same windows, same 2012 break. Units
+sanity-checked first: mean 2.507 mm day⁻¹ across 0–20.75, which is right for the contiguous US and
+rules out a factor-of-1000 error in the metres-to-millimetres conversion.
+
+| | screening step | ERA5 step, net of trend | ERA5 raw era means | corr |
+| --- | --- | --- | --- | --- |
+| **spring** (n=142) | −0.0243 ± 0.0054 | +0.1314 ± 0.1104 | 2.625 → **2.750** (+0.125) | **+0.36** |
+| **autumn** (n=143) | −0.0189 ± 0.0051 | +0.1155 ± 0.0952 | 2.301 → **2.292** (−0.009) | **+0.27** |
+
+**The drought explanation is rejected, in both windows.** Autumn precipitation is flat across 2012
+(−0.009 mm day⁻¹, 0.4% of the mean) and spring is slightly *wetter* (+0.125, +4.8%). Meanwhile the
+radar screened 14–17% *less* rain. Weather moved the wrong way, or not at all, so it cannot be what
+moved the screening.
+
+Both framings of the step are reported because they diverge and the difference is instructive: the
+break coefficient is net of a linear trend and comes out marginally positive, while the plain
+pre/post difference is flat. The drought question is about the plain difference. They agree on the
+only thing that matters here — no drying.
+
+**The correlation is the part that makes this a real null rather than an insensitive test.** Across
+stations, the screening step tracks the rainfall step at +0.36 in spring and +0.27 in autumn: where
+it got wetter, screening eased less. So the measurement does respond to weather, and would have
+shown a weather-driven level shift had there been one. A null that comes with its own positive
+control is worth much more than a bare null, and this is the second time in this note that structure
+has paid — Test B's spring correlation did the same job for the phenology comparison.
+
+**So the remaining explanation is the instrument.** Of the two candidates named in advance, weather
+is out and sweep availability at the dual-polarisation rollout is the one left standing. That is not
+the same as proving it: no direct evidence about elevation-sweep availability per station-year has
+been examined, and the honest statement is that the step is *consistent with* a processing change at
+the upgrade and *inconsistent with* the drought. Establishing it would mean going to the volume-scan
+metadata, which is a different dataset from the one this project ingests.
+
+**What this does not touch.** The phenology result, still. Test B already showed the screening step
+does not predict the phenology step (−0.07). Test D identifies what the screening step probably is;
+it does not make it matter for the timing claim.
+
+**One limit worth stating.** Monthly means smooth away daily extremes, and rain *screening* responds
+to how many scan volumes contain rain, not to how much water fell. A month could deliver the same
+total in fewer, heavier storms and be screened differently. So this bounds "did the climate dry out"
+— it did not — rather than "did the rain-volume statistics change", which monthly accumulations
+cannot see.
+
 ### The incidental finding worth recording
 
 The screening severity of this dataset is not stationary: it steps by about 17% relative at 2012

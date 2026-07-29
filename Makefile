@@ -122,6 +122,10 @@ ingest-ebird:  ## eBird Status & Trends weekly abundance -> lake (analysis only,
 ingest-narr:  ## NARR night winds at the radar stations -> lake (driver samples, gridded)
 	$(RUN) migratlas ingest-narr
 
+.PHONY: ingest-era5
+ingest-era5:  ## ERA5 monthly precipitation at the radar stations -> lake (driver samples)
+	$(RUN) migratlas ingest-era5
+
 .PHONY: build-layers
 build-layers:  ## Export the globe's layers from the lake, through the ethics gate
 	$(RUN) migratlas build-layers --out web/public/layers

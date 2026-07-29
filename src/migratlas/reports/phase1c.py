@@ -16,7 +16,7 @@ from typing import Final, NamedTuple
 import numpy as np
 import polars as pl
 
-from migratlas.drivers import narr
+from migratlas.drivers import era5, narr
 from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan_dataset
@@ -64,6 +64,10 @@ INSECT_AIRSPEED_MAX: Final = 5.0
 
 # The exclusion check needs both the all-nights and bird-nights fits to compare.
 BOTH_FITS: Final = 2
+
+# Above this, the station-to-station variation in screening is tracking rainfall rather than
+# noise. Modest on purpose: this is a sensitivity check on the test, not a claim of its own.
+WEATHER_SIGNAL: Final = 0.2
 
 
 class Paired(NamedTuple):
@@ -624,6 +628,135 @@ def _without_slow_nights(nights: pl.DataFrame, *, max_year: int) -> list[str]:
     return lines
 
 
+SEASON_MONTHS: Final[dict[str, tuple[int, ...]]] = {
+    "spring": (3, 4, 5, 6),
+    "autumn": (8, 9, 10, 11),
+}
+"""Which calendar months each phenology window covers, for joining to a monthly driver.
+Spring is doy 60-181 and autumn 213-334, so these are those windows rounded to whole months."""
+
+
+def weather_or_instrument(*, max_year: int = 2025) -> list[str]:
+    """Test D -- is the 2012 screening step the drought, or the radar upgrade?
+
+    Predictions fixed in phase1c-homogeneity.md before the precipitation was fetched. If weather,
+    ERA5 steps down too and the per-station steps correlate; if the instrument, ERA5 is flat and
+    the correlation is null. ERA5 is the right arbiter because it shares no hardware, no
+    processing and no NEXRAD with the radar product.
+    """
+    lines = [
+        "TEST D -- is the 2012 screening step weather or the instrument?",
+        "-" * 70,
+        "  ERA5 monthly total precipitation at the same stations, same windows, same break.",
+    ]
+
+    rain = scan_dataset(DRIVER_SAMPLES.name, source_id=era5.SOURCE_ID)
+    try:
+        precipitation = (
+            rain.filter(pl.col("variable") == era5.CANONICAL)
+            .select(
+                station_id=pl.col("site_id"),
+                year=pl.col("period_start").dt.year(),
+                month=pl.col("period_start").dt.month(),
+                mm=pl.col("value"),
+            )
+            .collect()
+        )
+    except FileNotFoundError, OSError:
+        lines.append("  no ERA5 precipitation in the lake yet -- run `make ingest-era5` first.")
+        return lines
+
+    nights = load_conus_nights(quantity=CLAIM_QUANTITY).filter(
+        pl.col("timestamp").dt.year() <= max_year
+    )
+
+    for season, months in SEASON_MONTHS.items():
+        window = SPRING if season == "spring" else AUTUMN
+        screening_series = (
+            nights.filter(
+                pl.col("timestamp").dt.ordinal_day().is_between(window.start_doy, window.end_doy)
+            )
+            .with_columns(year=pl.col("timestamp").dt.year())
+            .group_by("station_id", "year")
+            .agg(pl.col("rain_fraction").mean().alias("screened"))
+        )
+        weather = (
+            precipitation.filter(pl.col("month").is_in(months))
+            .group_by("station_id", "year")
+            .agg(pl.col("mm").mean().alias("rainfall"))
+        )
+        paired = screening_series.join(weather, on=("station_id", "year"), how="inner")
+
+        rows = []
+        for (station,), group in paired.group_by(["station_id"]):
+            if group.height < MIN_YEARS:
+                continue
+            ordered = group.sort("year")
+            years = ordered["year"].to_numpy()
+            screened = _fit_break(
+                years, ordered["screened"].to_numpy().astype(float), FLEET_MIDPOINT_YEAR
+            )
+            rainfall = _fit_break(
+                years, ordered["rainfall"].to_numpy().astype(float), FLEET_MIDPOINT_YEAR
+            )
+            if screened is None or rainfall is None:
+                continue
+            rows.append(
+                {"station_id": station, "screened": screened.step, "rainfall": rainfall.step}
+            )
+
+        # The raw era means alongside the fitted step, because they answer subtly different
+        # questions and here they diverge: a break coefficient is net of a linear trend, so it
+        # can be positive while the plain pre/post difference is flat. The drought question is
+        # about the plain difference, so both get printed rather than only the model's view.
+        eras = (
+            paired.with_columns(
+                era=pl.when(pl.col("year") < FLEET_MIDPOINT_YEAR)
+                .then(pl.lit("pre"))
+                .otherwise(pl.lit("post"))
+            )
+            .group_by("era")
+            .agg(pl.col("rainfall").mean().alias("mm"))
+        )
+        levels = dict(zip(eras["era"], eras["mm"], strict=True))
+
+        if len(rows) < MIN_STATIONS:
+            continue
+        steps = pl.DataFrame(rows)
+        screened_step = steps["screened"].to_numpy().astype(float)
+        rainfall_step = steps["rainfall"].to_numpy().astype(float)
+        screened_mean, screened_ci = _mean_ci(screened_step)
+        rainfall_mean, rainfall_ci = _mean_ci(rainfall_step)
+        correlation = float(np.corrcoef(screened_step, rainfall_step)[0, 1])
+
+        lines.append(f"\n  {season}, n={steps.height} stations")
+        lines.append(
+            f"    screening step        {screened_mean:+.4f} +/- {screened_ci:.4f} rain fraction"
+        )
+        lines.append(
+            f"    ERA5 rainfall step    {rainfall_mean:+.4f} +/- {rainfall_ci:.4f} mm/day"
+            "  (net of trend)"
+        )
+        lines.append(
+            f"    ERA5 raw era means    pre {levels.get('pre', float('nan')):.3f} -> "
+            f"post {levels.get('post', float('nan')):.3f} mm/day  "
+            f"({levels.get('post', 0.0) - levels.get('pre', 0.0):+.3f})"
+        )
+        lines.append(f"    corr(screening step, rainfall step) = {correlation:+.2f}")
+        dried = rainfall_mean < 0 and abs(rainfall_mean) > rainfall_ci
+        tracks = correlation > WEATHER_SIGNAL
+        lines.append(
+            f"    -> weather {'explains' if dried else 'does NOT explain'} the level shift; "
+            f"per-station variation {'does' if tracks else 'does not'} track rainfall"
+        )
+
+    lines.append(
+        "\n  Weather predicts a negative ERA5 step and a positive correlation; the instrument"
+    )
+    lines.append("  predicts neither. Mixed is a real answer and is reported as one.")
+    return lines
+
+
 def render(max_year: int = 2025) -> str:
     out = [
         "Phase 1c -- homogeneity of the 1995-2025 radar record",
@@ -638,4 +771,6 @@ def render(max_year: int = 2025) -> str:
     out += screening(max_year=max_year)
     out += ["", ""]
     out += composition(max_year=max_year)
+    out += ["", ""]
+    out += weather_or_instrument(max_year=max_year)
     return "\n".join(out)
