@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Final
 
 import polars as pl
 
-from migratlas.drivers.schema import DRIVER_SAMPLES
+from migratlas.drivers.schema import DRIVER_SAMPLES, DriverKind
 from migratlas.lake.writer import WriteResult, write_table
 
 if TYPE_CHECKING:
@@ -59,7 +59,8 @@ def to_samples(hauls: pl.DataFrame, source_id: str) -> pa.Table:
                 variable=pl.lit(variable),
                 value=pl.col(column).cast(pl.String).cast(pl.Float64, strict=False),
                 unit=pl.lit(unit),
-                measured=pl.lit(value=True),
+                kind=pl.lit(DriverKind.MEASURED.value),
+                derived_from=pl.lit(None, dtype=pl.String),
             )
             .drop_nulls("value")
             .filter(pl.col("value").is_between(*PLAUSIBLE))
