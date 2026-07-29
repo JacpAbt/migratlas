@@ -26,6 +26,9 @@ dependencies = [
 # may need a system package or a build-from-source step.
 geo = [
     "fsspec>=2024.9",
+    # OPeNDAP, which is how point drivers are sampled -- see adr/0006. Pure Python, so it
+    # needs no system netCDF or HDF5 library, unlike netCDF4's DAP support.
+    "pydap>=3.5",
     "pyogrio>=0.10",
     "rioxarray>=0.17",
     "shapely>=2.0",

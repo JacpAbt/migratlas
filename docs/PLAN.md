@@ -43,8 +43,12 @@ is now *auditing the change we already detected* rather than detecting more.
    control, the screening-severity test against the 2012 step, and the airspeed composition series.
    Existing results are unaffected: the Phase 1a report filters `quantity == "reflectivity_traffic"`,
    so new quantities are additive.
-2. **`features/annotate.py` and the ERA5 driver panel.** Required by test three above, and by
-   everything in Phase 2a.
+2. **`features/annotate.py` and the driver panel.** Required by test three above, and by
+   everything in Phase 2a. The wind source is **NARR over OPeNDAP**, not ARCO-ERA5 — every array
+   in that bucket is chunked one-timestep-whole-globe, so a single station-hour of 850 hPa wind
+   costs a 154 MB read. Measured and reasoned in `adr/0006`, along with why 925 hPa rather than
+   850, and verified end to end: 11.5 m/s median airspeed on the busiest nights, all headings
+   south-westward.
 3. **Phase 2a first links, per `phase2a-design.md`.** Thermal tracking in FISHGLOB needs no new
    source; the aerial timing response needs only ERA5.
 4. **Surface the findings on the globe** — a change layer and a results panel.
