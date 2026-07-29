@@ -172,31 +172,41 @@ was in the pre-registered table, not because it is a result.
 Two separate findings, and conflating them would be the easy mistake.
 
 **The screening series steps at 2012, which was not predicted.** On a fixed panel of 142 of 145
-stations spanning 2007–2017, mean autumn-window `rain_fraction` runs 0.1364 over the 17 pre-break
-years against 0.1126 over the 14 after — a per-station step of −0.0184 ± 0.0051, comfortably
-non-zero. The note above predicted this would be flat, on the reasoning that MistNet operates on
-single-polarisation moments and so should be blind to the upgrade. **That prior was wrong.** The
-likeliest remaining mechanisms are that the upgrade changed which elevation sweeps are available
-— the descriptor requires a sweep within 1° of each of five requested angles — or that the
-2012–2016 US drought is simply real meteorology. Distinguishing them needs an independent
-precipitation record, which is the ERA5 dependency, so it is left open here rather than guessed.
+stations with at least five years each side of the break, mean `rain_fraction` falls in both
+season windows: 0.1747 → 0.1450 in spring and 0.1364 → 0.1126 in autumn, over 17 pre-break years
+against 14 after. Per station the step is −0.0237 ± 0.0053 in spring and −0.0184 ± 0.0051 in
+autumn, both comfortably non-zero. The note above predicted this would be flat, on the reasoning
+that MistNet operates on single-polarisation moments and so should be blind to the upgrade.
+**That prior was wrong.** The likeliest remaining mechanisms are that the upgrade changed which
+elevation sweeps are available — the descriptor requires a sweep within 1° of each of five
+requested angles — or that the 2012–2016 US drought is simply real meteorology. Distinguishing
+them needs an independent precipitation record, which is the ERA5 dependency, so it is left open
+here rather than guessed.
 
-**It still does not explain the phenology step.** The correlations across stations are null:
+**It still does not explain the autumn step.** Rain is measured inside each season's own window,
+so each phenology step is compared against the screening it actually saw:
 
-| Autumn, n=142 | correlation with phenology step |
-| --- | --- |
-| station's screening step | −0.07 |
-| station's mean rain fraction | −0.19 |
-| station latitude | −0.23 |
+| correlation with phenology step | spring (n=140) | autumn (n=142) |
+| --- | --- | --- |
+| station's screening step | **+0.26** | **−0.07** |
+| station's mean rain fraction | +0.06 | −0.19 |
+| station latitude | −0.08 | −0.23 |
 
 Mean autumn phenology step is +1.41 ± 0.66 d, consistent with Phase 1a. The latitude gradient is
 present (−0.23, the sign that matches +2.16 d at 24–32°N against +0.01 at 42–50°N) and rain
-explains none of it — a station that saw its screening change most is not a station whose passage
-dates jumped most. **The mechanism is ruled out, and the step remains unexplained.** That is the
-pre-registered reading of a null and it is not upgraded here into an explanation.
+explains none of it — a station whose screening changed most is not a station whose autumn
+passage dates jumped most. **The mechanism is ruled out for autumn, and the step remains
+unexplained.**
 
-So the tally on the 2012 step is now four mechanisms tested and four rejected: window truncation,
-panel composition, curvature, and precipitation screening.
+The spring column is what makes that a real null rather than an insensitive test. Spring's
+phenology step correlates with its screening step at +0.26 across 140 stations, so this design
+*can* detect the coupling when it is there. Two consequences, and only the first bears on the
+Phase 1a claim: the autumn null is a null with demonstrated power, and spring's own step — which
+is −0.68 ± 0.76 d and covers zero, so not a Phase 1a claim — is partly screening-coupled and
+should not later be promoted to a result without accounting for that.
+
+So the tally on the autumn 2012 step is four mechanisms tested and four rejected: window
+truncation, panel composition, curvature, and precipitation screening.
 
 ### The incidental finding worth recording
 

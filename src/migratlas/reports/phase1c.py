@@ -51,6 +51,9 @@ MATERIAL_DIFFERENCE: Final = 0.3
 # Below this many stations a correlation across stations is not worth printing.
 MIN_STATIONS: Final = 3
 
+# Years a station must have on each side of the break to join the fixed panel.
+PANEL_MARGIN: Final = 5
+
 
 class Paired(NamedTuple):
     """One latitude band's trend under both quantities, and the within-station difference."""
@@ -174,8 +177,16 @@ def speed_weighting(*, max_year: int = 2025) -> list[str]:
                 )[0, 1]
             )
             verdict = "SURVIVES" if abs(difference) < MATERIAL_DIFFERENCE else "CHANGES"
+            # Only autumn at 37-50N is a Phase 1a claim. Spring has no detectable trend, so
+            # its row is a comparison of two nulls and saying "survives" of it would be
+            # claiming a result that was never made.
+            note = (
+                "the surviving Phase 1a claim"
+                if season == "autumn"
+                else "no Phase 1a claim here -- both are null"
+            )
             lines.append(
-                f"    37-50N pooled (the surviving Phase 1a claim): "
+                f"    37-50N pooled ({note}): "
                 f"diff {difference:+.2f} +/- {ci:.2f}, r={correlation:.2f}  -> {verdict}"
             )
     return lines
@@ -192,55 +203,13 @@ def screening(*, max_year: int = 2025) -> list[str]:
     lines = [
         "TEST B -- is the 2012 step the precipitation screening?",
         "-" * 70,
-        f"  break at {FLEET_MIDPOINT_YEAR}; rain_fraction measured in the autumn window only, "
-        "so it matches the phenology it is being compared to.",
+        f"  break at {FLEET_MIDPOINT_YEAR}; rain_fraction measured inside each season's own "
+        "window, so it matches the phenology it is compared against.",
     ]
 
     nights = load_conus_nights(quantity=CLAIM_QUANTITY).filter(
         pl.col("timestamp").dt.year() <= max_year
     )
-
-    # Restrict to a fixed panel. The network grew from 103 to 159 stations, and southern
-    # stations carry more rain, so an unrestricted mean confounds a change in screening with
-    # a change in who is being screened -- the same confound the Phase 1b footprint rule
-    # exists for.
-    autumn = nights.filter(
-        pl.col("timestamp").dt.ordinal_day().is_between(AUTUMN.start_doy, AUTUMN.end_doy)
-    ).with_columns(year=pl.col("timestamp").dt.year())
-    per_station_year = autumn.group_by("station_id", "year").agg(
-        pl.col("rain_fraction").mean().alias("rain"),
-        pl.col("station_latitude").first().alias("latitude"),
-    )
-    span = per_station_year.group_by("station_id").agg(
-        pl.col("year").min().alias("first"), pl.col("year").max().alias("last")
-    )
-    panel = span.filter(
-        pl.col("first") <= FLEET_MIDPOINT_YEAR - 5, pl.col("last") >= FLEET_MIDPOINT_YEAR + 5
-    )["station_id"]
-    fixed = per_station_year.filter(pl.col("station_id").is_in(panel))
-    lines.append(
-        f"  fixed panel: {panel.len()} of {per_station_year['station_id'].n_unique()} stations "
-        f"span {FLEET_MIDPOINT_YEAR - 5}-{FLEET_MIDPOINT_YEAR + 5}"
-    )
-
-    yearly = (
-        fixed.group_by("year")
-        .agg(pl.col("rain").mean())
-        .sort("year")
-        .with_columns(
-            era=pl.when(pl.col("year") < FLEET_MIDPOINT_YEAR)
-            .then(pl.lit("pre"))
-            .otherwise(pl.lit("post"))
-        )
-    )
-    eras = yearly.group_by("era").agg(pl.col("rain").mean().alias("mean"), pl.len().alias("years"))
-    lines.append("  screening series on the fixed panel:")
-    for row in eras.sort("era", descending=True).iter_rows(named=True):
-        lines.append(
-            f"    {row['era']:<5} {row['years']:>2} years  mean rain_fraction {row['mean']:.4f}"
-        )
-
-    # Per station: the screening step, and the phenology step, from the same design.
     quantiles = passage_quantiles(
         nights,
         spec_for(EvidenceType.FLUX),
@@ -251,8 +220,53 @@ def screening(*, max_year: int = 2025) -> list[str]:
     )
 
     rows: list[dict[str, object]] = []
-    for season in ("spring", "autumn"):
-        seasonal = quantiles.filter(pl.col("season") == season, pl.col("q50_doy").is_not_null())
+    for season in (SPRING, AUTUMN):
+        # Rain inside this season's window. Comparing a spring phenology step against an
+        # autumn rain step would be a mismatch dressed up as a control.
+        in_window = nights.filter(
+            pl.col("timestamp").dt.ordinal_day().is_between(season.start_doy, season.end_doy)
+        ).with_columns(year=pl.col("timestamp").dt.year())
+        per_station_year = in_window.group_by("station_id", "year").agg(
+            pl.col("rain_fraction").mean().alias("rain"),
+            pl.col("station_latitude").first().alias("latitude"),
+        )
+
+        # Restrict to a fixed panel. The network grew from 103 to 159 stations and southern
+        # stations carry more rain, so an unrestricted mean confounds a change in screening
+        # with a change in who is being screened -- the confound the Phase 1b footprint rule
+        # exists for.
+        span = per_station_year.group_by("station_id").agg(
+            pl.col("year").min().alias("first"), pl.col("year").max().alias("last")
+        )
+        panel = span.filter(
+            pl.col("first") <= FLEET_MIDPOINT_YEAR - PANEL_MARGIN,
+            pl.col("last") >= FLEET_MIDPOINT_YEAR + PANEL_MARGIN,
+        )["station_id"]
+        fixed = per_station_year.filter(pl.col("station_id").is_in(panel))
+
+        eras = (
+            fixed.group_by("year")
+            .agg(pl.col("rain").mean().alias("rain"))
+            .with_columns(
+                era=pl.when(pl.col("year") < FLEET_MIDPOINT_YEAR)
+                .then(pl.lit("pre"))
+                .otherwise(pl.lit("post"))
+            )
+            .group_by("era")
+            .agg(pl.col("rain").mean().alias("mean"), pl.len().alias("years"))
+        )
+        lines.append(
+            f"\n  {season.name} window, fixed panel of {panel.len()} of "
+            f"{per_station_year['station_id'].n_unique()} stations:"
+        )
+        for row in eras.sort("era", descending=True).iter_rows(named=True):
+            lines.append(
+                f"    {row['era']:<5} {row['years']:>2} years  mean rain_fraction {row['mean']:.4f}"
+            )
+
+        seasonal = quantiles.filter(
+            pl.col("season") == season.name, pl.col("q50_doy").is_not_null()
+        )
         for (station,), group in seasonal.group_by(["station_id"]):
             if group.height < MIN_YEARS:
                 continue
@@ -273,7 +287,7 @@ def screening(*, max_year: int = 2025) -> list[str]:
                 continue
             rows.append(
                 {
-                    "season": season,
+                    "season": season.name,
                     "station_id": station,
                     "latitude": float(rain_group["latitude"][0]),
                     "phenology_step": phenology.step,
@@ -287,21 +301,21 @@ def screening(*, max_year: int = 2025) -> list[str]:
         return lines
 
     steps = pl.DataFrame(rows)
-    for season in ("spring", "autumn"):
-        seasonal = steps.filter(pl.col("season") == season)
+    for name in (SPRING.name, AUTUMN.name):
+        seasonal = steps.filter(pl.col("season") == name)
         if seasonal.height < MIN_STATIONS:
             continue
-        lines.append(f"\n  {season}: per-station steps, n={seasonal.height}")
+        lines.append(f"\n  {name}: per-station steps, n={seasonal.height}")
         phenology_step = seasonal["phenology_step"].to_numpy().astype(float)
         mean, ci = _mean_ci(phenology_step)
         lines.append(f"    mean phenology step  {mean:+.2f} +/- {ci:.2f} d")
         rain_mean, rain_ci = _mean_ci(seasonal["rain_step"].to_numpy().astype(float))
         lines.append(f"    mean screening step  {rain_mean:+.4f} +/- {rain_ci:.4f} rain fraction")
-        for name in ("rain_step", "mean_rain", "latitude"):
+        for against in ("rain_step", "mean_rain", "latitude"):
             correlation = float(
-                np.corrcoef(phenology_step, seasonal[name].to_numpy().astype(float))[0, 1]
+                np.corrcoef(phenology_step, seasonal[against].to_numpy().astype(float))[0, 1]
             )
-            lines.append(f"    corr(phenology step, {name:<11}) = {correlation:+.2f}")
+            lines.append(f"    corr(phenology step, {against:<11}) = {correlation:+.2f}")
 
     lines.append(
         "\n  The pre-registered reading: a positive corr(phenology step, rain_step or mean_rain)"
