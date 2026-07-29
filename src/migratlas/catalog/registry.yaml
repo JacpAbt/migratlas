@@ -142,3 +142,45 @@ sources:
       killdeer and great blue heron are among the widest-ranging species by cell count.
       Any genuinely marine analysis needs a further filter on top of this ingest.
     added: 2026-07-28
+
+  - id: ebird_status_trends
+    title: eBird Status and Trends — weekly relative abundance (2023 release)
+    evidence_type: abundance_surface
+    realm: aerial
+    taxon_scope: exact
+    landing_page: https://science.ebird.org/en/status-and-trends
+    download_uri: https://st-download.ebird.org/v1/
+    licence: eBird Status and Trends Products Terms of Use
+    licence_url: https://ebird.org/about/products-access-terms-of-use
+    citation: >-
+      Fink, D., T. Auer, A. Johnston, M. Strimas-Mackey, S. Ligocki, O. Robinson, W. Hochachka,
+      L. Jaromczyk, C. Crowley, K. Dunham, A. Stillman, I. Davies, A. Rodewald, V. Ruiz-Gutierrez,
+      C. Wood (2023). eBird Status and Trends, Data Version: 2023. Cornell Lab of Ornithology,
+      Ithaca, New York.
+    redistribution:
+      # THE REASON THIS SOURCE EXISTS IN THE REGISTRY AS UNPUBLISHABLE.
+      # The Terms permit use and permit reporting results; they forbid serving the products or
+      # anything derived from them. Verbatim: "You shall not... redistribute eBird Status and
+      # Trends Data Products... through websites... or via any other means or technology without
+      # the prior written permission of the Cornell Lab." The gate refuses a clearance for this
+      # source, so no exporter can publish it even by mistake.
+      allowed: false
+      attribution_required: true
+      commercial_use: false
+      notes: >-
+        Analysis and reported statistics only. Non-peer-reviewed use is capped at 50 species,
+        which is why the species list is a fixed, curated constant rather than a query. Any
+        published visualisation would additionally have to be shown exactly as downloaded,
+        with the Cornell logo and citation embedded — a further reason nothing from here
+        reaches the globe.
+    # Modelled relative abundance of birds. Nothing here locates an individual animal, and the
+    # products are already smoothed to 3 km at their finest.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      A single modelled year at weekly resolution, not an annual time series — the 2023 release
+      describes one representative year, so it can validate the SHAPE of a seasonal cycle but
+      cannot corroborate a trend across years, and cannot speak to the 2012 instrument step.
+      Relative abundance is standing stock, not passage flux: a station-level comparison against
+      radar traffic must compare timing landmarks or rates of change, never levels. Release
+      versions are not comparable to each other; the models change between them.
+    added: 2026-07-29

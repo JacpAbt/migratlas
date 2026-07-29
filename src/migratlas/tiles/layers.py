@@ -171,6 +171,7 @@ def build(layer: LayerSpec, destination_root: Path | None = None) -> ExportResul
         sensitivity=source.default_sensitivity,
         taxon_scope=TaxonScope.AGGREGATE,
         taxon_key=None,
+        redistribution_allowed=source.redistribution.allowed,
     )
 
     root = destination_root or (get_settings().tiles_dir / "layers")
@@ -211,6 +212,7 @@ def build_series(layer: LayerSpec, destination_root: Path | None = None) -> Seri
         # The radar measures aerial biomass, so there is no taxon to attribute.
         taxon_scope=TaxonScope.UNATTRIBUTED,
         taxon_key=None,
+        redistribution_allowed=source.redistribution.allowed,
     )
     root = destination_root or (get_settings().tiles_dir / "layers")
     return export_station_series(

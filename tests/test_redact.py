@@ -37,6 +37,7 @@ def _clear(**overrides: object) -> PublicationClearance:
         "sensitivity": Sensitivity.NOT_SENSITIVE,
         "taxon_scope": TaxonScope.EXACT,
         "taxon_key": 12_345,
+        "redistribution_allowed": True,
         "now": NOW,
     }
     kwargs.update(overrides)
@@ -275,3 +276,36 @@ def test_generalization_statement_describes_what_was_done() -> None:
 def test_source_resolution_statement_is_explicit() -> None:
     statement = Generalization(grid_deg=None, delay_days=0, drop_individual_id=False).statement()
     assert statement == "Published at source resolution."
+
+
+# --- Licence, which is a separate reason to refuse from animal safety -------
+def test_a_licence_forbidding_redistribution_refuses_publication() -> None:
+    """eBird Status and Trends is not sensitive at all and still may not be republished."""
+    with pytest.raises(PublicationRefusedError, match="does not permit redistribution"):
+        clear_for_publication(
+            source_id="ebird_status_trends",
+            evidence_type=EvidenceType.ABUNDANCE_SURFACE,
+            realm=Realm.AERIAL,
+            sensitivity=Sensitivity.NOT_SENSITIVE,
+            taxon_scope=TaxonScope.EXACT,
+            taxon_key=9515886,
+            redistribution_allowed=False,
+        )
+
+
+def test_the_licence_check_runs_before_anything_else() -> None:
+    """A forbidden licence is refused even where sensitivity would also have refused it.
+
+    Order matters for the message: told "no sensitivity resolved", an operator goes looking for
+    a missing classification instead of reading the licence.
+    """
+    with pytest.raises(PublicationRefusedError, match="does not permit redistribution"):
+        clear_for_publication(
+            source_id="ebird_status_trends",
+            evidence_type=EvidenceType.TRACK,
+            realm=Realm.AERIAL,
+            sensitivity=None,
+            taxon_scope=TaxonScope.UNATTRIBUTED,
+            taxon_key=None,
+            redistribution_allowed=False,
+        )

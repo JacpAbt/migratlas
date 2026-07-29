@@ -42,6 +42,7 @@ def _clearance(
         sensitivity=sensitivity,
         taxon_scope=TaxonScope.EXACT,
         taxon_key=12345,
+        redistribution_allowed=True,
         permission=permission,
         now=NOW,
     )

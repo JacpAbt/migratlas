@@ -186,16 +186,31 @@ def clear_for_publication(  # noqa: PLR0913 -- each argument is a distinct polic
     sensitivity: Sensitivity | None,
     taxon_scope: TaxonScope,
     taxon_key: int | None,
+    redistribution_allowed: bool,
     permission: OwnerPermission | None = None,
     now: datetime | None = None,
 ) -> PublicationClearance:
     """Mint a clearance, or refuse. The only way to obtain one.
 
+    ``redistribution_allowed`` has no default on purpose. It comes from the source's licence in
+    the registry, and a caller that has not looked it up cannot compile -- which is the same
+    trick the clearance itself plays on the exporter. Animal safety and licence terms are
+    independent reasons to refuse: eBird Status and Trends is not sensitive in the least and
+    still may not be republished from a website.
+
     Raises:
-        PublicationRefusedError: if sensitivity is unresolved, the taxon claim is
-            inconsistent, or policy withholds the data outright.
+        PublicationRefusedError: if the licence forbids redistribution, sensitivity is
+            unresolved, the taxon claim is inconsistent, or policy withholds the data outright.
     """
     now = now or datetime.now(UTC)
+
+    if not redistribution_allowed:
+        msg = (
+            f"Refusing to publish {source_id!r}: its licence does not permit redistribution. "
+            f"The data may be used for analysis, and results may be reported, but no derived "
+            f"product may be served. See the source's `redistribution` block in the registry."
+        )
+        raise PublicationRefusedError(msg)
 
     if sensitivity is None:
         msg = (

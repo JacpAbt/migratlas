@@ -46,6 +46,7 @@ def clearance(sensitivity: Sensitivity = Sensitivity.NOT_SENSITIVE) -> Publicati
         sensitivity=sensitivity,
         taxon_scope=TaxonScope.UNATTRIBUTED,
         taxon_key=None,
+        redistribution_allowed=True,
     )
 
 
