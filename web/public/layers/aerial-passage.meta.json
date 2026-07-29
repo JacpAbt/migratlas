@@ -4,7 +4,7 @@
  "realm": "aerial",
  "sensitivity": "not_sensitive",
  "dwc:dataGeneralizations": "Published at source resolution.",
- "cleared_at": "2026-07-29T09:07:38.435553+00:00",
+ "cleared_at": "2026-07-29T09:17:21.869650+00:00",
  "stations": 161,
  "weeks": 52,
  "reduction": "Weekly median of nightly values, pooled across years. Not a nightly series.",

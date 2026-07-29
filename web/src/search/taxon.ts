@@ -16,6 +16,8 @@ export interface TaxonEntry {
   vernacular: string;
   /** Which published layer holds this taxon's surface. */
   layer: string;
+  /** Human name of that layer. 95 taxa appear in both marine sources, so the rows must differ. */
+  layer_title: string;
   /** Occupied cells, which is both a relevance signal and worth showing. */
   cells: number;
   /** Which shard file carries the surface. */

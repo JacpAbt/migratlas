@@ -168,6 +168,8 @@ def test_the_index_only_lists_taxa_that_have_a_surface(
     assert [taxon["key"] for taxon in payload["taxa"]] == [5]
     assert payload["taxa"][0]["vernacular"] == "Alpha"
     assert payload["taxa"][0]["cells"] == 8
+    # Present so two rows for one taxon in two layers can be told apart.
+    assert payload["taxa"][0]["layer_title"] == "Test layer"
 
 
 def test_the_index_is_ordered_widest_ranging_first(

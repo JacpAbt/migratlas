@@ -214,7 +214,10 @@ function render(hits: TaxonHit[]): void {
       // Scientific name as the heading when GBIF has no English name, rather than an empty row.
       item.querySelector("strong")!.textContent = hit.vernacular || hit.scientific;
       item.querySelector("em")!.textContent = hit.vernacular ? hit.scientific : "";
-      item.querySelector("span")!.textContent = `${hit.cells.toLocaleString()} cells`;
+      // The layer, not just the count: 95 taxa are in both marine sources, and two rows reading
+      // only "9,712 cells" and "1,312 cells" give the viewer no way to choose between them.
+      item.querySelector("span")!.textContent =
+        `${hit.cells.toLocaleString()} cells · ${hit.layer_title}`;
       item.addEventListener("click", () => void select(hit));
       return item;
     }),

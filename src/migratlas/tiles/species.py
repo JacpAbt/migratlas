@@ -57,6 +57,8 @@ class SpeciesEntry:
     taxon_key: int
     scientific_name: str
     layer: str
+    layer_title: str
+    """Carried into the index so a taxon present in two layers gives two distinguishable rows."""
     cells: int
     shard: int
     generalization: str
@@ -189,6 +191,7 @@ def build(layers: tuple[LayerSpec, ...], destination_root: Path | None = None) -
                     taxon_key=key,
                     scientific_name=str(taxon_label),
                     layer=layer.name,
+                    layer_title=layer.title,
                     cells=snapped.height,
                     shard=shard,
                     generalization=clearance.generalization.statement(),
@@ -281,6 +284,7 @@ def write_index(export: SpeciesExport, destination: Path) -> int:
             "scientific": entry.scientific_name,
             "vernacular": names.get(entry.taxon_key, ""),
             "layer": entry.layer,
+            "layer_title": entry.layer_title,
             "cells": entry.cells,
             "shard": entry.shard,
         }
