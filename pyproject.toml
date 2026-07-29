@@ -136,7 +136,14 @@ enable_error_code = ["redundant-expr", "truthy-bool", "ignore-without-code"]
 # Libraries that ship no py.typed marker. Listed explicitly rather than via a
 # global ignore_missing_imports, so that a genuinely mistyped import still fails.
 [[tool.mypy.overrides]]
-module = ["duckdb.*", "pmtiles.*", "pyarrow.*", "pyogrio.*", "statsmodels.*"]
+module = [
+    "duckdb.*",
+    "pmtiles.*",
+    "pyarrow.*",
+    "pyogrio.*",
+    "rasterio.*",
+    "statsmodels.*",
+]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------

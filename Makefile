@@ -106,6 +106,10 @@ ingest-megamove:  ## MegaMove 1-degree grids -> lake (ABUNDANCE_SURFACE, marine)
 ingest-obis:  ## OBIS speciesgrids -> lake (ABUNDANCE_SURFACE, marine)
 	$(RUN) migratlas ingest obis
 
+.PHONY: ingest-ebird
+ingest-ebird:  ## eBird Status & Trends weekly abundance -> lake (analysis only, never published)
+	$(RUN) migratlas ingest ebird-st
+
 .PHONY: build-layers
 build-layers:  ## Export the globe's layers from the lake, through the ethics gate
 	$(RUN) migratlas build-layers --out web/public/layers

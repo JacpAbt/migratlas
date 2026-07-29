@@ -13,7 +13,7 @@ from migratlas import __version__
 from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
-from migratlas.ingest import darkecology, megamove, obis
+from migratlas.ingest import darkecology, ebird_st, megamove, obis
 from migratlas.lake import check as lake_check
 from migratlas.reports import phase1, phase1_hierarchical, phase1_robustness
 from migratlas.taxonomy import index as taxon_index
@@ -68,6 +68,21 @@ def ingest_obis() -> None:
     """Land the OBIS speciesgrids marine slice (ABUNDANCE_SURFACE, marine)."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     result = obis.ingest()
+    print(f"{result.rows:,} rows -> {result.path}")
+    print(f"run {result.run_id}")
+
+
+@ingest_app.command("ebird-st")
+def ingest_ebird_st(
+    limit: Annotated[int | None, typer.Option(help="Land only the first N species.")] = None,
+) -> None:
+    """Land eBird Status and Trends weekly abundance (ABUNDANCE_SURFACE, aerial).
+
+    Analysis only: this source's licence forbids redistribution, the registry says so, and the
+    gate refuses to publish it. Fifty species, which is the Terms' cap.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    result = ebird_st.ingest(limit=limit)
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
 

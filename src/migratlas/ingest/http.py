@@ -14,6 +14,12 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+# httpx logs every request at INFO with the full URL. Some sources carry an access key in the
+# query string because their API requires it there -- eBird Status and Trends does -- so leaving
+# this at INFO prints credentials into consoles and CI logs. Raised here, in the module that owns
+# every outbound request, rather than in each caller that might forget.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 USER_AGENT = "migratlas/0.1 (+https://github.com/JacpAbt/migratlas)"
 CHUNK = 1 << 20
 
