@@ -100,6 +100,11 @@ def load_conus_nights(
             "magnitude",
             "coverage_fraction",
             "rain_fraction",
+            # Reflectivity-weighted mean ground speed and heading over the window. Not used by
+            # the phenology metric, and carried because `traffic` is weighted by speed -- so a
+            # trend in it is the mechanism phase1c's Test A exists to rule out.
+            "speed_ms",
+            "direction_deg",
             "station_latitude",
             "station_longitude",
         )

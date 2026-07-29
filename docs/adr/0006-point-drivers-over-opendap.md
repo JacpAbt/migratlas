@@ -60,25 +60,56 @@ NARR earns it on the merits rather than only on access:
   product at 0.25°, not a compromise.
 - 3-hourly is ample: the target is a nightly mean, not an instantaneous wind.
 
-## Verification
+## Verification, and a correction to the first version of it
 
-One month, one station, real numbers rather than a smoke test. KBGM, September 2015, wind averaged
-over 1000–850 hPa and over the four night timesteps, differenced against the lake's
-reflectivity-weighted ground velocity:
+**The first verification in this ADR was one day misaligned, and its headline number was wrong.**
+It reported a median airspeed of 11.5 m/s on the ten busiest KBGM nights of September 2015, pairing
+each radar night with the NARR winds carrying the *same* UTC date. That pairing is incorrect: a
+night that begins on the local evening of date D carries its 00–09 UTC hours on **D+1**, so the
+same-date join uses the wrong night's wind.
 
-- Ten busiest nights: median airspeed **11.5 m/s**, inside the 8–15 m/s band for nocturnal migrant
-  songbirds and well clear of the 0–5 m/s insect band.
-- Every one of those ten nights has a heading between **181° and 233°** — uniformly
-  south-westward, which is the autumn heading for the north-eastern US.
+That was found by measuring rather than by re-reading the code. `align_offset` sweeps the offset
+and reports the airspeed distribution at each, on the reasoning that pairing a night's scatterer
+velocity with some *other* night's wind can only inflate both the mean and the spread — so the
+correct offset is the one that minimises them. Across all 145 stations and 4,060–4,201 nights:
 
-The direction agreement is the part worth trusting, because it is independent of the airspeed
-arithmetic: it says the scatterers are migrating birds regardless of whether the level weighting is
-exactly right.
+| offset (days) | median airspeed | IQR | s.d. |
+| --- | --- | --- | --- |
+| −3 | 9.33 | 7.31 | 5.63 |
+| −2 | 8.55 | 6.37 | 5.00 |
+| **−1** | **7.47** | **4.95** | **4.34** |
+| 0 | 8.57 | 6.26 | 5.34 |
+| +1 | 10.03 | 7.36 | 5.73 |
+| +2 | 10.40 | 7.47 | 5.78 |
 
-Per-night noise is real and visible — 19.9 m/s on 2015-09-20, 6.7 m/s on 2015-09-11 — as expected
-from differencing two vectors whose levels and time windows only approximately coincide. Test C
-asks for a trend in a mean over thousands of nights, which tolerates that; any per-night claim
-would not, and none will be made.
+A clean V in both statistics with its minimum at −1, confirmed on both sides — which is why the
+sweep runs to −3 and not just to −1, where the minimum would have been indistinguishable from the
+edge of the search.
+
+So the corrected figures are **7.47 m/s median airspeed across all nights and 7.93 m/s on the
+busiest quartile**, not 11.5. The earlier number was inflated by wind decorrelation, and the
+claim that it sat "squarely in the songbird band" was partly an artefact of the misalignment. 7.9
+m/s is a reflectivity-weighted mean over a whole night and the whole 0–3000 m column of a
+*mixture*, so sitting at the bottom of the 8–15 m/s bird band rather than in the middle of it is
+what a mixture containing slower scatterers should look like. That is a substantive input to Test
+C rather than a disappointment.
+
+The offset is now applied at write time — driver rows carry the radar night's own label, not the
+UTC day their hours came from — so a join on date is correct by construction rather than by every
+consumer remembering. Re-running the sweep after the shift puts the minimum at 0, as it should.
+
+What does survive from the first verification, because it never depended on the wind at all: every
+one of those ten busiest nights has a radar heading between **181° and 233°**, uniformly
+south-westward, which is the autumn heading for the north-eastern US. The scatterers are migrating
+birds regardless of how the wind is paired.
+
+Per-night noise is real, as expected from differencing two vectors whose levels and time windows
+only approximately coincide. Test C asks for a trend in a mean over thousands of nights, which
+tolerates that; any per-night claim would not, and none will be made.
+
+The lesson worth keeping: this convention would never have failed loudly. It would have added wind
+variance to every airspeed, pulling the distribution towards the wind speed — which is precisely
+the direction that makes a real composition trend look like nothing.
 
 ## Consequences
 

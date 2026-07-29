@@ -4,6 +4,7 @@ command rather than a notebook cell someone ran once."""
 import json
 import logging
 from collections import Counter
+from datetime import date
 from pathlib import Path
 from typing import Annotated
 
@@ -13,6 +14,7 @@ from migratlas import __version__
 from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
+from migratlas.drivers import narr
 from migratlas.ingest import darkecology, ebird_st, fishglob, megamove, obis
 from migratlas.lake import check as lake_check
 from migratlas.reports import (
@@ -103,6 +105,28 @@ def ingest_fishglob() -> None:
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     result = fishglob.ingest()
+    print(f"{result.rows:,} rows -> {result.path}")
+    print(f"run {result.run_id}")
+
+
+@app.command("ingest-narr")
+def ingest_narr(
+    start: Annotated[int, typer.Option(help="First year, inclusive.")] = 1995,
+    end: Annotated[int, typer.Option(help="Last year, inclusive.")] = 2025,
+    months: Annotated[
+        str, typer.Option(help="Comma-separated calendar months, or 'all'.")
+    ] = "3,4,5,6,8,9,10,11",
+) -> None:
+    """Land NARR night winds at the radar stations (driver samples, gridded).
+
+    Months default to the two migration windows the phenology uses, because a month outside them
+    costs the same to fetch and answers nothing. See adr/0006 for why this is NARR over OPeNDAP
+    rather than ARCO-ERA5.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    only = None if months == "all" else tuple(int(part) for part in months.split(","))
+    points = narr.stations_from(phase1.load_conus_nights())
+    result = narr.ingest(points, date(start, 1, 1), date(end, 12, 31), only=only)
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
 

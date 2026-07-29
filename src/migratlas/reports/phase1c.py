@@ -192,6 +192,101 @@ def speed_weighting(*, max_year: int = 2025) -> list[str]:
     return lines
 
 
+def _weighted_mean(frame: pl.DataFrame, value: str, weight: str) -> pl.Expr:
+    """Traffic-weighted mean, so busy migration nights dominate a station-season's summary.
+
+    An unweighted mean over a season gives a quiet October night with a handful of insects the
+    same say as the largest passage of the autumn, which is the opposite of what is wanted.
+    """
+    del frame
+    return (pl.col(value) * pl.col(weight)).sum() / pl.col(weight).sum()
+
+
+def speed_drift(*, max_year: int = 2025) -> list[str]:
+    """Test A's premise, and a composition screen that needs no external data.
+
+    Test A showed the passage-date trend survives dropping the speed weighting. That says the
+    result is insensitive; it does not say whether there was anything to be insensitive to. The
+    direct question is whether mean flight speed drifted at all, and the lake already answers it.
+
+    The night-minus-day gap is the second thing here. Daytime aerial biomass is
+    insect-dominated -- that is what the July share established, and the day/night difference in
+    ground speed says the same -- so a narrowing gap over thirty years would mean the night
+    signal drifted towards the day one, which is a composition change.
+
+    This is a screen and not a measurement, for a reason worth stating: ground speed is airspeed
+    plus wind, and night and day do not share a wind climatology. The nocturnal low-level jet
+    systematically raises night winds, so the gap's *level* is not a composition ratio. Only its
+    stability over time is informative, and even then a trend could be a change in the day-night
+    wind contrast rather than in what is flying. A flat gap is reassuring; a moving one means the
+    airspeed work has to say why.
+    """
+    lines = [
+        "TEST A' -- did flight speed drift at all, and did the night-day gap close?",
+        "-" * 70,
+        "  ground speed is airspeed plus wind, so this screens for composition drift rather",
+        "  than measuring it. Traffic-weighted per station-season-year.",
+    ]
+
+    windows = {season.name: season for season in (SPRING, AUTUMN)}
+    per_window: dict[str, pl.DataFrame] = {}
+    for window_kind in ("night", "day"):
+        frame = load_conus_nights(window_kind, quantity=CLAIM_QUANTITY).filter(
+            pl.col("timestamp").dt.year() <= max_year,
+            pl.col("coverage_fraction") >= MIN_COVERAGE,
+            pl.col("speed_ms").is_not_null(),
+            pl.col("magnitude") > 0,
+        )
+        per_window[window_kind] = frame.with_columns(
+            year=pl.col("timestamp").dt.year(), doy=pl.col("timestamp").dt.ordinal_day()
+        )
+
+    for name, season in windows.items():
+        summaries = {}
+        for window_kind, frame in per_window.items():
+            summaries[window_kind] = (
+                frame.filter(pl.col("doy").is_between(season.start_doy, season.end_doy))
+                .group_by("station_id", "year")
+                .agg(_weighted_mean(frame, "speed_ms", "magnitude").alias("speed"))
+            )
+
+        paired = (
+            summaries["night"]
+            .join(summaries["day"], on=("station_id", "year"), how="inner", suffix="_day")
+            .with_columns(gap=pl.col("speed") - pl.col("speed_day"))
+        )
+
+        lines.append(f"\n  {name}, n={paired.height} station-years")
+        for column, label in (
+            ("speed", "night ground speed"),
+            ("speed_day", "day ground speed"),
+            ("gap", "night minus day"),
+        ):
+            slopes = []
+            for (_station,), group in paired.group_by(["station_id"]):
+                if group.height < MIN_YEARS:
+                    continue
+                fit = _fit_break(
+                    group["year"].to_numpy(),
+                    group[column].to_numpy().astype(float),
+                    FLEET_MIDPOINT_YEAR,
+                )
+                if fit is not None:
+                    slopes.append(fit.trend * 10.0)
+            if not slopes:
+                continue
+            mean, ci = _mean_ci(np.asarray(slopes, dtype=float))
+            level = float(paired[column].to_numpy().astype(float).mean())
+            verdict = "flat" if abs(mean) < abs(ci) else "MOVES"
+            lines.append(
+                f"    {label:<20} mean {level:5.2f} m/s   "
+                f"trend {mean:+.3f} +/- {ci:.3f} m/s per decade  ({len(slopes)} stations) {verdict}"
+            )
+
+    lines.append("\n  Trends are net of a 2012 level shift, the same break Test B fits.")
+    return lines
+
+
 def screening(*, max_year: int = 2025) -> list[str]:
     """Test B -- is the latitude-graded 2012 step the precipitation screening?
 
@@ -335,6 +430,8 @@ def render(max_year: int = 2025) -> str:
         "",
     ]
     out += speed_weighting(max_year=max_year)
+    out += ["", ""]
+    out += speed_drift(max_year=max_year)
     out += ["", ""]
     out += screening(max_year=max_year)
     out += [

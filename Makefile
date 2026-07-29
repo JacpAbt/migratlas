@@ -118,6 +118,10 @@ ingest-fishglob:  ## FISHGLOB bottom-trawl surveys -> lake (SURVEY_INDEX, marine
 ingest-ebird:  ## eBird Status & Trends weekly abundance -> lake (analysis only, never published)
 	$(RUN) migratlas ingest ebird-st
 
+.PHONY: ingest-narr
+ingest-narr:  ## NARR night winds at the radar stations -> lake (driver samples, gridded)
+	$(RUN) migratlas ingest-narr
+
 .PHONY: build-layers
 build-layers:  ## Export the globe's layers from the lake, through the ethics gate
 	$(RUN) migratlas build-layers --out web/public/layers
