@@ -54,9 +54,15 @@ class Source(BaseModel):
 
     id: NonEmpty
     title: NonEmpty
-    evidence_type: EvidenceType
+
+    # Both null for a source that provides only drivers -- a wind field is not evidence about
+    # an animal and has no taxon to scope. Registered here anyway, and deliberately: the
+    # registry is where a licence is recorded and PROVENANCE.md is generated from, so a driver
+    # kept out of it would be a source whose terms nothing states. `realm` still applies,
+    # because a driver belongs to one (ERA5 is aerial, CMEMS is marine).
+    evidence_type: EvidenceType | None = None
     realm: Realm
-    taxon_scope: TaxonScope
+    taxon_scope: TaxonScope | None = None
 
     landing_page: HttpUrl
     doi: str = ""
@@ -81,6 +87,28 @@ class Source(BaseModel):
     added: date
 
     @model_validator(mode="after")
+    def _evidence_and_scope_travel_together(self) -> Self:
+        """An evidence source needs a taxon scope; a driver source has neither.
+
+        Half-specified is the state worth refusing: an evidence type with no scope would leave
+        it unsaid whether rows name a species or a genus, and a scope with no evidence type
+        would claim a taxonomic precision for something that is not about animals at all.
+        """
+        if (self.evidence_type is None) != (self.taxon_scope is None):
+            msg = (
+                f"Source {self.id!r} must declare either both evidence_type and taxon_scope "
+                f"(it provides evidence) or neither (it provides only drivers). Got "
+                f"evidence_type={self.evidence_type!r}, taxon_scope={self.taxon_scope!r}."
+            )
+            raise ValueError(msg)
+        return self
+
+    @property
+    def provides_evidence(self) -> bool:
+        """Whether this source lands evidence rows rather than only driver samples."""
+        return self.evidence_type is not None
+
+    @model_validator(mode="after")
     def _individual_granularity_needs_taxon_rules(self) -> Self:
         """Individual-level sources must classify sensitivity per taxon.
 
@@ -89,6 +117,8 @@ class Source(BaseModel):
         pin an individual to a place, and "the average species in this dataset is not
         sensitive" is not a statement about the one that is.
         """
+        if self.evidence_type is None:
+            return self
         if self.evidence_type.granularity is Granularity.INDIVIDUAL and not self.taxon_sensitivity:
             msg = (
                 f"Source {self.id!r} is {self.evidence_type} (individual granularity) "

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Final
 
 import polars as pl
 
+from migratlas.catalog import loader as catalog
 from migratlas.drivers.schema import DRIVER_SAMPLES, DriverKind
 from migratlas.lake.writer import WriteResult, write_table
 
@@ -74,7 +75,13 @@ def to_samples(hauls: pl.DataFrame, source_id: str) -> pa.Table:
 
 
 def write(hauls: pl.DataFrame, source_id: str) -> WriteResult:
-    """Land one source's in-situ driver readings."""
+    """Land one source's in-situ driver readings.
+
+    Admits the source even though the only current caller already did. This function takes a
+    source id from its caller and writes it into the lake, so it is a route by which an
+    unregistered id could arrive; `admit` reads a cached registry and costs nothing.
+    """
+    catalog.admit(source_id)
     table = to_samples(hauls, source_id)
     log.info("%d driver samples from %d hauls", table.num_rows, hauls.height)
     return write_table(table, DRIVER_SAMPLES, source_id=source_id)

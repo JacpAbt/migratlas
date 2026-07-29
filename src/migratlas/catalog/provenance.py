@@ -45,20 +45,28 @@ def _summary_table(sources: Iterable[Source]) -> str:
     ]
     for source in sources:
         redist = "permitted" if source.redistribution.allowed else "**not permitted**"
+        kind = f"`{source.evidence_type}`" if source.provides_evidence else "driver only"
         rows.append(
-            f"| [{source.title}]({source.landing_page}) | `{source.evidence_type}` "
+            f"| [{source.title}]({source.landing_page}) | {kind} "
             f"| `{source.realm}` | {source.licence} | {redist} |"
         )
     return "\n".join(rows)
 
 
 def _source_section(source: Source) -> str:
+    kind = (
+        f"**evidence type** `{source.evidence_type}` · **realm** `{source.realm}`"
+        f" · **taxon scope** `{source.taxon_scope}`"
+        if source.provides_evidence
+        # A wind field is not evidence about an animal and has no taxon to scope. Saying that
+        # explicitly is better than printing `None` twice.
+        else f"**drivers only**, no evidence rows · **realm** `{source.realm}`"
+    )
     lines = [
         f"## {source.title}",
         "",
         f"- **id** `{source.id}`",
-        f"- **evidence type** `{source.evidence_type}` · **realm** `{source.realm}`"
-        f" · **taxon scope** `{source.taxon_scope}`",
+        f"- {kind}",
         f"- **landing page** {source.landing_page}",
     ]
     if source.doi:

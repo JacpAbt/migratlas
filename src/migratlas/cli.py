@@ -209,7 +209,9 @@ def report_phase1b() -> None:
 def list_sources() -> None:
     """Show every registered source."""
     for source in catalog.load().values():
-        print(f"{source.id:<14} {source.evidence_type:<18} {source.realm:<12} {source.licence}")
+        # A driver-only source has no evidence type, and saying so beats a blank column.
+        kind = str(source.evidence_type) if source.provides_evidence else "driver"
+        print(f"{source.id:<14} {kind:<18} {source.realm:<12} {source.licence}")
 
 
 @catalog_app.command("provenance")

@@ -1,6 +1,7 @@
 """Registry invariants and the sensitivity resolution cascade."""
 
 from datetime import date
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -51,6 +52,60 @@ def test_every_source_is_fully_described(source_id: str) -> None:
     assert source.caveats.strip(), f"{source_id} records no caveats -- every source has some"
 
 
+def test_every_module_that_writes_to_the_lake_admits_its_source() -> None:
+    """The registry rule was a convention, and a convention got skipped.
+
+    `drivers/narr.py` landed 8,700 rows from an unregistered source, because nothing checked
+    that an adapter calls `catalog.admit` -- the writer does not consult the registry, and every
+    other adapter happened to call it by hand. This turns "nothing may be ingested that is not
+    described here" from a comment at the top of registry.yaml into something that fails.
+    """
+    source_root = Path(__file__).resolve().parents[1] / "src" / "migratlas"
+    writers = ("write_table(", "write_evidence(")
+    offenders = []
+    for path in sorted(source_root.rglob("*.py")):
+        text = path.read_text(encoding="utf-8")
+        # The writer module defines them; it does not call them about a source of its own.
+        if path.parent.name == "lake":
+            continue
+        if any(call in text for call in writers) and "catalog.admit(" not in text:
+            offenders.append(path.relative_to(source_root).as_posix())
+    assert not offenders, f"these write to the lake without admitting a source: {offenders}"
+
+
+def test_a_driver_only_source_needs_no_evidence_type() -> None:
+    """A wind field is not evidence about an animal, and has no taxon to scope.
+
+    It is still registered, because the registry is where a licence lives and PROVENANCE.md is
+    generated from it -- a driver kept out would be a source whose terms nothing states.
+    """
+    source = _source(evidence_type=None, taxon_scope=None)
+    assert not source.provides_evidence
+    assert source.realm is Realm.MARINE
+
+
+def test_a_half_specified_source_is_refused() -> None:
+    """Either both or neither. An evidence type with no scope leaves it unsaid whether a row
+    names a species or a genus; a scope with no evidence type claims taxonomic precision for
+    something that is not about animals."""
+    with pytest.raises(ValidationError, match="either both evidence_type and taxon_scope"):
+        _source(taxon_scope=None)
+    with pytest.raises(ValidationError, match="either both evidence_type and taxon_scope"):
+        _source(evidence_type=None)
+
+
+def test_provenance_renders_a_driver_only_source_without_printing_none() -> None:
+    """Both display paths formatted `evidence_type` unconditionally, so the first driver-only
+    source crashed `catalog list` and would have written "None" into PROVENANCE.md -- while the
+    test suite stayed green, because nothing exercised the rendering.
+    """
+    text = provenance.render()
+    # Backticked, so this catches a formatted `None` rather than the document's own prose,
+    # which opens "None of this data is ours".
+    assert "`None`" not in text
+    assert "drivers only" in text
+
+
 def test_registry_spans_more_than_one_realm() -> None:
     """Phase 1 requires two realms; a single-realm registry means the core is untested."""
     assert len({s.realm for s in load().values()}) >= 2
@@ -92,6 +147,7 @@ def test_individual_granularity_source_accepts_taxon_rules() -> None:
             ),
         ),
     )
+    assert source.evidence_type is not None
     assert source.evidence_type.granularity is Granularity.INDIVIDUAL
 
 

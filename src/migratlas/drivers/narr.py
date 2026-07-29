@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Final
 import numpy as np
 import polars as pl
 
+from migratlas.catalog import loader as catalog
 from migratlas.drivers.schema import DRIVER_SAMPLES, DriverKind
 from migratlas.features.annotate import Located, Point, bounding_box, match_report, nearest_cells
 from migratlas.lake.writer import WriteResult, write_table
@@ -212,6 +213,10 @@ def ingest(
     points: list[Point], start: date, end: date, *, only: tuple[int, ...] | None = None
 ) -> WriteResult:
     """Fetch, reshape and land night winds for a point set over a date range."""
+    # Same first step as every evidence ingest. Being unable to name the source in the registry
+    # is the cheapest place to stop, and a driver needs it as much as evidence does -- its
+    # licence has to be recorded somewhere, and this is where PROVENANCE.md reads from.
+    catalog.admit(SOURCE_ID)
     located = locate(points)
     wanted = months_between(start, end, only=only)
     log.info("%d months to fetch, %d requests", len(wanted), len(wanted) * len(COMPONENTS) * 2)

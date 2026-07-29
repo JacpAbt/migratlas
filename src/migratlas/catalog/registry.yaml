@@ -221,3 +221,45 @@ sources:
       basis for distribution centroids, but a trawl selects by size and behaviour and is not a
       census.
     added: 2026-07-29
+
+  # The first source here that provides only drivers -- no evidence about any animal, so no
+  # evidence_type and no taxon_scope. Registered all the same, because the registry is where a
+  # licence is recorded and PROVENANCE.md is generated from it; a driver left out would be a
+  # source whose terms nothing states.
+  - id: narr
+    title: NCEP North American Regional Reanalysis — pressure-level winds, 1979–present
+    realm: aerial
+    landing_page: https://psl.noaa.gov/data/gridded/data.narr.html
+    download_uri: https://psl.noaa.gov/thredds/dodsC/Datasets/NARR/pressure/
+    # A work of the US federal government, so not subject to domestic copyright
+    # (17 U.S.C. §105). NOAA asks to be credited and asks that its data not be presented in a
+    # way implying endorsement, neither of which is a restriction on redistribution.
+    licence: US Government work, public domain (17 U.S.C. §105)
+    licence_url: https://www.noaa.gov/information-technology/open-data-dissemination
+    citation: >-
+      Mesinger, F., DiMego, G., Kalnay, E., Mitchell, K., Shafran, P. C., Ebisuzaki, W.,
+      Jović, D., Woollen, J., Rogers, E., Berbery, E. H., Ek, M. B., Fan, Y., Grumbine, R.,
+      Higgins, W., Li, H., Lin, Y., Manikin, G., Parrish, D., Shi, W. (2006). North American
+      Regional Reanalysis. Bulletin of the American Meteorological Society 87, 343–360.
+      https://doi.org/10.1175/BAMS-87-3-343
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        Public domain, so redistribution of derived products is unrestricted. Credit NOAA PSL as
+        the distributor and cite Mesinger et al. 2006 as the reanalysis.
+    # A wind field. There is no animal in it, so nothing to protect.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      North America only — the Lambert Conformal domain stops at the continent, so this cannot
+      serve a European or southern-hemisphere network and ERA5 via the Copernicus CDS is the
+      substitute there (docs/adr/0006). A reanalysis is a model constrained by observations, not a
+      measurement: its assimilated observing system changed across 1979–present, so a trend in a
+      NARR variable is not automatically a trend in the atmosphere, and any trend computed from a
+      quantity derived against it must be reported alongside the trend in the NARR term itself.
+      32 km cells mean a station near a coast or a mountain front is represented worse than an
+      inland one; the ingest records each station's distance to its cell centre for that reason.
+      Night winds here are means over the 00/03/06/09 UTC steps, which approximate but do not
+      reproduce any individual station's true night boundaries.
+    added: 2026-07-29

@@ -56,6 +56,11 @@ _CREDENTIAL_HINTS: Final[dict[str, str]] = {
     "ebird_api_key": "Request one at https://ebird.org/st/request",
     "movebank_user": "Register free at https://www.movebank.org",
     "movebank_password": "Register free at https://www.movebank.org",
+    "cds_token": (
+        "Personal access token from https://cds.climate.copernicus.eu/profile. The token alone "
+        "is not enough: each dataset's licence must also be accepted once, from that dataset's "
+        "download tab, or retrieval returns 403 'required licences not accepted'."
+    ),
 }
 
 
