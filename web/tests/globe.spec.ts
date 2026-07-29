@@ -196,6 +196,44 @@ test("a station popup states the caveat with the number", async ({ page }) => {
   await expect(popup).toContainText("aerial biomass, not birds");
 });
 
+test("the findings panel publishes a result with its scope and caveat", async ({ page }) => {
+  await page.goto("/");
+  const panel = page.locator(".panel--findings");
+  await expect(panel).toBeVisible();
+
+  // At least one of each: a change, a null, and a limit of the work. A panel showing only the
+  // changes would be lying by selection, and the null results here took as much work as the
+  // positive one.
+  const findings = panel.locator(".finding");
+  await expect(findings.first()).toBeVisible();
+  for (const direction of ["change", "null", "limit"]) {
+    await expect(
+      panel.locator(`.finding--${direction}`),
+      `no ${direction} finding is published`,
+    ).not.toHaveCount(0);
+  }
+
+  // Every card states where it holds and what would make it wrong. A number on a globe reads as
+  // settled fact, so this is the assertion that stops one being published bare.
+  const count = await findings.count();
+  for (let index = 0; index < count; index += 1) {
+    const card = findings.nth(index);
+    await expect(card.locator("dt", { hasText: "Where and when" })).toHaveCount(1);
+    await expect(card.locator("dt", { hasText: "Caveat" })).toHaveCount(1);
+    await expect(card.locator(".finding__method")).toHaveAttribute("href", /docs\/methods\//);
+  }
+});
+
+test("a missing findings file leaves the globe usable", async ({ page }) => {
+  // The layers are still worth showing if the findings fail to load, so the panel degrades and
+  // the map carries on. Asserted because the alternative -- an unhandled rejection taking the
+  // globe down with it -- is invisible until it happens in production.
+  await page.route("**/findings.json", (route) => route.fulfill({ status: 404, body: "" }));
+  const report = await ready(page);
+  expect(report.layers.length).toBeGreaterThan(0);
+  await expect(page.locator(".finding__error")).toBeVisible();
+});
+
 /**
  * The README commits to a heap ceiling and a load time. Until this test existed they were
  * aspirations, and a task got opened on the belief that a 2.9 MB layer was blowing the budget

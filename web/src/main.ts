@@ -5,6 +5,7 @@ import { addSeries } from "./layers/series";
 import { addSurface } from "./layers/surface";
 import { nightPolygon } from "./layers/terminator";
 import { loadManifest, type LoadedLayer } from "./layers/types";
+import { mountFindings } from "./panels/findings";
 import { SpeciesSelection } from "./layers/selection";
 import { SpeciesSurfaces, TaxonIndex, type TaxonHit } from "./search/taxon";
 import { Clock, formatInstant } from "./state/time";
@@ -48,6 +49,10 @@ if (new URLSearchParams(location.search).has("debug")) {
 const layerList = el<HTMLUListElement>("layer-list");
 const layerTerms = el("layer-terms");
 const visibleLayers = new Set<string>();
+
+// Independent of the map: the findings are text and should appear even if the globe is still
+// fetching tiles, or fails to.
+void mountFindings(el("findings-body"), import.meta.env.BASE_URL);
 
 void (async () => {
   const basemap = await styleReady(map);

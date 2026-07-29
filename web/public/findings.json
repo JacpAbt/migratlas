@@ -1,0 +1,53 @@
+{
+ "schema_version": 1,
+ "findings": [
+  {
+   "key": "autumn-advance",
+   "claim": "Nocturnal autumn passage over the mid-latitude US is happening earlier.",
+   "value": "-0.56 \u00b1 0.25 days per decade",
+   "scope": "78 US weather-radar stations between 37\u00b0N and 50\u00b0N, 1995-2025. Not the whole continent: the southern bands carry a step change at 2012 that four candidate explanations have failed to account for.",
+   "caveat": "The radar measures aerial biomass, not birds \u2014 it cannot separate birds from bats from insects. Bats in particular are not excluded.",
+   "method": "docs/methods/phase1-phenology.md",
+   "direction": "change",
+   "supporting": [
+    "Reproduces a published result on its own window before extending it.",
+    "Survives four break specifications, a mid-winter placebo and a permutation null.",
+    "Unchanged when the speed weighting is removed from the metric.",
+    "Unchanged when the non-bird nights are deleted outright."
+   ]
+  },
+  {
+   "key": "marine-null",
+   "claim": "There is no single global poleward shift in fish distribution \u2014 surveys disagree even in its direction.",
+   "value": "median -0.011 \u00b0latitude per decade across 2,240 species-survey pairs",
+   "scope": "29 harmonised scientific bottom-trawl surveys, North America and Europe, on consistently sampled cells only.",
+   "caveat": "A pooled median hides the variation worth predicting: individual surveys reach -0.22 and +0.26 \u00b0latitude per decade in opposite directions. The unit of analysis has to be the species in its region, not the ocean.",
+   "method": "docs/methods/phase1b-marine.md",
+   "direction": "null",
+   "supporting": []
+  },
+  {
+   "key": "composition-stable",
+   "claim": "The autumn signal is not drifting from birds towards insects \u2014 what the radar measures in 2025 means what it meant in 1995.",
+   "value": "airspeed trend -0.06 \u00b1 0.08 m/s per decade (flat)",
+   "scope": "2,193,560 station-night wind samples, 1995-2025, from an independent regional reanalysis rather than from the radar.",
+   "caveat": "Spring behaves differently: its airspeed rose, which is either a real change or migrants flying higher than the fixed wind level assumes. Separating those needs the vertical radar profiles. Spring carries no trend claim here either way.",
+   "method": "docs/methods/phase1c-homogeneity.md",
+   "direction": "change",
+   "supporting": [
+    "Mean autumn airspeed sits in the range for migrating songbirds, not insects.",
+    "A 2012 discontinuity in the dataset's own rain filtering was traced, and ruled out as weather using independent precipitation data."
+   ]
+  },
+  {
+   "key": "coverage-bias",
+   "claim": "Everything above is northern-hemisphere. The data that can measure change and the data that covers the globe are, so far, different data.",
+   "value": "0.0% of the radar record and 0.0% of the survey record lie south of the equator",
+   "scope": "Every source in this project that has a usable time axis.",
+   "caveat": "Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but it bounds every claim here to the northern temperate zone, and no model trained on it should be trusted elsewhere without being tested there first.",
+   "method": "docs/methods/geographic-coverage.md",
+   "direction": "limit",
+   "supporting": []
+  }
+ ]
+}

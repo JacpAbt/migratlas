@@ -126,6 +126,10 @@ ingest-narr:  ## NARR night winds at the radar stations -> lake (driver samples,
 ingest-era5:  ## ERA5 monthly precipitation at the radar stations -> lake (driver samples)
 	$(RUN) migratlas ingest-era5
 
+.PHONY: build-findings
+build-findings:  ## Recompute what the research established, for the globe to render
+	$(RUN) migratlas build-findings
+
 .PHONY: build-layers
 build-layers:  ## Export the globe's layers from the lake, through the ethics gate
 	$(RUN) migratlas build-layers --out web/public/layers

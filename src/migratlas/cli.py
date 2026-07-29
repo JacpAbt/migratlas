@@ -18,6 +18,7 @@ from migratlas.drivers import era5, narr
 from migratlas.ingest import darkecology, ebird_st, fishglob, megamove, obis
 from migratlas.lake import check as lake_check
 from migratlas.reports import (
+    findings,
     phase1,
     phase1_ebird,
     phase1_hierarchical,
@@ -164,6 +165,25 @@ def ingest_era5(
     )
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
+
+
+@app.command("build-findings")
+def build_findings(
+    out: Annotated[Path, typer.Option(help="Where to write the findings document.")] = Path(
+        "web/public/findings.json"
+    ),
+) -> None:
+    """Compute what the research established, for the globe to render.
+
+    Re-runs the analyses rather than reading a written-down number, so a finding on the site is
+    the one the pipeline produces. Minutes, not seconds.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    computed = findings.collect()
+    size = findings.write(out, computed)
+    for item in computed:
+        print(f"{item.direction:<7} {item.key:<20} {item.value}")
+    print(f"findings -> {out} ({size / 1024:.1f} KiB)")
 
 
 @app.command("build-layers")
