@@ -215,8 +215,23 @@ about the error structure, which a panel of 145 spatially correlated stations pl
 3. **The extension is not blind.** An exploratory pass over the full series ran *before* the
    target method was known. The 1995–2018 replication is unaffected — its target was
    published in advance — but the extension carries this permanently.
-4. **Insects are not separable.** The single largest interpretive limit, and the reason the
-   daytime placebo is ambiguous.
+4. **Insects are largely ruled out, bats are not.** `make phase1-ebird` compares the radar's
+   seasonal cycle against a composite of 50 nocturnally migrating landbirds from eBird Status
+   and Trends. North American insect biomass peaks in July; the radar puts **3.5% of its annual
+   total in July against 8.8% for a flat year**, a pronounced summer trough, while eBird — birds
+   present and breeding — puts 13.3% there. A signal dominated by resident summer insects would
+   peak in July rather than fall to 40% of flat, so the nocturnal traffic is dominated by
+   migration. Migrating bats remain unexcluded: nocturnal, partly overlapping schedule.
+
+   The timing comparison needed fixing before it said anything. Comparing eBird's standing
+   abundance median to the radar's passage median put the radar 18.7 d early in spring and 9.5 d
+   late in autumn — both exactly what a stock-versus-flux mismatch predicts, since birds arrive
+   and stay (so stock peaks after passage) then depart (so stock falls before passage ends).
+   Against the *rate of change* of abundance, which is the flux-like quantity, spring agrees to
+   **3.5 days**. Autumn is 18 d apart with an eBird departure curve spanning day 214–297 between
+   its 10th and 90th percentiles, so autumn is inconclusive rather than contradictory.
+
+   eBird cannot speak to the trend at all: the 2023 release models one representative year.
 
 ## What the signal is, and is not
 

@@ -20,6 +20,7 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
+import httpx
 import numpy as np
 import polars as pl
 import pyarrow as pa
@@ -83,6 +84,11 @@ class Species:
 #    passage rather than a local shuffle.
 # 3. eBird's own IS_RESIDENT flag must be false. Checked per species against its config, so a
 #    resident cannot enter the set through a mistake in this list.
+#
+# Every code below was verified to exist in the release by `preflight`, which is not a formality:
+# five of the fifty were wrong on the first pass (blpwar, bkpwar for the wrong warbler, bktwar,
+# capwar, gracat) and the API answers 200-with-an-empty-array rather than 404, so nothing short of
+# counting the objects catches them.
 SPECIES: Final[tuple[Species, ...]] = (
     # Parulidae
     Species("ovenbi1", "Seiurus aurocapilla", "Ovenbird"),
@@ -97,16 +103,16 @@ SPECIES: Final[tuple[Species, ...]] = (
     Species("bkbwar", "Setophaga fusca", "Blackburnian Warbler"),
     Species("yelwar", "Setophaga petechia", "Yellow Warbler"),
     Species("chswar", "Setophaga pensylvanica", "Chestnut-sided Warbler"),
-    Species("blpwar", "Setophaga striata", "Blackpoll Warbler"),
+    Species("bkpwar", "Setophaga striata", "Blackpoll Warbler"),
     Species("palwar", "Setophaga palmarum", "Palm Warbler"),
-    Species("bktwar", "Setophaga virens", "Black-throated Green Warbler"),
+    Species("btnwar", "Setophaga virens", "Black-throated Green Warbler"),
     Species("canwar", "Cardellina canadensis", "Canada Warbler"),
     Species("wlswar", "Cardellina pusilla", "Wilson's Warbler"),
     Species("hoowar", "Setophaga citrina", "Hooded Warbler"),
     Species("norpar", "Setophaga americana", "Northern Parula"),
     Species("babwar", "Setophaga castanea", "Bay-breasted Warbler"),
-    Species("capwar", "Setophaga tigrina", "Cape May Warbler"),
-    Species("bkpwar", "Setophaga caerulescens", "Black-throated Blue Warbler"),
+    Species("camwar", "Setophaga tigrina", "Cape May Warbler"),
+    Species("btbwar", "Setophaga caerulescens", "Black-throated Blue Warbler"),
     # Turdidae
     Species("veery", "Catharus fuscescens", "Veery"),
     Species("swathr", "Catharus ustulatus", "Swainson's Thrush"),
@@ -140,7 +146,7 @@ SPECIES: Final[tuple[Species, ...]] = (
     Species("easkin", "Tyrannus tyrannus", "Eastern Kingbird"),
     Species("eawpew", "Contopus virens", "Eastern Wood-Pewee"),
     # Mimidae, Troglodytidae, Cuculidae
-    Species("gracat", "Dumetella carolinensis", "Gray Catbird"),
+    Species("grycat", "Dumetella carolinensis", "Gray Catbird"),
     Species("yebcuc", "Coccyzus americanus", "Yellow-billed Cuckoo"),
 )
 
@@ -161,15 +167,59 @@ def _download(object_key: str, name: str) -> Path:
     """Fetch one API object, keeping the access key out of any error that escapes.
 
     The key travels as a query parameter because the API requires it there. httpx puts the
-    request URL into HTTPStatusError, so an unhandled 403 would print the credential into a
-    traceback or a CI log. Scrubbed here rather than trusted not to happen.
+    request URL into HTTPStatusError, so an unhandled error would print the credential into a
+    traceback or a CI log.
+
+    Raised as a new exception rather than a re-textured original, and chained with ``from None``:
+    an earlier version tried ``type(error)(scrubbed_text)``, which cannot reconstruct an
+    HTTPStatusError -- it requires ``request`` and ``response`` -- so the scrubber itself raised a
+    TypeError and hid the real failure, a 500 for a mistyped species code. The status code is kept
+    because that is the part worth reading; the URL is not.
     """
     key = _key()
     try:
         remote = RemoteFile(url=f"{API}/fetch?objKey={object_key}&key={key}", name=name)
         return fetch(remote, SOURCE_ID)
-    except Exception as error:
-        raise type(error)(str(error).replace(key, "<key>")) from None
+    except httpx.HTTPStatusError as error:
+        msg = f"{object_key}: HTTP {error.response.status_code}"
+        raise DownloadFailedError(msg) from None
+    except OSError as error:
+        scrubbed = str(error).replace(key, "<key>")
+        msg = f"{object_key}: {scrubbed}"
+        raise DownloadFailedError(msg) from None
+
+
+def preflight() -> None:
+    """Check every curated code exists in this release, before downloading anything.
+
+    One cheap listing per species against a run that otherwise discovers a bad code halfway
+    through and after tens of megabytes. The API answers 200 with an empty array for a code that
+    does not exist -- and 500 when asked for that code's config -- so the count is what to test,
+    never the status. That combination is how ``blpwar`` (Blackpoll Warbler is ``bkpwar``) got as
+    far as a confusing traceback.
+
+    Raises:
+        SpeciesRejectedError: naming every bad code at once, so the list is fixed in one pass.
+    """
+    key = _key()
+    bad: list[str] = []
+    with httpx.Client(timeout=30.0, follow_redirects=True) as http:
+        for species in SPECIES:
+            url = f"{API}/list-obj/{RELEASE}/{species.code}?key={key}"
+            try:
+                response = http.get(url)
+                response.raise_for_status()
+                objects = response.json()
+            except httpx.HTTPError, ValueError:
+                bad.append(f"{species.code} ({species.common_name}): listing failed")
+                continue
+            if not objects:
+                bad.append(f"{species.code} ({species.common_name}): no objects in {RELEASE}")
+
+    if bad:
+        msg = f"{len(bad)} species code(s) are not in the {RELEASE} release: " + "; ".join(bad)
+        raise SpeciesRejectedError(msg)
+    log.info("all %d species codes exist in the %s release", len(SPECIES), RELEASE)
 
 
 def verify(species: Species) -> dict[str, object]:
@@ -353,6 +403,7 @@ def ingest(limit: int | None = None) -> WriteResult:
         )
         raise SpeciesRejectedError(msg)
 
+    preflight()
     keys = taxon_keys()
     wanted = SPECIES[:limit] if limit else SPECIES
     tables: list[pa.Table] = []

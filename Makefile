@@ -122,6 +122,10 @@ phase1-report:  ## Replicate Horton et al. 2020 phenology, then extend
 phase1-hierarchical:  ## Station random effects rather than averaged per-station OLS
 	$(RUN) migratlas report phase1-hierarchical
 
+.PHONY: phase1-ebird
+phase1-ebird:  ## Radar seasonal cycle vs birds-only eBird abundance (the insect question)
+	$(RUN) migratlas report phase1-ebird
+
 .PHONY: phase1-robustness
 phase1-robustness:  ## Break sensitivity, daytime placebo and permutation null
 	$(RUN) migratlas report phase1-robustness
