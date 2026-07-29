@@ -5,8 +5,10 @@ silently. A nearest-cell match that biases eastward, or a date convention off by
 produce plausible numbers and a wrong answer.
 """
 
+from collections.abc import Callable
 from datetime import date
 
+import httpx
 import numpy as np
 import polars as pl
 import pytest
@@ -20,6 +22,17 @@ from migratlas.features.annotate import (
     match_report,
     nearest_cells,
 )
+
+
+def _responder(content: bytes) -> Callable[..., httpx.Response]:
+    """A stand-in for `httpx.get` that always returns the same body."""
+
+    def get(url: str, **kwargs: object) -> httpx.Response:
+        del kwargs
+        # A request has to be attached or `raise_for_status` refuses to run.
+        return httpx.Response(200, content=content, request=httpx.Request("GET", url))
+
+    return get
 
 
 def _regular_grid(
@@ -137,6 +150,89 @@ def test_the_level_recorded_in_the_variable_name_matches_the_level_fetched() -> 
     assert narr.LEVEL_HPA == 925
     # 1000/975/950/925/... at 25 hPa spacing, so 925 is the fourth.
     assert narr.LEVEL_INDEX == 3
+
+
+def test_a_transient_socket_error_is_retried_rather_than_losing_the_month(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The first full run lost nine months to connection resets, clustered across 2007-2011 --
+    the dual-polarisation transition, the period the analysis leans on hardest. A transient
+    socket error belongs to the request, not the month.
+    """
+
+    calls = {"n": 0}
+    payload = b"Dataset {}\nData:\n" + b"\x00" * 8 + np.array([1.5, 2.5], dtype=">f4").tobytes()
+
+    def flaky_get(url: str, **kwargs: object) -> httpx.Response:
+        del kwargs
+        calls["n"] += 1
+        if calls["n"] < 3:
+            reset = "connection reset by peer"
+            raise httpx.ReadError(reset)
+        return httpx.Response(200, content=payload, request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(httpx, "get", flaky_get)
+    monkeypatch.setattr(narr, "BACKOFF_S", 0.0)
+    values = narr._dods_slab("uwnd", 2007, 10, "[0:1:1]", (2,))
+    assert calls["n"] == 3
+    assert values.tolist() == [1.5, 2.5]
+
+
+def test_a_persistent_failure_still_raises_so_the_month_is_recorded_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Retrying must not turn a real outage into silence."""
+
+    def always_fails(url: str, **kwargs: object) -> httpx.Response:
+        del url, kwargs
+        timeout = "timed out"
+        raise httpx.ConnectTimeout(timeout)
+
+    monkeypatch.setattr(httpx, "get", always_fails)
+    monkeypatch.setattr(narr, "BACKOFF_S", 0.0)
+    with pytest.raises(httpx.ConnectTimeout):
+        narr._dods_slab("uwnd", 2007, 10, "[0:1:1]", (2,))
+
+
+def test_a_truncated_response_is_refused_rather_than_reshaped() -> None:
+    """A short read would otherwise become a wind field of the wrong shape, or silently
+    misaligned values -- both plausible-looking and wrong."""
+
+    short = b"Dataset {}\nData:\n" + b"\x00" * 8 + np.array([1.5], dtype=">f4").tobytes()
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(httpx, "get", _responder(short))
+        with pytest.raises(ValueError, match="truncated"):
+            narr._dods_slab("uwnd", 2015, 9, "[0:1:3]", (4,))
+
+
+def test_fill_values_become_nan_not_enormous_winds() -> None:
+    """NARR's _FillValue is 9.96921e36. Averaged into a night it would produce a wind of
+    astronomical magnitude, and a mean over a station-year that is pure nonsense."""
+
+    values = np.array([5.0, 9.96921e36, -9.96921e36, 7.0], dtype=">f4")
+    content = b"Dataset {}\nData:\n" + b"\x00" * 8 + values.tobytes()
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(httpx, "get", _responder(content))
+        out = narr._dods_slab("uwnd", 2015, 9, "[0:1:3]", (4,))
+    assert out[0] == pytest.approx(5.0)
+    assert out[3] == pytest.approx(7.0)
+    assert np.isnan(out[1])
+    assert np.isnan(out[2])
+
+
+def test_the_time_axis_is_arithmetic_and_matches_the_month_length() -> None:
+    """Computed rather than fetched, which removes three requests per component per month.
+    An off-by-one here would shift every wind by three hours."""
+    steps, stamps = narr._month_steps(2015, 9)
+    assert steps == 30 * narr.STEPS_PER_DAY
+    assert str(stamps[0]) == "2015-09-01T00:00:00.000"
+    assert str(stamps[1]) == "2015-09-01T03:00:00.000"
+    assert str(stamps[-1]) == "2015-09-30T21:00:00.000"
+
+
+def test_february_length_follows_the_leap_year() -> None:
+    assert narr._month_steps(2016, 2)[0] == 29 * narr.STEPS_PER_DAY
+    assert narr._month_steps(2015, 2)[0] == 28 * narr.STEPS_PER_DAY
 
 
 def test_airspeed_alignment_prefers_the_offset_that_tightens_the_distribution() -> None:

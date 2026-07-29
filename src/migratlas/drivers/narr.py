@@ -15,6 +15,7 @@ Two facts about this server shape everything below, both measured rather than as
 import logging
 from calendar import monthrange
 from concurrent.futures import ThreadPoolExecutor
+from time import sleep
 from typing import TYPE_CHECKING, Final
 
 import numpy as np
@@ -80,6 +81,11 @@ STEPS_PER_DAY: Final = 8
 FILL_THRESHOLD: Final = 1e30
 
 REQUEST_TIMEOUT_S: Final = 180.0
+
+# Retries per request, with doubling backoff. Sized from the failures actually seen: connection
+# resets and read timeouts under concurrency, all transient.
+ATTEMPTS: Final = 4
+BACKOFF_S: Final = 5.0
 
 # Concurrent months. A public research server, so deliberately modest -- fewer connections than
 # a browser opens, and the gain is mostly in overlapping latency rather than bandwidth.
@@ -178,11 +184,37 @@ def _dods_slab(
     import httpx  # noqa: PLC0415 -- only gridded drivers need it here
 
     url = f"{BASE}/{component}.{year}{month:02d}.nc.dods?{component}.{component}{ranges}"
-    response = httpx.get(url, timeout=REQUEST_TIMEOUT_S)
-    response.raise_for_status()
+
+    # Retried, because the first full run lost nine months to connection resets and read
+    # timeouts and they clustered in 2007-2011 -- right across the dual-polarisation
+    # transition, which is the period the analysis leans on hardest. A transient socket error
+    # belongs to the request, not to the month, so it is handled here rather than by dropping
+    # a month upstream.
+    content = b""
+    for attempt in range(1, ATTEMPTS + 1):
+        try:
+            response = httpx.get(url, timeout=REQUEST_TIMEOUT_S)
+            response.raise_for_status()
+            content = response.content
+            break
+        except (httpx.HTTPError, OSError) as error:
+            if attempt == ATTEMPTS:
+                raise
+            pause = BACKOFF_S * 2 ** (attempt - 1)
+            log.debug(
+                "  %s %d-%02d attempt %d/%d failed (%s), retrying in %.0fs",
+                component,
+                year,
+                month,
+                attempt,
+                ATTEMPTS,
+                type(error).__name__,
+                pause,
+            )
+            sleep(pause)
 
     marker = b"Data:\n"
-    at = response.content.find(marker)
+    at = content.find(marker)
     if at < 0:
         msg = f"{component} {year}-{month:02d}: no data section in the DAP2 response"
         raise ValueError(msg)
@@ -323,6 +355,8 @@ def ingest(
     # the assumption is wrong every wind is misplaced, so this is worth one request.
     verify_time_axis(*wanted[0])
 
+    missing: list[tuple[int, int]] = []
+
     def fetch(month_of: tuple[int, int]) -> pl.DataFrame | None:
         year, month = month_of
         try:
@@ -332,6 +366,7 @@ def ingest(
             log.warning(
                 "  %d-%02d skipped: %s: %s", year, month, type(error).__name__, str(error)[:90]
             )
+            missing.append(month_of)
             return None
 
     frames = []
@@ -346,6 +381,20 @@ def ingest(
     if not frames:
         msg = "no months could be fetched"
         raise RuntimeError(msg)
+
+    # Summarised at the end, not just warned about mid-stream. The first run lost nine months
+    # and the warnings scrolled past under two hundred progress lines -- a coverage hole has to
+    # be the last thing the run says, because a partial re-run cannot patch it: the writer
+    # replaces a source wholesale, so the only fix is another full pass.
+    if missing:
+        log.warning(
+            "INCOMPLETE: %d of %d months missing: %s",
+            len(missing),
+            len(wanted),
+            ", ".join(f"{year}-{month:02d}" for year, month in sorted(missing)),
+        )
+    else:
+        log.info("all %d months fetched", len(wanted))
 
     table = to_samples(pl.concat(frames))
     log.info("%d driver samples", table.num_rows)
