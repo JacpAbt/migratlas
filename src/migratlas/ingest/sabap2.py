@@ -30,6 +30,8 @@ from typing import TYPE_CHECKING, Any, Final
 from migratlas.config import get_settings
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     import httpx
 
 log = logging.getLogger(__name__)
@@ -42,6 +44,13 @@ DATASET_KEY: Final = "906e6978-e292-4a8b-9c39-adf6bb0f3323"
 2026-07-30, and the two atlases are twenty years apart."""
 
 FORMAT: Final = "SIMPLE_CSV"
+
+DOWNLOAD_KEY: Final = "0018183-260721160103020"
+"""The download this project's results are computed on, requested 2026-07-30.
+
+25,687,526 records, 2.35 GiB, **doi 10.15468/dl.8zjvpv** -- which is what a result cites, because it
+pins the exact records rather than "SABAP2 as of whenever". GBIF keeps a prepared download for six
+months, so a re-run after that needs a fresh request and will get a new DOI."""
 
 # GBIF asks that a client identify itself, and a download is attributable to an account.
 USER_AGENT: Final = "migratlas (+https://github.com/JacpAbt/migratlas)"
@@ -121,3 +130,32 @@ def describe(key: str) -> str:
         f"{key}: {found.get('status')} | {found.get('totalRecords', 0):,} records | "
         f"{size / 1024**2:.0f} MiB | doi {found.get('doi', '-')}"
     )
+
+
+def fetch_archive(key: str) -> Path:
+    """Download a prepared archive, resuming if a previous attempt was cut short.
+
+    The archive URL is public once the download has succeeded, so this needs no credential -- and
+    the DOI is what a result should cite, not the key. Refuses a download that is not ready rather
+    than saving GBIF's "not finished" response as a zip.
+    """
+    from migratlas.ingest.http import RemoteFile, fetch  # noqa: PLC0415 -- avoids a cycle
+
+    found = status(key)
+    state = found.get("status")
+    if state != "SUCCEEDED":
+        msg = f"download {key} is {state}, not SUCCEEDED -- nothing to fetch yet"
+        raise DownloadError(msg)
+
+    log.info(
+        "fetching %s: %s records, %.2f GiB, doi %s",
+        key,
+        f"{found.get('totalRecords', 0):,}",
+        (found.get("size") or 0) / 1024**3,
+        found.get("doi", "-"),
+    )
+    remote = RemoteFile(
+        url=f"{API}/occurrence/download/request/{key}.zip",
+        name=f"{key}.zip",
+    )
+    return fetch(remote, SOURCE_ID)
