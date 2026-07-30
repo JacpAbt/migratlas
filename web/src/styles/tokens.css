@@ -1,0 +1,172 @@
+/**
+ * Every colour, size and duration in the project, in one place.
+ *
+ * ADR 0007 commits to a night surface that is a *different artifact* rather than an inversion, and
+ * that is only cheap if nothing ever hard-codes a hex. Nothing may: not a component, not the SVG
+ * charts, not the MapLibre paint expressions, not the detectability ramp. If a colour appears as a
+ * literal anywhere outside this file, the second surface becomes a rewrite instead of a token swap.
+ *
+ * Day is the default rather than being behind `prefers-color-scheme: light`, so a browser that
+ * reports nothing sensible still gets a complete surface.
+ */
+
+:root {
+  /* --- Day: a naturalist's notebook on a desk ------------------------------ */
+  --paper: #f5efe2;
+  --paper-sunken: #ebe3d2;
+  --ink: #2f3d4f;
+  --ink-soft: #4a5a6d;
+  /* Two rusts, and the split is accessibility rather than taste. `--rust` is used on text and
+     clears 4.5:1 on paper at the sizes this page actually sets; `--rust-ink` is the brighter one
+     that reads better as a drawn stroke, and is only ever a stroke. Measured, not judged: the
+     original single #b4522e came out at 4.38:1, which fails for every label on the card. */
+  --rust: #a3441f;
+  --rust-ink: #b4522e;
+  --pencil: #6b6157;
+  --rule: #cdc0aa;
+  --rule-faint: #ded3bf;
+
+  /* Statuses. Named for what they mean, never for their colour: a rename to "amber" would be a
+     lie the first time the night surface shifts it. */
+  --status-open: #a3441f;
+  --status-bounded: #6b6157;
+  --status-addressed: #4b6650;
+
+  /* Chart ink. The ribbon's three lines and the detectability statuses live here rather than in
+     their components, because those four greys were tuned against parchment and will not survive
+     slate without being re-picked. */
+  --line-observed: #b4522e;
+  --line-counterfactual: #3d6b85;
+  --line-scatter: #8b7a68;
+  --detect-none: #a39c8d;
+  --detect-no-effort: #8b9487;
+  --detect-short: #d8bd7e;
+  --detect-yes: #b4522e;
+
+  /* Paper grain: two offset gradients at very low alpha. Cheap, tiles forever, survives zoom, and
+     is not a photograph of paper -- a photographic texture reads as a skin over a website. */
+  --grain: repeating-linear-gradient(103deg, rgb(124 98 74 / 2.5%) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(11deg, rgb(124 98 74 / 2%) 0 1px, transparent 1px 6px);
+
+  /* --- Type --------------------------------------------------------------- */
+  /* `--font-hand` is headings only. ADR 0007: never a label, never a number, never below 20px.
+     It has no tabular figures, so a measurement set in it stops reading as a measurement. */
+  --font-hand: "Architects Daughter", "Comic Sans MS", cursive;
+  --font-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono: "Plex Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
+
+  --size-claim: clamp(1.55rem, 1.1rem + 1.9vw, 2.1rem);
+  --size-body: 0.95rem;
+  --size-value: 1.35rem;
+  --size-margin: 0.66rem;
+  --size-label: 0.6rem;
+
+  --leading-body: 1.55;
+  --leading-hand: 1.16;
+
+  /* --- Space and shape ---------------------------------------------------- */
+  --gap-hair: 0.2rem;
+  --gap-tight: 0.45rem;
+  --gap: 0.9rem;
+  --gap-wide: 1.6rem;
+  /* Wide enough that six bias domains do not run to 2,500px. Narrower reads more like a real
+     margin, and measured worse: the claim scrolled off before its own audit finished. */
+  --margin-column: 19rem;
+
+  /* Nothing is a rectangle with a radius if a drawn line will do, so this is for the few things
+     that genuinely are boxes -- inputs, the odd button. */
+  --radius: 3px;
+
+  /* --- Motion ------------------------------------------------------------- */
+  /* Read by components rather than hard-coded, so the reduced-motion block below can zero all of
+     them at once instead of every component remembering to check. */
+  --draw-slow: 900ms;
+  --draw: 600ms;
+  --draw-quick: 400ms;
+  --fade: 220ms;
+  --ease-pen: cubic-bezier(0.32, 0.72, 0.35, 1);
+}
+
+/**
+ * Night field notes.
+ *
+ * Not the day palette inverted -- a different object, the way a notebook read by torchlight is a
+ * different thing from one on a desk. The ember is deliberately not the rust: #b4522e on slate
+ * loses the saturation that makes it read as *change* and *detectable*, so it moves warmer and
+ * lighter to keep doing that job.
+ *
+ * `[data-surface]` wins over the media query in both directions, so an explicit choice always
+ * beats the system preference -- including choosing day on a machine set to dark.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-surface="day"]) {
+    --paper: #232b33;
+    --paper-sunken: #1c232a;
+    --ink: #d9d3c4;
+    --ink-soft: #b3ac9c;
+    --rust: #e59a6b;
+    --rust-ink: #d9814a;
+    --pencil: #a8a294;
+    --rule: #3d4750;
+    --rule-faint: #313a42;
+
+    --status-open: #e59a6b;
+    --status-bounded: #a8a294;
+    --status-addressed: #7fa189;
+
+    --line-observed: #d9814a;
+    --line-counterfactual: #7fb0cc;
+    --line-scatter: #8a8578;
+    --detect-none: #4a5259;
+    --detect-no-effort: #47544c;
+    --detect-short: #8f7f4f;
+    --detect-yes: #d9814a;
+
+    /* Lighter still than the day grain: the same alpha over a dark ground reads as dirt. */
+    --grain: repeating-linear-gradient(103deg, rgb(217 211 196 / 2%) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(11deg, rgb(217 211 196 / 1.5%) 0 1px, transparent 1px 6px);
+  }
+}
+
+:root[data-surface="night"] {
+  --paper: #232b33;
+  --paper-sunken: #1c232a;
+  --ink: #d9d3c4;
+  --ink-soft: #b3ac9c;
+  --rust: #e59a6b;
+  --rust-ink: #d9814a;
+  --pencil: #a8a294;
+  --rule: #3d4750;
+  --rule-faint: #313a42;
+
+  --status-open: #e59a6b;
+  --status-bounded: #a8a294;
+  --status-addressed: #7fa189;
+
+  --line-observed: #d9814a;
+  --line-counterfactual: #7fb0cc;
+  --line-scatter: #8a8578;
+  --detect-none: #4a5259;
+  --detect-no-effort: #47544c;
+  --detect-short: #8f7f4f;
+  --detect-yes: #d9814a;
+
+  --grain: repeating-linear-gradient(103deg, rgb(217 211 196 / 2%) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(11deg, rgb(217 211 196 / 1.5%) 0 1px, transparent 1px 6px);
+}
+
+/**
+ * Reduced motion is a full path, not a faster one.
+ *
+ * Every duration goes to zero, so an animation *lands in its final state on frame one* -- the end
+ * of the animation, not a rushed version of it. Components read these variables instead of writing
+ * their own durations, which is what makes one block enough.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --draw-slow: 0ms;
+    --draw: 0ms;
+    --draw-quick: 0ms;
+    --fade: 0ms;
+  }
+}

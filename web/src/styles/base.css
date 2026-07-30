@@ -1,0 +1,61 @@
+/**
+ * The page itself: paper, grain, and the type defaults everything else inherits.
+ *
+ * Deliberately small. Anything that describes a component belongs in that component's own `<style>`
+ * block, where Svelte scopes it and where it cannot be inherited by something it was not written
+ * for -- which is how the previous stylesheet reached 700 lines.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  /* So a browser paints its own scrollbars and form controls to match whichever surface is live. */
+  color-scheme: light;
+}
+
+:root[data-surface="night"] {
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-surface="day"]) {
+    color-scheme: dark;
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background-color: var(--paper);
+  background-image: var(--grain);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--size-body);
+  line-height: var(--leading-body);
+  /* The grain is 1px lines, and unsnapped subpixel text over it shimmers on scroll. */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--rust);
+}
+
+a:focus-visible,
+input:focus-visible,
+button:focus-visible {
+  /* Rust rather than the browser blue, which is the one colour on the page belonging to nothing. */
+  outline: 2px solid var(--rust);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -1,5 +1,10 @@
 # Bundled fonts
 
+**The woff2 files are in `web/src/assets/fonts/`, not here.** Vite rewrites and hashes URLs it
+can see, and an absolute `/fonts/...` reference 404s under the GitHub Pages subpath where `base`
+is `/migratlas/`. Only the licence text stays in `public/`, so it is served verbatim at a stable
+URL. `web/src/styles/fonts.css` is the only place the files are named.
+
 Self-hosted, not fetched from a CDN. `web/tests/globe.spec.ts` asserts the default build requests
 nothing off-origin, and a webfont CDN would break that assertion — correctly, since a font host sees
 every visitor's IP.

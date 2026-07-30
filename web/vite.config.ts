@@ -1,10 +1,13 @@
+import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig, loadEnv } from "vite";
+import { resolve } from "node:path";
 
 export default defineConfig(({ mode }) => {
   // Set VITE_BASE=/migratlas/ when deploying to a project subpath.
   const env = loadEnv(mode, process.cwd(), "VITE_");
 
   return {
+    plugins: [svelte()],
     // Trimmed: `set VAR=value && cmd` on Windows carries the trailing space into the value.
     base: (env.VITE_BASE ?? "/").trim(),
     // MapLibre must not be pre-bundled. Its ESM worker is referenced relatively, and the dep
@@ -15,6 +18,16 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: { exclude: ["maplibre-gl"] },
     build: {
       target: "es2023",
+      rollupOptions: {
+        // Two pages while the shell is being rebuilt: the live globe, and the notebook components
+        // in isolation. `claims.html` renders every claim from the real findings.json with nothing
+        // else on the page, which is the only way to judge a card on its own -- and it keeps the
+        // globe's 15 browser tests passing untouched until the shell is ready to replace them.
+        input: {
+          index: resolve(import.meta.dirname, "index.html"),
+          claims: resolve(import.meta.dirname, "claims.html"),
+        },
+      },
       // MapLibre alone is ~940 kB raw / ~245 kB gzipped and cannot be code-split
       // meaningfully -- it is one WebGL engine. It sits in its own chunk below, so it is
       // fetched once and cached across deploys. Warning at 500 kB would fire forever.

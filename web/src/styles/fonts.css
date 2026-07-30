@@ -1,0 +1,43 @@
+/**
+ * Self-hosted, latin subset only. Licences and reasoning in `web/public/fonts/README.md`.
+ *
+ * The files live under `src/assets/` rather than `public/` so Vite rewrites and hashes them. An
+ * absolute `/fonts/...` would 404 on the GitHub Pages subpath, where `base` is `/migratlas/` --
+ * and a missing font fails quietly into the fallback rather than loudly, so it would have shipped.
+ *
+ * `font-display: swap` on the body and mono faces so text is readable before they land, and
+ * `optional` on the hand face: it is headings only, and a heading that reflows 200 ms after paint
+ * is worse than one that arrives in the fallback and stays there.
+ */
+
+@font-face {
+  font-family: "Architects Daughter";
+  src: url("../assets/fonts/ArchitectsDaughter.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: optional;
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("../assets/fonts/SourceSerif4-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("../assets/fonts/SourceSerif4-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Plex Mono";
+  src: url("../assets/fonts/PlexMono-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
