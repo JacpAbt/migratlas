@@ -15,7 +15,7 @@ from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
 from migratlas.drivers import cmip6, era5, narr
-from migratlas.ingest import darkecology, ebird_st, fishglob, megamove, obis, sabap1
+from migratlas.ingest import bbs, darkecology, ebird_st, fishglob, megamove, obis, sabap1
 from migratlas.lake import check as lake_check
 from migratlas.reports import (
     findings,
@@ -109,6 +109,18 @@ def ingest_fishglob() -> None:
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     result = fishglob.ingest()
+    print(f"{result.rows:,} rows -> {result.path}")
+    print(f"run {result.run_id}")
+
+
+@ingest_app.command("bbs")
+def ingest_bbs() -> None:
+    """Land the North American Breeding Bird Survey (SURVEY_INDEX, terrestrial).
+
+    A second instrument on the continent Phase 1a measured, with effort fixed by design since 1966.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    result = bbs.ingest()
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
 

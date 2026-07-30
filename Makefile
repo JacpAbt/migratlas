@@ -198,6 +198,10 @@ phase2a-attribution:  ## The causal step: human share of the advance, CMIP6 hist
 phase2a-timing:  ## Does warming explain the autumn advance? S x W against observed
 	$(RUN) migratlas report phase2a-timing
 
+.PHONY: ingest-bbs
+ingest-bbs:  ## Breeding Bird Survey route counts -> SURVEY_INDEX (terrestrial, 1966-2025)
+	$(RUN) migratlas ingest bbs
+
 .PHONY: ingest-sabap1
 ingest-sabap1:  ## SABAP1 atlas cards -> SURVEY_INDEX (terrestrial, southern hemisphere)
 	$(RUN) migratlas ingest sabap1

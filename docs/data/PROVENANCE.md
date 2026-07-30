@@ -24,6 +24,7 @@ each source carries its own terms.
 | [ERA5 monthly averaged reanalysis on single levels, 1940–present](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [CMIP6 DAMIP and historical — near-surface air temperature, detection and attribution](https://pcmdi.llnl.gov/CMIP6/) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991](https://www.gbif.org/dataset/282d0ccb-4fa0-40f9-8593-105c77e88417) | `survey_index` | `terrestrial` | CC BY 4.0 | permitted |
+| [North American Breeding Bird Survey — route counts, 1966–2025](https://www.usgs.gov/centers/eesc/science/north-american-breeding-bird-survey) | `survey_index` | `terrestrial` | CC0 1.0 | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -207,3 +208,21 @@ A reanalysis is a model constrained by observations, not a measurement, and ERA5
 **Caveats**
 
 Citizen science, so effort is not fixed by design the way a trawl survey's is: cards per cell over the 1987–1991 core run from 4 at the tenth percentile to 119 at the ninetieth and 2,271 at the maximum, which is why reporting rate is stored as cards-with-species over cards and why the consistent-footprint rule from Phase 1b has to be applied before any comparison. Presence only — `occurrenceStatus` is empty for all 5,053,399 rows — so an absence is the absence of a row and the denominator has to come from the cards. Dates are month resolution: the `day` column holds 1, 28, 30 or 31, the ends of a month rather than an observation date. Years in the archive run from 1901 to 2975, both impossible, so the ingest keeps 1950–1999 and logs what it drops. 830 of 98,878 cards carry records in two cells and are counted once per cell, because a card that touches two cells contributed effort to both. The cell id is derived from the cell centre rather than reusing the atlas's quarter-degree letter codes, so it stays checkable against the coordinates in the same row.
+
+## North American Breeding Bird Survey — route counts, 1966–2025
+
+- **id** `bbs`
+- **evidence type** `survey_index` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.usgs.gov/centers/eesc/science/north-american-breeding-bird-survey
+- **licence** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- **redistribution** permitted
+  - Marked with CC0 1.0, a public-domain dedication, so attribution is not legally required. It is given anyway: the data exists because volunteers drove routes at dawn every June for sixty years, and a licence that does not compel credit is not a reason to withhold it.
+- **sensitivity** `low` by default
+
+**Cite as**
+
+> Ziolkowski, D. J., Lutmerding, M., Aponte, V. I., Hudson, M-A. R. (2026). North American Breeding Bird Survey Dataset 1966 - 2025: U.S. Geological Survey data release, https://doi.org/10.5066/P144YU3S. The survey depends on thousands of skilled volunteer observers, whose contribution the citation for the release represents.
+
+**Caveats**
+
+Roadside by design, so the sample is not a random sample of the landscape and the bias is not random with respect to land use — which matters directly for any comparison against a land-cover or urbanisation driver. Observer skill is the best-documented bias in the dataset: counts differ between observers and a first-year observer differs from a practised one, so `ObsN`, `RunType` and `RPID` all travel into the protocol field for use as break terms. Only RPID 101 is the standard protocol; other values are experimental or incidental runs that the survey's own analyses exclude. **2020 is absent entirely** — field activities were cancelled for COVID-19 — so a trend fit must be told about the gap rather than interpolating across it. Routes are added and abandoned over time and the loss is not random, which is the same missing-not-at-random problem the consistent-footprint rule addresses in Phase 1b. The publisher holds migrant and non-breeder records in a separate file, excluded from the counts landed here; the ingest reports how many, because it is a judgement made on our behalf. Species totals include unidentified groupings and hybrids whose AOU codes carry no binomial; those rows are dropped and counted, as they cannot be evidence about a taxon.

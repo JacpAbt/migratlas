@@ -62,6 +62,13 @@ FORMAT: Final = "DWCA"
 """The archive format. See the module docstring: SIMPLE_CSV omits the card id and so cannot produce
 an effort denominator."""
 
+DOWNLOAD_KEY: Final = "0018243-260721160103020"
+"""The download this project's results are computed on, requested 2026-07-30.
+
+25,687,526 records as a Darwin Core archive, 7.36 GiB, **doi 10.15468/dl.wb5t54** -- which is what a
+result cites, because it pins the exact records rather than "SABAP2 as of whenever". GBIF keeps a
+prepared download for six months, so a re-run after that needs a fresh request and a new DOI."""
+
 SIMPLE_CSV_KEY: Final = "0018183-260721160103020"
 """The first download, kept for the record rather than used.
 
