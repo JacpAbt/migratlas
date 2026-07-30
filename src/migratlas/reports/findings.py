@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Final
 import numpy as np
 import polars as pl
 
-from migratlas.evidence import EvidenceType
+from migratlas.evidence import EvidenceType, Realm, TaxonScope
 from migratlas.lake.reader import scan, scan_dataset
 
 if TYPE_CHECKING:
@@ -33,7 +33,45 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION: Final = 1
+SCHEMA_VERSION: Final = 2
+
+# The domains ROBITT asks about (Boyd et al. 2022, Methods in Ecology and Evolution 13:1497), a
+# 17-question tool for risk of bias in studies of temporal trends, built on PRISMA's model. Adopted
+# rather than invented, for the same reason the ethics gate implements GBIF's sensitive-species
+# guidance instead of writing a policy: a published standard carries credibility an in-house
+# checklist cannot, and this project turns out to have been answering these questions already.
+#
+# Every domain asks the same second question -- did coverage hold *over time* -- which is what makes
+# it a temporal-trend tool rather than a general one.
+BIAS_DOMAINS: Final[tuple[str, ...]] = (
+    "geographic",
+    "temporal",
+    "taxonomic",
+    "environmental",
+    "detectability",
+    "phenological",
+)
+
+# What the work did about a domain, in the four honest answers available.
+BIAS_STATUSES: Final[tuple[str, ...]] = (
+    # Tested, and the test came back clean enough to proceed.
+    "addressed",
+    # Not eliminated, but measured, and the claim narrowed to where it holds.
+    "bounded",
+    # Known, unresolved, and stated. The 2012 step lives here.
+    "open",
+    "not applicable",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class BiasDomain:
+    """One ROBITT domain, and what happened when this claim was checked against it."""
+
+    domain: str
+    status: str
+    finding: str
+    """One line. Not "we considered this" -- what was done and what came back."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,11 +94,198 @@ class Finding:
     method: str
     """Path to the pre-registered method note, relative to the repository root."""
 
+    realm: str
+    """`aerial`, `terrestrial`, `marine` or `freshwater`.
+
+    Required, and required for a reason beyond tidiness. This project was built taxon-agnostic and
+    then drifted: three consecutive sources were birds. Making the realm a field a claim cannot
+    omit, and testing that the published set spans more than one, is the same kind of structural
+    guarantee as the evidence-type core itself -- a convention would drift again.
+    """
+
+    taxon_scope: str
+    """`exact`, `aggregate` or `unattributed`. The radar's is `unattributed`, and that is the point:
+    it measures biomass, and a claim that quietly said "birds" would be overclaiming."""
+
+    evidence_type: str
+    """Which of the seven shapes the claim rests on, so a reader can see four are still unused."""
+
+    bias: list[BiasDomain] = field(default_factory=list)
+    """The ROBITT assessment. Required in practice -- a test refuses a claim without one."""
+
     direction: str = "neutral"
     """`change`, `null`, or `limit` -- so the frontend can group rather than parse the text."""
 
     supporting: list[str] = field(default_factory=list)
     """Tests the claim survived, each one line."""
+
+
+def _domains(**findings: tuple[str, str]) -> list[BiasDomain]:
+    """Build an assessment from `domain=(status, finding)` pairs, in ROBITT's order."""
+    return [
+        BiasDomain(domain=domain, status=findings[domain][0], finding=findings[domain][1])
+        for domain in BIAS_DOMAINS
+        if domain in findings
+    ]
+
+
+# The assessments live here rather than inside `collect` so they read as a document. Every line is a
+# re-expression of something already in a method note under docs/methods/ -- none of it is new
+# analysis, and that is the point: the work was ROBITT-shaped before the framework was known.
+AUTUMN_ADVANCE_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "Survives only at 37-50°N. The southern bands carry an unexplained 2012 step and are "
+        "excluded, so this is a regional result and 'continental' is not available.",
+    ),
+    temporal=(
+        "open",
+        "A latitude-graded step change at 2012 is still unexplained: truncation, panel "
+        "composition, curvature and drought were each tested and each failed to explain it.",
+    ),
+    taxonomic=(
+        "bounded",
+        "The instrument measures aerial biomass, not birds. Bats and insects are not "
+        "excluded; mean autumn airspeed of 8.65 m/s sits in the songbird range, which bounds the "
+        "drift without identifying the taxa.",
+    ),
+    environmental=(
+        "bounded",
+        "Stations sit where weather radar was funded, not on a sample of habitat, so the panel is "
+        "not environmentally representative of the continent it covers.",
+    ),
+    detectability=(
+        "addressed",
+        "The dataset's own rain screening steps at 2012, and independent ERA5 precipitation "
+        "shows no matching drying, so the step is instrumental rather than meteorological. "
+        "Dropping the speed weighting leaves the trend unchanged (-0.09 +/- 0.14, r = 0.86).",
+    ),
+    phenological=(
+        "addressed",
+        "The passage window and the quantile definition were matched to the published metric "
+        "before any extension, so the replication is of the same quantity, not a similar one.",
+    ),
+)
+
+MARINE_NULL_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "29 surveys across North America and Europe: 0% southern hemisphere and 0% tropics, "
+        "so this is a null for the northern temperate zone and not for the ocean.",
+    ),
+    temporal=(
+        "addressed",
+        "A cell enters only where it was sampled consistently across the window, and a gear-change "
+        "break term is fitted for every survey that changed gear.",
+    ),
+    taxonomic=(
+        "addressed",
+        "Around 2,000 species, and the unit of analysis is the species in its region rather "
+        "than the ocean: pooling destroys the finding, since surveys disagree in sign.",
+    ),
+    environmental=(
+        "bounded",
+        "A bottom-trawl survey samples trawlable ground. Rocky, protected and untrawlable "
+        "habitat is absent by construction, and species that live there cannot appear.",
+    ),
+    detectability=(
+        "addressed",
+        "Three Alaskan surveys publish catch per unit area rather than raw catch; effort is "
+        "recorded as prestandardised so the centroid weighting stays correct rather than wrong.",
+    ),
+    phenological=(
+        "bounded",
+        "Surveys run in fixed seasons, so a species that shifted its seasonal timing rather "
+        "than its position would not show up here at all.",
+    ),
+)
+
+COMPOSITION_BIAS: Final = _domains(
+    temporal=(
+        "open",
+        "Spring behaves differently: airspeed rose +0.50 +/- 0.13 m/s per decade, either a "
+        "real change or migrants flying above the fixed 925 hPa wind level. Separating them needs "
+        "the vertical profiles, so spring carries no trend claim.",
+    ),
+    taxonomic=(
+        "addressed",
+        "This is the taxonomic test. Autumn airspeed is flat and sits in the songbird range "
+        "rather than the 0-5 m/s insect range, and deleting the 293,497 non-bird nights outright "
+        "moves the advance only from -0.56 to -0.42.",
+    ),
+    environmental=(
+        "bounded",
+        "Wind comes from a 32 km reanalysis at a single pressure level, so a station near a "
+        "coast or a mountain front is represented worse than an inland one.",
+    ),
+    detectability=(
+        "addressed",
+        "The wind is from an independent regional reanalysis rather than from the radar, so the "
+        "airspeed estimate does not inherit the radar's own errors.",
+    ),
+    phenological=(
+        "addressed",
+        "Airspeed is computed per station-night inside the same August-November window as the "
+        "passage metric, so the two describe the same nights.",
+    ),
+)
+
+ATTRIBUTION_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "37-50°N, and the models are 1-2°, so the human fraction is regional rather than local to "
+        "any one station.",
+    ),
+    temporal=(
+        "bounded",
+        "CMIP6 `historical` ends in 2014 while the observed record runs to 2025, so the "
+        "fraction is measured over an earlier window than the magnitude it scales. That mismatch "
+        "is why it is built as a ratio rather than a difference.",
+    ),
+    taxonomic=(
+        "bounded",
+        "Inherits the radar's caveat whole. This attributes the *warming*, not the animals, "
+        "and says nothing about which taxa responded.",
+    ),
+    environmental=(
+        "addressed",
+        "Sampled at the radar stations rather than globally, so the fraction is local to where the "
+        "counting actually happened.",
+    ),
+    detectability=(
+        "addressed",
+        "A synthetic null — the same machinery run on two halves of one experiment — returns 3% of "
+        "the forced difference, which bounds how much could be internal variability.",
+    ),
+    phenological=(
+        "addressed",
+        "The June-July pre-season window is the one the response function was fitted on, and "
+        "it does not overlap the August-November response it predicts.",
+    ),
+)
+
+COVERAGE_BIAS: Final = _domains(
+    geographic=(
+        "open",
+        "This claim *is* the geographic bias. Every source with a usable time axis is northern "
+        "temperate; the two with global reach cannot support a trend.",
+    ),
+    temporal=(
+        "bounded",
+        "Measured from the lake rather than asserted, and recomputed on every build, so the day a "
+        "southern source lands the number moves on its own.",
+    ),
+    taxonomic=(
+        "open",
+        "The terrestrial realm is entirely birds — three sources, one class. Four of the seven "
+        "evidence types are unused, and they are where mammals, reptiles and insects live.",
+    ),
+    environmental=(
+        "open",
+        "Long digitised radar and trawl series exist where they were funded, so the environmental "
+        "space this project covers is a funding history rather than a sample.",
+    ),
+)
 
 
 def _radar_coverage() -> tuple[int, int, int]:
@@ -132,6 +357,10 @@ def collect() -> list[Finding]:
     findings.append(
         Finding(
             key="autumn-advance",
+            realm=Realm.AERIAL.value,
+            taxon_scope=TaxonScope.UNATTRIBUTED.value,
+            evidence_type=EvidenceType.FLUX.value,
+            bias=AUTUMN_ADVANCE_BIAS,
             claim="Nocturnal autumn passage over the mid-latitude US is happening earlier.",
             value=f"{mean:+.2f} ± {ci:.2f} days per decade",
             scope=(
@@ -164,6 +393,10 @@ def collect() -> list[Finding]:
     findings.append(
         Finding(
             key="marine-null",
+            realm=Realm.MARINE.value,
+            taxon_scope=TaxonScope.EXACT.value,
+            evidence_type=EvidenceType.SURVEY_INDEX.value,
+            bias=MARINE_NULL_BIAS,
             claim=(
                 "There is no single global poleward shift in fish distribution — surveys "
                 "disagree even in its direction."
@@ -191,6 +424,10 @@ def collect() -> list[Finding]:
     findings.append(
         Finding(
             key="composition-stable",
+            realm=Realm.AERIAL.value,
+            taxon_scope=TaxonScope.UNATTRIBUTED.value,
+            evidence_type=EvidenceType.FLUX.value,
+            bias=COMPOSITION_BIAS,
             claim=(
                 "The autumn signal is not drifting from birds towards insects — what the radar "
                 "measures in 2025 means what it meant in 1995."
@@ -235,6 +472,10 @@ def collect() -> list[Finding]:
         findings.append(
             Finding(
                 key="anthropogenic-share",
+                realm=Realm.AERIAL.value,
+                taxon_scope=TaxonScope.UNATTRIBUTED.value,
+                evidence_type=EvidenceType.FLUX.value,
+                bias=ATTRIBUTION_BIAS,
                 claim=(
                     "Human forcing accounts for almost all of the pre-season warming the birds "
                     "are responding to, and so for about half of the observed advance."
@@ -270,6 +511,11 @@ def collect() -> list[Finding]:
     findings.append(
         Finding(
             key="coverage-bias",
+            # Every realm at once, so the field names the whole lake rather than picking one.
+            realm="all",
+            taxon_scope="all",
+            evidence_type="all",
+            bias=COVERAGE_BIAS,
             claim=(
                 "Everything above is northern-hemisphere. The data that can measure change and "
                 "the data that covers the globe are, so far, different data."

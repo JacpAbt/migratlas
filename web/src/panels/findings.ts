@@ -11,6 +11,22 @@
 
 export type FindingDirection = "change" | "null" | "limit" | "neutral";
 
+/** What the work did about one risk of bias. "considered" is deliberately not an option. */
+export type BiasStatus = "addressed" | "bounded" | "open" | "not applicable";
+
+/**
+ * One ROBITT domain (Boyd et al. 2022, Methods in Ecology and Evolution 13:1497).
+ *
+ * The framework is adopted rather than invented, for the same reason the ethics gate implements
+ * GBIF's guidance instead of writing a policy. Its domains are shown in its own order so two claims
+ * can be compared by reading down rather than by hunting.
+ */
+export interface BiasDomain {
+  domain: string;
+  status: BiasStatus;
+  finding: string;
+}
+
 export interface Finding {
   key: string;
   claim: string;
@@ -18,6 +34,10 @@ export interface Finding {
   scope: string;
   caveat: string;
   method: string;
+  realm: string;
+  taxon_scope: string;
+  evidence_type: string;
+  bias: BiasDomain[];
   direction: FindingDirection;
   supporting: string[];
 }
@@ -27,7 +47,7 @@ interface FindingsDocument {
   findings: Finding[];
 }
 
-const SUPPORTED_SCHEMA = 1;
+const SUPPORTED_SCHEMA = 2;
 
 const LABEL: Record<FindingDirection, string> = {
   change: "change detected",
@@ -45,11 +65,43 @@ function element(tag: string, className?: string, text?: string): HTMLElement {
   return node;
 }
 
+/**
+ * The risk-of-bias assessment, one row per domain.
+ *
+ * Shown open rather than behind a toggle. A viewer who has to click to find out how a number could
+ * be wrong will not click, and the whole point of the ledger is that the caveat arrives with the
+ * number rather than after it.
+ */
+function biasBlock(bias: BiasDomain[]): HTMLElement {
+  const section = element("div", "finding__bias");
+  if (bias.length === 0) return section;
+
+  section.append(element("p", "finding__bias-label", "Risk of bias"));
+  const list = element("dl", "finding__bias-list");
+  for (const entry of bias) {
+    const term = element("dt", `bias bias--${entry.status.replace(/ /g, "-")}`);
+    term.append(element("span", "bias__domain", entry.domain));
+    term.append(element("span", "bias__status", entry.status));
+    list.append(term);
+    list.append(element("dd", undefined, entry.finding));
+  }
+  section.append(list);
+  return section;
+}
+
 function card(finding: Finding): HTMLElement {
   const item = element("li", `finding finding--${finding.direction}`);
   item.append(element("p", "finding__label", LABEL[finding.direction] ?? LABEL.neutral));
   item.append(element("h3", "finding__claim", finding.claim));
   item.append(element("p", "finding__value", finding.value));
+
+  // Realm and taxon scope sit with the claim rather than in a footnote: "aerial, unattributed"
+  // is the difference between a statement about biomass and a statement about birds.
+  const provenance = element("p", "finding__scope-tags");
+  for (const tag of [finding.realm, finding.taxon_scope, finding.evidence_type]) {
+    if (tag) provenance.append(element("span", "finding__tag", tag.replace(/_/g, " ")));
+  }
+  item.append(provenance);
 
   const detail = element("dl", "finding__detail");
   for (const [term, description] of [
@@ -60,6 +112,8 @@ function card(finding: Finding): HTMLElement {
     detail.append(element("dd", undefined, description));
   }
   item.append(detail);
+
+  item.append(biasBlock(finding.bias));
 
   if (finding.supporting.length > 0) {
     const survived = element("ul", "finding__supporting");

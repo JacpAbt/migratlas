@@ -1,5 +1,5 @@
 {
- "schema_version": 1,
+ "schema_version": 2,
  "findings": [
   {
    "key": "autumn-advance",
@@ -8,6 +8,41 @@
    "scope": "78 US weather-radar stations between 37\u00b0N and 50\u00b0N, 1995-2025. Not the whole continent: the southern bands carry a step change at 2012 that four candidate explanations have failed to account for.",
    "caveat": "The radar measures aerial biomass, not birds \u2014 it cannot separate birds from bats from insects. Bats in particular are not excluded.",
    "method": "docs/methods/phase1-phenology.md",
+   "realm": "aerial",
+   "taxon_scope": "unattributed",
+   "evidence_type": "flux",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "Survives only at 37-50\u00b0N. The southern bands carry an unexplained 2012 step and are excluded, so this is a regional result and 'continental' is not available."
+    },
+    {
+     "domain": "temporal",
+     "status": "open",
+     "finding": "A latitude-graded step change at 2012 is still unexplained: truncation, panel composition, curvature and drought were each tested and each failed to explain it."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "bounded",
+     "finding": "The instrument measures aerial biomass, not birds. Bats and insects are not excluded; mean autumn airspeed of 8.65 m/s sits in the songbird range, which bounds the drift without identifying the taxa."
+    },
+    {
+     "domain": "environmental",
+     "status": "bounded",
+     "finding": "Stations sit where weather radar was funded, not on a sample of habitat, so the panel is not environmentally representative of the continent it covers."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "The dataset's own rain screening steps at 2012, and independent ERA5 precipitation shows no matching drying, so the step is instrumental rather than meteorological. Dropping the speed weighting leaves the trend unchanged (-0.09 +/- 0.14, r = 0.86)."
+    },
+    {
+     "domain": "phenological",
+     "status": "addressed",
+     "finding": "The passage window and the quantile definition were matched to the published metric before any extension, so the replication is of the same quantity, not a similar one."
+    }
+   ],
    "direction": "change",
    "supporting": [
     "Reproduces a published result on its own window before extending it.",
@@ -23,6 +58,41 @@
    "scope": "29 harmonised scientific bottom-trawl surveys, North America and Europe, on consistently sampled cells only.",
    "caveat": "A pooled median hides the variation worth predicting: individual surveys reach -0.22 and +0.26 \u00b0latitude per decade in opposite directions. The unit of analysis has to be the species in its region, not the ocean.",
    "method": "docs/methods/phase1b-marine.md",
+   "realm": "marine",
+   "taxon_scope": "exact",
+   "evidence_type": "survey_index",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "29 surveys across North America and Europe: 0% southern hemisphere and 0% tropics, so this is a null for the northern temperate zone and not for the ocean."
+    },
+    {
+     "domain": "temporal",
+     "status": "addressed",
+     "finding": "A cell enters only where it was sampled consistently across the window, and a gear-change break term is fitted for every survey that changed gear."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "addressed",
+     "finding": "Around 2,000 species, and the unit of analysis is the species in its region rather than the ocean: pooling destroys the finding, since surveys disagree in sign."
+    },
+    {
+     "domain": "environmental",
+     "status": "bounded",
+     "finding": "A bottom-trawl survey samples trawlable ground. Rocky, protected and untrawlable habitat is absent by construction, and species that live there cannot appear."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "Three Alaskan surveys publish catch per unit area rather than raw catch; effort is recorded as prestandardised so the centroid weighting stays correct rather than wrong."
+    },
+    {
+     "domain": "phenological",
+     "status": "bounded",
+     "finding": "Surveys run in fixed seasons, so a species that shifted its seasonal timing rather than its position would not show up here at all."
+    }
+   ],
    "direction": "null",
    "supporting": []
   },
@@ -33,6 +103,36 @@
    "scope": "2,193,560 station-night wind samples, 1995-2025, from an independent regional reanalysis rather than from the radar.",
    "caveat": "Spring behaves differently: its airspeed rose, which is either a real change or migrants flying higher than the fixed wind level assumes. Separating those needs the vertical radar profiles. Spring carries no trend claim here either way.",
    "method": "docs/methods/phase1c-homogeneity.md",
+   "realm": "aerial",
+   "taxon_scope": "unattributed",
+   "evidence_type": "flux",
+   "bias": [
+    {
+     "domain": "temporal",
+     "status": "open",
+     "finding": "Spring behaves differently: airspeed rose +0.50 +/- 0.13 m/s per decade, either a real change or migrants flying above the fixed 925 hPa wind level. Separating them needs the vertical profiles, so spring carries no trend claim."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "addressed",
+     "finding": "This is the taxonomic test. Autumn airspeed is flat and sits in the songbird range rather than the 0-5 m/s insect range, and deleting the 293,497 non-bird nights outright moves the advance only from -0.56 to -0.42."
+    },
+    {
+     "domain": "environmental",
+     "status": "bounded",
+     "finding": "Wind comes from a 32 km reanalysis at a single pressure level, so a station near a coast or a mountain front is represented worse than an inland one."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "The wind is from an independent regional reanalysis rather than from the radar, so the airspeed estimate does not inherit the radar's own errors."
+    },
+    {
+     "domain": "phenological",
+     "status": "addressed",
+     "finding": "Airspeed is computed per station-night inside the same August-November window as the passage metric, so the two describe the same nights."
+    }
+   ],
    "direction": "change",
    "supporting": [
     "Mean autumn airspeed sits in the range for migrating songbirds, not insects.",
@@ -46,6 +146,41 @@
    "scope": "15 CMIP6 models with both a historical and a hist-nat run, sampled at the 78 radar stations between 37\u00b0N and 50\u00b0N over 1995-2014.",
    "caveat": "This attributes the warming, not the migration. It says what caused the temperature change the birds tracked \u2014 the other half of the advance does not track temperature at all and is unexplained here. The models' human share spans 0.88 to 0.98 depending on the window fitted, and CMIP6's historical runs stop in 2014 while the radar record runs to 2025.",
    "method": "docs/methods/phase2a-attribution.md",
+   "realm": "aerial",
+   "taxon_scope": "unattributed",
+   "evidence_type": "flux",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "37-50\u00b0N, and the models are 1-2\u00b0, so the human fraction is regional rather than local to any one station."
+    },
+    {
+     "domain": "temporal",
+     "status": "bounded",
+     "finding": "CMIP6 `historical` ends in 2014 while the observed record runs to 2025, so the fraction is measured over an earlier window than the magnitude it scales. That mismatch is why it is built as a ratio rather than a difference."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "bounded",
+     "finding": "Inherits the radar's caveat whole. This attributes the *warming*, not the animals, and says nothing about which taxa responded."
+    },
+    {
+     "domain": "environmental",
+     "status": "addressed",
+     "finding": "Sampled at the radar stations rather than globally, so the fraction is local to where the counting actually happened."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "A synthetic null \u2014 the same machinery run on two halves of one experiment \u2014 returns 3% of the forced difference, which bounds how much could be internal variability."
+    },
+    {
+     "domain": "phenological",
+     "status": "addressed",
+     "finding": "The June-July pre-season window is the one the response function was fitted on, and it does not overlap the August-November response it predicts."
+    }
+   ],
    "direction": "change",
    "supporting": [
     "The counterfactual runs warm at +0.01 \u00b0C per decade against +0.59 with human forcing included.",
@@ -60,6 +195,31 @@
    "scope": "Every source in this project that has a usable time axis.",
    "caveat": "Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but it bounds every claim here to the northern temperate zone, and no model trained on it should be trusted elsewhere without being tested there first.",
    "method": "docs/methods/geographic-coverage.md",
+   "realm": "all",
+   "taxon_scope": "all",
+   "evidence_type": "all",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "open",
+     "finding": "This claim *is* the geographic bias. Every source with a usable time axis is northern temperate; the two with global reach cannot support a trend."
+    },
+    {
+     "domain": "temporal",
+     "status": "bounded",
+     "finding": "Measured from the lake rather than asserted, and recomputed on every build, so the day a southern source lands the number moves on its own."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "open",
+     "finding": "The terrestrial realm is entirely birds \u2014 three sources, one class. Four of the seven evidence types are unused, and they are where mammals, reptiles and insects live."
+    },
+    {
+     "domain": "environmental",
+     "status": "open",
+     "finding": "Long digitised radar and trawl series exist where they were funded, so the environmental space this project covers is a funding history rather than a sample."
+    }
+   ],
    "direction": "limit",
    "supporting": []
   }

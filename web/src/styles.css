@@ -475,6 +475,95 @@ input[type="range"] {
   font-size: 0.75rem;
 }
 
+/* Realm, taxon scope and evidence type, beside the claim rather than in a footnote: "aerial,
+   unattributed" is the difference between a statement about biomass and one about birds. */
+.finding__scope-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 0 0.4rem;
+}
+
+.finding__tag {
+  padding: 0.05rem 0.3rem;
+  border: 1px solid var(--muted);
+  border-radius: 0.6rem;
+  color: var(--muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+}
+
+/* The risk-of-bias assessment. Shown open, never behind a toggle: a viewer who has to click to
+   find out how a number could be wrong will not click. */
+.finding__bias {
+  margin-top: 0.45rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--muted);
+}
+
+.finding__bias-label,
+.finding__bias-list {
+  font-size: 0.68rem;
+}
+
+.finding__bias-label {
+  margin: 0 0 0.25rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.finding__bias-list {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.finding__bias-list dt {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin-top: 0.28rem;
+}
+
+.bias__domain {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* The status carries the colour, because it is the part a reader scans for. `open` is the one that
+   has to be legible at a glance -- it means we know about the problem and have not solved it. */
+.bias__status {
+  padding: 0 0.28rem;
+  border-radius: 0.5rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.bias--addressed .bias__status {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+}
+
+.bias--bounded .bias__status {
+  background: color-mix(in srgb, var(--muted) 26%, transparent);
+  color: var(--text);
+}
+
+.bias--open .bias__status {
+  background: color-mix(in srgb, #c2622c 30%, transparent);
+  color: #8f4318;
+}
+
+.bias--not-applicable .bias__status {
+  color: var(--muted);
+}
+
+.finding__bias-list dd {
+  margin: 0.1rem 0 0;
+  color: var(--muted);
+}
+
 @media (max-width: 48rem) {
   /* Search moves to the bottom on a narrow screen, so the top-right corner is free again.
      Collapsed by default here: open, it would cover the globe entirely. */

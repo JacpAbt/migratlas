@@ -221,7 +221,24 @@ test("the findings panel publishes a result with its scope and caveat", async ({
     await expect(card.locator("dt", { hasText: "Where and when" })).toHaveCount(1);
     await expect(card.locator("dt", { hasText: "Caveat" })).toHaveCount(1);
     await expect(card.locator(".finding__method")).toHaveAttribute("href", /docs\/methods\//);
+
+    // The risk-of-bias assessment, rendered rather than merely present in the JSON. A schema that
+    // carries the audit and a panel that does not show it would be worse than not having it: the
+    // data would claim an honesty the page does not deliver.
+    await expect(
+      card.locator(".bias__domain"),
+      "a claim is published with no visible risk-of-bias assessment",
+    ).not.toHaveCount(0);
+    await expect(card.locator(".bias__status").first()).toBeVisible();
   }
+
+  // And at least one `open` status somewhere in the set. Every domain reading "addressed" would
+  // mean either that nothing is unresolved -- which is false, the 2012 step is -- or that the
+  // assessment is being written to reassure rather than to inform.
+  await expect(
+    panel.locator(".bias--open"),
+    "nothing is marked open, which would mean the audit is decorative",
+  ).not.toHaveCount(0);
 });
 
 test("a missing findings file leaves the globe usable", async ({ page }) => {
