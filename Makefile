@@ -82,6 +82,10 @@ coverage:  ## Tests with coverage report
 # ---------------------------------------------------------------------------
 # Pipelines
 # ---------------------------------------------------------------------------
+.PHONY: sandbox
+sandbox:  ## Recompute the analysis with each safeguard off -> web/public/sandbox.json
+	$(RUN) migratlas build-sandbox
+
 .PHONY: provenance
 provenance:  ## Regenerate docs/data/PROVENANCE.md from the source registry
 	$(RUN) migratlas catalog provenance

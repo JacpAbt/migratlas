@@ -37,6 +37,7 @@ from migratlas.reports import (
     phase2a_attribution,
     phase2a_thermal,
     phase2a_timing,
+    sandbox,
 )
 from migratlas.taxonomy import index as taxon_index
 from migratlas.tiles import layers as tile_layers
@@ -234,6 +235,25 @@ def ingest_cmip6() -> None:
     result = cmip6.ingest(points)
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
+
+
+@app.command("build-sandbox")
+def build_sandbox(
+    out: Annotated[Path, typer.Option(help="Where to write the sandbox document.")] = Path(
+        "web/public/sandbox.json"
+    ),
+) -> None:
+    """Recompute the analysis with each safeguard switched off, and write the variants.
+
+    Slow on purpose: it re-runs the analyses, the marine one once per effort threshold. Nothing here
+    is a new metric -- every setting is a parameter of a function the reports already call.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    computed = sandbox.collect()
+    size = sandbox.write(out, computed)
+    knobs = ", ".join(knob.key for knob in computed.knobs)
+    print(f"{len(computed.knobs)} knobs ({knobs}), {len(computed.refusals)} refusal(s)")
+    print(f"sandbox -> {out} ({size / 1024:.1f} KiB)")
 
 
 @app.command("build-findings")
