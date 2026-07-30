@@ -61,6 +61,12 @@ _CREDENTIAL_HINTS: Final[dict[str, str]] = {
         "is not enough: each dataset's licence must also be accepted once, from that dataset's "
         "download tab, or retrieval returns 403 'required licences not accepted'."
     ),
+    "gbif_user": "Free account at https://www.gbif.org/user/profile",
+    "gbif_password": (
+        "The account password, not an API key: GBIF's download API authenticates with HTTP Basic. "
+        "It buys the only working bulk route to a large dataset's records, and each download is "
+        "issued a DOI. Set it here rather than passing it anywhere else."
+    ),
 }
 
 
