@@ -23,6 +23,7 @@ each source carries its own terms.
 | [NCEP North American Regional Reanalysis — pressure-level winds, 1979–present](https://psl.noaa.gov/data/gridded/data.narr.html) | driver only | `aerial` | US Government work, public domain (17 U.S.C. §105) | permitted |
 | [ERA5 monthly averaged reanalysis on single levels, 1940–present](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [CMIP6 DAMIP and historical — near-surface air temperature, detection and attribution](https://pcmdi.llnl.gov/CMIP6/) | driver only | `aerial` | CC BY 4.0 | permitted |
+| [Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991](https://www.gbif.org/dataset/282d0ccb-4fa0-40f9-8593-105c77e88417) | `survey_index` | `terrestrial` | CC BY 4.0 | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -189,3 +190,20 @@ A reanalysis is a model constrained by observations, not a measurement, and ERA5
 **Caveats**
 
 `hist-nat` is a counterfactual: it is what the models say the climate would have done under solar and volcanic forcing alone, and it must never be presented as an observation. Models are 1–2° so a station-point sample is regional rather than local. `historical` ends in 2014, so the window both experiments share stops there while the observed record runs to 2025 — the attribution therefore uses a *ratio* from the models and a magnitude from observations, which is what makes the mismatch tolerable. A run starting in 1995 also begins in the recovery from Pinatubo, which can give `hist-nat` a positive trend from volcanic rebound alone and understate the human share, so the window is varied and both answers reported. Member counts are wildly uneven (fifty for MIROC6 and CanESM5, three for nine others), so members are averaged within a model before models are averaged together.
+
+## Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991
+
+- **id** `sabap1`
+- **evidence type** `survey_index` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.gbif.org/dataset/282d0ccb-4fa0-40f9-8593-105c77e88417
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+- **sensitivity** `low` by default
+
+**Cite as**
+
+> South African National Biodiversity Institute. Southern African Bird Atlas Project. Version 1.0. Occurrence dataset https://doi.org/10.15468/ry4ux6 accessed via GBIF.org on 2026-07-30. Underlying atlas: Harrison, J. A., Allan, D. G., Underhill, L. G., Herremans, M., Tree, A. J., Parker, V., Brown, C. J. (eds) (1997). The Atlas of Southern African Birds. BirdLife South Africa, Johannesburg.
+
+**Caveats**
+
+Citizen science, so effort is not fixed by design the way a trawl survey's is: cards per cell over the 1987–1991 core run from 4 at the tenth percentile to 119 at the ninetieth and 2,271 at the maximum, which is why reporting rate is stored as cards-with-species over cards and why the consistent-footprint rule from Phase 1b has to be applied before any comparison. Presence only — `occurrenceStatus` is empty for all 5,053,399 rows — so an absence is the absence of a row and the denominator has to come from the cards. Dates are month resolution: the `day` column holds 1, 28, 30 or 31, the ends of a month rather than an observation date. Years in the archive run from 1901 to 2975, both impossible, so the ingest keeps 1950–1999 and logs what it drops. 830 of 98,878 cards carry records in two cells and are counted once per cell, because a card that touches two cells contributed effort to both. The cell id is derived from the cell centre rather than reusing the atlas's quarter-degree letter codes, so it stays checkable against the coordinates in the same row.

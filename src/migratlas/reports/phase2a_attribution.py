@@ -465,8 +465,8 @@ def render() -> str:
         "=" * 78,
         "modelled warming and the human share",
         "=" * 78,
-        "The +- is the spread across models, not the uncertainty of any one trend: it says how much",
-        "the modelling centres disagree, which is the thing a single-model answer would hide.",
+        "The +- is the spread across models, not the uncertainty of one trend: it says how much",
+        "the modelling centres disagree, which a single-model answer would hide.",
         "",
     ]
     out.append(

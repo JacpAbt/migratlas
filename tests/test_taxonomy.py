@@ -1,9 +1,15 @@
 """Taxonomy helpers. The name-cleaning cases are all real GBIF responses."""
 
+import httpx
 import pytest
 
 from migratlas.evidence import Realm
-from migratlas.taxonomy.gbif import clean_vernacular, titlecase
+from migratlas.taxonomy.gbif import (
+    TaxonomyError,
+    clean_vernacular,
+    match_name,
+    titlecase,
+)
 from migratlas.taxonomy.index import load_seed
 
 
@@ -58,3 +64,77 @@ def test_seed_names_are_unique() -> None:
 def test_seed_entries_have_required_keys() -> None:
     for item in load_seed():
         assert {"name", "group", "realm"} <= set(item), item
+
+
+# --- Name resolution --------------------------------------------------------
+# Real /species/match payloads, trimmed to the fields match_name reads.
+def _stub(payload: dict[str, object]) -> httpx.Client:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
+
+    return httpx.Client(transport=httpx.MockTransport(handler), base_url="https://example.invalid")
+
+
+def test_a_synonym_resolves_to_the_accepted_usage() -> None:
+    """The Backbone is a spine, so it has to answer with the taxon and not with the name.
+
+    SABAP1 calls the black saw-wing `Psalidoprocne holomelas`, which GBIF holds as a synonym of the
+    subspecies `Psalidoprocne pristoptera holomelas`. Returning the synonym's own key would give a
+    second source that used the current name a different key for the same bird, and a join across
+    the two would lose the species without failing.
+    """
+    with _stub(
+        {
+            "usageKey": 2489155,
+            "acceptedUsageKey": 5846393,
+            "status": "SYNONYM",
+            "rank": "SPECIES",
+            "matchType": "EXACT",
+            "confidence": 98,
+            "scientificName": "Psalidoprocne holomelas (Sundevall, 1850)",
+            "canonicalName": "Psalidoprocne holomelas",
+        }
+    ) as http:
+        match = match_name(http, "Psalidoprocne holomelas")
+
+    assert match.usage_key == 5846393
+    # The status still reports what was asked about, so the substitution stays auditable.
+    assert match.status == "SYNONYM"
+    assert match.is_synonym
+
+
+def test_an_accepted_name_keeps_its_own_key() -> None:
+    with _stub(
+        {
+            "usageKey": 2480689,
+            "status": "ACCEPTED",
+            "rank": "SPECIES",
+            "matchType": "EXACT",
+            "confidence": 99,
+            "scientificName": "Hieraaetus ayresii (Gurney, 1862)",
+            "canonicalName": "Hieraaetus ayresii",
+        }
+    ) as http:
+        match = match_name(http, "Hieraaetus ayresii")
+
+    assert match.usage_key == 2480689
+    assert not match.is_synonym
+
+
+def test_a_genus_match_is_refused_rather_than_returned_as_a_species() -> None:
+    """What SABAP1's six unresolved names ran into: GBIF answers with the genus, confidently."""
+    with (
+        _stub(
+            {
+                "usageKey": 2480498,
+                "status": "ACCEPTED",
+                "rank": "GENUS",
+                "matchType": "HIGHERRANK",
+                "confidence": 95,
+                "scientificName": "Aquila Brisson, 1760",
+                "canonicalName": "Aquila",
+            }
+        ) as http,
+        pytest.raises(TaxonomyError, match="HIGHERRANK"),
+    ):
+        match_name(http, "Aquila ayresii")

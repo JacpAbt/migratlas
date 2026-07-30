@@ -19,10 +19,20 @@ class TaxonMatch:
     """A name resolved against the Backbone."""
 
     usage_key: int
+    """The *accepted* usage, following the Backbone's own redirect where the name is a synonym.
+
+    Not the key the name itself carries. A spine that returned synonym keys would give two sources
+    two different keys for one taxon whenever they used different names for it -- so a join across
+    them would silently drop the species rather than fail. SABAP1 is where this showed up: its
+    ``Psalidoprocne holomelas`` is a synonym of the subspecies ``Psalidoprocne pristoptera
+    holomelas``, and anything else calling that bird by its current name would not have met it.
+    """
     scientific_name: str
     canonical_name: str
     rank: str
     status: str
+    """As GBIF reported it for the name asked about, so a synonym stays visible in the audit trail
+    even though ``usage_key`` points at the accepted taxon."""
     match_type: str
     confidence: int
 
@@ -67,8 +77,11 @@ def match_name(http: httpx.Client, name: str) -> TaxonMatch:
         msg = f"Low-confidence GBIF match for {name!r} (confidence={confidence})"
         raise TaxonomyError(msg)
 
+    # Follow the Backbone to the accepted usage. See TaxonMatch.usage_key for why a synonym key
+    # would be worse than useless across two sources that name the same bird differently.
+    accepted = payload.get("acceptedUsageKey")
     return TaxonMatch(
-        usage_key=int(usage_key),
+        usage_key=int(accepted if accepted is not None else usage_key),
         scientific_name=str(payload.get("scientificName", name)),
         canonical_name=str(payload.get("canonicalName", name)),
         rank=str(payload.get("rank", "UNRANKED")),

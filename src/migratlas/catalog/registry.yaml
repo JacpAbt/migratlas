@@ -349,3 +349,49 @@ sources:
       uneven (fifty for MIROC6 and CanESM5, three for nine others), so members are averaged within a
       model before models are averaged together.
     added: 2026-07-30
+
+  # The first source that is neither northern nor marine, and the one that fills the terrestrial
+  # realm. Realm is a judgement: an atlas card records which birds occupy a patch of land, where
+  # the radar in Phase 1a records birds in flight, so the same species can appear under both.
+  - id: sabap1
+    title: Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991
+    realm: terrestrial
+    evidence_type: survey_index
+    taxon_scope: exact
+    landing_page: https://www.gbif.org/dataset/282d0ccb-4fa0-40f9-8593-105c77e88417
+    download_uri: https://orphans.gbif.org/ZA/282d0ccb-4fa0-40f9-8593-105c77e88417.zip
+    # Served by GBIF itself rather than by the publisher: the original IPT is gone, which is what
+    # `orphans.gbif.org` means. SABAP2's IPT is still advertised and does not answer at all.
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      South African National Biodiversity Institute. Southern African Bird Atlas Project. Version
+      1.0. Occurrence dataset https://doi.org/10.15468/ry4ux6 accessed via GBIF.org on 2026-07-30.
+      Underlying atlas: Harrison, J. A., Allan, D. G., Underhill, L. G., Herremans, M., Tree, A. J.,
+      Parker, V., Brown, C. J. (eds) (1997). The Atlas of Southern African Birds. BirdLife South
+      Africa, Johannesburg.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+    # Aggregate by construction, and generalised further than the TDWG Sensitive Species Extension
+    # asks: a row is a count of atlas cards over a quarter-degree cell (~25 km) for one month,
+    # pooled over every observer. There is no individual, no nest and no coordinate finer than the
+    # cell in the source itself, so nothing here can be sharpened into a location. `low` rather than
+    # `not_sensitive` because the taxa include species that are poaching-sensitive at fine scale,
+    # and the gate should not record a judgement that the *species* are safe.
+    default_sensitivity: low
+    caveats: >-
+      Citizen science, so effort is not fixed by design the way a trawl survey's is: cards per cell
+      over the 1987–1991 core run from 4 at the tenth percentile to 119 at the ninetieth and 2,271 at
+      the maximum, which is why reporting rate is stored as cards-with-species over cards and why the
+      consistent-footprint rule from Phase 1b has to be applied before any comparison. Presence only
+      — `occurrenceStatus` is empty for all 5,053,399 rows — so an absence is the absence of a row
+      and the denominator has to come from the cards. Dates are month resolution: the `day` column
+      holds 1, 28, 30 or 31, the ends of a month rather than an observation date. Years in the
+      archive run from 1901 to 2975, both impossible, so the ingest keeps 1950–1999 and logs what it
+      drops. 830 of 98,878 cards carry records in two cells and are counted once per cell, because a
+      card that touches two cells contributed effort to both. The cell id is derived from the cell
+      centre rather than reusing the atlas's quarter-degree letter codes, so it stays checkable
+      against the coordinates in the same row.
+    added: 2026-07-30
