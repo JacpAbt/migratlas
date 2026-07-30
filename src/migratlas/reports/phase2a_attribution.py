@@ -460,7 +460,15 @@ def render() -> str:
         )
         return "\n".join(out)
 
-    out += ["", "=" * 78, "modelled warming and the human share", "=" * 78]
+    out += [
+        "",
+        "=" * 78,
+        "modelled warming and the human share",
+        "=" * 78,
+        "The +- is the spread across models, not the uncertainty of any one trend: it says how much",
+        "the modelling centres disagree, which is the thing a single-model answer would hide.",
+        "",
+    ]
     out.append(
         f"  {'window':<12} {'models':>6}  {'W_hist degC/dec':>17}  {'W_nat degC/dec':>17}  {'f':>6}"
     )

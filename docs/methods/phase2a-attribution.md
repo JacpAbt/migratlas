@@ -107,6 +107,9 @@ experiments landed, 3 members each where 3 exist (GFDL-CM4 publishes 1 `historic
 | **1995–2014** | 15 | **+0.586 ± 0.090** | **+0.010 ± 0.090** | **0.98** |
 | 1980–2014 | 15 | +0.517 ± 0.077 | +0.060 ± 0.038 | 0.88 |
 
+The ± is the **spread across models**, not the uncertainty of any one trend — it says how much the
+modelling centres disagree, which is what a single-model answer would hide.
+
 **All four predictions held.**
 
 1. **`W_hist` reproduces the observed warming.** +0.586 modelled against +0.518 observed, a ratio of

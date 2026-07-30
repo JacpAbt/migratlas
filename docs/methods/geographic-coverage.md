@@ -114,13 +114,39 @@ asking for, and it should be decided deliberately rather than by a driver loader
 defaulting to a North American reanalysis.
 
 **Southern hemisphere and Africa.** The
-[Southern African Bird Atlas Project 2](https://sabap2.birdmap.africa/) has run since 2007 with
-~19 million records over 600,000+ checklists across eight countries, expanded by the African Bird
-Atlas Project to 24 countries, open access and mirrored on
-[GBIF](https://www.gbif.org/dataset/282d0ccb-4fa0-40f9-8593-105c77e88417). Structurally it is
-repeated checklists per pentad, which is `SURVEY_INDEX` with reporting rate as the index — the
-same shape FISHGLOB already exercises. This is the one candidate that addresses southern hemisphere
-*and* tropics *and* a continent with no representation at all.
+[Southern African Bird Atlas Project 2](https://sabap2.birdmap.africa/) has run since 2007, open
+access and mirrored on GBIF. Structurally it is repeated checklists per pentad, which is
+`SURVEY_INDEX` with reporting rate as the index — the same shape FISHGLOB already exercises. This is
+the one candidate that addresses southern hemisphere *and* tropics *and* a continent with no
+representation at all.
+
+**Three corrections, all checked against the GBIF and atlas APIs on 2026-07-30.** This note gave
+the wrong dataset and the wrong size, and the access route it assumed does not work.
+
+- **The key quoted above was SABAP1, not SABAP2.** `282d0ccb-4fa0-40f9-8593-105c77e88417` is the
+  *Southern African Bird Atlas Project* — 5,053,399 records, 1953–1992 with the atlas core in
+  1987–1991. SABAP2 is `906e6978-e292-4a8b-9c39-adf6bb0f3323`, with **25,687,526** records over
+  2007–2026, not ~19 million. Both are CC BY 4.0. "African Bird Atlas Project"
+  (`285550d0-…`) is a *metadata-only* dataset with zero records, and SABAP2 already carries Malawi,
+  Zambia and Mozambique, so there is no separate 24-country occurrence dataset to ingest.
+- **SABAP2's own archive is unreachable.** The endpoint GBIF advertises is an IPT 2.3.2 at
+  `aduipt.uct.ac.za:8080`, and the host times out on the archive and on its small EML alike. SABAP1's
+  archive, by contrast, is served by GBIF itself at `orphans.gbif.org` (133 MiB) because the
+  publisher's IPT is gone — so the older atlas is the one that can be ingested today.
+- **The atlas API works, and it is pooled.** `api.birdmap.africa/sabap2/v2/summary/species/{id}/
+  project/sabap2` returns one row per pentad with its bounding box, `cards`, `records`,
+  `reporting_rate`, twelve monthly rates and lifetime first-sighting statistics — 20,248 pentads
+  under the full protocol and 22,251 ad-hoc, **separated**, which is the effort distinction that
+  matters. But `reporting_rate` is computed over 2007–present as a whole and no per-year endpoint
+  exists. So the API gives a static effort-controlled atlas, not a series.
+
+**What that leaves.** Without a GBIF account, the change-detection design is **atlas against
+atlas** — SABAP1 1987–1991 against SABAP2 pooled, which is the EBBA1→EBBA2 design and the standard
+comparison in this literature — plus a genuinely new globe layer for southern Africa. A
+*within*-SABAP2 trend needs the raw records, and the only working bulk route to those is the GBIF
+occurrence download API, which requires a free account and mints a citable DOI per download. That is
+a decision to take deliberately, like the Copernicus account above, rather than by assuming a route
+that turns out to be dead.
 
 **Marine, southern hemisphere.** No trawl series south of the equator is in FISHGLOB. South
 African, Australian, New Zealand and Chilean demersal surveys exist and are the obvious next
@@ -154,8 +180,12 @@ a safe default here; it is the thing most likely to be wrong.
 
 Nothing here is scheduled ahead of Phase 2a. When it is:
 
-1. Widen eBird beyond CONUS — a constant, not a source.
-2. ENRAM aerial radar — same evidence type, same metric, second continent, CC0.
-3. SABAP2/ABAP — southern hemisphere, tropics, a new continent, and `SURVEY_INDEX` again.
-4. Research southern-hemisphere trawl series.
-5. Only then a terrestrial source, which is a new realm and a new ethics surface.
+1. **SABAP1, then SABAP2** — southern hemisphere, tropics, a new continent, and `SURVEY_INDEX`
+   again. SABAP1 first because it is the half that can be ingested without a new account.
+2. Widen eBird beyond CONUS — a constant, not a source.
+3. Research southern-hemisphere trawl series.
+4. Only then a terrestrial source, which is a new realm and a new ethics surface.
+
+ENRAM has left this list: one radar has fifteen usable autumns, so it cannot carry a trend at all,
+and what it can still do is descriptive. It stays in the section above as a documented reassessment
+rather than as queued work.

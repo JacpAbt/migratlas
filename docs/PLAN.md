@@ -53,8 +53,18 @@ is now *auditing the change we already detected* rather than detecting more.
 3. **Phase 2a first links, per `phase2a-design.md`.** Thermal tracking in FISHGLOB needs no new
    source; the aerial timing response needs only ERA5.
 4. **Surface the findings on the globe** — a change layer and a results panel.
-5. **ENRAM, then SABAP2**, per `geographic-coverage.md`.
-6. **Forecasting**, unchanged.
+5. **The causal step** — CMIP6 DAMIP `hist-nat` against `historical`, per `phase2a-attribution.md`.
+   Not in the 2026-07-29 list because it sat under "Phase 2a first links"; it is separate work and
+   it is the plan's novel contribution. **Done 2026-07-30**: 15 models, `f = 0.98`, so the thermal
+   half of the autumn advance is essentially all anthropogenic.
+6. **SABAP2 and SABAP1**, per `geographic-coverage.md`. ENRAM is out, not merely deferred: one radar
+   has ≥15 usable autumns, so it cannot carry a trend at all. Access was tested on 2026-07-30 and
+   changes the shape of this item — SABAP1's archive is served by GBIF (133 MiB) and ingestible now,
+   SABAP2's own IPT at UCT is **unreachable**, and the atlas API serves per-pentad card counts and
+   reporting rates **pooled over 2007–present** rather than per year. So without a GBIF account the
+   design is atlas-against-atlas (SABAP1 1987–1991 against SABAP2 pooled, the EBBA1→EBBA2 design)
+   and there is no within-SABAP2 trend.
+7. **Forecasting**, unchanged.
 
 ## Corrections to the record
 
