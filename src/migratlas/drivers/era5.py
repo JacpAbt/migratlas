@@ -19,7 +19,7 @@ Two things about access, both learned by hitting them:
 """
 
 import logging
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, NamedTuple
 
 import numpy as np
 import polars as pl
@@ -41,13 +41,37 @@ SOURCE_ID: Final = "era5"
 API: Final = "https://cds.climate.copernicus.eu/api"
 DATASET: Final = "reanalysis-era5-single-levels-monthly-means"
 
-# Total precipitation, metres of water equivalent per day in the monthly-mean product. Converted
-# to millimetres on the way in, because a driver in metres invites a factor-of-1000 error in
-# whatever reads it.
-VARIABLE: Final = "total_precipitation"
-CANONICAL: Final = "total_precipitation"
-UNIT: Final = "mm day-1"
-M_TO_MM: Final = 1000.0
+
+class Field(NamedTuple):
+    """One ERA5 variable, with what it has to become before it enters the lake.
+
+    `scale` and `offset` are applied on the way in rather than left to whatever reads the driver
+    table. Precipitation arrives in metres, which invites a factor-of-1000 error downstream, and
+    temperature arrives in kelvin, which invites a subtraction someone forgets.
+    """
+
+    cds_name: str
+    canonical: str
+    unit: str
+    scale: float = 1.0
+    offset: float = 0.0
+
+
+FIELDS: Final[dict[str, Field]] = {
+    "precipitation": Field(
+        cds_name="total_precipitation",
+        canonical="total_precipitation",
+        unit="mm day-1",
+        # Metres of water equivalent per day in the monthly-mean product.
+        scale=1000.0,
+    ),
+    "temperature": Field(
+        cds_name="2m_temperature",
+        canonical="air_temperature_2m",
+        unit="degC",
+        offset=-273.15,
+    ),
+}
 
 # North, west, south, east. The radar network's own extent, so the request is small.
 CONUS_AREA: Final[tuple[float, float, float, float]] = (50.0, -125.0, 24.0, -66.0)
@@ -66,14 +90,14 @@ def _headers() -> dict[str, str]:
     return {"PRIVATE-TOKEN": get_settings().credential("cds_token")}
 
 
-def submit(years: list[int], months: list[int]) -> str:
+def submit(field: Field, years: list[int], months: list[int]) -> str:
     """Queue one request and return its job id."""
     import httpx  # noqa: PLC0415 -- only gridded drivers need it here
 
     payload = {
         "inputs": {
             "product_type": ["monthly_averaged_reanalysis"],
-            "variable": [VARIABLE],
+            "variable": [field.cds_name],
             "year": [str(year) for year in years],
             "month": [f"{month:02d}" for month in months],
             "time": ["00:00"],
@@ -137,16 +161,16 @@ def wait(job_id: str) -> str:
     raise RetrievalError(msg)
 
 
-def download(href: str) -> Path:
+def download(field: Field, href: str) -> Path:
     """Fetch the result into the raw archive, exactly as served."""
     from migratlas.ingest.http import RemoteFile, fetch  # noqa: PLC0415 -- avoids a cycle
 
-    name = f"{DATASET}-{VARIABLE}.nc"
+    name = f"{DATASET}-{field.cds_name}.nc"
     return fetch(RemoteFile(url=href, name=name), SOURCE_ID)
 
 
-def monthly(path: Path, located: list[Located]) -> pl.DataFrame:
-    """Monthly precipitation at each station, from the downloaded grid.
+def monthly(field: Field, path: Path, located: list[Located]) -> pl.DataFrame:
+    """One monthly field at each station, from the downloaded grid.
 
     ERA5 is a regular latitude/longitude grid, so `nearest_cells` sees it as a degenerate
     curvilinear one -- the same code that matches stations onto NARR's Lambert Conformal grid,
@@ -155,13 +179,15 @@ def monthly(path: Path, located: list[Located]) -> pl.DataFrame:
     import xarray as xr  # noqa: PLC0415 -- an optional extra, needed only for gridded drivers
 
     dataset = xr.open_dataset(path)
-    field = dataset[next(iter(dataset.data_vars))]
+    # Named `array`, not `field`: calling it `field` shadowed this function's own Field parameter,
+    # and the scale factor silently became an attribute lookup on an xarray DataArray.
+    array = dataset[next(iter(dataset.data_vars))]
     # CDS has used `time` and `valid_time` for this product at different points.
-    time_name = "valid_time" if "valid_time" in field.dims else "time"
+    time_name = "valid_time" if "valid_time" in array.dims else "time"
 
     frames = []
     for item in located:
-        column = field.isel(latitude=item.y, longitude=item.x).to_numpy().astype(np.float64)
+        column = array.isel(latitude=item.y, longitude=item.x).to_numpy().astype(np.float64)
         stamps = pl.Series("period_start", dataset[time_name].to_numpy()).cast(
             pl.Datetime("ms", time_zone="UTC")
         )
@@ -169,7 +195,7 @@ def monthly(path: Path, located: list[Located]) -> pl.DataFrame:
             pl.DataFrame(
                 {
                     "period_start": stamps,
-                    "value": np.ravel(column) * M_TO_MM,
+                    "value": np.ravel(column) * field.scale + field.offset,
                     "site_id": [item.site_id] * len(stamps),
                     "longitude": [item.longitude] * len(stamps),
                     "latitude": [item.latitude] * len(stamps),
@@ -179,7 +205,7 @@ def monthly(path: Path, located: list[Located]) -> pl.DataFrame:
     return pl.concat(frames)
 
 
-def to_samples(months: pl.DataFrame) -> pa.Table:
+def to_samples(field: Field, months: pl.DataFrame) -> pa.Table:
     """Driver rows, marked GRIDDED and carrying a monthly rather than nightly period."""
     out = months.select(
         source_id=pl.lit(SOURCE_ID),
@@ -188,9 +214,9 @@ def to_samples(months: pl.DataFrame) -> pa.Table:
         longitude=pl.col("longitude").cast(pl.Float64),
         latitude=pl.col("latitude").cast(pl.Float64),
         depth_m=pl.lit(None, dtype=pl.Float64),
-        variable=pl.lit(CANONICAL),
+        variable=pl.lit(field.canonical),
         value=pl.col("value").cast(pl.Float64),
-        unit=pl.lit(UNIT),
+        unit=pl.lit(field.unit),
         kind=pl.lit(DriverKind.GRIDDED.value),
         # Monthly, unlike narr's nightly rows, and said so rather than inferred from the dates.
         derived_from=pl.lit(f"{DATASET}:monthly_mean"),
@@ -212,13 +238,36 @@ def locate(points: list[Point], path: Path) -> list[Located]:
 
 
 def ingest(
-    points: list[Point], years: list[int], months: list[int], *, root: Path | None = None
+    points: list[Point],
+    years: list[int],
+    months: list[int],
+    *,
+    fields: tuple[str, ...] = ("precipitation",),
+    root: Path | None = None,
 ) -> WriteResult:
-    """Fetch, reshape and land monthly precipitation for a point set."""
+    """Fetch, reshape and land monthly fields for a point set.
+
+    Every requested field is written in one call, because the lake replaces the partitions a write
+    touches: landing temperature in a second write would delete the precipitation from every year
+    they share. Same constraint that shaped `narr.ingest(resume=...)`, arriving from a different
+    direction.
+    """
     catalog.admit(SOURCE_ID)
-    path = download(wait(submit(years, months)))
-    located = locate(points, path)
-    log.info("ERA5 grid: %d stations matched", len(located))
-    table = to_samples(monthly(path, located))
-    log.info("%d driver samples", table.num_rows)
+    frames = []
+    located: list[Located] = []
+    for name in fields:
+        field = FIELDS[name]
+        path = download(field, wait(submit(field, years, months)))
+        if not located:
+            located = locate(points, path)
+            log.info("ERA5 grid: %d stations matched", len(located))
+        frames.append(monthly(field, path, located))
+        log.info("  %s: %d station-months", field.canonical, frames[-1].height)
+
+    import pyarrow as pa  # noqa: PLC0415 -- only this concatenation needs it at runtime
+
+    table = pa.concat_tables(
+        [to_samples(FIELDS[name], frame) for name, frame in zip(fields, frames, strict=True)]
+    )
+    log.info("%d driver samples across %d field(s)", table.num_rows, len(fields))
     return write_table(table, DRIVER_SAMPLES, source_id=SOURCE_ID, root=root)

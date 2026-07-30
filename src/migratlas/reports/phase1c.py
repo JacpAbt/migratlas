@@ -653,7 +653,7 @@ def weather_or_instrument(*, max_year: int = 2025) -> list[str]:
     rain = scan_dataset(DRIVER_SAMPLES.name, source_id=era5.SOURCE_ID)
     try:
         precipitation = (
-            rain.filter(pl.col("variable") == era5.CANONICAL)
+            rain.filter(pl.col("variable") == era5.FIELDS["precipitation"].canonical)
             .select(
                 station_id=pl.col("site_id"),
                 year=pl.col("period_start").dt.year(),

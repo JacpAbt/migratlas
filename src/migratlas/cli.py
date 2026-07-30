@@ -26,6 +26,7 @@ from migratlas.reports import (
     phase1b,
     phase1c,
     phase2a_thermal,
+    phase2a_timing,
 )
 from migratlas.taxonomy import index as taxon_index
 from migratlas.tiles import layers as tile_layers
@@ -148,9 +149,12 @@ def ingest_era5(
     end: Annotated[int, typer.Option(help="Last year, inclusive.")] = 2025,
     months: Annotated[
         str, typer.Option(help="Comma-separated calendar months.")
-    ] = "3,4,5,6,8,9,10,11",
+    ] = "3,4,5,6,7,8,9,10,11",
+    fields: Annotated[
+        str, typer.Option(help="Comma-separated fields: precipitation, temperature.")
+    ] = "precipitation,temperature",
 ) -> None:
-    """Land ERA5 monthly precipitation at the radar stations (driver samples, gridded).
+    """Land ERA5 monthly fields at the radar stations (driver samples, gridded).
 
     An independent precipitation record, which is what separates weather from instrument in the
     2012 screening step -- see docs/methods/phase1c-homogeneity.md, Test D.
@@ -163,6 +167,7 @@ def ingest_era5(
         points,
         list(range(start, end + 1)),
         [int(part) for part in months.split(",")],
+        fields=tuple(part.strip() for part in fields.split(",")),
     )
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
@@ -259,6 +264,13 @@ def report_phase2a_thermal() -> None:
     """Thermal tracking: did a species keep its temperature or keep its place?"""
     logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
     print(phase2a_thermal.render())
+
+
+@report_app.command("phase2a-timing")
+def report_phase2a_timing() -> None:
+    """Does warming explain the autumn advance? Sensitivity times warming against observed."""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
+    print(phase2a_timing.render())
 
 
 @report_app.command("phase1b")
