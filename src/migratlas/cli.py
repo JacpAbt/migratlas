@@ -15,7 +15,16 @@ from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
 from migratlas.drivers import cmip6, era5, narr
-from migratlas.ingest import bbs, darkecology, ebird_st, fishglob, megamove, obis, sabap1
+from migratlas.ingest import (
+    bbs,
+    darkecology,
+    ebird_st,
+    fishglob,
+    megamove,
+    obis,
+    sabap1,
+    sabap2,
+)
 from migratlas.lake import check as lake_check
 from migratlas.reports import (
     findings,
@@ -121,6 +130,19 @@ def ingest_bbs() -> None:
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     result = bbs.ingest()
+    print(f"{result.rows:,} rows -> {result.path}")
+    print(f"run {result.run_id}")
+
+
+@ingest_app.command("sabap2")
+def ingest_sabap2() -> None:
+    """Land the second Southern African Bird Atlas (SURVEY_INDEX, terrestrial).
+
+    Streams a 7.4 GiB Darwin Core archive rather than extracting the 53 GB inside it, then caches a
+    projection, so the first run is slow and later ones reuse it.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    result = sabap2.ingest()
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
 

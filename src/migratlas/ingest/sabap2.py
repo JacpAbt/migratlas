@@ -42,7 +42,12 @@ problem `sabap1.py` ran into. The DwC-A carries those too, beside the verbatim f
 import logging
 from typing import TYPE_CHECKING, Any, Final
 
+import polars as pl
+
+from migratlas.catalog import loader as catalog
 from migratlas.config import get_settings
+from migratlas.evidence import EvidenceType, Realm, TaxonScope, spec_for
+from migratlas.lake.writer import WriteResult, write_evidence
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -257,6 +262,167 @@ def _as_table(batch: list[list[str]], schema: pa.Schema) -> pa.Table:
             for name, values in zip(schema.names, columns, strict=True)
         },
         schema=schema,
+    )
+
+
+PENTAD_DEG: Final = 1 / 12
+"""Five arcminutes. A quarter-degree SABAP1 cell holds exactly nine of these, which is what makes
+the two atlases comparable at all -- see `metrics` and the method note."""
+
+EFFORT_UNIT: Final = "atlas_cards"
+"""The same unit `sabap1.py` uses, deliberately. The whole point of this source is a comparison
+against that one, and two similar-but-different denominators would make it meaningless."""
+
+FULL_PROTOCOL: Final = "fullprot"
+"""The effort-standardised protocol: a pentad covered for a minimum period with a species list.
+`adhocprot` is a casual list -- 9.5 species per card against 52 -- and is landed separately rather
+than mixed in, so it can be excluded knowingly and counted."""
+
+PLAUSIBLE_YEARS: Final[tuple[int, int]] = (1900, 2027)
+"""Only the impossible is excluded, as in `sabap1.py`. The archive holds years back to 1930, which
+is early for a project that began in 2007 but not impossible for a retrospective card. Which years
+belong to the atlas is the metric's question, answered through ATLAS_YEARS."""
+
+ATLAS_YEARS: Final[tuple[int, int]] = (2007, 2025)
+"""The years the project has run at scale. 2000-2006 carry single-digit cards, and 2026 is a partial
+year at the time of download -- 108,352 rows against 1.3 million for a full one."""
+
+
+def core(archive: Path) -> pl.DataFrame:
+    """The projected columns, typed, with the protocol and the pentad pulled out.
+
+    The protocol comes out of `occurrenceID` because that is where the atlas puts it, and the pentad
+    out of `verbatimLocality` rather than out of the card id. Those two disagree for 117,960 of
+    21,279,299 full-protocol rows -- half a percent -- and the record's own locality is the better
+    authority for where the record is than a string embedded in the identifier of the card it
+    arrived on. The disagreement is reported rather than reconciled.
+    """
+    frame = (
+        pl.scan_parquet(archive.parent / PROJECTION)
+        .select(
+            card=pl.col("fieldNotes"),
+            pentad=pl.col("verbatimLocality"),
+            protocol=pl.col("occurrenceID").str.extract(r"sabap2:(\w+?):", 1),
+            year=pl.col("year").cast(pl.Int32, strict=False),
+            month=pl.col("month").cast(pl.Int32, strict=False),
+            taxon_key=pl.col("speciesKey").cast(pl.Int64, strict=False),
+            taxon_label=pl.col("species"),
+            latitude=pl.col("decimalLatitude").cast(pl.Float64, strict=False),
+            longitude=pl.col("decimalLongitude").cast(pl.Float64, strict=False),
+        )
+        .collect()
+    )
+    log.info("%s projected rows", f"{frame.height:,}")
+
+    disagree = frame.filter(
+        pl.col("protocol") == FULL_PROTOCOL, pl.col("card").str.slice(0, 9) != pl.col("pentad")
+    ).height
+    log.info(
+        "  %s full-protocol rows where the card id's pentad differs from verbatimLocality",
+        f"{disagree:,}",
+    )
+
+    usable = frame.drop_nulls(
+        ["card", "pentad", "protocol", "year", "latitude", "longitude"]
+    ).filter(pl.col("year").is_between(*PLAUSIBLE_YEARS))
+    untyped = frame.height - usable.height
+    if untyped:
+        log.warning(
+            "dropping %s rows with no card, pentad, protocol, year or position", f"{untyped:,}"
+        )
+
+    unattributed = usable.filter(pl.col("taxon_key").is_null()).height
+    log.info(
+        "  %s rows carry no accepted species key (unidentified or coarser than species)",
+        f"{unattributed:,}",
+    )
+    return usable.drop_nulls("taxon_key").with_columns(
+        month=pl.col("month").fill_null(1).clip(1, 12)
+    )
+
+
+def reporting_rates(frame: pl.DataFrame) -> pl.DataFrame:
+    """Cards-with-the-species and cards-submitted, per pentad per month per species per protocol.
+
+    Aggregated **within** protocol rather than across it. A full-protocol card and an ad-hoc list
+    are not the same unit of effort, and pooling them would put a nine-species casual list in the
+    same denominator as a fifty-two-species survey.
+
+    A card is counted once per pentad, as in `sabap1.py`: a card with records in two pentads
+    contributed effort to both.
+    """
+    keys = ("pentad", "protocol", "year", "month")
+    effort = frame.group_by(keys).agg(
+        effort=pl.col("card").n_unique(),
+        latitude=pl.col("latitude").first(),
+        longitude=pl.col("longitude").first(),
+    )
+    present = frame.group_by([*keys, "taxon_key", "taxon_label"]).agg(
+        count=pl.col("card").n_unique()
+    )
+    return present.join(effort, on=keys, how="inner")
+
+
+def to_evidence(rates: pl.DataFrame) -> pa.Table:
+    """Reshape into SURVEY_INDEX rows.
+
+    No name resolution: `speciesKey` is already an accepted GBIF Backbone key, so this source cannot
+    inherit the synonym problem `sabap1.py` had to patch with a table of six replacements.
+    """
+    out = rates.select(
+        source_id=pl.lit(SOURCE_ID),
+        realm=pl.lit(Realm.TERRESTRIAL.value),
+        taxon_scope=pl.lit(TaxonScope.EXACT.value),
+        taxon_key=pl.col("taxon_key"),
+        taxon_label=pl.col("taxon_label"),
+        # The atlas's own pentad code, prefixed so it cannot be mistaken for SABAP1's derived
+        # quarter-degree id. Rolling pentads up to those cells is the metric's job.
+        site_id=pl.lit("pentad:") + pl.col("pentad"),
+        period_start=pl.date(pl.col("year"), pl.col("month"), 1).cast(
+            pl.Datetime("ms", time_zone="UTC")
+        ),
+        period_end=pl.date(pl.col("year"), pl.col("month"), 1)
+        .dt.month_end()
+        .cast(pl.Datetime("ms", time_zone="UTC")),
+        site_longitude=pl.col("longitude"),
+        site_latitude=pl.col("latitude"),
+        site_depth_m=pl.lit(None, dtype=pl.Float64),
+        count=pl.col("count").cast(pl.Float64),
+        effort=pl.col("effort").cast(pl.Float64),
+        effort_unit=pl.lit(EFFORT_UNIT),
+        protocol=pl.lit("BirdMAP ") + pl.col("protocol"),
+    )
+    schema = spec_for(EvidenceType.SURVEY_INDEX).schema
+    return out.select(schema.names).to_arrow().cast(schema)
+
+
+def ingest(root: Path | None = None) -> WriteResult:
+    """Fetch, project, aggregate to pentad-month reporting rates and land as SURVEY_INDEX."""
+    catalog.admit(SOURCE_ID)
+    archive = fetch_archive(DOWNLOAD_KEY)
+    project(archive)
+    frame = core(archive)
+
+    rates = reporting_rates(frame)
+    full = rates.filter(pl.col("protocol") == FULL_PROTOCOL)
+    log.info(
+        "%s rows | %s pentads | %s cards | %s species | %d-%d",
+        f"{rates.height:,}",
+        f"{frame['pentad'].n_unique():,}",
+        f"{frame['card'].n_unique():,}",
+        f"{frame['taxon_key'].n_unique():,}",
+        frame["year"].min(),
+        frame["year"].max(),
+    )
+    log.info(
+        "  full protocol: %s rows, %s pentads; ad-hoc landed separately",
+        f"{full.height:,}",
+        f"{full['pentad'].n_unique():,}",
+    )
+    table = to_evidence(rates)
+    log.info("%s evidence rows", f"{table.num_rows:,}")
+    return write_evidence(
+        table, spec_for(EvidenceType.SURVEY_INDEX), source_id=SOURCE_ID, root=root
     )
 
 

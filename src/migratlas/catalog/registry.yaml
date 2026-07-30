@@ -442,3 +442,55 @@ sources:
       Species totals include unidentified groupings and hybrids whose AOU codes carry no binomial;
       those rows are dropped and counted, as they cannot be evidence about a taxon.
     added: 2026-07-30
+
+  # The late half of an atlas-against-atlas comparison, twenty years after sabap1. Landed with the
+  # same effort unit as that source on purpose: two similar-but-different denominators would make
+  # the comparison meaningless, which is the whole reason this source is here.
+  - id: sabap2
+    title: Southern African Bird Atlas Project 2 (SABAP2) — atlas cards, 2007–2026
+    realm: terrestrial
+    evidence_type: survey_index
+    taxon_scope: exact
+    landing_page: https://www.gbif.org/dataset/906e6978-e292-4a8b-9c39-adf6bb0f3323
+    download_uri: https://doi.org/10.15468/dl.wb5t54
+    # A GBIF download DOI, not the dataset page: it pins the exact 25,687,526 records a result was
+    # computed on, where "SABAP2" alone means whatever the atlas held on the day you asked. The
+    # publisher's own IPT at aduipt.uct.ac.za:8080 does not answer at all — see
+    # docs/methods/geographic-coverage.md.
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      Brooks, M., Ryan, P. (2026). Southern African Bird Atlas Project 2. Version 1.87. FitzPatrick
+      Institute of African Ornithology. Occurrence dataset, accessed via GBIF.org, download
+      https://doi.org/10.15468/dl.wb5t54. Protocol described in Brooks, M., Rose, S., Altwegg, R.,
+      Lee, A. T. K., Nel, H., Ottosson, U., Retief, E., Reynolds, C., Ryan, P. G., Shema, S., Tende,
+      T., Underhill, L. G., Thomson, R. L. (2022). The African Bird Atlas Project: a description of
+      the project and BirdMap data-collection protocol. Ostrich 93, 223–232.
+      The atlas exists because thousands of volunteers submitted cards.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+    # Aggregate by construction and generalised further than the TDWG extension asks: a row counts
+    # atlas cards over a five-arcminute pentad for one month, pooled over observers. GBIF flags the
+    # dataset as gridded, so the coordinates are pentad centroids rather than observation points.
+    # `low` rather than `not_sensitive` for the same reason as sabap1 — the taxa include species
+    # that are sensitive at fine scale, and the gate should not record a judgement that they are not.
+    default_sensitivity: low
+    caveats: >-
+      Citizen science, so effort is not fixed by design the way a trawl survey's is: cards per pentad
+      under the full protocol run from 1 at the tenth percentile to 32 at the ninetieth and 3,963 at
+      the maximum, so the consistent-footprint rule from Phase 1b has to be applied before any
+      comparison. Two protocols are landed **separately, never pooled** — a full-protocol card
+      averages 52 species and an ad-hoc list 9.5, so one denominator cannot serve both; the protocol
+      travels in the `protocol` field and 4,408,227 of 25,687,526 rows are ad-hoc. Presence only, so
+      an absence is the absence of a row and the denominator comes from the cards. 390,194 rows carry
+      no accepted species key, being unidentified or coarser than species, and are dropped and
+      counted. Years in the archive run from 1930, early for a project that began in 2007 but not
+      impossible for a retrospective card, so the ingest keeps 1900–2027 and the analysis window
+      (2007–2025) excludes both the stragglers and the partial 2026. For 117,960 full-protocol rows
+      the pentad embedded in the card identifier disagrees with the record's own `verbatimLocality`;
+      the locality is taken as the authority and the disagreement reported rather than reconciled.
+      Coverage is overwhelmingly South Africa. Comparing against SABAP1 means rolling nine pentads
+      into each quarter-degree cell, and the two atlases differ in card duration as well as in grid.
+    added: 2026-07-30

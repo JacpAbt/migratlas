@@ -25,6 +25,7 @@ each source carries its own terms.
 | [CMIP6 DAMIP and historical — near-surface air temperature, detection and attribution](https://pcmdi.llnl.gov/CMIP6/) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991](https://www.gbif.org/dataset/282d0ccb-4fa0-40f9-8593-105c77e88417) | `survey_index` | `terrestrial` | CC BY 4.0 | permitted |
 | [North American Breeding Bird Survey — route counts, 1966–2025](https://www.usgs.gov/centers/eesc/science/north-american-breeding-bird-survey) | `survey_index` | `terrestrial` | CC0 1.0 | permitted |
+| [Southern African Bird Atlas Project 2 (SABAP2) — atlas cards, 2007–2026](https://www.gbif.org/dataset/906e6978-e292-4a8b-9c39-adf6bb0f3323) | `survey_index` | `terrestrial` | CC BY 4.0 | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -226,3 +227,20 @@ Citizen science, so effort is not fixed by design the way a trawl survey's is: c
 **Caveats**
 
 Roadside by design, so the sample is not a random sample of the landscape and the bias is not random with respect to land use — which matters directly for any comparison against a land-cover or urbanisation driver. Observer skill is the best-documented bias in the dataset: counts differ between observers and a first-year observer differs from a practised one, so `ObsN`, `RunType` and `RPID` all travel into the protocol field for use as break terms. Only RPID 101 is the standard protocol; other values are experimental or incidental runs that the survey's own analyses exclude. **2020 is absent entirely** — field activities were cancelled for COVID-19 — so a trend fit must be told about the gap rather than interpolating across it. Routes are added and abandoned over time and the loss is not random, which is the same missing-not-at-random problem the consistent-footprint rule addresses in Phase 1b. The publisher holds migrant and non-breeder records in a separate file, excluded from the counts landed here; the ingest reports how many, because it is a judgement made on our behalf. Species totals include unidentified groupings and hybrids whose AOU codes carry no binomial; those rows are dropped and counted, as they cannot be evidence about a taxon.
+
+## Southern African Bird Atlas Project 2 (SABAP2) — atlas cards, 2007–2026
+
+- **id** `sabap2`
+- **evidence type** `survey_index` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.gbif.org/dataset/906e6978-e292-4a8b-9c39-adf6bb0f3323
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+- **sensitivity** `low` by default
+
+**Cite as**
+
+> Brooks, M., Ryan, P. (2026). Southern African Bird Atlas Project 2. Version 1.87. FitzPatrick Institute of African Ornithology. Occurrence dataset, accessed via GBIF.org, download https://doi.org/10.15468/dl.wb5t54. Protocol described in Brooks, M., Rose, S., Altwegg, R., Lee, A. T. K., Nel, H., Ottosson, U., Retief, E., Reynolds, C., Ryan, P. G., Shema, S., Tende, T., Underhill, L. G., Thomson, R. L. (2022). The African Bird Atlas Project: a description of the project and BirdMap data-collection protocol. Ostrich 93, 223–232. The atlas exists because thousands of volunteers submitted cards.
+
+**Caveats**
+
+Citizen science, so effort is not fixed by design the way a trawl survey's is: cards per pentad under the full protocol run from 1 at the tenth percentile to 32 at the ninetieth and 3,963 at the maximum, so the consistent-footprint rule from Phase 1b has to be applied before any comparison. Two protocols are landed **separately, never pooled** — a full-protocol card averages 52 species and an ad-hoc list 9.5, so one denominator cannot serve both; the protocol travels in the `protocol` field and 4,408,227 of 25,687,526 rows are ad-hoc. Presence only, so an absence is the absence of a row and the denominator comes from the cards. 390,194 rows carry no accepted species key, being unidentified or coarser than species, and are dropped and counted. Years in the archive run from 1930, early for a project that began in 2007 but not impossible for a retrospective card, so the ingest keeps 1900–2027 and the analysis window (2007–2025) excludes both the stragglers and the partial 2026. For 117,960 full-protocol rows the pentad embedded in the card identifier disagrees with the record's own `verbatimLocality`; the locality is taken as the authority and the disagreement reported rather than reconciled. Coverage is overwhelmingly South Africa. Comparing against SABAP1 means rolling nine pentads into each quarter-degree cell, and the two atlases differ in card duration as well as in grid.
