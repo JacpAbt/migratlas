@@ -150,6 +150,23 @@ def test_no_cell_is_counted_detectable_by_a_source_that_cannot_be(document: dict
         assert entry["detectable_cells"] <= entry["cells"]
 
 
+def test_a_source_admitted_for_its_series_produces_at_least_one(document: dict[str, Any]) -> None:
+    """The guard that was missing when the haul bug shipped, stated as the invariant it violates.
+
+    A ceiling of "detectable" is an assertion that this source exists in the lake *because* it can
+    support a trend. Zero detectable cells contradicts that assertion, and it is a much stronger
+    check than any threshold: it caught nothing about the number 676 being right, but it would have
+    refused 0 immediately, which is where the bug was.
+    """
+    for entry in document["coverage"]:
+        if entry["ceiling"] != "detectable":
+            continue
+        assert entry["detectable_cells"] > 0, (
+            f"{entry['source_id']} is in the lake because it can support trends and contributes "
+            f"none of {entry['cells']} cells -- check what its unit of repetition is"
+        )
+
+
 def test_the_layer_spans_more_than_one_realm(document: dict[str, Any]) -> None:
     """The same structural guarantee the ledger carries, applied to the map.
 
