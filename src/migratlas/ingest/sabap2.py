@@ -15,13 +15,28 @@ works, which is recorded in docs/methods/geographic-coverage.md:
 Downloads are asynchronous: a request is queued, GBIF prepares an archive over minutes to hours, and
 the key it returns is the handle. So this module submits and polls rather than blocking.
 
-**SIMPLE_CSV rather than the Darwin Core archive**, for two reasons beyond size. It carries GBIF's
-own `taxonKey` and `speciesKey`, which are *accepted* backbone keys -- so this source needs no name
-resolution and cannot inherit the synonym problem `sabap1.py` ran into. And everything the design
-needs survives in it: `catalogNumber` embeds the pentad and the card ("2215_1730_004876_20201115" is
-pentad, observer, date), `occurrenceID` carries "fullprot" or "adhocprot", and the coordinates are
-pentad centroids. What it drops is `fieldNotes`, which holds hours-observed per card -- a refinement
-on the card as the effort unit, not a requirement of it.
+**The Darwin Core archive, after SIMPLE_CSV turned out to be insufficient.** SIMPLE_CSV was asked
+for first, on the belief that `catalogNumber` carried the card id. It does not: in the download it
+repeats `occurrenceID` (`urn:fiao:sabap2:fullprot:rid10002350`). Reading the search API's own fields
+back in order shows where the card id actually lives:
+
+| field | content | in SIMPLE_CSV? |
+| --- | --- | --- |
+| `occurrenceID` | `urn:fiao:sabap2:fullprot:rid...` — carries the **protocol** | yes |
+| `fieldNotes` | `2215_1730_004876_20201115` — the **card**: pentad, observer, date | **no** |
+| `eventRemarks` | `TotalHour observing:3 ...` — hours per card | **no** |
+| `verbatimLocality` | `2215_1730` — the **pentad** | **no** |
+
+The card is the effort denominator, so a download without it cannot produce a reporting rate. The
+pentad *is* recoverable from the coordinates -- they are pentad centroids on a 1/12 degree grid,
+with a sub-arcsecond offset from `COORDINATE_ROUNDED` -- but the card is not recoverable from
+anything. A proxy of (pentad, observer, date) would split a card that spans several days, and a
+full-protocol card may cover its pentad over up to five, so the proxy would inflate effort by an
+unknown factor and do it unevenly between observers.
+
+What SIMPLE_CSV does get right, and what is worth keeping: GBIF's `taxonKey` and `speciesKey` are
+*accepted* backbone keys, so this source needs no name resolution and cannot inherit the synonym
+problem `sabap1.py` ran into. The DwC-A carries those too, beside the verbatim fields.
 """
 
 import logging
@@ -43,14 +58,17 @@ DATASET_KEY: Final = "906e6978-e292-4a8b-9c39-adf6bb0f3323"
 """SABAP2 on GBIF. Not 282d0ccb-..., which is SABAP1 -- the docs named the wrong one until
 2026-07-30, and the two atlases are twenty years apart."""
 
-FORMAT: Final = "SIMPLE_CSV"
+FORMAT: Final = "DWCA"
+"""The archive format. See the module docstring: SIMPLE_CSV omits the card id and so cannot produce
+an effort denominator."""
 
-DOWNLOAD_KEY: Final = "0018183-260721160103020"
-"""The download this project's results are computed on, requested 2026-07-30.
+SIMPLE_CSV_KEY: Final = "0018183-260721160103020"
+"""The first download, kept for the record rather than used.
 
-25,687,526 records, 2.35 GiB, **doi 10.15468/dl.8zjvpv** -- which is what a result cites, because it
-pins the exact records rather than "SABAP2 as of whenever". GBIF keeps a prepared download for six
-months, so a re-run after that needs a fresh request and will get a new DOI."""
+25,687,526 records, 2.35 GiB, doi 10.15468/dl.8zjvpv. Requested in SIMPLE_CSV on the mistaken belief
+that `catalogNumber` held the card id; it holds a copy of `occurrenceID`. Left here because a
+superseded download is part of the provenance, and because re-requesting it would be the obvious
+mistake to make twice."""
 
 # GBIF asks that a client identify itself, and a download is attributable to an account.
 USER_AGENT: Final = "migratlas (+https://github.com/JacpAbt/migratlas)"
