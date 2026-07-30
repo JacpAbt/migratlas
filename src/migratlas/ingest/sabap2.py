@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import httpx
+    import pyarrow as pa
 
 log = logging.getLogger(__name__)
 
@@ -154,6 +155,108 @@ def describe(key: str) -> str:
     return (
         f"{key}: {found.get('status')} | {found.get('totalRecords', 0):,} records | "
         f"{size / 1024**2:.0f} MiB | doi {found.get('doi', '-')}"
+    )
+
+
+CORE: Final = "occurrence.txt"
+
+PROJECTION: Final = "sabap2-core.parquet"
+"""Where the projected columns are cached, beside the archive in the raw store."""
+
+NEEDED: Final[tuple[str, ...]] = (
+    # Carries the protocol: "fullprot" or "adhocprot". Only full-protocol cards are effort-
+    # standardised, and the ad-hoc ones have to be excluded knowingly and counted.
+    "occurrenceID",
+    # The card: pentad, observer, date. The effort denominator, and the field SIMPLE_CSV omits.
+    "fieldNotes",
+    # The pentad code as the atlas writes it, so the grid never has to be inferred from coordinates.
+    "verbatimLocality",
+    "eventDate",
+    "year",
+    "month",
+    "day",
+    # Hours observed, whether nights were included, whether all habitats were covered. Effort
+    # covariates finer than the card, kept because they are free once the row is being read.
+    "eventRemarks",
+    # GBIF's *accepted* backbone key, so this source needs no name resolution at all.
+    "speciesKey",
+    "species",
+    "decimalLatitude",
+    "decimalLongitude",
+    "countryCode",
+)
+
+BATCH: Final = 500_000
+
+
+def project(archive: Path) -> Path:
+    """Stream the core file and keep only the columns the design needs.
+
+    The core is 33.5 GB uncompressed and the verbatim file another 19.5, so neither is extracted.
+    Instead the entry is read as a stream straight out of the zip and written out as Parquet holding
+    thirteen columns of twenty-five million rows, which is a few hundred megabytes rather than fifty
+    gigabytes. Cached, because the pass takes minutes.
+    """
+    import csv  # noqa: PLC0415 -- only this function needs these
+    import io  # noqa: PLC0415
+    import zipfile  # noqa: PLC0415
+
+    import pyarrow as pa  # noqa: PLC0415
+    import pyarrow.parquet as pq  # noqa: PLC0415
+
+    # GBIF writes its archives tab-delimited with no quote character, stripping tabs from values
+    # rather than quoting them. The reader has to be told: with the default, one apostrophe in an
+    # observer's name swallows every following line until the next one.
+
+    out = archive.parent / PROJECTION
+    if out.exists() and out.stat().st_size:
+        log.info("%s already projected (%.0f MiB)", out.name, out.stat().st_size / 1024**2)
+        return out
+
+    schema = pa.schema([pa.field(name, pa.string()) for name in NEEDED])
+    written = malformed = 0
+    partial = out.with_suffix(".part")
+
+    with zipfile.ZipFile(archive) as bundle, bundle.open(CORE) as raw:
+        stream = io.TextIOWrapper(raw, encoding="utf-8", errors="replace", newline="")
+        reader = csv.reader(stream, delimiter="\t", quoting=csv.QUOTE_NONE)
+        header = next(reader)
+        index = {name: header.index(name) for name in NEEDED}
+        width = len(header)
+
+        with pq.ParquetWriter(partial, schema, compression="zstd") as writer:
+            batch: list[list[str]] = []
+            for row in reader:
+                # A row of the wrong width means the delimiter appeared inside a value. Counted
+                # rather than guessed at: a silently shifted row would put a date in a taxon column.
+                if len(row) != width:
+                    malformed += 1
+                    continue
+                batch.append([row[index[name]] for name in NEEDED])
+                if len(batch) >= BATCH:
+                    writer.write_table(_as_table(batch, schema))
+                    written += len(batch)
+                    batch = []
+                    log.info("  %s rows projected", f"{written:,}")
+            if batch:
+                writer.write_table(_as_table(batch, schema))
+                written += len(batch)
+
+    partial.replace(out)
+    log.info("%s rows projected, %s malformed", f"{written:,}", f"{malformed:,}")
+    return out
+
+
+def _as_table(batch: list[list[str]], schema: pa.Schema) -> pa.Table:
+    import pyarrow as pa  # noqa: PLC0415 -- an optional extra everywhere else in this module
+
+    columns = list(zip(*batch, strict=True))
+    return pa.table(
+        {
+            name: pa.array(values, pa.string())
+            for name, values in zip(schema.names, columns, strict=True)
+        },
+        schema=schema,
     )
 
 

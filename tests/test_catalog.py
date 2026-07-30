@@ -68,9 +68,38 @@ def test_every_module_that_writes_to_the_lake_admits_its_source() -> None:
         # The writer module defines them; it does not call them about a source of its own.
         if path.parent.name == "lake":
             continue
+        # The import is required as well as the call, because `write_table(` is not a name this
+        # project owns: pyarrow's ParquetWriter has a method of exactly that name, and
+        # `ingest/sabap2.py` uses it to cache a projection of a 33 GB archive without going near
+        # the lake. A module that never imports the writer cannot be writing to the lake.
+        if "migratlas.lake.writer" not in text:
+            continue
         if any(call in text for call in writers) and "catalog.admit(" not in text:
             offenders.append(path.relative_to(source_root).as_posix())
     assert not offenders, f"these write to the lake without admitting a source: {offenders}"
+
+
+def test_the_lake_write_guard_still_catches_a_module_that_forgets_to_admit() -> None:
+    """The guard above was loosened to ignore pyarrow's identically-named method.
+
+    So it needs its own test: a module that really does import the lake writer and call it without
+    admitting a source must still be caught, or the loosening quietly disabled the invariant.
+    """
+    offender = "from migratlas.lake.writer import write_evidence\nwrite_evidence(table, spec)\n"
+    innocent = "import pyarrow.parquet as pq\nwriter.write_table(batch)\n"
+
+    def caught(text: str) -> bool:
+        if "migratlas.lake.writer" not in text:
+            return False
+        return any(call in text for call in ("write_table(", "write_evidence(")) and (
+            "catalog.admit(" not in text
+        )
+
+    assert caught(offender)
+    assert not caught(innocent)
+    assert not caught(
+        offender.replace("write_evidence(table", "catalog.admit(x)\nwrite_evidence(t")
+    )
 
 
 def test_a_driver_only_source_needs_no_evidence_type() -> None:
