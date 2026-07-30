@@ -40,6 +40,20 @@
    ]
   },
   {
+   "key": "anthropogenic-share",
+   "claim": "Human forcing accounts for almost all of the pre-season warming the birds are responding to, and so for about half of the observed advance.",
+   "value": "-0.30 days per decade of the -0.56 observed",
+   "scope": "15 CMIP6 models with both a historical and a hist-nat run, sampled at the 78 radar stations between 37\u00b0N and 50\u00b0N over 1995-2014.",
+   "caveat": "This attributes the warming, not the migration. It says what caused the temperature change the birds tracked \u2014 the other half of the advance does not track temperature at all and is unexplained here. The models' human share spans 0.88 to 0.98 depending on the window fitted, and CMIP6's historical runs stop in 2014 while the radar record runs to 2025.",
+   "method": "docs/methods/phase2a-attribution.md",
+   "direction": "change",
+   "supporting": [
+    "The counterfactual runs warm at +0.01 \u00b0C per decade against +0.59 with human forcing included.",
+    "The ensemble reproduces the observed pre-season warming it is calibrated against, which is the check that licenses using it.",
+    "Members are averaged within a model before models are averaged, so two models with fifty runs each cannot carry the answer."
+   ]
+  },
+  {
    "key": "coverage-bias",
    "claim": "Everything above is northern-hemisphere. The data that can measure change and the data that covers the globe are, so far, different data.",
    "value": "0.0% of the radar record and 0.0% of the survey record lie south of the equator",

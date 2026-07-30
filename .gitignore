@@ -2,7 +2,10 @@
 # Data. Never committed -- not for size reasons alone, but because the ethics
 # gate governs what may leave this machine and git history is not revocable.
 # ---------------------------------------------------------------------------
-data/
+# Anchored. Unanchored `data/` matches any directory of that name at any depth, which
+# quietly swallowed docs/data/PROVENANCE.md -- the generated credit ledger every source's
+# licence requires us to publish.
+/data/
 *.parquet
 *.zarr/
 *.nc

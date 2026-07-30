@@ -14,7 +14,7 @@ from migratlas import __version__
 from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
-from migratlas.drivers import era5, narr
+from migratlas.drivers import cmip6, era5, narr
 from migratlas.ingest import darkecology, ebird_st, fishglob, megamove, obis
 from migratlas.lake import check as lake_check
 from migratlas.reports import (
@@ -25,6 +25,7 @@ from migratlas.reports import (
     phase1_robustness,
     phase1b,
     phase1c,
+    phase2a_attribution,
     phase2a_thermal,
     phase2a_timing,
 )
@@ -173,6 +174,21 @@ def ingest_era5(
     print(f"run {result.run_id}")
 
 
+@app.command("ingest-cmip6")
+def ingest_cmip6() -> None:
+    """Land CMIP6 historical and DAMIP hist-nat pre-season temperature at the radar stations.
+
+    The counterfactual: hist-nat is the climate the models say we would have had without human
+    forcing. Landed with kind=simulated, never mixed with an observation. See
+    docs/methods/phase2a-attribution.md.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    points = narr.stations_from(phase1.load_conus_nights())
+    result = cmip6.ingest(points)
+    print(f"{result.rows:,} rows -> {result.path}")
+    print(f"run {result.run_id}")
+
+
 @app.command("build-findings")
 def build_findings(
     out: Annotated[Path, typer.Option(help="Where to write the findings document.")] = Path(
@@ -271,6 +287,13 @@ def report_phase2a_timing() -> None:
     """Does warming explain the autumn advance? Sensitivity times warming against observed."""
     logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
     print(phase2a_timing.render())
+
+
+@report_app.command("phase2a-attribution")
+def report_phase2a_attribution() -> None:
+    """The causal step: the human share of the autumn advance, from CMIP6 DAMIP."""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
+    print(phase2a_attribution.render())
 
 
 @report_app.command("phase1b")

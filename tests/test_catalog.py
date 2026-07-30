@@ -216,3 +216,16 @@ def test_provenance_names_every_source_and_its_licence() -> None:
 
 def test_provenance_marks_itself_generated() -> None:
     assert "Do not edit by hand" in provenance.render()
+
+
+def test_the_committed_provenance_document_is_current() -> None:
+    """The credit ledger is generated, committed, and therefore able to go stale.
+
+    It exists because every licence here demands attribution, so a version that no longer matches
+    the registry is a broken promise rather than an untidy file. It was invisible to git until
+    2026-07-30 -- `.gitignore` carried an unanchored `data/` that matched `docs/data/` too -- which
+    is exactly the kind of thing only a test notices.
+    """
+    committed = Path(__file__).resolve().parents[1] / "docs" / "data" / "PROVENANCE.md"
+    assert committed.is_file(), "run `make provenance`"
+    assert committed.read_text(encoding="utf-8") == provenance.render(), "run `make provenance`"

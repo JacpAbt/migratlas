@@ -190,6 +190,14 @@ clean:  ## Remove build/test caches (never touches the data lake)
 phase2a-thermal:  ## Thermal tracking: did a species keep its temperature or its place?
 	$(RUN) migratlas report phase2a-thermal
 
+.PHONY: phase2a-attribution
+phase2a-attribution:  ## The causal step: human share of the advance, CMIP6 historical vs hist-nat
+	$(RUN) migratlas report phase2a-attribution
+
 .PHONY: phase2a-timing
 phase2a-timing:  ## Does warming explain the autumn advance? S x W against observed
 	$(RUN) migratlas report phase2a-timing
+
+.PHONY: ingest-cmip6
+ingest-cmip6:  ## CMIP6 historical + DAMIP hist-nat pre-season temperature -> lake (simulated)
+	$(RUN) migratlas ingest-cmip6

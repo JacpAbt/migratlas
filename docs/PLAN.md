@@ -47,8 +47,9 @@ is now *auditing the change we already detected* rather than detecting more.
    everything in Phase 2a. The wind source is **NARR over OPeNDAP**, not ARCO-ERA5 — every array
    in that bucket is chunked one-timestep-whole-globe, so a single station-hour of 850 hPa wind
    costs a 154 MB read. Measured and reasoned in `adr/0006`, along with why 925 hPa rather than
-   850, and verified end to end: 11.5 m/s median airspeed on the busiest nights, all headings
-   south-westward.
+   850, and verified end to end: 7.9 m/s median airspeed on the busiest nights, all headings
+   south-westward. (An earlier draft of this line said 11.5 m/s, from a wind series one day out of
+   alignment with the radar night; `adr/0006` records the offset sweep that found it.)
 3. **Phase 2a first links, per `phase2a-design.md`.** Thermal tracking in FISHGLOB needs no new
    source; the aerial timing response needs only ERA5.
 4. **Surface the findings on the globe** — a change layer and a results panel.

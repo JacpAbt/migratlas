@@ -305,3 +305,47 @@ sources:
       station near a sharp precipitation gradient is represented worse than one inland.
       Access needs a personal access token AND a one-off acceptance of the `cc-by` licence.
     added: 2026-07-29
+
+  # The third driver-only source, and the only one that is not an observation at all: DAMIP runs
+  # the same models with and without human forcing, so `hist-nat` is a climate that never happened.
+  # Landed with kind=simulated for exactly that reason -- see drivers/schema.py.
+  - id: cmip6_damip
+    title: CMIP6 DAMIP and historical — near-surface air temperature, detection and attribution
+    realm: aerial
+    landing_page: https://pcmdi.llnl.gov/CMIP6/
+    download_uri: https://storage.googleapis.com/cmip6/pangeo-cmip6.csv
+    # Read from the Pangeo mirror on Google Cloud rather than ESGF, which needs an account and
+    # client certificates. The mirror publishes the same data under the same terms.
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      Eyring, V., Bony, S., Meehl, G. A., Senior, C. A., Stevens, B., Stouffer, R. J., Taylor, K. E.
+      (2016). Overview of the Coupled Model Intercomparison Project Phase 6 (CMIP6) experimental
+      design and organization. Geoscientific Model Development 9, 1937–1958.
+      https://doi.org/10.5194/gmd-9-1937-2016 — with Gillett, N. P. et al. (2016), Detection and
+      Attribution Model Intercomparison Project (DAMIP v1.0), Geoscientific Model Development 9,
+      3685–3697, https://doi.org/10.5194/gmd-9-3685-2016, and the individual modelling centres
+      credited per model as CMIP6 terms require.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        Most CMIP6 output is CC BY 4.0, but the licence is set per modelling centre and a few are
+        non-commercial. Any published product built on a specific model must carry that model's own
+        terms, which is why the citation names the centres rather than only the project.
+    # Simulated air temperature. There is no animal in it, and no place either -- one of these
+    # climates did not happen.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      `hist-nat` is a counterfactual: it is what the models say the climate would have done under
+      solar and volcanic forcing alone, and it must never be presented as an observation. Models are
+      1–2° so a station-point sample is regional rather than local. `historical` ends in 2014, so the
+      window both experiments share stops there while the observed record runs to 2025 — the
+      attribution therefore uses a *ratio* from the models and a magnitude from observations, which
+      is what makes the mismatch tolerable. A run starting in 1995 also begins in the recovery from
+      Pinatubo, which can give `hist-nat` a positive trend from volcanic rebound alone and understate
+      the human share, so the window is varied and both answers reported. Member counts are wildly
+      uneven (fifty for MIROC6 and CanESM5, three for nine others), so members are averaged within a
+      model before models are averaged together.
+    added: 2026-07-30

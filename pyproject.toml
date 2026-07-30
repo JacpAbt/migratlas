@@ -25,7 +25,14 @@ dependencies = [
 # Raster/vector IO and cloud-native formats. Wheel-only on purpose: nothing here
 # may need a system package or a build-from-source step.
 geo = [
+    # Climate models mostly do not use a real calendar -- 365_day, 360_day and proleptic_gregorian
+    # all appear across CMIP6 -- and without cftime xarray refuses to decode the time axis rather
+    # than guessing. Skipping those stores silently drops nine of fifteen models from the DAMIP
+    # ensemble along a line drawn by which centre picked which calendar.
+    "cftime>=1.6",
     "fsspec>=2024.9",
+    # Reading the Pangeo CMIP6 zarr mirror on Google Cloud, anonymously.
+    "gcsfs>=2024.9",
     # Reads the NetCDF4/HDF5 files CDS serves. h5netcdf over netCDF4 because it needs only the
     # h5py wheel and no system HDF5 or libnetcdf, which is the no-sudo constraint in ADR 0003.
     # h5py is named explicitly: h5netcdf declares it optional, so resolving it alone leaves a

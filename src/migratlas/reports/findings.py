@@ -215,6 +215,57 @@ def collect() -> list[Finding]:
         )
     )
 
+    # --- The causal step ----------------------------------------------------
+    # Published only if the model ensemble is whole. `shortfall` exists because a third of it can
+    # go missing on a calendar error and still produce a plausible number, and a site is the last
+    # place that should be quoting one.
+    from migratlas.reports import phase2a_attribution as attribution  # noqa: PLC0415
+
+    simulations = attribution.simulated()
+    seen = attribution.observed()
+    windows = [
+        found
+        for window in attribution.WINDOWS
+        if (found := attribution.fraction(simulations, window)) is not None
+    ]
+    if seen is not None and windows and not attribution.shortfall(simulations):
+        primary = attribution.chosen(windows)
+        days = primary.ensemble * seen.explained
+        bracket = sorted(found.ensemble for found in windows)
+        findings.append(
+            Finding(
+                key="anthropogenic-share",
+                claim=(
+                    "Human forcing accounts for almost all of the pre-season warming the birds "
+                    "are responding to, and so for about half of the observed advance."
+                ),
+                value=f"{days:+.2f} days per decade of the {seen.advance:+.2f} observed",
+                scope=(
+                    f"{primary.models} CMIP6 models with both a historical and a hist-nat run, "
+                    f"sampled at the {seen.stations} radar stations between 37°N and 50°N over "
+                    f"{primary.window[0]}-{primary.window[1]}."
+                ),
+                caveat=(
+                    "This attributes the warming, not the migration. It says what caused the "
+                    "temperature change the birds tracked — the other half of the advance does not "
+                    "track temperature at all and is unexplained here. The models' human share "
+                    f"spans {bracket[0]:.2f} to {bracket[-1]:.2f} depending on the window fitted, "
+                    "and CMIP6's historical runs stop in 2014 while the radar record runs to 2025."
+                ),
+                method="docs/methods/phase2a-attribution.md",
+                direction="change",
+                supporting=[
+                    "The counterfactual runs warm at "
+                    f"{primary.natural:+.2f} °C per decade against {primary.historical:+.2f} "
+                    "with human forcing included.",
+                    "The ensemble reproduces the observed pre-season warming it is calibrated "
+                    "against, which is the check that licenses using it.",
+                    "Members are averaged within a model before models are averaged, so two "
+                    "models with fifty runs each cannot carry the answer.",
+                ],
+            )
+        )
+
     # --- The limit, published rather than buried --------------------------
     findings.append(
         Finding(

@@ -43,6 +43,17 @@ class DriverKind(StrEnum):
     DERIVED = "derived"
     """An index computed from this lake's own evidence -- how an indirect pathway is expressed."""
 
+    SIMULATED = "simulated"
+    """Output of a climate model, including a counterfactual that never happened.
+
+    A fourth kind rather than a variety of ``gridded``, because the difference is not resolution
+    but ontology: a reanalysis is an estimate of what the atmosphere did, while a DAMIP `hist-nat`
+    temperature is what it *would* have done without human forcing. Filing that as "gridded" would
+    put an observation and a counterfactual in the same bucket, which is the exact confusion this
+    field exists to prevent. ``derived_from`` carries the experiment, model and member, because
+    "a simulated temperature" is meaningless without knowing which simulation.
+    """
+
 
 class DriverSpec(NamedTuple):
     """Schema and partitioning for the driver table. Satisfies ``lake.spec.TableSpec``."""
@@ -89,6 +100,7 @@ DRIVER_SAMPLES: Final = DriverSpec(
             # reanalysis or satellite product at the site's position and time. "derived": an
             # index computed from this lake's own evidence, which is how a trophic pathway is
             # expressed -- one population's abundance as a driver of another's movement.
+            # "simulated": climate-model output, including a counterfactual that never happened.
             pa.field("kind", pa.string(), nullable=False),
             # For a derived driver, what it was computed from: the source and taxon, so a
             # pathway can be traced back to the observations behind it rather than asserted.
