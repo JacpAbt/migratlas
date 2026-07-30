@@ -185,3 +185,7 @@ web-test:  ## Browser smoke test -- asks the map what it actually drew
 clean:  ## Remove build/test caches (never touches the data lake)
 	rm -rf .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov dist
 	find src tests -type d -name __pycache__ -prune -exec rm -rf {} +
+
+.PHONY: phase2a-thermal
+phase2a-thermal:  ## Thermal tracking: did a species keep its temperature or its place?
+	$(RUN) migratlas report phase2a-thermal

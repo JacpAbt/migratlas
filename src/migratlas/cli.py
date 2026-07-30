@@ -25,6 +25,7 @@ from migratlas.reports import (
     phase1_robustness,
     phase1b,
     phase1c,
+    phase2a_thermal,
 )
 from migratlas.taxonomy import index as taxon_index
 from migratlas.tiles import layers as tile_layers
@@ -251,6 +252,13 @@ def report_phase1c() -> None:
     """Speed-weighting control and screening test on the 1995-2025 radar record."""
     logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
     print(phase1c.render())
+
+
+@report_app.command("phase2a-thermal")
+def report_phase2a_thermal() -> None:
+    """Thermal tracking: did a species keep its temperature or keep its place?"""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
+    print(phase2a_thermal.render())
 
 
 @report_app.command("phase1b")
