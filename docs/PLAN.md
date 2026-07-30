@@ -64,7 +64,13 @@ is now *auditing the change we already detected* rather than detecting more.
    reporting rates **pooled over 2007–present** rather than per year. So without a GBIF account the
    design is atlas-against-atlas (SABAP1 1987–1991 against SABAP2 pooled, the EBBA1→EBBA2 design)
    and there is no within-SABAP2 trend.
-7. **Forecasting**, unchanged.
+7. **Forecasting**, and `DATASETS.md` now decides what feeds it. The short version: the response
+   function and its attribution are fitted, so the only *load-bearing* new dataset is CMIP6
+   ScenarioMIP — 13 of the 15 DAMIP models carry all four SSPs in the catalogue `drivers/cmip6.py`
+   already reads. Every landscape factor (water, built-up, forest, lights) is explanatory rather than
+   projectable: it can attribute the past and cannot appear in a projection unless held constant and
+   declared. That is the test each candidate is judged against there, with what it would add and the
+   reason to stop.
 
 ## Corrections to the record
 
