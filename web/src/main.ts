@@ -5,7 +5,9 @@ import { addSeries } from "./layers/series";
 import { addSurface } from "./layers/surface";
 import { nightPolygon } from "./layers/terminator";
 import { loadManifest, type LoadedLayer } from "./layers/types";
+import { addDetectability, legend } from "./layers/detectability";
 import { mountFindings } from "./panels/findings";
+import { mountRibbon } from "./panels/ribbon";
 import { SpeciesSelection } from "./layers/selection";
 import { SpeciesSurfaces, TaxonIndex, type TaxonHit } from "./search/taxon";
 import { Clock, formatInstant } from "./state/time";
@@ -53,6 +55,7 @@ const visibleLayers = new Set<string>();
 // Independent of the map: the findings are text and should appear even if the globe is still
 // fetching tiles, or fails to.
 void mountFindings(el("findings-body"), import.meta.env.BASE_URL);
+void mountRibbon(el("ribbon-body"), import.meta.env.BASE_URL);
 
 void (async () => {
   const basemap = await styleReady(map);
@@ -108,6 +111,18 @@ async function addDataLayers(): Promise<LoadedLayer[]> {
       notice(`Layer ${meta.name}: ${String(error)}`);
     }
   }
+
+  // Added after the manifest layers so it can find them in the style and insert itself beneath.
+  try {
+    const [layer, document_] = await addDetectability(map, import.meta.env.BASE_URL);
+    loaded.push(layer);
+    el("detectability-legend").append(legend(document_));
+  } catch (error) {
+    // A missing assessment is not a reason to lose the data layers, so it degrades to no layer
+    // and a notice rather than taking the globe with it.
+    notice(`Detectability: ${String(error)}`);
+  }
+
   renderLayerList(loaded);
 
   // One subscription for every time-indexed layer. Each ignores a repeat of its current
@@ -134,13 +149,13 @@ let loadedLayers: LoadedLayer[] = [];
 function renderLayerList(loaded: LoadedLayer[]): void {
   loadedLayers = loaded;
   layerList.replaceChildren(
-    ...loaded.map(({ meta, setVisible }) => {
+    ...loaded.map(({ meta, setVisible, visible }) => {
       const item = document.createElement("li");
       const label = document.createElement("label");
       const toggle = document.createElement("input");
       toggle.type = "checkbox";
-      toggle.checked = true;
-      visibleLayers.add(meta.name);
+      toggle.checked = visible ?? true;
+      if (toggle.checked) visibleLayers.add(meta.name);
       toggle.addEventListener("change", () => {
         setVisible(toggle.checked);
         if (toggle.checked) visibleLayers.add(meta.name);

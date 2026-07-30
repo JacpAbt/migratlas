@@ -27,6 +27,8 @@ from migratlas.ingest import (
 )
 from migratlas.lake import check as lake_check
 from migratlas.reports import (
+    counterfactual,
+    detectability,
     findings,
     phase1,
     phase1_ebird,
@@ -235,6 +237,43 @@ def ingest_cmip6() -> None:
     result = cmip6.ingest(points)
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
+
+
+@app.command("build-ribbon")
+def build_ribbon(
+    out: Annotated[Path, typer.Option(help="Where to write the counterfactual ribbon.")] = Path(
+        "web/public/counterfactual.json"
+    ),
+) -> None:
+    """Observed passage dates against the counterfactual without human forcing.
+
+    The counterfactual removes only what was attributed, so it still advances: about half the
+    observed advance does not track temperature and was never attributed to anything.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    ribbon = counterfactual.collect()
+    size = counterfactual.write(out, ribbon)
+    print(f"{ribbon.window[0]}-{ribbon.window[1]}, {len(ribbon.years)} years")
+    for line in ribbon.lines:
+        print(f"  {line.label:<34} {line.per_decade:+.3f} days per decade")
+    print(f"  the two part by {ribbon.divergence:.2f} days across the window")
+    print(f"ribbon -> {out} ({size / 1024:.1f} KiB)")
+
+
+@app.command("build-detectability")
+def build_detectability(
+    out: Annotated[Path, typer.Option(help="Where to write the detectability grid.")] = Path(
+        "web/public/detectability.json"
+    ),
+) -> None:
+    """Where a change could ever be measured, and where it could not, as a one-degree grid."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    found = detectability.collect()
+    size = detectability.write(out, found)
+    total = sum(found.summary.values())
+    for status, cells in found.summary.items():
+        print(f"  {status:<22} {cells:>6,} cells  {cells / total:>5.1%}")
+    print(f"detectability -> {out} ({size / 1024:.1f} KiB)")
 
 
 @app.command("build-sandbox")

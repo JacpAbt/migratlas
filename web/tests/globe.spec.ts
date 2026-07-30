@@ -123,16 +123,23 @@ test("the globe reaches a usable style with coastlines", async ({ page }) => {
   await expectDrawn(page, "land");
 });
 
-test("every manifest layer draws features", async ({ page }) => {
+test("every layer draws features once it is switched on", async ({ page }) => {
   const report = await ready(page);
   expect(report.layers.length).toBeGreaterThan(0);
   // Each layer gets its own patience, so the test's budget has to cover all of them plus the
   // load. Leaving it at the 30 s default meant the third layer was blamed for the deadline.
   test.setTimeout(20_000 + report.layers.length * (DRAW_TIMEOUT_MS + 4000));
 
-  for (const name of report.layers) {
+  for (const [index, name] of report.layers.entries()) {
     const id = await mapLayerFor(page, name);
-    expect(id, `no map layer for manifest entry ${name}`).not.toBe("");
+    expect(id, `no map layer for entry ${name}`).not.toBe("");
+
+    // Switched on first. Not every layer ships visible -- the detectability assessment starts off
+    // deliberately -- and asserting on the arrival state would either fail on that layer or, if
+    // the loop simply skipped hidden ones, let a broken layer pass by staying hidden.
+    const toggle = page.locator("#layer-list input").nth(index);
+    if (!(await toggle.isChecked())) await toggle.check();
+
     // The assertion the last failure needed: not "the layer exists" but "it drew something".
     await focusOn(page, report, name, id);
   }
@@ -241,6 +248,75 @@ test("the findings panel publishes a result with its scope and caveat", async ({
   ).not.toHaveCount(0);
 });
 
+test("the counterfactual draws three lines and states how little they part", async ({ page }) => {
+  await page.goto("/");
+  const panel = page.locator(".panel--ribbon");
+  await expect(panel).toBeVisible();
+
+  // Three lines: observed, without human forcing, and without any warming. Two would leave the
+  // reader unable to see how much of the warming the models call natural.
+  await expect(panel.locator(".ribbon__line")).toHaveCount(3);
+  await expect(panel.locator(".ribbon__line--observed")).toBeVisible();
+  await expect(panel.locator(".ribbon__line--counterfactual")).toBeVisible();
+
+  // The year-to-year scatter, which is the reference the divergence has to be judged against. A
+  // ribbon showing only the fitted lines would make a 0.89-day gap look like whatever the axis
+  // chose to make it look like.
+  const years = panel.locator(".ribbon__year");
+  await expect(await years.count()).toBeGreaterThan(20);
+
+  // And the number, in words, under the chart. This is the assertion that stops the panel being
+  // "fixed" into a dramatic diverging wedge: whatever the drawing does, the size is stated.
+  await expect(panel.locator(".ribbon__size")).toContainText(/part by \d+\.\d+ days/);
+  await expect(panel.locator(".ribbon__caveat")).toContainText("trend");
+  await expect(panel.locator(".finding__method")).toHaveAttribute("href", /docs\/methods\//);
+});
+
+test("the counterfactual is drawn to the scatter, not to the gap", async ({ page }) => {
+  // The one geometric property worth pinning. If the axis were ever scaled to the divergence, the
+  // gap between the two lines would grow to fill the plot -- so it must stay small relative to the
+  // spread of the observed points, which is what makes the picture honest about the signal's size.
+  await page.goto("/");
+  const measured = await page.evaluate(() => {
+    const y = (selector: string) => {
+      const line = document.querySelector(selector) as SVGLineElement | null;
+      return line ? Number(line.getAttribute("y2")) : NaN;
+    };
+    const dots = [...document.querySelectorAll(".ribbon__year")].map((dot) =>
+      Number(dot.getAttribute("cy")),
+    );
+    return {
+      gap: Math.abs(y(".ribbon__line--observed") - y(".ribbon__line--counterfactual")),
+      scatter: Math.max(...dots) - Math.min(...dots),
+    };
+  });
+  expect(measured.scatter).toBeGreaterThan(0);
+  expect(
+    measured.gap / measured.scatter,
+    `the two lines part by ${((measured.gap / measured.scatter) * 100).toFixed(0)}% of the ` +
+      "observed scatter, which means the axis is scaled to the gap rather than to the data",
+  ).toBeLessThan(0.35);
+});
+
+test("the detectability layer draws, and most of it is not detectable", async ({ page }) => {
+  const report = await ready(page);
+  const legend = page.locator(".detectability-legend li");
+  await expect(legend).toHaveCount(4);
+
+  // Off on arrival: a first-time visitor should meet the animals before the epistemology.
+  const toggle = page.locator("#layer-list input").last();
+  await expect(toggle).not.toBeChecked();
+  await toggle.check();
+  await focusOn(page, report, "detectability", "detectability");
+
+  // The finding, asserted through the legend the viewer actually reads. If "detectable" were ever
+  // the largest share, either the lake changed profoundly or the assessment stopped assessing.
+  const shares = await page.locator(".detectability-legend em").allTextContents();
+  const detectable = Number.parseFloat(shares[0] ?? "0");
+  expect(detectable, "nothing is detectable, so the layer is broken").toBeGreaterThan(0);
+  expect(detectable, "most of the world is detectable, which is not true").toBeLessThan(50);
+});
+
 test("a missing findings file leaves the globe usable", async ({ page }) => {
   // The layers are still worth showing if the findings fail to load, so the panel degrades and
   // the map carries on. Asserted because the alternative -- an unhandled rejection taking the
@@ -262,26 +338,34 @@ const BUDGET = {
   heapMb: 150,
   readyMs: 4000,
   /**
-   * Compressed layer bytes, which is what a visitor actually pays. Measured at 172 KiB for the
-   * three published layers -- 858 KiB on disk, served gzipped. Headroom for roughly a tripling.
+   * Compressed bytes of every data payload the page fetches on load, which is what a visitor
+   * actually pays. Was measured at 172 KiB when it counted only `layers/`, and that filter let two
+   * of the largest payloads through: `taxon-index.json` and `detectability.json` sit at the root,
+   * so 978 KiB on disk never reached the gate the budget existed to be. Counting everything is the
+   * point -- a ceiling that only watches one directory measures the directory, not the page.
    */
-  layerBytesGzipped: 600_000,
+  payloadBytesGzipped: 900_000,
 };
+
+/** Data the page fetches for itself. The basemap is excluded: it is not ours and it is not built. */
+const PAYLOAD = /\/(layers\/.*|[^/]+)\.(geojson|json)$/;
 
 test("the published layers stay inside the performance budget", async ({ page }) => {
   // request.sizes(), not response.body() and not content-length. content-length is absent on
   // the chunked grid responses, so reading the header measured 94 KiB of an 858 KiB payload --
   // and reading the bodies instead made Chromium retain them, which pushed the measured heap
   // from 45 MB to 141 MB. An instrument that perturbs its subject is worse than none.
-  const sizes: Promise<number>[] = [];
+  const sizes: Promise<[string, number]>[] = [];
   page.on("response", (response) => {
-    if (!/\/layers\/.*\.(geojson|json)$/.test(response.url())) return;
+    const url = new URL(response.url());
+    if (url.origin !== new URL(page.url() || "http://localhost").origin) return;
+    if (!PAYLOAD.test(url.pathname)) return;
     sizes.push(
       response
         .request()
         .sizes()
-        .then(({ responseBodySize }) => responseBodySize)
-        .catch(() => 0),
+        .then(({ responseBodySize }): [string, number] => [url.pathname, responseBodySize])
+        .catch((): [string, number] => [url.pathname, 0]),
     );
   });
 
@@ -302,20 +386,26 @@ test("the published layers stay inside the performance budget", async ({ page })
   });
   await cdp.detach();
 
-  const layerBytes = (await Promise.all(sizes)).reduce((sum, n) => sum + n, 0);
+  const measured = await Promise.all(sizes);
+  const payloadBytes = measured.reduce((sum, [, bytes]) => sum + bytes, 0);
 
   expect(report.layers.length, "no layers means the budget proves nothing").toBeGreaterThan(0);
-  expect(layerBytes, "measured no layer bytes at all, so the budget proves nothing").toBeGreaterThan(
+  expect(payloadBytes, "measured no payload bytes, so the budget proves nothing").toBeGreaterThan(
     100_000,
   );
   expect(heapMb, `heap ${heapMb.toFixed(1)} MB`).toBeLessThan(BUDGET.heapMb);
   expect(readyMs, `ready in ${readyMs} ms`).toBeLessThan(BUDGET.readyMs);
-  expect(layerBytes, `layers total ${(layerBytes / 1024).toFixed(0)} KiB compressed`).toBeLessThan(
-    BUDGET.layerBytesGzipped,
-  );
+  expect(
+    payloadBytes,
+    `payloads total ${(payloadBytes / 1024).toFixed(0)} KiB compressed:\n` +
+      measured
+        .sort((a, b) => b[1] - a[1])
+        .map(([path, bytes]) => `  ${(bytes / 1024).toFixed(0)} KiB  ${path}`)
+        .join("\n"),
+  ).toBeLessThan(BUDGET.payloadBytesGzipped);
   console.log(
     `budget: heap ${heapMb.toFixed(1)} MB, ready ${readyMs} ms, ` +
-      `layers ${(layerBytes / 1024).toFixed(0)} KiB compressed`,
+      `payloads ${(payloadBytes / 1024).toFixed(0)} KiB compressed`,
   );
 });
 

@@ -25,6 +25,13 @@
       <div id="findings-body"></div>
     </details>
 
+    <!-- The counterfactual sits apart from the ledger because it answers a different question.
+         The ledger says what changed; this says how much of it was us. -->
+    <details class="panel panel--ribbon" id="ribbon" open>
+      <summary><h2>The world without us</h2></summary>
+      <div id="ribbon-body"></div>
+    </details>
+
     <div class="panel panel--search">
       <label class="sr-only" for="taxon-search">Search for an animal</label>
       <input
@@ -40,6 +47,7 @@
     <div class="panel panel--layers">
       <h2>Layers</h2>
       <ul id="layer-list"></ul>
+      <div id="detectability-legend"></div>
       <p id="layer-terms" class="terms"></p>
     </div>
 

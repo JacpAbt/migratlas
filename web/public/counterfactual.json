@@ -1,0 +1,241 @@
+{
+ "schema_version": 1,
+ "window": [
+  1995,
+  2025
+ ],
+ "unit": "day of year",
+ "anchor": 266.52056047542936,
+ "years": [
+  {
+   "year": 1995,
+   "observed": 271.54028205766053,
+   "stations": 42,
+   "spread": 3.100668901832206
+  },
+  {
+   "year": 1996,
+   "observed": 268.7582093934506,
+   "stations": 60,
+   "spread": 2.5271782034518693
+  },
+  {
+   "year": 1997,
+   "observed": 267.31804709816146,
+   "stations": 64,
+   "spread": 2.5268353450880405
+  },
+  {
+   "year": 1998,
+   "observed": 264.3144699950977,
+   "stations": 67,
+   "spread": 2.3116926594852023
+  },
+  {
+   "year": 1999,
+   "observed": 266.5718969584222,
+   "stations": 65,
+   "spread": 2.3425566627563565
+  },
+  {
+   "year": 2000,
+   "observed": 266.5976156825756,
+   "stations": 59,
+   "spread": 2.795390261093199
+  },
+  {
+   "year": 2001,
+   "observed": 265.48557851053727,
+   "stations": 63,
+   "spread": 2.46246647653719
+  },
+  {
+   "year": 2002,
+   "observed": 264.8890487629234,
+   "stations": 65,
+   "spread": 2.0201748026017543
+  },
+  {
+   "year": 2003,
+   "observed": 266.11233049508115,
+   "stations": 64,
+   "spread": 2.2079895532458527
+  },
+  {
+   "year": 2004,
+   "observed": 267.28811687529645,
+   "stations": 73,
+   "spread": 1.9131179283734676
+  },
+  {
+   "year": 2005,
+   "observed": 266.2740276211833,
+   "stations": 76,
+   "spread": 2.0278970014353206
+  },
+  {
+   "year": 2006,
+   "observed": 267.13097642689854,
+   "stations": 76,
+   "spread": 1.9334089590155177
+  },
+  {
+   "year": 2007,
+   "observed": 265.54510581350894,
+   "stations": 76,
+   "spread": 1.9913035676352047
+  },
+  {
+   "year": 2008,
+   "observed": 267.4749061880279,
+   "stations": 75,
+   "spread": 1.900712408899247
+  },
+  {
+   "year": 2009,
+   "observed": 266.74391836368426,
+   "stations": 76,
+   "spread": 1.9981875574132617
+  },
+  {
+   "year": 2010,
+   "observed": 265.80183911139574,
+   "stations": 76,
+   "spread": 1.7380238352166393
+  },
+  {
+   "year": 2011,
+   "observed": 268.0496894825224,
+   "stations": 77,
+   "spread": 1.8379948807583575
+  },
+  {
+   "year": 2012,
+   "observed": 265.09768292876333,
+   "stations": 77,
+   "spread": 2.090303100546197
+  },
+  {
+   "year": 2013,
+   "observed": 268.9133846494707,
+   "stations": 78,
+   "spread": 1.933897797917215
+  },
+  {
+   "year": 2014,
+   "observed": 266.5833637674388,
+   "stations": 78,
+   "spread": 1.957427775077669
+  },
+  {
+   "year": 2015,
+   "observed": 266.08083855625216,
+   "stations": 78,
+   "spread": 2.044519037977083
+  },
+  {
+   "year": 2016,
+   "observed": 266.375863498603,
+   "stations": 78,
+   "spread": 1.7751896450691504
+  },
+  {
+   "year": 2017,
+   "observed": 266.9079503423269,
+   "stations": 78,
+   "spread": 1.9097890912016169
+  },
+  {
+   "year": 2018,
+   "observed": 266.87588118332445,
+   "stations": 78,
+   "spread": 2.093589241413779
+  },
+  {
+   "year": 2019,
+   "observed": 265.66869175625874,
+   "stations": 78,
+   "spread": 1.7775150174592498
+  },
+  {
+   "year": 2020,
+   "observed": 267.0062645064142,
+   "stations": 78,
+   "spread": 1.9761461330674626
+  },
+  {
+   "year": 2021,
+   "observed": 263.2310914037777,
+   "stations": 78,
+   "spread": 1.9132170284237708
+  },
+  {
+   "year": 2022,
+   "observed": 264.4985380924816,
+   "stations": 78,
+   "spread": 1.6727009309593912
+  },
+  {
+   "year": 2023,
+   "observed": 266.3039983582603,
+   "stations": 78,
+   "spread": 2.111366252992655
+  },
+  {
+   "year": 2024,
+   "observed": 266.01716954209314,
+   "stations": 78,
+   "spread": 1.8705157215600066
+  },
+  {
+   "year": 2025,
+   "observed": 266.680597316417,
+   "stations": 78,
+   "spread": 1.930292125202821
+  }
+ ],
+ "lines": [
+  {
+   "key": "observed",
+   "label": "what happened",
+   "per_decade": -0.5590837875896769,
+   "start": 267.3591861568139,
+   "end": 265.6819347940448,
+   "note": "The fitted trend at the claim-band stations, and the number the ledger publishes."
+  },
+  {
+   "key": "counterfactual",
+   "label": "without human forcing",
+   "per_decade": -0.26351092962932593,
+   "start": 266.91582686987334,
+   "end": 266.1252940809854,
+   "note": "The observed trend with the attributed human share removed. It still advances, because about half the observed advance does not track temperature at all and was never attributed to anything; flattening it would claim that half is natural."
+  },
+  {
+   "key": "no-thermal",
+   "label": "with no warming at all",
+   "per_decade": -0.25844835614649714,
+   "start": 266.9082330096491,
+   "end": 266.1328879412096,
+   "note": "A second reference: the trend with the entire temperature response removed, human or not. It sits almost on top of the counterfactual, and that near-coincidence is what f = 0.98 looks like -- almost none of the warming was natural."
+  }
+ ],
+ "terms": {
+  "sensitivity_days_per_degree": -0.6585167526711125,
+  "warming_degrees_per_decade": 0.5178997960229069,
+  "thermal_days_per_decade": -0.3006354314431798,
+  "human_share_of_warming": 0.9831604230461917,
+  "human_days_per_decade": -0.295572857960351,
+  "observed_days_per_decade": -0.5590837875896769,
+  "stations": 78.0,
+  "models": 15.0
+ },
+ "divergence": 0.8867185738810529,
+ "caveat": "The two lines part by under a day across thirty years, inside a year-to-year scatter of several days. That is the honest size of the signal: the attribution is of the *trend*, not of any single year, and no year's date can be called human-caused. The counterfactual also inherits every limit of the response function it is built on: it attributes the warming the animals tracked, not the animals.",
+ "method": "docs/methods/counterfactual.md",
+ "supporting": [
+  "The human share of the modelled warming is 0.98 across 15 CMIP6 models with both a historical and a natural-forcing-only run.",
+  "A synthetic null on two halves of one experiment returns 3% of the forced difference.",
+  "Shuffling the years destroys the observed trend entirely (-0.56 to -0.001 days per decade), so the line being drawn is order and not arithmetic."
+ ]
+}

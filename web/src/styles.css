@@ -124,6 +124,10 @@ body {
   top: 7.5rem;
   left: 1rem;
   width: min(17rem, calc(100vw - 2rem));
+  /* Capped for the same reason the ribbon below it is: this panel grows with every layer added,
+     and an eighth layer would otherwise push it down over the chart. */
+  max-height: calc(100vh - 40rem);
+  overflow-y: auto;
 }
 
 .panel--layers h2 {
@@ -573,5 +577,234 @@ input[type="range"] {
        layer list. Capped so it ends above the search box, which moves to the bottom here. */
     top: 21.5rem;
     max-height: calc(100vh - 21.5rem - 14rem);
+  }
+}
+
+/* --- The counterfactual ribbon ------------------------------------------------
+   Bottom-left, and wider than the sidebars: the chart's whole argument is the small distance
+   between two lines, and squeezing it into a 19rem column would compress that distance to a few
+   pixels and make it unreadable rather than modest. Collapsible, so the globe is reachable.
+
+   Height capped so it cannot reach the layer list above it. The left column is at its limit --
+   title, layers, legend and this -- and the two did overlap by 130 px before the cap. It scrolls
+   rather than shrinking the chart, because a chart about a 0.89-day gap has a floor on how small
+   it can usefully be. */
+.panel--ribbon {
+  bottom: 1rem;
+  left: 1rem;
+  width: min(33rem, calc(100vw - 2rem));
+  max-height: min(30rem, calc(100vh - 33rem));
+  overflow-y: auto;
+}
+
+.panel--ribbon summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.panel--ribbon summary::-webkit-details-marker {
+  display: none;
+}
+
+.panel--ribbon summary h2 {
+  display: inline;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.panel--ribbon summary::after {
+  content: " ▾";
+  color: var(--muted);
+}
+
+.panel--ribbon[open] summary::after {
+  content: " ▴";
+}
+
+.ribbon__chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0.5rem 0 0;
+  overflow: visible;
+}
+
+.ribbon__gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+/* Sized in viewBox units, and the chart renders at roughly two thirds scale in a 33rem
+   panel, so 9px here arrived as 6px on screen and could not be read. */
+.ribbon__tick {
+  fill: var(--muted);
+  font-size: 12px;
+}
+
+/* The year-to-year scatter, drawn as quietly as it can be while still being visible. It is the
+   reference the divergence is judged against, so it must be present and must not compete. */
+.ribbon__year {
+  fill: #8b7a68;
+  fill-opacity: 0.55;
+}
+
+.ribbon__spread {
+  stroke: #8b7a68;
+  stroke-opacity: 0.28;
+  stroke-width: 1;
+}
+
+.ribbon__line {
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.ribbon__line--observed {
+  stroke: var(--accent);
+}
+
+/* The two counterfactuals in the same blue, the second dashed: they are nearly coincident by
+   arithmetic, and giving them contrasting hues would suggest a difference worth reading. */
+.ribbon__line--counterfactual {
+  stroke: #4c7f9c;
+}
+
+.ribbon__line--no-thermal {
+  stroke: #4c7f9c;
+  stroke-width: 1.6;
+  stroke-dasharray: 5 4;
+  stroke-opacity: 0.85;
+}
+
+.ribbon__label {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ribbon__label--observed {
+  fill: var(--accent);
+}
+
+.ribbon__label--counterfactual,
+.ribbon__label--no-thermal {
+  fill: #3d6b85;
+}
+
+.ribbon__rate {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ribbon__divergence {
+  stroke: var(--text);
+  stroke-width: 1.4;
+  stroke-opacity: 0.65;
+}
+
+.ribbon__leader {
+  stroke: var(--muted);
+  stroke-width: 0.8;
+  stroke-opacity: 0.6;
+}
+
+.ribbon__clipped {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.ribbon__size {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.ribbon__notes {
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.ribbon__key {
+  margin-top: 0.35rem;
+  font-weight: 600;
+}
+
+.ribbon__key--observed {
+  color: var(--accent);
+}
+
+.ribbon__key--counterfactual,
+.ribbon__key--no-thermal {
+  color: #3d6b85;
+}
+
+.ribbon__notes dd {
+  margin: 0.1rem 0 0;
+  color: var(--muted);
+}
+
+.ribbon__caveat {
+  margin: 0.55rem 0 0;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+/* --- The detectability legend -------------------------------------------------
+   Four unlabelled greys are not a map of anything, so the legend ships with the layer rather
+   than as an optional extra. */
+.detectability-legend {
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.7rem;
+}
+
+.detectability-legend li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+}
+
+.detectability-legend__swatch {
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+.detectability-legend__label {
+  flex: 1;
+  color: var(--text);
+}
+
+.detectability-legend em {
+  color: var(--muted);
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 48rem) {
+  /* No room for a 33rem chart beside anything, and the time slider owns the bottom of a phone
+     screen. Collapsed by JS at this width, so this only has to be a sane closed bar. */
+  .panel--ribbon {
+    bottom: auto;
+    top: 3.6rem;
+    left: 1rem;
+    width: calc(100vw - 2rem);
+    max-height: calc(100vh - 8rem);
   }
 }

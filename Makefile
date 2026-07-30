@@ -82,6 +82,14 @@ coverage:  ## Tests with coverage report
 # ---------------------------------------------------------------------------
 # Pipelines
 # ---------------------------------------------------------------------------
+.PHONY: ribbon
+ribbon:  ## Observed against counterfactual passage dates -> web/public/counterfactual.json
+	$(RUN) migratlas build-ribbon
+
+.PHONY: detectability
+detectability:  ## Where change could ever be measured -> web/public/detectability.json
+	$(RUN) migratlas build-detectability
+
 .PHONY: sandbox
 sandbox:  ## Recompute the analysis with each safeguard off -> web/public/sandbox.json
 	$(RUN) migratlas build-sandbox

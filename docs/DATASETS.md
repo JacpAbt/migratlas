@@ -57,6 +57,10 @@ Two entries in that table are doing a different job from the rest. `obis_species
 `megamove` are *why the globe looks like a globe* — 20.7M rows of worldwide coverage — and they can
 never contribute a trend. That is not a defect as long as nobody asks them to.
 
+This conclusion is now a published layer rather than a paragraph: see
+[`detectability.md`](methods/detectability.md), which turns it into a one-degree map and puts a number
+on it. **Four per cent of the cells the lake covers could support a trend.**
+
 ## What our own results support forecasting
 
 This matters more than the dataset list, because it decides which drivers are needed at all.

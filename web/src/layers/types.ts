@@ -29,6 +29,8 @@ export interface LoadedLayer {
   cells: number;
   /** Mean position of the layer's features -- where to point a camera to see it. */
   center: [number, number];
+  /** Whether it is drawn on arrival. Defaults to true; the layer list has to agree with the map. */
+  visible?: boolean;
   setVisible: (visible: boolean) => void;
   /** Called when the clock crosses into a new week. Only time-indexed layers implement it. */
   showWeek?: (week: number) => void;
