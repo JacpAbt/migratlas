@@ -24,6 +24,25 @@ isn't. A camera-trap study showed naive 1 km obfuscation could be narrowed to ro
 candidate area using public satellite imagery and simple heuristics. Snapping to a grid destroys
 information; jitter hides it behind a puzzle that a motivated person solves.
 
+### And one floor beneath both
+
+**Humans never enter the lake.** *Homo sapiens* and the genus *Homo* are refused at ingest, by key and
+by name, at `redact.admit_taxon_for_ingest` — and again at publication, ahead of even the licence
+check, for rows that might predate the floor.
+
+This is not a sensitivity classification, and it is deliberately not expressible as one. Sensitivity
+lives per source in the registry, and the failure it closes is exactly that **nobody wrote an entry**:
+an unclassified taxon falls through to the source's `default_sensitivity`, which was chosen while
+thinking about animals.
+
+It was found, not anticipated. Movebank hosts human tracking studies beside animal ones — an
+open-licence study of twelve people sits in the same taxon list as the caribou — so an ingest that
+trusted the archive's taxon field would have landed human location data here. Nothing about the design
+prevented that; a floor does. See `docs/methods/tracks-and-sensitivity.md` §7.
+
+A registry entry cannot lower it. `not_sensitive` with a valid licence is the most permissive thing a
+source can say, the source-level gate accepts it, and the taxon floor still refuses.
+
 ## Sensitivity is not a property of a species
 
 It is a property of **(taxon × realm × evidence type)**. A white shark occurrence record from a

@@ -149,6 +149,58 @@ def policy_for(sensitivity: Sensitivity, granularity: Granularity) -> Generaliza
     return table[sensitivity]
 
 
+NEVER_INGESTED_KEYS: Final[frozenset[int]] = frozenset({2436436, 2436435})
+"""GBIF usage keys for *Homo sapiens* and the genus *Homo*, verified against the species-match API.
+
+Both, because a source may resolve only to genus, and a refusal that a coarser identification slips
+past is not a refusal.
+"""
+
+NEVER_INGESTED_NAMES: Final[frozenset[str]] = frozenset({"homo sapiens", "homo"})
+"""The same refusal by name, for a source that ships names and no keys.
+
+Two routes to one answer rather than a preference between them: Movebank supplies names, the lake
+stores keys, and a check that only understood one of those would be satisfiable by accident.
+"""
+
+
+def admit_taxon_for_ingest(
+    source_id: str,
+    *,
+    taxon_key: int | None = None,
+    scientific_name: str | None = None,
+) -> None:
+    """Refuse a taxon that must never enter the lake, whatever its source's registry entry says.
+
+    **Not a sensitivity classification.** Those are per source, in the registry, and the failure
+    this closes is precisely that nobody wrote one: an unclassified taxon falls through to
+    ``default_sensitivity``, and a source-wide default cannot speak for a species nobody considered.
+    That is the same argument :meth:`Source._individual_granularity_needs_taxon_rules` makes,
+    applied to the one taxon where the answer is never "publish it more coarsely".
+
+    Found rather than anticipated. Movebank hosts human tracking studies beside animal ones -- an
+    open-licence study of twelve people sits in the same taxon list as the caribou -- so an ingest
+    that trusted the archive's taxon field would land human location data here. See
+    ``docs/methods/tracks-and-sensitivity.md`` §7.
+
+    Deliberately a floor, not a policy row: a registry entry cannot lower it, and the refusal is at
+    *ingest* rather than publication because the publication gate can only refuse what it was told
+    to look at.
+
+    Raises:
+        IngestRefusedError: if the taxon is refused outright.
+    """
+    normalised = " ".join(scientific_name.lower().split()) if scientific_name else None
+    if taxon_key in NEVER_INGESTED_KEYS or (normalised in NEVER_INGESTED_NAMES):
+        subject = scientific_name or f"taxon key {taxon_key}"
+        msg = (
+            f"Source {source_id!r} carries rows for {subject}, which never enters this lake. "
+            f"This is an animal-movement atlas and the gate has no resolution at which human "
+            f"location data may be stored. Filter the taxon out at the ingest, not downstream."
+        )
+        raise IngestRefusedError(msg)
+
+
 def admit_for_ingest(
     source_id: str,
     *,
@@ -160,6 +212,9 @@ def admit_for_ingest(
     Weaker than the publication gate by design: holding raw data on one machine is not
     the dangerous act. What this prevents is data arriving with nobody having thought
     about its sensitivity, because by tiling time that person has moved on.
+
+    Source-level only. A source's *rows* are screened per taxon by
+    :func:`admit_taxon_for_ingest`, which this cannot do because a source declares no taxon list.
 
     Raises:
         IngestRefusedError: if the source is unclassified or has no recorded licence.
@@ -203,6 +258,18 @@ def clear_for_publication(  # noqa: PLR0913 -- each argument is a distinct polic
             unresolved, the taxon claim is inconsistent, or policy withholds the data outright.
     """
     now = now or datetime.now(UTC)
+
+    # First, and before the licence: a taxon on the never-ingested floor is also never published.
+    # Redundant if the ingest held -- and that is the point. Rows landed before the floor existed
+    # would otherwise reach a reader through a gate that had only ever been taught to check
+    # sensitivity, and sensitivity is the thing nobody wrote down for them.
+    if taxon_key in NEVER_INGESTED_KEYS:
+        msg = (
+            f"Refusing to publish {source_id!r}: taxon_key={taxon_key} is on the never-ingested "
+            f"floor, so its presence means the lake holds rows an ingest should have refused. "
+            f"Delete them rather than coarsening them."
+        )
+        raise PublicationRefusedError(msg)
 
     if not redistribution_allowed:
         msg = (

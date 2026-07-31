@@ -19,6 +19,7 @@ from migratlas.redact import (
     RedactionError,
     Sensitivity,
     admit_for_ingest,
+    admit_taxon_for_ingest,
     clear_for_publication,
     is_within_delay,
     policy_for,
@@ -220,6 +221,81 @@ def test_ingest_refuses_source_without_licence() -> None:
 
 def test_ingest_admits_a_fully_described_source() -> None:
     admit_for_ingest("darkecology", sensitivity=Sensitivity.NOT_SENSITIVE, licence="CC BY 4.0")
+
+
+# ---------------------------------------------------------------------------
+# The never-ingested floor
+#
+# Movebank hosts human tracking studies beside animal ones: an open-licence study of twelve people
+# sits in the same taxon list as the caribou (docs/methods/tracks-and-sensitivity.md, section 7). An
+# ingest that trusted the archive's taxon field would land human location data in this lake, and the
+# reason the sensitivity tables would not have caught it is that nobody wrote an entry -- so the row
+# falls through to `default_sensitivity`, which was chosen for animals.
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    ("key", "name"),
+    [
+        (2436436, None),
+        (2436435, None),
+        (None, "Homo sapiens"),
+        (None, "homo sapiens"),
+        (None, "  Homo   sapiens  "),
+        (None, "Homo"),
+        (2436436, "Homo sapiens"),
+    ],
+)
+def test_humans_never_enter_the_lake(key: int | None, name: str | None) -> None:
+    """By key, by name, at species and at genus, however the source spells it."""
+    with pytest.raises(IngestRefusedError, match="never enters this lake"):
+        admit_taxon_for_ingest("movebank", taxon_key=key, scientific_name=name)
+
+
+@pytest.mark.parametrize(
+    ("key", "name"),
+    [
+        (2440944, "Rangifer tarandus"),
+        (5219243, "Canis lupus"),
+        (None, None),
+        (None, "Homo sapiens tracking study"),
+    ],
+)
+def test_the_floor_refuses_only_what_it_names(key: int | None, name: str | None) -> None:
+    """Including a study *title* containing the name: the check is on the taxon, not on prose.
+
+    A substring match here would refuse a caribou study called "Homo sapiens impacts on Rangifer",
+    and a gate that refuses the wrong things gets switched off.
+    """
+    admit_taxon_for_ingest("movebank", taxon_key=key, scientific_name=name)
+
+
+def test_the_floor_holds_where_the_source_level_gate_is_satisfied() -> None:
+    """The point of a floor, and the reason it is a second function.
+
+    `NOT_SENSITIVE` with a real licence is the most permissive thing a registry can say, and the
+    source-level gate is content with it -- as it should be, since Movebank's animal studies are
+    exactly that. The taxon check is what refuses, and nothing at the source level can lower it.
+    """
+    admit_for_ingest("movebank", sensitivity=Sensitivity.NOT_SENSITIVE, licence="CC0")
+    with pytest.raises(IngestRefusedError, match="never enters this lake"):
+        admit_taxon_for_ingest("movebank", taxon_key=2436436)
+
+
+def test_a_human_row_already_in_the_lake_is_refused_at_publication_too() -> None:
+    """Belt and braces, for rows that landed before the floor existed.
+
+    Refused ahead of the licence check, unlike everything else, because the answer does not depend
+    on the licence: no permission makes this publishable.
+    """
+    with pytest.raises(PublicationRefusedError, match="never-ingested floor"):
+        clear_for_publication(
+            source_id="movebank",
+            evidence_type=EvidenceType.TRACK,
+            realm=Realm.TERRESTRIAL,
+            sensitivity=Sensitivity.NOT_SENSITIVE,
+            taxon_scope=TaxonScope.EXACT,
+            taxon_key=2436436,
+            redistribution_allowed=True,
+        )
 
 
 # ---------------------------------------------------------------------------
