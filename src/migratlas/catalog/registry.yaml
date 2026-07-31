@@ -350,6 +350,52 @@ sources:
       model before models are averaged together.
     added: 2026-07-30
 
+  # The second counterfactual, and the reason there is a second: DAMIP asks what if there had been no
+  # human forcing, ATTRICI asks what if there had been no warming. Same source for both halves,
+  # because the factual half is the control that licenses using the other.
+  - id: isimip3a
+    title: ISIMIP3a GSWP3-W5E5 — factual and ATTRICI counterfactual near-surface air temperature
+    realm: aerial
+    landing_page: https://data.isimip.org/search/climate_scenario/counterclim/
+    download_uri: https://files.isimip.org/api/v2
+    # A files API that subsets server-side before sending, which is what makes a point panel
+    # affordable here where ARCO-ERA5 made it impossible (ADR 0006). No account needed.
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      Mengel, M., Treu, S., Lange, S., Frieler, K. (2021). ATTRICI v1.1 — counterfactual climate for
+      impact attribution. Geoscientific Model Development 14, 5269–5284.
+      https://doi.org/10.5194/gmd-14-5269-2021 — with Frieler, K. et al. (2024), Scenario set-up and
+      forcing data for impact model evaluation and impact attribution within the third round of the
+      Inter-Sectoral Impact Model Intercomparison Project (ISIMIP3a), Geoscientific Model Development
+      17, 1–51, https://doi.org/10.5194/gmd-17-1-2024, and the GSWP3-W5E5 forcing it detrends.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        CC BY 4.0 for the ISIMIP3a input data. A published product must credit ATTRICI and the
+        GSWP3-W5E5 forcing separately, because the counterfactual is a transformation of somebody
+        else's observational product rather than a dataset in its own right.
+    # Two climates, one of which did not happen. There is no animal in either and, for the
+    # counterfactual, no place either.
+    evidence_type: null
+    taxon_scope: null
+    default_sensitivity: not_sensitive
+    caveats: >-
+      Half a degree, so a station-point sample is a cell mean over roughly 50 km — coarser than
+      NARR's 32 km, finer than CMIP6's 1–2°, and regional rather than local. The binding limit is
+      that `counterclim` ends in 2019 while the radar record runs to 2025, so any claim built here
+      covers 25 of its 31 years and must say which; the same shape of mismatch as DAMIP's
+      `historical` stopping in 2014, and reported the same way. `obsclim` is filed as GRIDDED and
+      `counterclim` as SIMULATED, under two variable names rather than one with a scenario flag, so
+      that "which climate is this" is a join condition instead of a string match. A one-station
+      scoping probe found ATTRICI removing about 15% of the local June–July warming where DAMIP's
+      ratio is 0.98 — not a contradiction, because one is a ratio of ensemble-mean forced signals
+      and the other operates on a single cell's actual daily series, but the two must be reported
+      side by side rather than averaged.
+    added: 2026-07-31
+
   # The first source that is neither northern nor marine, and the one that fills the terrestrial
   # realm. Realm is a judgement: an atlas card records which birds occupy a patch of land, where
   # the radar in Phase 1a records birds in flight, so the same species can appear under both.

@@ -23,6 +23,7 @@ each source carries its own terms.
 | [NCEP North American Regional Reanalysis — pressure-level winds, 1979–present](https://psl.noaa.gov/data/gridded/data.narr.html) | driver only | `aerial` | US Government work, public domain (17 U.S.C. §105) | permitted |
 | [ERA5 monthly averaged reanalysis on single levels, 1940–present](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [CMIP6 DAMIP and historical — near-surface air temperature, detection and attribution](https://pcmdi.llnl.gov/CMIP6/) | driver only | `aerial` | CC BY 4.0 | permitted |
+| [ISIMIP3a GSWP3-W5E5 — factual and ATTRICI counterfactual near-surface air temperature](https://data.isimip.org/search/climate_scenario/counterclim/) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991](https://www.gbif.org/dataset/282d0ccb-4fa0-40f9-8593-105c77e88417) | `survey_index` | `terrestrial` | CC BY 4.0 | permitted |
 | [North American Breeding Bird Survey — route counts, 1966–2025](https://www.usgs.gov/centers/eesc/science/north-american-breeding-bird-survey) | `survey_index` | `terrestrial` | CC0 1.0 | permitted |
 | [Southern African Bird Atlas Project 2 (SABAP2) — atlas cards, 2007–2026](https://www.gbif.org/dataset/906e6978-e292-4a8b-9c39-adf6bb0f3323) | `survey_index` | `terrestrial` | CC BY 4.0 | permitted |
@@ -192,6 +193,24 @@ A reanalysis is a model constrained by observations, not a measurement, and ERA5
 **Caveats**
 
 `hist-nat` is a counterfactual: it is what the models say the climate would have done under solar and volcanic forcing alone, and it must never be presented as an observation. Models are 1–2° so a station-point sample is regional rather than local. `historical` ends in 2014, so the window both experiments share stops there while the observed record runs to 2025 — the attribution therefore uses a *ratio* from the models and a magnitude from observations, which is what makes the mismatch tolerable. A run starting in 1995 also begins in the recovery from Pinatubo, which can give `hist-nat` a positive trend from volcanic rebound alone and understate the human share, so the window is varied and both answers reported. Member counts are wildly uneven (fifty for MIROC6 and CanESM5, three for nine others), so members are averaged within a model before models are averaged together.
+
+## ISIMIP3a GSWP3-W5E5 — factual and ATTRICI counterfactual near-surface air temperature
+
+- **id** `isimip3a`
+- **drivers only**, no evidence rows · **realm** `aerial`
+- **landing page** https://data.isimip.org/search/climate_scenario/counterclim/
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+  - CC BY 4.0 for the ISIMIP3a input data. A published product must credit ATTRICI and the GSWP3-W5E5 forcing separately, because the counterfactual is a transformation of somebody else's observational product rather than a dataset in its own right.
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> Mengel, M., Treu, S., Lange, S., Frieler, K. (2021). ATTRICI v1.1 — counterfactual climate for impact attribution. Geoscientific Model Development 14, 5269–5284. https://doi.org/10.5194/gmd-14-5269-2021 — with Frieler, K. et al. (2024), Scenario set-up and forcing data for impact model evaluation and impact attribution within the third round of the Inter-Sectoral Impact Model Intercomparison Project (ISIMIP3a), Geoscientific Model Development 17, 1–51, https://doi.org/10.5194/gmd-17-1-2024, and the GSWP3-W5E5 forcing it detrends.
+
+**Caveats**
+
+Half a degree, so a station-point sample is a cell mean over roughly 50 km — coarser than NARR's 32 km, finer than CMIP6's 1–2°, and regional rather than local. The binding limit is that `counterclim` ends in 2019 while the radar record runs to 2025, so any claim built here covers 25 of its 31 years and must say which; the same shape of mismatch as DAMIP's `historical` stopping in 2014, and reported the same way. `obsclim` is filed as GRIDDED and `counterclim` as SIMULATED, under two variable names rather than one with a scenario flag, so that "which climate is this" is a join condition instead of a string match. A one-station scoping probe found ATTRICI removing about 15% of the local June–July warming where DAMIP's ratio is 0.98 — not a contradiction, because one is a ratio of ensemble-mean forced signals and the other operates on a single cell's actual daily series, but the two must be reported side by side rather than averaged.
 
 ## Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991
 

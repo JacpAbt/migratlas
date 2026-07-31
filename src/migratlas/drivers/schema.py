@@ -44,7 +44,11 @@ class DriverKind(StrEnum):
     """An index computed from this lake's own evidence -- how an indirect pathway is expressed."""
 
     SIMULATED = "simulated"
-    """Output of a climate model, including a counterfactual that never happened.
+    """A climate that did not happen, however it was produced.
+
+    Widened from "output of a climate model" when ATTRICI landed: its counterfactual is a
+    statistical detrending of an observational product, so no model made it, and it is still a
+    climate that never happened. The test is ontological rather than about provenance.
 
     A fourth kind rather than a variety of ``gridded``, because the difference is not resolution
     but ontology: a reanalysis is an estimate of what the atmosphere did, while a DAMIP `hist-nat`

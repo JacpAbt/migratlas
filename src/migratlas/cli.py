@@ -14,7 +14,7 @@ from migratlas import __version__
 from migratlas.catalog import loader as catalog
 from migratlas.catalog import provenance
 from migratlas.config import get_settings
-from migratlas.drivers import cmip6, era5, narr
+from migratlas.drivers import attrici, cmip6, era5, narr
 from migratlas.ingest import (
     bbs,
     darkecology,
@@ -37,6 +37,7 @@ from migratlas.reports import (
     phase1b,
     phase1c,
     phase2a_attribution,
+    phase2a_attrici,
     phase2a_thermal,
     phase2a_timing,
     sandbox,
@@ -224,6 +225,34 @@ def ingest_era5(
     print(f"run {result.run_id}")
 
 
+@app.command("ingest-attrici")
+def ingest_attrici(
+    start: Annotated[int, typer.Option(help="First year, inclusive.")] = 1995,
+    end: Annotated[
+        int, typer.Option(help="Last year, inclusive. The counterfactual ends in 2019.")
+    ] = attrici.LAST_YEAR,
+) -> None:
+    """Land ISIMIP3a factual and counterfactual daily temperature at the radar stations.
+
+    The second counterfactual, asking a different question of different data: DAMIP asks what if
+    there had been no human forcing, ATTRICI asks what if there had been no warming, and answers it
+    by detrending observations rather than by running a model. Both halves land together, since the
+    factual one is the control that licenses using the other.
+
+    No account needed. See docs/methods/phase2a-attrici.md.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    if end > attrici.LAST_YEAR:
+        # Clamped loudly rather than silently returning fewer years: a shrunken window that nobody
+        # announced is how a claim quietly starts covering something else.
+        print(f"counterclim ends in {attrici.LAST_YEAR}; clamping --end from {end}")
+        end = attrici.LAST_YEAR
+    points = narr.stations_from(phase1.load_conus_nights())
+    result = attrici.ingest(points, list(range(start, end + 1)))
+    print(f"{result.rows:,} rows -> {result.path}")
+    print(f"run {result.run_id}")
+
+
 @app.command("ingest-cmip6")
 def ingest_cmip6() -> None:
     """Land CMIP6 historical and DAMIP hist-nat pre-season temperature at the radar stations.
@@ -393,6 +422,17 @@ def report_phase2a_timing() -> None:
     """Does warming explain the autumn advance? Sensitivity times warming against observed."""
     logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
     print(phase2a_timing.render())
+
+
+@report_app.command("phase2a-attrici")
+def report_phase2a_attrici() -> None:
+    """The second counterfactual: ATTRICI against DAMIP, and the control that licenses it.
+
+    Prints the stop condition first. If ISIMIP's factual half does not reproduce the ERA5 warming
+    already in the lake, no comparison is reported. See docs/methods/phase2a-attrici.md.
+    """
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
+    print(phase2a_attrici.render())
 
 
 @report_app.command("phase2a-attribution")

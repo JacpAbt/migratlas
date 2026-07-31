@@ -134,6 +134,14 @@ ingest-ebird:  ## eBird Status & Trends weekly abundance -> lake (analysis only,
 ingest-narr:  ## NARR night winds at the radar stations -> lake (driver samples, gridded)
 	$(RUN) migratlas ingest-narr
 
+.PHONY: report-phase2a-attrici
+report-phase2a-attrici:  ## ATTRICI against DAMIP, with the control that licenses the comparison
+	$(RUN) migratlas report phase2a-attrici
+
+.PHONY: ingest-attrici
+ingest-attrici:  ## ISIMIP3a factual + ATTRICI counterfactual daily temperature -> lake
+	$(RUN) migratlas ingest-attrici
+
 .PHONY: ingest-era5
 ingest-era5:  ## ERA5 monthly precipitation at the radar stations -> lake (driver samples)
 	$(RUN) migratlas ingest-era5

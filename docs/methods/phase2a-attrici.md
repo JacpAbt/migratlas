@@ -87,6 +87,78 @@ Stated as a scoping observation, not a result. One station, one window, one naiv
    the two into line, then the disagreement was the window and not the method, and that is the
    finding instead.
 
+## Results, 2026-07-31
+
+2,647,990 driver rows: 145 stations, 1995–2019, both climates, from one job of six files and 266 MiB.
+Every station matched the grid. `make report-phase2a-attrici`.
+
+June–July warming, within-station, claim band 37–50°N, 78 stations:
+
+| | trend |
+| --- | --- |
+| ERA5 reanalysis, already in the lake | +0.522 ± 0.057 °C/decade |
+| ISIMIP `obsclim` (factual) | +0.489 ± 0.040 °C/decade |
+| ISIMIP `counterclim` (counterfactual) | +0.306 ± 0.038 °C/decade |
+
+### Prediction 2 — the stop condition — PASSES
+
+`obsclim − ERA5 = −0.033` against a combined interval of `0.097`. Two independently produced
+estimates of the same quantity agreeing to a third of their combined uncertainty, on the same 78
+stations over the same window. **The pair describes the same place, so the counterfactual is usable.**
+
+The tolerance is one combined interval rather than two, because a stop condition that cannot stop is
+not a control.
+
+### Prediction 1 — HOLDS, narrowly
+
+ATTRICI removes **+0.184 ± 0.023 °C/decade**, 37.5% of the factual trend, from the per-station
+*paired* difference — paired because both scenarios come from the same cells, so the difference
+cancels the between-station spread that an unpaired interval would be dominated by.
+
+With `S = −0.659 ± 0.165` days per degree, reused from `phase2a_timing` rather than refitted, the
+advance it attributes is **−0.121 ± 0.034 days/decade**. Half of DAMIP's −0.296 is −0.148, so the
+prediction that it would come in under half holds — by 0.027 d/decade, which is inside the intervals
+and should not be read as a comfortable margin.
+
+### Prediction 3 — HOLDS, and this is the finding
+
+| | attributed advance |
+| --- | --- |
+| DAMIP, `f` = 0.98 of the ensemble-mean forced warming | **−0.296 ± 0.090 d/decade** |
+| ATTRICI, 38% of each station's own trend | **−0.121 ± 0.034 d/decade** |
+
+`[−0.386, −0.206]` against `[−0.155, −0.087]`. **The intervals do not overlap.** The two
+counterfactuals disagree by a factor of about 2.4, so the fourth line earns its place rather than
+corroborating the third.
+
+Neither is wrong, and they are not averaged. `f` is a ratio of *ensemble-mean forced* signals, and
+averaging fifteen models suppresses internal variability by construction, leaving something close to
+a pure forced response. ATTRICI detrends *one 0.5° cell's actual daily series*, where a 25-year trend
+contains a great deal of internal variability and only the GMT-correlated part comes out.
+
+**So the gap between them measures how much of a local 25-year warming trend is internal variability
+rather than forced response — about 60% of it.** That is a caution against reading `f = 0.98` as "98%
+of the warming at these stations was us": it is a claim about the forced component, not about the
+trend a thermometer at one station measured. The attribution claim should carry that.
+
+### Prediction 4 — moot, and why
+
+The prediction was that truncating DAMIP to 1995–2019 would not rescue the agreement. It cannot be
+tested as written: DAMIP's shared window already ends in **2014**, because `historical` stops there,
+so it is already the *shorter* window of the two. Matching them would mean shrinking both to
+1995–2014, which trades the window mismatch for less data on both sides.
+
+Recorded as unanswerable rather than quietly dropped. The windows differ (1995–2014 against
+1995–2019) and that difference is one of the several reasons these two numbers are not comparable
+quantities — which is the same conclusion prediction 3 reached from the other direction.
+
+### What the scoping probe got wrong
+
+The one-station probe in the pre-registration put the removal at **~15%**. The 78-station claim-band
+answer is **37.5%** — off by a factor of two and a half. Right direction, wrong magnitude, which is
+exactly why it was labelled a scoping observation and not a result. Recorded because the temptation
+with a probe that points the right way is to treat it as the answer.
+
 ## What this cannot establish
 
 Neither counterfactual attributes the *animals*. Both attribute the warming the animals tracked,
