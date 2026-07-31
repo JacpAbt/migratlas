@@ -274,19 +274,28 @@ def build_ribbon(
         "web/public/counterfactual.json"
     ),
 ) -> None:
-    """Observed passage dates against the counterfactual without human forcing.
+    """Observed passage dates against each counterfactual, drawn as two ribbons.
 
-    The counterfactual removes only what was attributed, so it still advances: about half the
-    observed advance does not track temperature and was never attributed to anything.
+    Two questions, one chart each: what if there had been no human forcing, and what if there had
+    been no warming. They disagree by a factor of about 2.4 and both are right, which is why this is
+    not one chart with four lines -- four would invite averaging, and averaging is meaningless here.
+
+    Neither counterfactual is flat. Each removes only what it attributes, and about half the
+    observed advance does not track temperature at all.
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
-    ribbon = counterfactual.collect()
-    size = counterfactual.write(out, ribbon)
-    print(f"{ribbon.window[0]}-{ribbon.window[1]}, {len(ribbon.years)} years")
-    for line in ribbon.lines:
-        print(f"  {line.label:<34} {line.per_decade:+.3f} days per decade")
-    print(f"  the two part by {ribbon.divergence:.2f} days across the window")
-    print(f"ribbon -> {out} ({size / 1024:.1f} KiB)")
+    comparison = counterfactual.collect()
+    size = counterfactual.write(out, comparison)
+    for ribbon in comparison.ribbons:
+        print(f"\n{ribbon.key}: {ribbon.question}")
+        print(f"  {ribbon.window[0]}-{ribbon.window[1]}, {len(ribbon.years)} years")
+        for line in ribbon.lines:
+            print(f"  {line.label:<28} {line.per_decade:+.3f} days per decade")
+        print(f"  the two part by {ribbon.divergence:.2f} days across the window")
+    # Printed rather than counted: the text says whether the second ribbon is there and why, so a
+    # run that lost it to its own control reads as a result instead of as a shorter list.
+    print(f"\n{comparison.disagreement}")
+    print(f"\nribbons -> {out} ({size / 1024:.1f} KiB)")
 
 
 @app.command("build-detectability")

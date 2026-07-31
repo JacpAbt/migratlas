@@ -111,13 +111,19 @@ as fifteen grey threads.
 
 Two kinds of motion, nothing else:
 
-- **SVG paths stroke on** as if drawn by hand — the ribbon's three lines, heading underlines,
+- **SVG paths stroke on** as if drawn by hand — each ribbon's two lines, heading underlines,
   brackets.
 - **The globe flies** between claims, so a reader sees where the evidence is.
 
 The ribbon is why this is worth building at all: **the drawing order is the argument.** Observed
 draws, then the counterfactual draws after it, and the reader *watches the gap fail to open*. Drawn
 together, the same two lines make the reader hunt for a difference instead of witnessing its size.
+
+*Amended 2026-07-31.* The one ribbon became two, one per counterfactual, and the decision survived
+unchanged — but it gained a partner. The two charts share **one frame**, vertical and horizontal, so a
+0.89-day gap and a 0.29-day gap render at different heights and the shorter window visibly runs out.
+Drawing order makes one gap's size legible; a shared frame makes two gaps *comparable*. See
+`docs/methods/counterfactual.md`.
 
 `prefers-reduced-motion` gets a full path, and it is not a faster animation — every element lands in
 its **final state on frame one**.
@@ -175,7 +181,7 @@ The ember is not the rust: `#b4522e` on slate loses the saturation that makes it
 *detectable*, so it shifts warmer and lighter to hold the same job.
 
 Honest scope, agreed with the user up front: this is roughly a week of the rebuild, not a day. It
-needs a dark `EARTH_FLAVOR` for MapLibre (~15 keys), the ribbon's three line colours re-checked
+needs a dark `EARTH_FLAVOR` for MapLibre (~15 keys), the ribbons' line colours re-checked
 against slate, and the detectability greys re-tuned — those four were chosen specifically to read as
 "mostly grey" against parchment and will not transfer.
 

@@ -136,10 +136,17 @@ averaging fifteen models suppresses internal variability by construction, leavin
 a pure forced response. ATTRICI detrends *one 0.5° cell's actual daily series*, where a 25-year trend
 contains a great deal of internal variability and only the GMT-correlated part comes out.
 
-**So the gap between them measures how much of a local 25-year warming trend is internal variability
-rather than forced response — about 60% of it.** That is a caution against reading `f = 0.98` as "98%
-of the warming at these stations was us": it is a claim about the forced component, not about the
-trend a thermometer at one station measured. The attribution claim should carry that.
+**So the gap between them measures the share of a local 25-year warming trend that does not move with
+the global mean — about 60% of it.** Over 25 years at one 0.5° cell that is mostly variability, but it
+is not *only* variability: any forced response that does not scale with global mean temperature —
+aerosol and land-use effects, circulation change — is also removed from neither side, and ATTRICI
+regresses on GMT specifically. **So 60% is an upper bound on the chance part, not a measurement of
+it.** Stated that way because the looser reading is the one that would get repeated.
+
+Either way it is a caution against reading `f = 0.98` as "98% of the warming at these stations was
+us": that is a claim about the forced component, not about the trend a thermometer at one station
+measured. The attribution claim carries it — `reports/findings.py` computes both numbers and puts the
+comparison in the `anthropogenic-share` caveat rather than leaving it in this file.
 
 ### Prediction 4 — moot, and why
 

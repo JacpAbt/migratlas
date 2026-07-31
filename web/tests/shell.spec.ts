@@ -324,24 +324,52 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   await page.getByRole("button", { name: /show me how you know/i }).click();
 
   // Not on the first claim: a chart on every claim would be decoration.
-  await expect(page.locator(".ribbon__chart")).toHaveCount(0);
+  await expect(page.locator(".chart__svg")).toHaveCount(0);
 
   await page.locator(".tab", { hasText: /Human forcing/i }).click();
-  const chart = page.locator(".ribbon__chart");
-  await expect(chart).toBeVisible();
+  const charts = page.locator(".chart__svg");
+  await expect(charts.first()).toBeVisible();
 
-  // Three lines, and the observed one draws before the counterfactual: the drawing order is the
-  // argument, because a reader watches the gap fail to open rather than hunting for it.
-  await expect(page.locator(".ribbon__line")).toHaveCount(3);
+  // Two charts, not one with four lines. Two of four lines would nearly coincide and two would sit
+  // far apart, which invites averaging -- and an average of two different quantities is nothing.
+  await expect(charts).toHaveCount(2);
+  await expect(page.locator(".chart__line")).toHaveCount(4);
+
+  // One frame for both, which is the assertion the whole design rests on. Each chart drawn to its
+  // own extents would make a 0.89-day gap and a 0.29-day gap look the same size, and would stretch
+  // the shorter window's slope. Compared on the rendered geometry rather than the source numbers,
+  // because it is the pixels that would lie.
+  const geometry = await charts.evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const ticks = [...node.querySelectorAll(".chart__tick")].map((t) => t.textContent?.trim());
+      return ticks.join("|");
+    }),
+  );
+  expect(new Set(geometry).size, "the two charts share one frame").toBe(1);
+
+  // The observed line draws before the counterfactual: the drawing order is the argument, because a
+  // reader watches the gap fail to open rather than hunting for it.
   const delays = await page
-    .locator(".ribbon__line")
+    .locator(".chart__line")
     .evaluateAll((nodes) => nodes.map((n) => getComputedStyle(n).transitionDelay));
-  expect(new Set(delays).size, "all three lines draw at once").toBeGreaterThan(1);
+  expect(new Set(delays).size, "the lines all draw at once").toBeGreaterThan(1);
 
-  // And the size stated in words, which is the assertion that stops the chart being "improved" into
-  // a dramatic diverging wedge.
-  await expect(page.locator(".ribbon__size")).toContainText(/part by \d+\.\d+ days/);
-  await expect(page.locator(".ribbon__caveat")).toContainText("trend");
+  // The shorter counterfactual says so on the chart, not only in its caveat.
+  await expect(page.locator(".chart__beyond-label")).toHaveCount(1);
+
+  // Each size stated in words, which is what stops a chart being "improved" into a diverging wedge.
+  await expect(page.locator(".chart__size").first()).toContainText(/part by \d+\.\d+ days/);
+
+  // And the disagreement explained, at body size rather than as a footnote. Two numbers that differ
+  // by a factor of two with no explanation would be worse than publishing one of them.
+  const gap = page.locator(".pair__gap");
+  await expect(gap).toContainText(/differ/i);
+  await expect(gap.locator("p")).toContainText("not two estimates of one number");
+  const size = await gap.locator("p").evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
+  const footnote = await page
+    .locator(".pair__caveat")
+    .evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
+  expect(size, "the explanation is not set at footnote size").toBeGreaterThan(footnote);
 });
 
 test("the detectability assessment is the coverage claim's own number", async ({ page }) => {

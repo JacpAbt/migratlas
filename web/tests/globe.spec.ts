@@ -286,33 +286,57 @@ test("a station popup states the caveat with the number", async ({ page }) => {
   await expect(popup).toContainText("aerial biomass, not birds");
 });
 
-test("the counterfactual is drawn to the scatter, not to the gap", async ({ page }) => {
-  // The one geometric property worth pinning. If the axis were ever scaled to the divergence, the
-  // gap between the two lines would grow to fill the plot -- so it must stay small relative to the
-  // spread of the observed points, which is what makes the picture honest about the signal's size.
+test("each counterfactual is drawn to the scatter, and both to one frame", async ({ page }) => {
+  // The two geometric properties worth pinning, measured off the rendered SVG rather than the source
+  // numbers, because it is the pixels that would lie.
+  //
+  // Scaled to the gap, the divergence would grow to fill the plot. And scaled *per chart*, DAMIP's
+  // 0.89-day gap and ATTRICI's 0.29-day gap would render the same height -- so the reader would see
+  // two counterfactuals agreeing where the whole finding is that they do not.
   await ready(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
   await page.locator(".tab", { hasText: /Human forcing/i }).click();
-  await expect(page.locator(".ribbon__chart")).toBeVisible();
-  const measured = await page.evaluate(() => {
-    const y = (selector: string) => {
-      const line = document.querySelector(selector) as SVGLineElement | null;
-      return line ? Number(line.getAttribute("y2")) : NaN;
-    };
-    const dots = [...document.querySelectorAll(".ribbon__year")].map((dot) =>
-      Number(dot.getAttribute("cy")),
-    );
-    return {
-      gap: Math.abs(y(".ribbon__line--observed") - y(".ribbon__line--counterfactual")),
-      scatter: Math.max(...dots) - Math.min(...dots),
-    };
-  });
-  expect(measured.scatter).toBeGreaterThan(0);
+  await expect(page.locator(".chart__svg").first()).toBeVisible();
+
+  const charts = await page.locator(".chart__svg").evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const y = (selector: string) => {
+        const line = node.querySelector(selector) as SVGLineElement | null;
+        return line ? Number(line.getAttribute("y2")) : NaN;
+      };
+      const dots = [...node.querySelectorAll(".chart__year")].map((dot) =>
+        Number(dot.getAttribute("cy")),
+      );
+      const ticks = [...node.querySelectorAll(".chart__tick")].map((tick) =>
+        Number(tick.getAttribute("y")),
+      );
+      return {
+        gap: Math.abs(y(".chart__line--observed") - y(".chart__line--counterfactual")),
+        scatter: Math.max(...dots) - Math.min(...dots),
+        ticks: ticks.join(","),
+      };
+    }),
+  );
+
+  expect(charts.length).toBeGreaterThan(1);
+  for (const chart of charts) {
+    expect(chart.scatter).toBeGreaterThan(0);
+    expect(
+      chart.gap / chart.scatter,
+      `the lines part by ${((chart.gap / chart.scatter) * 100).toFixed(0)}% of the observed ` +
+        "scatter, which means the axis is scaled to the gap rather than to the data",
+    ).toBeLessThan(0.35);
+  }
+
   expect(
-    measured.gap / measured.scatter,
-    `the two lines part by ${((measured.gap / measured.scatter) * 100).toFixed(0)}% of the ` +
-      "observed scatter, which means the axis is scaled to the gap rather than to the data",
-  ).toBeLessThan(0.35);
+    new Set(charts.map((chart) => chart.ticks)).size,
+    "the charts' rules sit at different heights, so each was scaled to itself",
+  ).toBe(1);
+
+  // And the gaps must render *differently*, because they are different sizes. Equal heights here
+  // would mean the shared frame was defeated somewhere downstream of the ticks.
+  const gaps = charts.map((chart) => Math.round(chart.gap));
+  expect(new Set(gaps).size, `both gaps render at ${gaps[0]}px`).toBeGreaterThan(1);
 });
 
 test("the detectability layer draws, and most of it is not detectable", async ({ page }) => {

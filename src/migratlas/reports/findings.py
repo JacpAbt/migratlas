@@ -469,6 +469,33 @@ def collect() -> list[Finding]:
         primary = attribution.chosen(windows)
         days = primary.ensemble * seen.explained
         bracket = sorted(found.ensemble for found in windows)
+
+        # A second counterfactual, built from observations rather than models, attributes a much
+        # smaller advance. That is not a competing estimate of this number and it is not averaged
+        # into it -- but it changes how "almost all" here should be read, so it goes in the caveat
+        # rather than staying in a methods note nobody opens.
+        from migratlas.reports import phase2a_attrici  # noqa: PLC0415
+
+        second = phase2a_attrici.attributed(seen.sensitivity, seen.sensitivity_ci95)
+        variability = (
+            ' Read "almost all" as a share of the forced warming as the ensemble mean has it, '
+            f"though: averaging {primary.models} models cancels the year-to-year weather, so what "
+            "the ratio divides into is close to a pure forced signal rather than the trend a "
+            "thermometer at one station recorded. An independent counterfactual built from the "
+            "observations themselves, with no model in it (ATTRICI), removes only "
+            f"{second.share_of_factual:.0%} of each station's own warming and so attributes "
+            f"{second.advance:+.2f} days per decade against this finding's {days:+.2f}. Neither is "
+            "wrong and they are not averaged: the distance between them says that roughly "
+            f"{1 - abs(second.advance / days):.0%} of the warming at these stations over "
+            f"{second.window[0]}-{second.window[1]} does not move with the global mean at all. "
+            "Over twenty-five years at one half-degree cell that is mostly weather leaning one "
+            "way — but it also holds any forcing that does not scale with the global average, so "
+            "it is an upper bound on the chance part rather than a measurement of it. Either "
+            "way: human forcing caused nearly all of the warming signal, and that is not the "
+            "same thing as nearly all of the warming these stations measured."
+            if second is not None
+            else ""
+        )
         findings.append(
             Finding(
                 key="anthropogenic-share",
@@ -492,6 +519,7 @@ def collect() -> list[Finding]:
                     "track temperature at all and is unexplained here. The models' human share "
                     f"spans {bracket[0]:.2f} to {bracket[-1]:.2f} depending on the window fitted, "
                     "and CMIP6's historical runs stop in 2014 while the radar record runs to 2025."
+                    + variability
                 ),
                 method="docs/methods/phase2a-attribution.md",
                 direction="change",

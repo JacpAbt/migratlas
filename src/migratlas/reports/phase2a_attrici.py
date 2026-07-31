@@ -23,6 +23,7 @@ differs between the two attributions is the warming term.
 from __future__ import annotations
 
 import logging
+from functools import lru_cache
 from typing import Final, NamedTuple
 
 import numpy as np
@@ -127,12 +128,15 @@ def warming(source: str, variable: str, label: str) -> Warming:
     return Warming(label=label, per_decade=mean, ci95=ci, stations=trends.height)
 
 
+@lru_cache(maxsize=1)
 def control() -> tuple[Warming, Warming, bool]:
     """Prediction 2: does the factual half reproduce the reanalysis already in the lake?
 
     Returns both warmings and whether the control passes. A failure means the two datasets describe
     different places, and the pre-registration says the whole comparison stops rather than being
     reported with a caveat.
+
+    Cached because three callers gate on it and each call is two full scans of the driver panel.
     """
     reanalysis = warming(era5.SOURCE_ID, TEMPERATURE, "ERA5 reanalysis")
     factual = warming(attrici.SOURCE_ID, TEMPERATURE, "ISIMIP obsclim")
@@ -154,6 +158,56 @@ def paired_removal() -> tuple[float, float]:
     both = _in_band(factual.join(counter, on="station_id", how="inner"))
     differences = (both["factual"] - both["counter"]).to_numpy()
     return _mean_ci(differences)
+
+
+class Attributed(NamedTuple):
+    """What the second counterfactual attributes, and the terms behind it."""
+
+    window: tuple[int, int]
+    stations: int
+    warming_removed: float
+    warming_removed_ci95: float
+    share_of_factual: float
+    """Fraction of the factual trend the detrending removes. What DAMIP's `f` is compared to."""
+
+    advance: float
+    advance_ci95: float
+    control_gap: float
+    """How far obsclim lands from ERA5, in C/decade. What the stop condition was applied to."""
+
+
+def attributed(per_degree: float, per_degree_ci95: float) -> Attributed | None:
+    """The second counterfactual's answer, or None if its control did not pass.
+
+    `S` is supplied rather than refitted here. The two attributions are meant to differ only in the
+    warming term, so a second fit would make part of the gap between them a difference of method.
+    """
+    reanalysis, factual, passes = control()
+    if not passes:
+        log.warning(
+            "ATTRICI control failed: obsclim %+.3f against ERA5 %+.3f C/decade",
+            factual.per_decade,
+            reanalysis.per_decade,
+        )
+        return None
+
+    removed, removed_ci = paired_removal()
+    advance = per_degree * removed
+    # Relative errors in quadrature: S and the warming difference come from the same stations but
+    # different quantities, so treating them as independent is the honest default.
+    ci = abs(advance) * float(
+        np.sqrt((per_degree_ci95 / per_degree) ** 2 + (removed_ci / removed) ** 2)
+    )
+    return Attributed(
+        window=WINDOW,
+        stations=factual.stations,
+        warming_removed=removed,
+        warming_removed_ci95=removed_ci,
+        share_of_factual=removed / factual.per_decade,
+        advance=advance,
+        advance_ci95=ci,
+        control_gap=abs(factual.per_decade - reanalysis.per_decade),
+    )
 
 
 def render() -> str:
@@ -187,7 +241,6 @@ def render() -> str:
         return "\n".join(out)
 
     counterfactual = warming(attrici.SOURCE_ID, COUNTERFACTUAL, "ISIMIP counterclim")
-    removed, removed_ci = paired_removal()
     fitted = sensitivities()
     fitted_band = [item for item in fitted if CLAIM_BAND[0] <= item.latitude < CLAIM_BAND[1]]
     if not fitted_band:
@@ -197,34 +250,35 @@ def render() -> str:
     per_degree, per_degree_ci = _mean_ci(np.array([item.per_degree for item in fitted_band]))
     observed, observed_ci = _mean_ci(np.array([item.observed_per_decade for item in fitted_band]))
 
-    attrici_advance = per_degree * removed
-    # Relative errors added in quadrature: S and the warming difference are fitted on the same
-    # stations but from different quantities, so treating them as independent is the honest default.
-    attrici_ci = abs(attrici_advance) * float(
-        np.sqrt((per_degree_ci / per_degree) ** 2 + (removed_ci / removed) ** 2)
-    )
+    answer = attributed(per_degree, per_degree_ci)
+    if answer is None:  # unreachable: the control passed above, and it is cached
+        return "\n".join(out)
 
     out += [
         "",
         f"  {counterfactual.label:<22} {counterfactual.per_decade:+.3f}"
         f" +/- {counterfactual.ci95:.3f} C/decade",
         "",
-        f"ATTRICI removes {removed:+.3f} +/- {removed_ci:.3f} C/decade of warming,"
-        f" {removed / factual.per_decade:.1%} of the factual trend",
+        f"ATTRICI removes {answer.warming_removed:+.3f} +/-"
+        f" {answer.warming_removed_ci95:.3f} C/decade of warming,"
+        f" {answer.share_of_factual:.1%} of the factual trend",
         f"S = {per_degree:+.3f} +/- {per_degree_ci:.3f} days per degree (from phase2a_timing)",
-        f"so the advance it attributes is {attrici_advance:+.3f} +/- {attrici_ci:.3f} days/decade",
+        f"so the advance it attributes is {answer.advance:+.3f} +/-"
+        f" {answer.advance_ci95:.3f} days/decade",
         f"against an observed {observed:+.3f} +/- {observed_ci:.3f}",
         "",
         "=" * 78,
         "the two counterfactuals",
         "=" * 78,
         "  DAMIP     f = 0.98 of the ensemble-mean forced warming -> -0.296 +/- 0.090 d/decade",
-        f"  ATTRICI   {removed / factual.per_decade:.0%} of each station's own trend"
-        f" -> {attrici_advance:+.3f} +/- {attrici_ci:.3f} d/decade",
+        f"  ATTRICI   {answer.share_of_factual:.0%} of each station's own trend"
+        f" -> {answer.advance:+.3f} +/- {answer.advance_ci95:.3f} d/decade",
         "",
         "Not averaged, and not adjudicated. A ratio of ensemble-mean forced signals and a",
         "detrending of one cell's actual series are different quantities; the gap between them is",
-        "how much of a local 25-year trend is internal variability rather than forced response.",
+        "the share of a local 25-year trend that does not move with the global mean. Mostly that",
+        "is variability, but it also holds any forcing that does not scale with the global",
+        "average, so the gap is an upper bound on the chance part rather than a reading of it.",
         "",
         "What neither establishes: both attribute the warming the animals tracked, through a",
         "response function fitted on observations. A confounder common to both temperature and",

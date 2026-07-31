@@ -281,6 +281,9 @@ class Observed(NamedTuple):
 
     sensitivity: float
     """S, days of passage-date shift per degC. Negative is earlier."""
+    sensitivity_ci95: float
+    """The spread on S across the band's stations. Carried so a second attribution reusing S can
+    propagate its interval rather than treating the response function as exact."""
     warming: float
     """W_obs, observed degC per decade."""
     explained: float
@@ -301,8 +304,10 @@ def observed() -> Observed | None:
     fitted = [item for item in sensitivities() if CLAIM_BAND[0] <= item.latitude < CLAIM_BAND[1]]
     if not fitted:
         return None
+    sensitivity, sensitivity_ci = _mean_ci(np.array([item.per_degree for item in fitted]))
     return Observed(
-        sensitivity=float(np.mean([item.per_degree for item in fitted])),
+        sensitivity=sensitivity,
+        sensitivity_ci95=sensitivity_ci,
         warming=float(np.mean([item.warming_per_decade for item in fitted])),
         explained=float(np.mean([item.explained_per_decade for item in fitted])),
         advance=float(np.mean([item.observed_per_decade for item in fitted])),
