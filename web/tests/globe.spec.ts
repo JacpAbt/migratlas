@@ -380,6 +380,11 @@ const BUDGET = {
 const PAYLOAD = /\/(layers\/.*|[^/]+)\.(geojson|json)$/;
 
 test("the published layers stay inside the performance budget", async ({ page }) => {
+  // Must outlast its own readyMs ceiling by a clear margin, or the test dies before the assertion
+  // it exists to make can fail. Raising that ceiling to 20s while leaving this on Playwright's 30s
+  // default made the budget unfalsifiable and still red -- worst of both.
+  test.setTimeout(90_000);
+
   // request.sizes(), not response.body() and not content-length. content-length is absent on
   // the chunked grid responses, so reading the header measured 94 KiB of an 858 KiB payload --
   // and reading the bodies instead made Chromium retain them, which pushed the measured heap
