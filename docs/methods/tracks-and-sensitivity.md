@@ -137,3 +137,105 @@ is studied is range shift from occurrence records, which lands straight back in 
 MegaMove already holds them under the marine realm. They belong on the coverage page as an
 **explained absence**, which is itself the honest teaching point about what a movement atlas can
 cover.
+
+## 7. The enumeration, 2026-07-31
+
+Account acquired, so §4's ordering could finally be run: enumerate first, classify sensitivity from
+the species that are actually reachable. **Metadata only — no location data was requested.**
+
+### Two facts about the API that a later ingest must not forget
+
+**`i_can_see_data=true` cannot be trusted.** The same authenticated call returned the *unfiltered*
+8,688-study set on one attempt and the correct 2,031 on the next, minutes apart, with no change to the
+request. A run that silently got the wrong one would have quadrupled the denominator under every
+count below. **The filter has to be re-applied client-side**, and this note exists so the next person
+does not discover it by publishing a wrong number.
+
+**Line counting is not row counting.** The first reading of this endpoint reported "13,523 studies"
+from `len(text.splitlines())`. Quoted fields contain newlines: the same response is 4,190 physical
+lines for 2,031 studies. Row counts come from a real CSV reader, and `csv.reader` and polars agree
+exactly on this feed with zero ragged rows.
+
+### What survives the filters
+
+| | studies |
+| --- | --- |
+| in Movebank | 8,688 |
+| data visible to this account | 2,031 |
+| has deployed locations | 1,873 |
+| downloadable | 900 |
+| open licence (CC family) | 825 |
+| north of 55°N | **152** |
+| …and ≥15 years *inside one study* | **5** |
+
+That last row is the one that decides what this source can be. `MIN_YEARS` is 15 across this project,
+and five studies clearing it is not an archive of change — it is an archive of snapshots.
+
+But a study is not obviously the unit. The radar's trend is per *station*, so the analogue is per
+cell, and many short studies in one place could clear the threshold where no single study does.
+Computed as an **upper bound** from each study's single reported centroid — generous, because a
+study's animals were not all at its centroid:
+
+- **115** 1° cells touched by an open Arctic study
+- **7** cells whose pooled study-years reach 15
+- deepest cell: **33 distinct years, 1987–2019**
+
+So the verdict is mostly grey. AAMA-region open data belongs in the same part of the detectability map
+as MegaMove and OBIS — vast coverage, no trend available — with a handful of exceptions.
+
+### The taxon gap *is* fillable, and two series are deep
+
+88 taxa across the 152 open Arctic studies. Split by group, and this is the answer to the question
+the whole note was written for:
+
+| terrestrial mammal | studies | distinct years | ~individuals |
+| --- | --- | --- | --- |
+| **Rangifer tarandus** (caribou/reindeer) | 5 | **35** (1988–2022) | 1,286 |
+| Vulpes lagopus (Arctic fox) | 8 | 19 (2007–2025) | 270 |
+| Vulpes vulpes (red fox) | 5 | 16 (2009–2025) | 41 |
+| Ovis dalli | 2 | 7 | 136 |
+| Canis lupus | 2 | 5 | 58 |
+| Alces alces | 2 | 6 | 60 |
+| Nyctereutes procyonoides | 1 | 6 | 30 |
+| Lepus arcticus | 1 | 2 | 25 |
+
+**Caribou is the source.** 35 distinct years across 1,286 individuals, open licence, and the strongest
+driver signal available anywhere in this lake. It is also, unambiguously, a terrestrial non-bird
+mammal that migrates — which is exactly the gap.
+
+One marine series is deeper still and was not being looked for: **Odobenus rosmarus** (walrus), one
+study, **33 distinct years 1987–2019, ~921 individuals**. That is the 33-year cell above. Worth
+recording because it is the single deepest track series in the open set.
+
+Birds remain the bulk — 70 taxa, 121 study-taxon pairs, led by *Uria lomvia* at 14 studies. No fish in
+the open Arctic subset at all.
+
+### Canis lupus is present, so the gate's first real test is not hypothetical
+
+§1 documented the wolf pathway: an anti-wolf site published telemetry-location instructions, Idaho
+legislated against telemetry-aided hunting, and four of eleven collared wolves on Yellowstone's
+Northern Range were shot in one season. Two open-licence Arctic wolf studies are in this set.
+
+So `taxon_sensitivity` gets a **`high`** entry for *Canis lupus* with that rationale, and under the
+individual-granularity policy `high` means **withheld — nothing published at any resolution**. Not a
+coarse grid, not a delay. The gate refuses, and it refuses about a real species in a real source,
+which is what it was built in Phase 0 to do.
+
+### And one refusal nobody planned for
+
+**`Homo sapiens` appears in the taxon list.** One open-licence study, 12 individuals, 2026. Movebank
+hosts human tracking studies alongside animal ones, and an ingest that trusted the archive's taxon
+field would land human location data in this lake.
+
+`EMBARGOED` exists for exactly this. It needs to be a refusal in code with a test, not a line in a
+document — a `Homo sapiens` entry that the ingest checks before it writes anything, so the refusal
+cannot be forgotten by whoever adds the next study.
+
+### A method note on my own shortcut
+
+Grouping 88 species by a hand-written genus list put four birds in an UNCLASSIFIED bucket — *Chen
+canagica*, *Plectrophenax nivalis*, *Zonotrichia atricapilla*, *Setophaga striata*. Harmless in a
+screening pass, and a concrete argument that the ingest must resolve taxa through the GBIF spine
+(`taxonomy.py`) rather than any list written by hand: a missed genus in a classifier that fed the
+sensitivity lookup would be a species falling through to the source default, which is the one failure
+mode the individual-granularity rule exists to prevent.
