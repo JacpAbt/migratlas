@@ -11,6 +11,11 @@
 }
 
 html {
+  /* Needed for `height: 100%` further down to mean anything at all: a percentage height resolves
+     against the parent, and without this one the shell collapsed to zero and its arrival card
+     rendered outside the layout entirely -- visible on screen, unclickable, and reported by
+     Playwright as "outside of the viewport". */
+  height: 100%;
   /* So a browser paints its own scrollbars and form controls to match whichever surface is live. */
   color-scheme: light;
 }
@@ -37,6 +42,15 @@ body {
   /* The grain is 1px lines, and unsnapped subpixel text over it shimmers on scroll. */
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+/* The shell is a fixed viewport with a globe in it, while the preview page is a document that
+   scrolls. Opting in by class rather than setting `overflow: hidden` globally, which would silently
+   break the preview and anything else added later. */
+.shell-page,
+.shell-page > #app {
+  height: 100%;
+  overflow: hidden;
 }
 
 a {

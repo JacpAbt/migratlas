@@ -175,6 +175,16 @@ the page refuse an overclaim that a prettier page would happily make.
 **Still to settle.** The margin's behaviour on a phone, where a 13rem column does not exist. It
 collapses to below the claim, still always visible, still not behind a click.
 
+**Progress, 2026-07-31.** Tokens, the claim card and the shell are built and live at `/shell.html`
+alongside the shipped globe, which keeps its own 15 tests untouched. The shell has three modes --
+arriving, reading, exploring -- and `web/src/lib/story.ts` holds the per-claim camera and layer set,
+because a camera position is presentation and does not belong in `reports/findings.py`.
+
+`index.html` does not take it over yet, and the reason is a list rather than a judgement: the shell
+has no species search, no time slider, no layer toggles with their generalisation statements, no
+counterfactual ribbon and no detectability legend. Every one of those is asserted by a test on the
+old page, so the swap happens when the new page passes them too.
+
 **Settled by building rather than by describing.** The hand face was chosen from four candidates
 rendered as the real claim card in the real palette, because a text mockup cannot convey a pen. That
 exercise also killed one candidate outright on evidence: Shadows Into Light Two renders *lighter

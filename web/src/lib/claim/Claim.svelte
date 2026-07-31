@@ -48,7 +48,10 @@
 <style>
   .claim {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--margin-column);
+    /* The margin is narrower here than the token's default, because inside a sheet on a globe there
+       is less room than on a page of its own. Two columns need body + gap + margin to fit, which is
+       what the 46rem breakpoint below is measured from. */
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, var(--margin-column));
     column-gap: var(--gap-wide);
     align-items: start;
     max-width: 66rem;
@@ -148,7 +151,7 @@
 
   /* On a phone there is no 12.5rem column, so the margin goes below the claim -- still always
      visible, still not behind a control. Only its position changes. */
-  @media (max-width: 52rem) {
+  @media (max-width: 46rem) {
     .claim {
       grid-template-columns: minmax(0, 1fr);
     }

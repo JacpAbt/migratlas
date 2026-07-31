@@ -10,15 +10,18 @@
   // Measured, not stretched. See the note at the top of `ink.ts`: a stretched viewBox and a dash
   // animation cannot coexist, because the path lives in user units and the dashes in screen units.
   let width = $state(0);
-  let drawn = $state(!draw);
+  let started = $state(false);
 
   const path = $derived(underline(seed, width));
+  // Derived rather than `$state(!draw)`, which captures only the prop's first value and would leave
+  // a rule permanently undrawn if `draw` ever flipped after mount.
+  const drawn = $derived(!draw || started);
 
   $effect(() => {
     // Guarded on width so the animation starts when there is a line to draw, not on first paint at
     // zero width -- where it would complete instantly and then be replaced by an undrawn line.
     if (!draw || width <= 0) return;
-    const frame = requestAnimationFrame(() => (drawn = true));
+    const frame = requestAnimationFrame(() => (started = true));
     return () => cancelAnimationFrame(frame);
   });
 </script>
