@@ -203,7 +203,7 @@
     {
      "key": "observed",
      "label": "what happened",
-     "per_decade": -0.5590837875896769,
+     "per_decade": -0.559083787589677,
      "start": 267.3591861568139,
      "end": 265.6819347940448,
      "note": "The fitted trend at the claim-band stations, and the number the ledger publishes."
@@ -211,23 +211,23 @@
     {
      "key": "counterfactual",
      "label": "no human forcing",
-     "per_decade": -0.2635109296293262,
+     "per_decade": -0.26351092962932615,
      "start": 266.91582686987334,
      "end": 266.1252940809854,
      "note": "The observed trend with the attributed human share removed. It still advances, because about half the observed advance does not track temperature at all and was never attributed to anything; flattening it would claim that half is natural."
     }
    ],
    "terms": {
-    "sensitivity_days_per_degree": -0.6585167526711123,
-    "warming_degrees_per_decade": 0.5178997960229069,
-    "thermal_days_per_decade": -0.3006354314431795,
+    "sensitivity_days_per_degree": -0.6585167526711124,
+    "warming_degrees_per_decade": 0.5178997960229068,
+    "thermal_days_per_decade": -0.30063543144317967,
     "human_share_of_warming": 0.9831604230461917,
-    "removed_days_per_decade": -0.2955728579603507,
-    "observed_days_per_decade": -0.5590837875896769,
+    "removed_days_per_decade": -0.2955728579603509,
+    "observed_days_per_decade": -0.559083787589677,
     "stations": 78.0,
     "models": 15.0
    },
-   "divergence": 0.8867185738810521,
+   "divergence": 0.8867185738810526,
    "caveat": "The share is a ratio of forced warming as the ensemble mean has it. Averaging 15 models suppresses year-to-year variability by construction, so this is a statement about the forced signal and not about the trend any one thermometer measured. CMIP6's historical runs also stop in 2014 while the radar record runs to 2025.",
    "method": "docs/methods/phase2a-attribution.md"
   },
@@ -396,7 +396,7 @@
     {
      "key": "observed",
      "label": "what happened",
-     "per_decade": -0.5590837875896769,
+     "per_decade": -0.559083787589677,
      "start": 267.4068891658622,
      "end": 266.065088075647,
      "note": "The fitted trend at the claim-band stations, and the number the ledger publishes."
@@ -404,23 +404,23 @@
     {
      "key": "counterfactual",
      "label": "no warming",
-     "per_decade": -0.4382126782998206,
+     "per_decade": -0.4382126782998207,
      "start": 267.2618438347144,
      "end": 266.2101334067948,
      "note": "The observed trend with the warming-correlated share removed. Smaller than the forcing answer, and the gap between the two is the point: most of a 25-year trend at one place does not move with the global mean at all."
     }
    ],
    "terms": {
-    "sensitivity_days_per_degree": -0.6585167526711123,
-    "warming_removed_degrees_per_decade": 0.18355054567643456,
-    "warming_removed_ci95": 0.022966751114410596,
-    "share_of_factual_warming": 0.37525544588770615,
-    "removed_days_per_decade": -0.12087110928985637,
-    "removed_days_ci95": 0.03391826345176605,
-    "observed_days_per_decade": -0.5590837875896769,
+    "sensitivity_days_per_degree": -0.6585167526711124,
+    "warming_removed_degrees_per_decade": 0.1835505456764345,
+    "warming_removed_ci95": 0.022966751114410617,
+    "share_of_factual_warming": 0.3752554458877062,
+    "removed_days_per_decade": -0.12087110928985634,
+    "removed_days_ci95": 0.03391826345176606,
+    "observed_days_per_decade": -0.559083787589677,
     "stations": 78.0
    },
-   "divergence": 0.2900906622956553,
+   "divergence": 0.29009066229565517,
    "caveat": "This covers 1995-2019, because the counterfactual ends in 2019 while the radar record runs to 2025. It says nothing about the last six years. The detrending removes what correlates with global mean temperature, which at one half-degree cell is a smaller share of the trend than the forced signal is.",
    "method": "docs/methods/phase2a-attrici.md"
   }
