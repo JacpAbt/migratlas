@@ -504,10 +504,10 @@ def collect() -> list[Finding]:
                 evidence_type=EvidenceType.FLUX.value,
                 bias=ATTRIBUTION_BIAS,
                 claim=(
-                    # "the animals", not "the birds". This claim's taxon scope is `unattributed` and
-                    # the margin next to it says so, while `autumn-advance` two cards over says the
-                    # radar cannot separate birds from bats from insects. It was the one claim in the
-                    # ledger contradicting the rest of it.
+                    # "the animals", not "the birds". This claim's taxon scope is
+                    # `unattributed` and the margin next to it says so, while `autumn-advance`
+                    # two cards over says the radar cannot separate birds from bats from
+                    # insects. It was the one claim in the ledger contradicting the rest of it.
                     "Human forcing accounts for almost all of the pre-season warming the animals "
                     "are responding to, and so for about half of the observed advance."
                 ),
@@ -519,8 +519,9 @@ def collect() -> list[Finding]:
                 ),
                 caveat=(
                     "This attributes the warming, not the migration. It says what caused the "
-                    "temperature change the record tracked — the other half of the advance does not "
-                    "track temperature at all and is unexplained here. The models' human share "
+                    "temperature change the record tracked — the other half of the advance does "
+                    "not track temperature at all and is unexplained here. The models' human "
+                    "share "
                     f"spans {bracket[0]:.2f} to {bracket[-1]:.2f} depending on the window fitted, "
                     "and CMIP6's historical runs stop in 2014 while the radar record runs to 2025."
                     + variability
