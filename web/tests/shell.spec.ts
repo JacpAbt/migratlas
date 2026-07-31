@@ -9,8 +9,14 @@
 
 import { expect, test, type Page } from "@playwright/test";
 
-/** The camera flight is 2.2s, plus tile settling. Generous: a flaky wait is worse than a slow test. */
-const FLIGHT_MS = 4000;
+/**
+ * How long to keep asking whether the camera has arrived.
+ *
+ * Polled, never slept. The flight is 2.2s and the layers load asynchronously before it starts, so a
+ * one-shot read after a fixed wait passes alone and fails under the whole suite -- which is the flake
+ * that gets re-run rather than fixed. Two of these tests did exactly that.
+ */
+const SETTLE_MS = 15_000;
 
 async function arrive(page: Page): Promise<void> {
   // Relative, and with ?debug so the map is readable. A leading slash would replace the whole
@@ -22,13 +28,50 @@ async function arrive(page: Page): Promise<void> {
   await expect(page.locator(".globe canvas")).toBeVisible();
 }
 
-/** Camera state, read from MapLibre rather than inferred from pixels. */
-async function camera(page: Page): Promise<{ lon: number; lat: number; zoom: number }> {
+/**
+ * Wait until the camera stops moving, then answer where it is.
+ *
+ * Two consecutive identical readings, because `flyTo` has no "arrived" event worth trusting and a
+ * single sample mid-flight is indistinguishable from a camera that never left.
+ */
+async function settled(page: Page): Promise<Camera> {
+  let previous = "";
+  await expect
+    .poll(
+      async () => {
+        // Tolerates the hook not existing yet. It is published only once every layer has loaded,
+        // and the arrival card is visible long before the 50,000-feature assessment finishes -- so a
+        // poll that threw on a missing map reported "the shell must expose one" for a shell that
+        // simply had not got there.
+        const at = await camera(page);
+        if (!at) return false;
+        const now = `${at.lon.toFixed(2)},${at.lat.toFixed(2)},${at.zoom.toFixed(2)}`;
+        const still = now === previous;
+        previous = now;
+        return still;
+      },
+      { timeout: SETTLE_MS, intervals: [250] },
+    )
+    .toBe(true);
+
+  const at = await camera(page);
+  expect(at, "the shell never exposed a map under ?debug").not.toBeNull();
+  return at!;
+}
+
+interface Camera {
+  lon: number;
+  lat: number;
+  zoom: number;
+}
+
+/** Camera state, read from MapLibre rather than inferred from pixels. Null until the hook exists. */
+async function camera(page: Page): Promise<Camera | null> {
   return page.evaluate(() => {
     const globe = (window as unknown as { migratlas?: { map?: unknown } }).migratlas?.map as
       | { getCenter: () => { lng: number; lat: number }; getZoom: () => number }
       | undefined;
-    if (!globe) throw new Error("no map on window; the shell must expose one for this test");
+    if (!globe) return null;
     const centre = globe.getCenter();
     return { lon: centre.lng, lat: centre.lat, zoom: globe.getZoom() };
   });
@@ -49,7 +92,7 @@ test("a visitor lands on a claim, with its number and its caveat", async ({ page
 
   // And the globe is live behind it, already pointed at the claim's own evidence -- which is the
   // only reason to put a card on a globe rather than on a picture of one.
-  const at = await camera(page);
+  const at = await settled(page);
   expect(Math.abs(at.lat - 42), `arrived at ${at.lat.toFixed(1)}N`).toBeLessThan(12);
   expect(at.zoom).toBeGreaterThan(2);
 });
@@ -87,13 +130,12 @@ test("the sheet leaves the globe it is read against visible", async ({ page }) =
 test("choosing another claim flies the camera and swaps the evidence", async ({ page }) => {
   await arrive(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
-  const before = await camera(page);
+  const before = await settled(page);
 
   await page.locator(".tab", { hasText: /poleward/i }).click();
   await expect(page.locator(".claim__title")).toHaveText(/poleward/i);
-  await page.waitForTimeout(FLIGHT_MS);
 
-  const after = await camera(page);
+  const after = await settled(page);
   const moved = Math.abs(after.lon - before.lon) + Math.abs(after.lat - before.lat);
   expect(moved, "the camera did not move between two claims on different continents").toBeGreaterThan(
     10,
@@ -119,10 +161,10 @@ test("just the map means the whole map, not the last claim's filter", async ({ p
   await arrive(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
   await page.locator(".tab", { hasText: /poleward/i }).click();
-  await page.waitForTimeout(FLIGHT_MS);
+  await settled(page);
 
   await page.getByRole("button", { name: /just the map/i }).click();
-  await page.waitForTimeout(FLIGHT_MS);
+  const wide = await settled(page);
 
   // No claim in the way.
   await expect(page.locator(".shell__sheet")).toHaveCount(0);
@@ -140,7 +182,7 @@ test("just the map means the whole map, not the last claim's filter", async ({ p
   expect(visible, "explore mode is still hiding layers").toBeGreaterThanOrEqual(3);
 
   // And pulled back: the reader asked to stop being led somewhere.
-  expect((await camera(page)).zoom).toBeLessThan(2);
+  expect(wide.zoom).toBeLessThan(2);
 });
 
 test("the index names every claim and says what each one found", async ({ page }) => {
@@ -265,3 +307,115 @@ for (const [device, width, height] of [
     expect(collisions, `${collisions.join(", ")} overlaps the reading sheet`).toEqual([]);
   });
 }
+
+/**
+ * The panels the old page carried, rebuilt where they belong.
+ *
+ * The structural change worth asserting: a figure belongs to the *claim* it is evidence for, not to a
+ * panel of its own. The counterfactual is the attribution's argument and the detectability
+ * assessment is the coverage limit's number, so each appears with its claim and nowhere else.
+ */
+
+test("the counterfactual is the attribution claim's own evidence", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /show me how you know/i }).click();
+
+  // Not on the first claim: a chart on every claim would be decoration.
+  await expect(page.locator(".ribbon__chart")).toHaveCount(0);
+
+  await page.locator(".tab", { hasText: /Human forcing/i }).click();
+  const chart = page.locator(".ribbon__chart");
+  await expect(chart).toBeVisible();
+
+  // Three lines, and the observed one draws before the counterfactual: the drawing order is the
+  // argument, because a reader watches the gap fail to open rather than hunting for it.
+  await expect(page.locator(".ribbon__line")).toHaveCount(3);
+  const delays = await page
+    .locator(".ribbon__line")
+    .evaluateAll((nodes) => nodes.map((n) => getComputedStyle(n).transitionDelay));
+  expect(new Set(delays).size, "all three lines draw at once").toBeGreaterThan(1);
+
+  // And the size stated in words, which is the assertion that stops the chart being "improved" into
+  // a dramatic diverging wedge.
+  await expect(page.locator(".ribbon__size")).toContainText(/part by \d+\.\d+ days/);
+  await expect(page.locator(".ribbon__caveat")).toContainText("trend");
+});
+
+test("the detectability assessment is the coverage claim's own number", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /show me how you know/i }).click();
+  await page.locator(".tab", { hasText: /northern-hemis/i }).click();
+
+  const coverage = page.locator(".coverage");
+  await expect(coverage).toBeVisible();
+  // The headline, as a share rather than a count: "1,997 cells" means nothing without a denominator.
+  await expect(coverage.locator(".coverage__lead")).toContainText(/%/);
+  // A key, because four unlabelled greys are not a map of anything.
+  await expect(coverage.locator(".coverage__legend li")).toHaveCount(4);
+  // And every source, with the best it can do -- the point being that most of them can do nothing.
+  await expect(coverage.locator("tbody tr")).not.toHaveCount(0);
+  await expect(coverage.locator(".coverage__ceiling").first()).not.toBeEmpty();
+});
+
+test("explore carries the tools, with the terms every drawn layer was published under", async ({
+  page,
+}) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+
+  const explore = page.locator(".explore");
+  await expect(explore).toBeVisible();
+
+  // One toggle per layer, including the assessment, which starts off.
+  const toggles = explore.locator(".layers input");
+  await expect(toggles).toHaveCount(4);
+
+  // Required, not decorative: published data must never be separable from the terms it was
+  // published under. This is the assertion the old page had and the shell has to keep.
+  await expect(explore.locator(".terms")).not.toBeEmpty();
+
+  // The clock reads as a date rather than as a day number, and without the stray punctuation a
+  // trimmed shared formatter left behind.
+  const clockface = await explore.locator(".clockface").textContent();
+  expect(clockface).toMatch(/^\d{1,2} \w{3} · week \d{1,2}$/);
+
+  // Moving the slider moves the label, so the control is wired to the clock and not decorative.
+  await explore.locator(".time input").fill("120");
+  await expect(explore.locator(".clockface")).not.toHaveText(clockface!);
+
+  // Search is loaded and knows how many animals it holds.
+  await expect(explore.locator("#taxon-search")).toHaveAttribute("placeholder", /Search [\d,]+ animals/);
+});
+
+test("switching on the assessment brings its key with it", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+
+  const explore = page.locator(".explore");
+  // The regression: the legend was on the claim and missing here, which is the worse way round --
+  // the layer can be switched on from this panel and could not be read once it was.
+  await expect(explore.locator(".key li")).toHaveCount(0);
+
+  await explore.locator(".layers input").last().check();
+  await expect(explore.locator(".key li")).toHaveCount(4);
+  await expect(explore.locator(".key li").first()).toContainText("%");
+});
+
+test("searching an animal draws it and says which one is shown", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+
+  // A species the index actually holds. It is built from the *published* layers, so FISHGLOB's
+  // fish are absent -- that source is a survey index with no per-species surface, and searching for
+  // a cod found nothing while looking exactly like a broken search.
+  await page.locator("#taxon-search").fill("Physeter");
+  const hits = page.locator(".hits button");
+  await expect(hits.first()).toBeVisible();
+  await hits.first().click();
+
+  // Named back to the reader, with a way out. A selection with no label is a map that changed for
+  // no stated reason.
+  await expect(page.locator(".chosen")).toContainText(/Showing/);
+  await page.locator(".chosen__clear").click();
+  await expect(page.locator(".chosen")).toHaveCount(0);
+});

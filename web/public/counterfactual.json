@@ -198,7 +198,7 @@
   {
    "key": "observed",
    "label": "what happened",
-   "per_decade": -0.5590837875896769,
+   "per_decade": -0.559083787589677,
    "start": 267.3591861568139,
    "end": 265.6819347940448,
    "note": "The fitted trend at the claim-band stations, and the number the ledger publishes."
@@ -206,7 +206,7 @@
   {
    "key": "counterfactual",
    "label": "without human forcing",
-   "per_decade": -0.26351092962932593,
+   "per_decade": -0.2635109296293264,
    "start": 266.91582686987334,
    "end": 266.1252940809854,
    "note": "The observed trend with the attributed human share removed. It still advances, because about half the observed advance does not track temperature at all and was never attributed to anything; flattening it would claim that half is natural."
@@ -214,23 +214,23 @@
   {
    "key": "no-thermal",
    "label": "with no warming at all",
-   "per_decade": -0.25844835614649714,
+   "per_decade": -0.2584483561464976,
    "start": 266.9082330096491,
    "end": 266.1328879412096,
    "note": "A second reference: the trend with the entire temperature response removed, human or not. It sits almost on top of the counterfactual, and that near-coincidence is what f = 0.98 looks like -- almost none of the warming was natural."
   }
  ],
  "terms": {
-  "sensitivity_days_per_degree": -0.6585167526711125,
-  "warming_degrees_per_decade": 0.5178997960229069,
-  "thermal_days_per_decade": -0.3006354314431798,
+  "sensitivity_days_per_degree": -0.658516752671112,
+  "warming_degrees_per_decade": 0.5178997960229068,
+  "thermal_days_per_decade": -0.30063543144317945,
   "human_share_of_warming": 0.9831604230461917,
-  "human_days_per_decade": -0.295572857960351,
-  "observed_days_per_decade": -0.5590837875896769,
+  "human_days_per_decade": -0.29557285796035065,
+  "observed_days_per_decade": -0.559083787589677,
   "stations": 78.0,
   "models": 15.0
  },
- "divergence": 0.8867185738810529,
+ "divergence": 0.886718573881052,
  "caveat": "The two lines part by under a day across thirty years, inside a year-to-year scatter of several days. That is the honest size of the signal: the attribution is of the *trend*, not of any single year, and no year's date can be called human-caused. The counterfactual also inherits every limit of the response function it is built on: it attributes the warming the animals tracked, not the animals.",
  "method": "docs/methods/counterfactual.md",
  "supporting": [

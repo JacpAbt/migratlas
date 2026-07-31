@@ -5,6 +5,8 @@
   import { addSeries } from "../../layers/series";
   import { addSurface } from "../../layers/surface";
   import { loadManifest, type LoadedLayer } from "../../layers/types";
+  import { addDetectability, type DetectabilityDocument } from "../../layers/detectability";
+  import { SpeciesSelection } from "../../layers/selection";
   import type { View } from "../story";
 
   let {
@@ -17,7 +19,12 @@
     /** Where to point. Reassigning it flies the camera; it is never read back. */
     view: View | null;
     week?: number;
-    onready?: (report: { layers: string[]; cells: Record<string, number> }) => void;
+    onready?: (report: {
+      layers: LoadedLayer[];
+      detectability: DetectabilityDocument | null;
+      selection: SpeciesSelection;
+      map: MapLibreMap;
+    }) => void;
   } = $props();
 
   let container: HTMLDivElement;
@@ -47,6 +54,17 @@
           failures = [...failures, `${meta.name}: ${String(error)}`];
         }
       }
+      // Added after the manifest layers so it can find them in the style and insert itself
+      // beneath. A missing assessment costs the layer, not the globe.
+      let assessment: DetectabilityDocument | null = null;
+      try {
+        const [layer, document_] = await addDetectability(instance, base);
+        added.push(layer);
+        assessment = document_;
+      } catch (error) {
+        failures = [...failures, `detectability: ${String(error)}`];
+      }
+
       loaded = added;
 
       // Behind ?debug, matching the old shell, so a browser test can read camera and layer state
@@ -57,8 +75,10 @@
       }
 
       onready?.({
-        layers: added.map(({ meta }) => meta.name),
-        cells: Object.fromEntries(added.map(({ meta, cells }) => [meta.name, cells])),
+        layers: added,
+        detectability: assessment,
+        selection: new SpeciesSelection(instance),
+        map: instance,
       });
     })();
 

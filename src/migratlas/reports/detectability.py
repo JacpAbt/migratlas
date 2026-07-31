@@ -372,7 +372,7 @@ def collect() -> Detectability:
         summary=summary,
         caveat=(
             "A cell counted as detectable means some source there has a long enough series with a "
-            "measurable effort denominator -- not that a change has been detected, and not that "
+            "measurable effort denominator — not that a change has been detected, and not that "
             "any particular species could be tracked in it. Cells with no source at all are "
             "absent from the grid rather than marked, because the lake says nothing about them."
         ),

@@ -1,12 +1,32 @@
 <script lang="ts">
+  import type { Map as MapLibreMap } from "maplibre-gl";
+
   import Globe from "../globe/Globe.svelte";
   import Claim from "../claim/Claim.svelte";
+  import Evidence from "../claim/Evidence.svelte";
   import Arrival from "./Arrival.svelte";
+  import Explore from "./Explore.svelte";
   import Index from "./Index.svelte";
   import { loadLedger, type Finding, type Ledger } from "../ledger";
   import { arrivalOf, exploreView, viewFor, type View } from "../story";
+  import type { DetectabilityDocument } from "../../layers/detectability";
+  import type { LoadedLayer } from "../../layers/types";
+  import type { SpeciesSelection } from "../../layers/selection";
+  import { SpeciesSurfaces } from "../../search/taxon";
+  import { Clock } from "../../state/time";
 
   let { base }: { base: string } = $props();
+
+  // One clock, outside the reactive graph because it owns the URL and a timer. `day` mirrors it into
+  // state, since a class with its own listeners is not reactive by itself.
+  const clock = new Clock();
+  let day = $state(clock.state.day);
+
+  // Derived, not constructed once: a value captured at init is a value that cannot change, and the
+  // Svelte compiler is right to say so even where this particular prop never does.
+  const surfaces = $derived(new SpeciesSurfaces(base));
+
+  $effect(() => clock.subscribe((state) => (day = state.day)));
 
   /**
    * Three states, and the third is not a lesser version of the second.
@@ -22,7 +42,12 @@
   let mode = $state<Mode>("arriving");
   let current = $state<Finding | null>(null);
   /** What the globe actually loaded, so explore mode can show all of it without a second list. */
-  let available = $state<string[]>([]);
+  let layers = $state<LoadedLayer[]>([]);
+  let detectability = $state<DetectabilityDocument | null>(null);
+  let selection = $state<SpeciesSelection | null>(null);
+  let map: MapLibreMap | undefined;
+
+  const available = $derived(layers.map((layer) => layer.meta.name));
 
   $effect(() => {
     loadLedger(base)
@@ -47,7 +72,17 @@
 </script>
 
 <div class="shell" class:shell--reading={mode === "reading"}>
-  <Globe {base} {view} onready={(report) => (available = report.layers)} />
+  <Globe
+    {base}
+    {view}
+    week={Math.floor(day / 7)}
+    onready={(report) => {
+      layers = report.layers;
+      detectability = report.detectability;
+      selection = report.selection;
+      map = report.map;
+    }}
+  />
 
   {#if failure}
     <!-- The ledger is the whole page here, so its failure is not survivable the way a layer's is.
@@ -68,10 +103,25 @@
         <div class="shell__sheet">
           {#key current.key}
             <Claim finding={current} />
+            <!-- The figure belongs to the claim, not to a panel of its own: for the attribution it
+                 IS the argument, and for the coverage limit it is the number. -->
+            <Evidence finding={current} {base} {detectability} />
           {/key}
         </div>
         <p class="shell__because">{view?.because}</p>
       </article>
+    {/if}
+
+    {#if mode === "exploring"}
+      <Explore
+        {layers}
+        {clock}
+        {day}
+        {selection}
+        {surfaces}
+        {detectability}
+        onfocus={(at) => map?.flyTo({ center: at, zoom: 3, essential: true })}
+      />
     {/if}
 
     {#if mode !== "arriving"}

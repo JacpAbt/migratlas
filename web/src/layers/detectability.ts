@@ -43,21 +43,31 @@ const SUPPORTED_SCHEMA = 1;
 const LAYER_ID = "detectability";
 
 /**
- * One colour per status, keyed by name rather than by index so a reordering upstream cannot
- * silently recolour the map.
+ * One token per status, keyed by name so a reordering upstream cannot silently recolour the map.
+ *
+ * Read from CSS rather than written here, because the night surface has to reach them and these four
+ * were picked to read as "mostly grey" against parchment -- they do not transfer to slate. The
+ * accent for `detectable` is the same one the ledger uses for "change detected": against the greys
+ * it is the only colour that survives at globe zoom. The first attempt drew it in the layer blue at
+ * 55% opacity and the whole map vanished into the basemap, turning "grey is the finding" into
+ * "there is nothing here".
  */
-const COLOURS: Record<string, string> = {
-  "no-time-axis": "#a39c8d",
-  "effort-not-measured": "#8b9487",
-  "too-short": "#d8bd7e",
-  // The project's accent, the same one the ledger uses for "change detected". Against the greys it
-  // is the only colour that survives at globe zoom -- the first attempt drew this in the layer blue
-  // at 55% opacity and the whole map vanished into the basemap, which turned "grey is the finding"
-  // into "there is nothing here".
-  detectable: "#b9743f",
+const TOKENS: Record<string, string> = {
+  "no-time-axis": "--detect-none",
+  "effort-not-measured": "--detect-no-effort",
+  "too-short": "--detect-short",
+  detectable: "--detect-yes",
 };
 
 const FALLBACK = "#b5afa3";
+
+/** Resolve a token against the live surface. MapLibre paint takes colours, not custom properties. */
+export function colourFor(status: string): string {
+  const token = TOKENS[status];
+  if (!token) return FALLBACK;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+  return value || FALLBACK;
+}
 
 /** Plain-language legend text. The status slug is precise and says nothing to a first-time reader. */
 const MEANS: Record<string, string> = {
@@ -70,7 +80,7 @@ const MEANS: Record<string, string> = {
 function paint(categories: string[]): ExpressionSpecification {
   // `v` is an index into the shipped categories, so the match is built from that array. A
   // hard-coded index list here would break the moment a status was inserted.
-  const colours = categories.map((status) => COLOURS[status] ?? FALLBACK);
+  const colours = categories.map((status) => colourFor(status));
   const [first = FALLBACK, ...rest] = colours;
   return [
     "match",
@@ -110,35 +120,25 @@ function meta(document_: DetectabilityDocument): LayerMeta {
   };
 }
 
-/** The legend. Required rather than decorative: four unlabelled greys are not a map of anything. */
-export function legend(document_: DetectabilityDocument): HTMLElement {
-  const list = document.createElement("ul");
-  list.className = "detectability-legend";
-
+/**
+ * Legend rows, best first.
+ *
+ * Data rather than DOM: the shell renders these in a component, and the old page built the elements
+ * here. Best first so the eye starts at the colour that matters and works down into the grey.
+ */
+export function legendRows(
+  document_: DetectabilityDocument,
+): { status: string; means: string; colour: string; share: number }[] {
   const total = Object.values(document_.summary).reduce((sum, n) => sum + n, 0);
-  // Best first, so the eye starts at the colour that matters and works down into the grey.
-  for (const status of [...document_.grid.categories].reverse()) {
-    const cells = document_.summary[status] ?? 0;
-    const item = document.createElement("li");
-
-    const swatch = document.createElement("span");
-    swatch.className = "detectability-legend__swatch";
-    swatch.style.background = COLOURS[status] ?? FALLBACK;
-    item.append(swatch);
-
-    const label = document.createElement("span");
-    label.className = "detectability-legend__label";
-    label.textContent = MEANS[status] ?? status;
-    item.append(label);
-
-    const share = document.createElement("em");
-    share.textContent = total > 0 ? `${((cells / total) * 100).toFixed(1)}%` : "—";
-    item.append(share);
-
-    list.append(item);
-  }
-  return list;
+  return [...document_.grid.categories].reverse().map((status) => ({
+    status,
+    means: MEANS[status] ?? status,
+    colour: colourFor(status),
+    share: total > 0 ? ((document_.summary[status] ?? 0) / total) * 100 : 0,
+  }));
 }
+
+export type { Coverage, DetectabilityDocument };
 
 export async function addDetectability(
   map: MapLibreMap,

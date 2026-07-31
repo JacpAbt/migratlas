@@ -190,10 +190,18 @@ alongside the shipped globe, which keeps its own 15 tests untouched. The shell h
 arriving, reading, exploring -- and `web/src/lib/story.ts` holds the per-claim camera and layer set,
 because a camera position is presentation and does not belong in `reports/findings.py`.
 
-`index.html` does not take it over yet, and the reason is a list rather than a judgement: the shell
-has no species search, no time slider, no layer toggles with their generalisation statements, no
-counterfactual ribbon and no detectability legend. Every one of those is asserted by a test on the
-old page, so the swap happens when the new page passes them too.
+**The panels landed 2026-07-31, and where they landed is the substantive change.** A figure belongs
+to the *claim* it is evidence for, not to a panel of its own: the counterfactual is the attribution's
+argument and the detectability assessment is the coverage limit's number, so each appears with its
+claim and nowhere else. Only two claims have a figure, because only two have one that adds something
+the sentence does not — the marine null and the composition control both say "indistinguishable from
+zero", and a flat line drawn three times teaches nothing.
+
+The tools — layer toggles with their generalisation statements, the clock, species search, and the
+assessment's key — live in explore mode, which is what is left when no claim is in hand. The old page
+put them around the globe permanently, which is what made a *layer* the first-class thing.
+
+`index.html` still has to hand over. What remains is a swap and a deletion, not new work.
 
 **Settled by building rather than by describing.** The hand face was chosen from four candidates
 rendered as the real claim card in the real palette, because a text mockup cannot convey a pen. That

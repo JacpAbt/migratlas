@@ -5,7 +5,7 @@ import { addSeries } from "./layers/series";
 import { addSurface } from "./layers/surface";
 import { nightPolygon } from "./layers/terminator";
 import { loadManifest, type LoadedLayer } from "./layers/types";
-import { addDetectability, legend } from "./layers/detectability";
+import { addDetectability, legendRows, type DetectabilityDocument } from "./layers/detectability";
 import { mountFindings } from "./panels/findings";
 import { mountRibbon } from "./panels/ribbon";
 import { SpeciesSelection } from "./layers/selection";
@@ -116,7 +116,7 @@ async function addDataLayers(): Promise<LoadedLayer[]> {
   try {
     const [layer, document_] = await addDetectability(map, import.meta.env.BASE_URL);
     loaded.push(layer);
-    el("detectability-legend").append(legend(document_));
+    el("detectability-legend").append(detectabilityLegend(document_));
   } catch (error) {
     // A missing assessment is not a reason to lose the data layers, so it degrades to no layer
     // and a notice rather than taking the globe with it.
@@ -134,6 +134,36 @@ async function addDataLayers(): Promise<LoadedLayer[]> {
     });
   }
   return loaded;
+}
+
+/**
+ * The detectability legend as DOM.
+ *
+ * Built here rather than in the layer module, which now returns rows instead: the rebuilt shell
+ * renders the same rows in a Svelte component, and two implementations of one legend is two things
+ * that drift. Four unlabelled greys are not a map of anything, so this is required, not decorative.
+ */
+function detectabilityLegend(document_: DetectabilityDocument): HTMLUListElement {
+  const list = document.createElement("ul");
+  list.className = "detectability-legend";
+  for (const row of legendRows(document_)) {
+    const item = document.createElement("li");
+
+    const swatch = document.createElement("span");
+    swatch.className = "detectability-legend__swatch";
+    swatch.style.background = row.colour;
+
+    const label = document.createElement("span");
+    label.className = "detectability-legend__label";
+    label.textContent = row.means;
+
+    const share = document.createElement("em");
+    share.textContent = `${row.share.toFixed(1)}%`;
+
+    item.append(swatch, label, share);
+    list.append(item);
+  }
+  return list;
 }
 
 function emptyItem(text: string): HTMLLIElement {

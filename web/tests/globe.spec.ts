@@ -128,7 +128,12 @@ test("every layer draws features once it is switched on", async ({ page }) => {
   expect(report.layers.length).toBeGreaterThan(0);
   // Each layer gets its own patience, so the test's budget has to cover all of them plus the
   // load. Leaving it at the 30 s default meant the third layer was blamed for the deadline.
-  test.setTimeout(20_000 + report.layers.length * (DRAW_TIMEOUT_MS + 4000));
+  //
+  // Widened when the detectability assessment became a fourth layer. It is 50,000 features against
+  // the next largest at 29,000, and the run measured 42 s against a 68 s budget -- which passes
+  // alone and fails under the whole suite, i.e. exactly the flake that gets re-run rather than
+  // fixed. Per-layer allowance rather than a bigger constant, so a fifth layer scales it too.
+  test.setTimeout(25_000 + report.layers.length * (DRAW_TIMEOUT_MS + 9000));
 
   for (const [index, name] of report.layers.entries()) {
     const id = await mapLayerFor(page, name);
