@@ -231,6 +231,79 @@ field would land human location data in this lake.
 document — a `Homo sapiens` entry that the ingest checks before it writes anything, so the refusal
 cannot be forgotten by whoever adds the next study.
 
+## 8. Reading the actual study records, which corrected §7
+
+§7 was written from aggregates. Pulling the individual records for *Rangifer*, *Odobenus* and *Canis
+lupus* — still metadata only — corrected three of its conclusions. Recorded as corrections rather
+than quietly revised, because each one was a claim confident enough to have been built on.
+
+### "Caribou is the source" was too quick
+
+The 35 distinct years are the union of **five studies in five different places**:
+
+| study | span | individuals | locations | licence | lat |
+| --- | --- | --- | --- | --- | --- |
+| Mountain caribou in British Columbia | 1988–2016 | 260 | 249,450 | CC BY | 55.3 |
+| Svalbard Reindeer Project – Nordenskiöld | 2009–2022 | 116 | 1,317,837 | CC BY-NC | 78.0 |
+| Caribou GPS data Nelchina Herd AK | 1999–2002 | 49 | 47,389 | CC0 | 62.0 |
+| Caribou GPS Data Fortymile Herd, Alaska | 1998–1999 | **3** | 11,575 | CC0 | 65.0 |
+| Dolphin\_Union\_Caribou\_UAV | **2015-11-06 to 2015-11-08** | 858 | **450,042** | CC BY | 69.2 |
+
+Svalbard, British Columbia, two Alaskan herds and the Canadian Arctic archipelago are different
+populations in different 1° cells. On the per-cell unit, **no cell gets 35 years** — the union was
+never a series, and §7 said so about cells while the taxon table implied otherwise.
+
+**The Dolphin-Union study is three days long and holds 450,042 locations** — a UAV survey, not
+tracking, and the largest location count of any caribou study here. Pooled naively it would dominate
+the set with a single instant, which is exactly the MegaMove failure (`phase1b-marine.md`: all
+3,487,176 rows stamped 1985). The exclusion has to be by span in code, not by having noticed it.
+
+So the real caribou candidate is **one study**: Mountain caribou in British Columbia, 29 years, 260
+individuals, CC BY. Which is long, terrestrial and non-bird — and at 55.3°N is a *temperate mountain*
+ecotype, not an Arctic population. The "38 years of Arctic mammal migration" framing does not survive.
+
+### The 55°N filter was serving the wrong objective
+
+The filter came from AAMA being an Arctic archive. But the *gap* is terrestrial non-bird **movement**,
+and latitude has nothing to do with that. Dropping it and asking instead for single-population
+terrestrial non-bird studies of ≥10 years surfaces better candidates than anything §7 found:
+
+| study | span | individuals | locations | licence | lat |
+| --- | --- | --- | --- | --- | --- |
+| Mountain caribou in British Columbia | 29y 1988–2016 | 260 | 249,450 | CC BY | 55.3 |
+| **Ya Ha Tinda elk project, Banff** | 24y 2001–2024 | 207 | **1,795,326** | **CC0** | 51.7 |
+| Missouri Bison Tracking Project | 15y 2012–2026 | 54 | 724,967 | CC BY | 40.5 |
+| **Arctic fox Bylot – Argos tracking** | 15y 2007–2021 | 170 | 64,489 | **CC0** | 73.0 |
+| Svalbard Reindeer – Nordenskiöld | 14y 2009–2022 | 116 | 1,317,837 | CC BY-NC | 78.0 |
+| Hebblewhite Alberta-BC Wolves | 12y 2000–2011 | 68 | 174,443 | CC BY | 53.0 |
+
+Elk at 51.7°N and bison at 40.5°N were **excluded by my own filter**, and the elk study is CC0, still
+running, and holds seven times the caribou study's locations. A filter inherited from a source's
+branding rather than from the question is a filter that hides the answer.
+
+### *Canis lupus* in Movebank is not "wolves"
+
+Ten open studies carry the key. Four are wolves — Hebblewhite Alberta-BC, Boutin Alberta Grey Wolf,
+Latham Alberta Wolves, Wolves Mongolia 2003–2005. The rest are **domestic dogs**, which resolve to
+*Canis lupus*: free-ranging dogs in Mudumalai Tiger Reserve, Kruger Hounds, Stray Dogs Prishtina,
+livestock guarding dogs in Romania, and a cat-and-dog study in Australia.
+
+So a `high` entry keyed on *Canis lupus* withholds stray-dog data along with wolf data. It
+**over-restricts**, which is the acceptable direction of error, and the classification stands. But §7
+said "two open-licence Arctic wolf studies are in this set" as though the key identified the risk, and
+it does not: the risk is a property of the population, and the key cannot see it.
+
+### And *Homo sapiens* is not one avoidable study
+
+It is a taxon **riding inside multi-taxon animal studies**. "Poultry network Thailand 2022" lists
+fourteen taxa — turtle, monitor lizard, six birds of prey, waterfowl — *and Homo sapiens, and Canis
+lupus*. "Kruger Hounds" lists *Homo sapiens* and *Canis lupus*.
+
+Which makes the floor considerably more load-bearing than §7 judged it. Skipping a study named
+"human tracking" would have been easy and would have caught nothing: the human rows are inside
+studies someone would want for the raptors. A row-level refusal was the right shape for a reason that
+only became visible here.
+
 ### A method note on my own shortcut
 
 Grouping 88 species by a hand-written genus list put four birds in an UNCLASSIFIED bucket — *Chen
