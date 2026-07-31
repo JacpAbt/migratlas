@@ -113,7 +113,9 @@
     margin: var(--gap) 0 0;
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 1.5rem;
+    /* Shrinks rather than wrapping. "-0.56 +/- 0.25 days per decade" breaking after "days" put
+       "decade" alone on a line, which reads as two facts instead of one measurement. */
+    font-size: clamp(1.05rem, 0.7rem + 1.6vw, 1.5rem);
     color: var(--rust);
     font-variant-numeric: tabular-nums;
   }
@@ -168,11 +170,22 @@
 
   @media (max-width: 40rem) {
     .arrival {
-      /* Top-aligned on a phone: centred, a tall card with a three-line hand heading pushes the
+      /* Top-aligned on a phone: centred, a tall card with a four-line hand heading pushes the
          buttons off the bottom of the viewport. */
       place-items: start center;
       padding: var(--gap);
       overflow-y: auto;
+    }
+
+    .arrival__card {
+      padding: var(--gap);
+    }
+
+    /* Full width each, stacked: side by side at this width they were 44px tall and 3px apart, and
+       the primary one is the whole point of the screen. */
+    .way {
+      flex: 1 1 100%;
+      text-align: center;
     }
   }
 </style>

@@ -60,6 +60,9 @@
     bottom: 0;
     left: 0;
     z-index: 3;
+    /* Fixed rather than content-derived: `--strip` is what the sheet above and MapLibre's controls
+       both clear, so the strip has to be exactly that tall or the reservation is a guess. */
+    height: var(--strip);
     padding: var(--gap-tight) var(--gap);
     background-color: var(--paper);
     background-image: var(--grain);
@@ -75,8 +78,21 @@
     margin: 0 auto;
     padding: 0;
     max-width: 78rem;
+    height: 100%;
+    align-items: center;
     list-style: none;
-    scrollbar-width: thin;
+    /* Hidden rather than thin: a horizontal scrollbar inside a 3.5rem strip eats a third of it, and
+       on a phone that is the difference between two lines of tab and one. The fade below is the
+       affordance instead. */
+    scrollbar-width: none;
+    /* Fades the right edge so it is visible that there is more strip than screen. Costs a slightly
+       pale last tab when scrolled to the end, which is cheaper than a reader never learning the
+       other four claims exist. */
+    mask-image: linear-gradient(to right, #000 calc(100% - 1.75rem), transparent);
+  }
+
+  ul::-webkit-scrollbar {
+    display: none;
   }
 
   li {
@@ -134,5 +150,13 @@
 
   .tab--clear .tab__claim {
     color: var(--ink-soft);
+  }
+
+  @media (max-width: 40rem) {
+    /* Narrower, so more than one and a half tabs are on screen. At 15rem a phone showed the open
+       claim and half of the next, which reads as a broken layout rather than as a scrollable list. */
+    .tab {
+      max-width: 11rem;
+    }
   }
 </style>

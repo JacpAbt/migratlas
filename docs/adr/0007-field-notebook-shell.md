@@ -172,8 +172,18 @@ safe and also the thing that makes it slower.
 of the eight decisions — no creature beside an unattributed claim, no number that counts up — make
 the page refuse an overclaim that a prettier page would happily make.
 
-**Still to settle.** The margin's behaviour on a phone, where a 13rem column does not exist. It
-collapses to below the claim, still always visible, still not behind a click.
+**Small screens are a decision, not a fallback.** The card is used at three widths -- a preview page,
+a 52rem sheet on a globe, and a phone -- so it responds with a **container query**, not a media query.
+A media query asks about the viewport, and on a 768px tablet the sheet is 522px while the viewport is
+comfortably past any breakpoint: the two-column layout squeezed the claim body to 230px and wrapped
+the hand heading over nine lines. Below the width two columns need, the margin drops under the claim
+and stays exactly as visible.
+
+Two rules for what the map owns, and the difference is not cosmetic. The **attribution** is a licence
+notice, so the reading sheet reserves height for it and it never moves. **Zoom, projection and scale**
+drive a globe that, at phone and tablet width, is entirely behind an opaque sheet -- 200px of buttons
+printed over the claim's own text, controlling something the reader cannot see -- so they are hidden
+while a claim is open and return the moment the sheet stops covering the sphere.
 
 **Progress, 2026-07-31.** Tokens, the claim card and the shell are built and live at `/shell.html`
 alongside the shipped globe, which keeps its own 15 tests untouched. The shell has three modes --

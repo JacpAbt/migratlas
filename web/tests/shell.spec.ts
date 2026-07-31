@@ -187,3 +187,81 @@ test("every published claim has a view, and every view names a real layer", asyn
   }
   expect(problems.keys, "the arrival claim is not in the ledger").toContain(ARRIVAL_KEY);
 });
+
+/**
+ * Small screens.
+ *
+ * "At least decent" is the bar, and these are the four ways it was not: a claim column two words
+ * wide on a tablet, zoom buttons printed over the claim's own text, a licence notice printed across
+ * it, and the arrival's measurement broken so that "decade" sat alone on a line.
+ */
+for (const [device, width, height] of [
+  ["phone", 390, 844],
+  ["tablet", 768, 1024],
+] as const) {
+  test(`the shell is readable on a ${device}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await arrive(page);
+
+    // Nothing runs off the side, in any mode. The one failure a visitor cannot work around.
+    const overflow = () =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+    expect(await overflow(), `${await overflow()}px of horizontal overflow on arrival`).toBeLessThanOrEqual(1);
+
+    // The arrival's measurement stays on one line. Broken after "days", it read as two facts
+    // rather than as one number with an interval.
+    const value = page.locator(".arrival__value");
+    const lines = await value.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return node.getBoundingClientRect().height / Number.parseFloat(style.lineHeight || "0");
+    });
+    expect(lines, "the arrival value wraps").toBeLessThan(1.8);
+
+    // Both ways out reachable without scrolling past the fold.
+    for (const name of [/show me how you know/i, /just let me explore/i]) {
+      await expect(page.getByRole("button", { name })).toBeInViewport();
+    }
+
+    await page.getByRole("button", { name: /show me how you know/i }).click();
+    expect(await overflow()).toBeLessThanOrEqual(1);
+
+    // The claim card responds to the sheet it is in, not to the viewport. On a 768px tablet the
+    // sheet is narrower than any sensible media-query breakpoint, and the two-column layout
+    // squeezed the claim body to 230px and wrapped the hand heading over nine lines.
+    const claim = page.locator(".claim").first();
+    const body = await claim.locator(".claim__body").boundingBox();
+    expect(body, "no claim body").toBeTruthy();
+    expect(
+      body!.width,
+      `the claim body is ${Math.round(body!.width)}px wide, which is a column of two-word lines`,
+    ).toBeGreaterThan(300);
+
+    // The audit is still there, still not behind a control -- only its position changed.
+    await expect(claim.locator(".margin")).toBeVisible();
+    await expect(claim.locator(".bias__finding").first()).toBeVisible();
+
+    // And nothing the map owns is printed over the claim: the zoom buttons landed on the text, and
+    // the attribution -- a licence notice -- printed across the bottom of it.
+    const collisions = await page.evaluate(() => {
+      const sheet = document.querySelector(".shell__sheet")?.getBoundingClientRect();
+      if (!sheet) return ["no sheet"];
+      const hits: string[] = [];
+      for (const selector of [".maplibregl-ctrl-attrib", ".maplibregl-ctrl-group", ".maplibregl-ctrl-scale"]) {
+        for (const node of document.querySelectorAll(selector)) {
+          const box = node.getBoundingClientRect();
+          if (box.width === 0 || box.height === 0) continue;
+          const clear =
+            box.right < sheet.left ||
+            box.left > sheet.right ||
+            box.bottom < sheet.top ||
+            box.top > sheet.bottom;
+          if (!clear) hits.push(selector);
+        }
+      }
+      return hits;
+    });
+    expect(collisions, `${collisions.join(", ")} overlaps the reading sheet`).toEqual([]);
+  });
+}

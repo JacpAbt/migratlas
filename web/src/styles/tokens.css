@@ -72,6 +72,14 @@
   /* Wide enough that six bias domains do not run to 2,500px. Narrower reads more like a real
      margin, and measured worse: the claim scrolled off before its own audit finished. */
   --margin-column: 19rem;
+  /* Height of the claim index pinned to the bottom of the shell. Stated once because two other
+     things have to clear it: the reading sheet's bottom padding, and MapLibre's own controls,
+     which default to the same corner and sat on top of it at every width. */
+  --strip: 3.5rem;
+  /* MapLibre's attribution, which wraps to two lines on a phone. Reserved rather than hidden:
+     it is a licence notice, and on a narrow screen the reading sheet is full width, so without
+     this the credit printed across the bottom of the claim's own text. */
+  --attrib: 3.25rem;
 
   /* Nothing is a rectangle with a radius if a drawn line will do, so this is for the few things
      that genuinely are boxes -- inputs, the odd button. */

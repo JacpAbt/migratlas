@@ -9,6 +9,14 @@
   const instrument = $derived(instrumentFor(finding));
 </script>
 
+<!--
+  Wrapped so the card is a container query context. The card lives in three places at three
+  widths -- a 66rem preview page, a 52rem sheet on a globe, and a phone -- and a media query asks
+  about the viewport, not about the room it was given. On a 768px tablet the sheet is 522px while
+  the viewport is comfortably past any breakpoint, so the two-column layout squeezed the claim
+  body to 230px and wrapped the hand heading over nine lines.
+-->
+<div class="claim-frame">
 <article class="claim claim--{finding.direction}">
   <!--
     The claim and the margin are two cells of a single-row grid, not two columns of a six-row one.
@@ -44,8 +52,13 @@
 
   <Margin {finding} />
 </article>
+</div>
 
 <style>
+  .claim-frame {
+    container-type: inline-size;
+  }
+
   .claim {
     display: grid;
     /* The margin is narrower here than the token's default, because inside a sheet on a globe there
@@ -149,9 +162,10 @@
     max-width: 26rem;
   }
 
-  /* On a phone there is no 12.5rem column, so the margin goes below the claim -- still always
-     visible, still not behind a control. Only its position changes. */
-  @media (max-width: 46rem) {
+  /* Below the width two columns need, the margin goes under the claim -- still always visible,
+     still not behind a control. Only its position changes. A container query rather than a media
+     query, so it responds to the sheet it is in and not to the size of the screen. */
+  @container (max-width: 46rem) {
     .claim {
       grid-template-columns: minmax(0, 1fr);
     }

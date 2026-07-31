@@ -46,7 +46,7 @@
   }
 </script>
 
-<div class="shell">
+<div class="shell" class:shell--reading={mode === "reading"}>
   <Globe {base} {view} onready={(report) => (available = report.layers)} />
 
   {#if failure}
@@ -92,6 +92,15 @@
     overflow: hidden;
   }
 
+  /* Lifted clear of the index strip. MapLibre owns these nodes so they cannot be scoped, and they
+     defaulted into the same corner the strip occupies: on a phone the zoom buttons landed on top of
+     the claim's own text, and the attribution was underneath the strip entirely -- which is a
+     licence notice that a visitor cannot read. */
+  .shell :global(.maplibregl-ctrl-bottom-right),
+  .shell :global(.maplibregl-ctrl-bottom-left) {
+    bottom: var(--strip);
+  }
+
   .shell__reading {
     position: absolute;
     inset: 0;
@@ -101,16 +110,16 @@
     gap: var(--gap-tight);
     /* Room at the bottom for the index, and at the right for the globe to stay visible. A claim
        that covered the sphere would make the flight pointless. */
-    padding: var(--gap-wide) var(--gap-wide) 6.5rem;
+    padding: var(--gap-wide) var(--gap-wide) calc(var(--strip) + var(--gap-wide));
     pointer-events: none;
   }
 
   .shell__sheet {
     pointer-events: auto;
-    /* Narrow enough that the globe it is read against stays visible. At 56rem the sheet covered the
-       sphere on a 1360px laptop, which makes both the camera flight and the caption beneath it
-       pointless. The claim card's own two-column breakpoint is set to match. */
-    max-width: min(52rem, 68vw);
+    /* Full width by default. The `68vw` cap that keeps the globe visible beside it is only sane
+       once there is a globe worth seeing: at 390px it left a useless 32% strip of sphere and shrank
+       the claim to a column of two-word lines. */
+    max-width: 52rem;
     max-height: 100%;
     padding: var(--gap-wide);
     overflow-y: auto;
@@ -171,9 +180,34 @@
     color: var(--rust);
   }
 
+  /* Wide enough for the sphere to be worth leaving room for. */
+  @media (min-width: 60rem) {
+    .shell__sheet {
+      max-width: min(52rem, 68vw);
+    }
+  }
+
+  /* Below the width where the sheet leaves room beside itself, it runs the full width and so
+     reaches the corner MapLibre keeps its controls in. Two different answers for two different
+     kinds of control, and the difference is not cosmetic:
+       - The attribution is a licence notice, so space is reserved for it and it stays put.
+       - Zoom, projection and scale are for driving a globe that is, at this width, entirely behind
+         an opaque sheet. They are 200px of buttons printed over the claim's own text, controlling
+         something the reader cannot see. They come back the moment the sheet does not cover it. */
+  @media (max-width: 60rem) {
+    .shell__reading {
+      padding-bottom: calc(var(--strip) + var(--attrib) + var(--gap-tight));
+    }
+
+    .shell--reading :global(.maplibregl-ctrl-group),
+    .shell--reading :global(.maplibregl-ctrl-scale) {
+      display: none;
+    }
+  }
+
   @media (max-width: 52rem) {
     .shell__reading {
-      padding: var(--gap) var(--gap) 8rem;
+      padding: var(--gap) var(--gap) calc(var(--strip) + var(--attrib) + var(--gap-tight));
     }
 
     .shell__sheet {
