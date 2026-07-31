@@ -11,6 +11,7 @@
     layers,
     clock,
     day,
+    minute,
     selection,
     surfaces,
     detectability,
@@ -21,6 +22,7 @@
     clock: Clock;
     /** Mirrored into state by the shell, since a Clock is not reactive by itself. */
     day: number;
+    minute: number;
     selection: SpeciesSelection | null;
     surfaces: SpeciesSurfaces;
     onfocus: (at: [number, number]) => void;
@@ -141,8 +143,21 @@
         {playing ? "Pause" : "Play"}
       </button>
     </div>
+    <label class="utc">
+      <span>Time of day, UTC</span>
+      <input
+        type="range"
+        min="0"
+        max="1439"
+        step="10"
+        value={minute}
+        oninput={(event) => clock.set({ minute: event.currentTarget.valueAsNumber })}
+      />
+    </label>
     <p class="hint">
-      Only the nightly aerial passage is time-indexed. The gridded surfaces are one value per cell
+      This one moves the night terminator rather than the data: the radar layer is a weekly mean, and
+      night is where the nocturnal migration in it happens. Only the nightly aerial passage is
+      time-indexed. The gridded surfaces are one value per cell
       for their whole period, so the slider does not move them.
     </p>
   </section>
@@ -302,6 +317,21 @@
 
   .time button:hover {
     background: var(--paper-sunken);
+  }
+
+  .utc {
+    display: flex;
+    gap: var(--gap-tight);
+    align-items: center;
+    margin-top: var(--gap-tight);
+    font-size: 0.7rem;
+    color: var(--pencil);
+  }
+
+  .utc input {
+    flex: 1;
+    min-width: 0;
+    accent-color: var(--pencil);
   }
 
   @media (max-width: 52rem) {

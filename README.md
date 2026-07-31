@@ -100,19 +100,30 @@ runtime.
 
 Ordered so each phase is the foundation of the next, rather than the most exciting thing first.
 
-| Phase | Question | Status |
+| Phase | Question | Answer |
 | --- | --- | --- |
-| **0** | Can the ethics gate and the evidence core hold two realms? | in progress |
-| **1** | What has *actually* changed, with proper uncertainty? | — |
-| **2a** | How much of the change is attributable to human influence? | — |
-| **2b** | What drives an individual animal's decisions? | — |
-| **3** | Where will they be? | — |
+| **0** | Can the ethics gate and the evidence core hold two realms? | done — three realms, seven evidence types, 12 sources |
+| **1a** | What has *actually* changed, with proper uncertainty? | **autumn passage −0.56 ± 0.25 d/decade**, 37–50°N. Spring: no detectable trend |
+| **1b** | Does the marine realm show the poleward shift the literature reports? | **no** — median −0.011 °lat/decade, and surveys disagree in *sign* |
+| **1c** | Is the aerial signal an artefact of the instrument, or of what is flying? | neither — airspeed flat at −0.06 ± 0.08 m/s/decade, four confounds tested and rejected |
+| **2a** | How much of the change is attributable to human influence? | **−0.30 of the −0.56**, `f` = 0.98 across 15 CMIP6 models |
+| **2b** | What drives an individual animal's decisions? | not started |
+| **3** | Where will they be? | not started |
 
-Phase 1 replicates a published continental-scale result before extending it — reproducing a known
+Phase 1a replicates Horton et al. 2020 on their own window before extending it — reproducing a known
 finding first is what makes the extension believable.
 
 Phase 2a's counterfactual comes from climate model runs with human forcing removed, which turns
 "movement correlates with warming" into an estimate of the anthropogenic share of the observed shift.
+It is a narrow claim and worth stating precisely: **of the portion of the advance that tracks
+pre-season temperature, essentially all is attributable to human forcing.** The other half of the
+advance does not track temperature at all and remains unexplained.
+
+Two things the table cannot show, both deliberate. A **latitude-graded step change at 2012** in the
+southern radar bands is still unexplained after four candidate mechanisms were each tested and each
+failed, so those bands are excluded from every claim. And **0.0% of the radar record and 0.0% of the
+survey record lie south of the equator**, computed rather than estimated, and published as a finding
+in its own right — global extent and measurable change are, so far, different data.
 
 Method choices are frozen in [`docs/methods/`](docs/methods/) *before* held-out years are touched.
 

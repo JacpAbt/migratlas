@@ -1,10 +1,11 @@
 <script lang="ts">
-  import type { Map as MapLibreMap } from "maplibre-gl";
+  import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 
   import { createGlobe, styleReady } from "../../globe/map";
   import { addSeries } from "../../layers/series";
   import { addSurface } from "../../layers/surface";
   import { loadManifest, type LoadedLayer } from "../../layers/types";
+  import { nightPolygon } from "../../layers/terminator";
   import { addDetectability, type DetectabilityDocument } from "../../layers/detectability";
   import { SpeciesSelection } from "../../layers/selection";
   import type { View } from "../story";
@@ -13,12 +14,15 @@
     base,
     view,
     week = 0,
+    instant,
     onready,
   }: {
     base: string;
     /** Where to point. Reassigning it flies the camera; it is never read back. */
     view: View | null;
     week?: number;
+    /** Drives the night terminator. Not decoration on a page about nocturnal passage. */
+    instant: Date;
     onready?: (report: {
       layers: LoadedLayer[];
       detectability: DetectabilityDocument | null;
@@ -41,6 +45,7 @@
 
     void (async () => {
       await styleReady(instance);
+      addNightShade(instance);
       const manifest = await loadManifest(base);
       const added: LoadedLayer[] = [];
       for (const meta of manifest) {
@@ -110,6 +115,33 @@
   $effect(() => {
     for (const layer of loaded) layer.showWeek?.(week);
   });
+
+  $effect(() => {
+    const source = map?.getSource("night") as GeoJSONSource | undefined;
+    source?.setData(nightPolygon(instant));
+  });
+
+  /**
+   * The dusk veil.
+   *
+   * Kept from the old shell rather than dropped with it: this globe's headline layer is *nocturnal*
+   * passage, so where night currently is says something about when the animals fly. A cool veil and
+   * not a blackout -- on parchment a dark fill reads as a hole in the sphere, and the night side
+   * still has to show its coastlines and its data.
+   */
+  function addNightShade(instance: MapLibreMap): void {
+    instance.addSource("night", { type: "geojson", data: nightPolygon(instant) });
+    const firstSymbol = instance.getStyle().layers.find((l) => l.type === "symbol")?.id;
+    instance.addLayer(
+      {
+        id: "night-shade",
+        type: "fill",
+        source: "night",
+        paint: { "fill-color": "#41566b", "fill-opacity": 0.17 },
+      },
+      firstSymbol,
+    );
+  }
 
   /** Read from the token rather than from `matchMedia` twice, so one block controls all motion. */
   function reducedMotion(): boolean {

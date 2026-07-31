@@ -1,9 +1,9 @@
 /**
- * The notebook components, on their own page.
+ * The notebook: type, contrast, and the three refusals ADR 0007 commits to.
  *
- * Separate from `globe.spec.ts` because they are separate concerns and separate entry points: the
- * globe suite is the contract the shell rebuild must not break, and this one is the contract for the
- * components being built to replace it.
+ * Split from the other two suites by concern rather than by page -- all three now target the one
+ * shipped page. `globe.spec.ts` is the map and the budget, `shell.spec.ts` is the modes and the
+ * navigation, and this is what a claim looks like and what it will not do.
  *
  * The contrast test earns its place. Three text tokens were shipped failing AA in at least one
  * surface -- pencil at 4.10:1, rust at 4.38, the "addressed" green at 4.14 -- and all three looked
@@ -20,10 +20,30 @@ const AA_SMALL = 4.5;
 /** AA for large text and for meaningful non-text marks. */
 const AA_LARGE = 3;
 
+/**
+ * Open the shipped page and get to a claim.
+ *
+ * The shell shows one claim at a time, so a suite that used to read five cards off a preview page now
+ * walks the index. That is the right trade: these assertions are worth more against what actually
+ * ships than against a page built to make them convenient.
+ */
 async function ready(page: Page): Promise<void> {
-  await page.goto("/claims.html");
+  await page.goto("?debug=1");
+  await page.getByRole("button", { name: /show me how you know/i }).click();
   await expect(page.locator(".claim").first()).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
+}
+
+/** Every claim in turn, by clicking the index. */
+async function eachClaim(page: Page, visit: (index: number) => Promise<void>): Promise<void> {
+  const tabs = page.locator(".tab").filter({ hasNotText: "Just the map" });
+  const count = await tabs.count();
+  expect(count, "no claims in the index").toBeGreaterThan(0);
+  for (let index = 0; index < count; index += 1) {
+    await tabs.nth(index).click();
+    await expect(page.locator(".claim__title")).toBeVisible();
+    await visit(index);
+  }
 }
 
 /**
@@ -56,7 +76,10 @@ for (const surface of ["day", "night"] as const) {
   test(`every text colour clears AA on the ${surface} surface`, async ({ page }) => {
     await ready(page);
     if (surface === "night") {
-      await page.locator('input[value="night"]').check();
+      // Stamped directly. The shell has no surface switch yet -- ADR 0007 scopes night as a week of
+      // work -- but the token set is written for both, and an unrendered palette is a guess. This is
+      // exactly what a switch will do when there is one.
+      await page.evaluate(() => document.documentElement.setAttribute("data-surface", "night"));
       await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
     }
 
@@ -101,12 +124,8 @@ test("an addressed status is legible too, and is not the only signal", async ({ 
 
 test("every claim shows an instrument rather than a creature", async ({ page }) => {
   await ready(page);
-  const claims = page.locator(".claim");
-  const count = await claims.count();
-  expect(count).toBeGreaterThan(0);
-
-  for (let index = 0; index < count; index += 1) {
-    const claim = claims.nth(index);
+  await eachClaim(page, async () => {
+    const claim = page.locator(".claim").first();
     const instrument = claim.locator(".instrument");
     await expect(instrument, "a claim with no instrument mark").toHaveCount(1);
 
@@ -119,16 +138,13 @@ test("every claim shows an instrument rather than a creature", async ({ page }) 
       label,
       `"${label}" names a creature; only the apparatus goes here`,
     ).not.toMatch(/bird|bat|insect|fish|whale|shark|turtle|swallow/i);
-  }
+  });
 });
 
 test("the audit is rendered beside every claim, not behind a control", async ({ page }) => {
   await ready(page);
-  const claims = page.locator(".claim");
-  const count = await claims.count();
-
-  for (let index = 0; index < count; index += 1) {
-    const claim = claims.nth(index);
+  await eachClaim(page, async () => {
+    const claim = page.locator(".claim").first();
 
     // Visible, and with no ancestor that could be closed. `findings.py` refuses to publish a claim
     // with no caveat; a `<details>` around the audit would satisfy that and break its point.
@@ -136,12 +152,16 @@ test("the audit is rendered beside every claim, not behind a control", async ({ 
     await expect(claim.locator(".bias__domain").first()).toBeVisible();
     await expect(claim.locator(".margin details, .margin [hidden]")).toHaveCount(0);
     await expect(claim.locator(".claim__caveat")).not.toBeEmpty();
-  }
+  });
 
-  // And at least one domain reading "open" somewhere in the set: every domain "addressed" would
-  // mean either that nothing is unresolved -- false, the 2012 step is -- or that the audit is
-  // written to reassure rather than to inform.
-  await expect(page.locator(".bias__status--open")).not.toHaveCount(0);
+  // And at least one domain reading "open" across the set: every domain "addressed" would mean
+  // either that nothing is unresolved -- false, the 2012 step is -- or that the audit is written to
+  // reassure rather than to inform.
+  let open = 0;
+  await eachClaim(page, async () => {
+    open += await page.locator(".bias__status--open").count();
+  });
+  expect(open, "nothing is marked open, which would mean the audit is decorative").toBeGreaterThan(0);
 });
 
 test("no number animates to its value", async ({ page }) => {

@@ -6,72 +6,12 @@
     <title>Migratlas</title>
     <meta
       name="description"
-      content="A globe of animal movement, and why it's changing."
+      content="A globe of animal movement, how much of the change is us, and how we know."
     />
     <link rel="icon" href="data:," />
   </head>
-  <body>
-    <div id="globe" role="application" aria-label="Interactive globe"></div>
-
-    <header class="panel panel--title">
-      <h1>Migratlas</h1>
-      <p class="phase">Aerial and marine movement · 1985–2025</p>
-    </header>
-
-    <!-- Findings before layers, deliberately: the layers are what went in, this is what came
-         out, and a visitor who reads nothing else should still see what the work established. -->
-    <details class="panel panel--findings" id="findings" open>
-      <summary><h2>What the data shows</h2></summary>
-      <div id="findings-body"></div>
-    </details>
-
-    <!-- The counterfactual sits apart from the ledger because it answers a different question.
-         The ledger says what changed; this says how much of it was us. -->
-    <details class="panel panel--ribbon" id="ribbon" open>
-      <summary><h2>The world without us</h2></summary>
-      <div id="ribbon-body"></div>
-    </details>
-
-    <div class="panel panel--search">
-      <label class="sr-only" for="taxon-search">Search for an animal</label>
-      <input
-        id="taxon-search"
-        type="search"
-        placeholder="Search any animal…"
-        autocomplete="off"
-        spellcheck="false"
-      />
-      <ul id="taxon-results" role="listbox" hidden></ul>
-    </div>
-
-    <div class="panel panel--layers">
-      <h2>Layers</h2>
-      <ul id="layer-list"></ul>
-      <div id="detectability-legend"></div>
-      <p id="layer-terms" class="terms"></p>
-    </div>
-
-    <div class="panel panel--time">
-      <output id="time-label" for="time-slider"></output>
-      <input
-        id="time-slider"
-        type="range"
-        min="0"
-        max="365"
-        step="1"
-        value="0"
-        aria-label="Day of year"
-      />
-      <div class="time-row">
-        <input id="utc-slider" type="range" min="0" max="1439" step="10" value="720"
-               aria-label="Time of day, UTC" />
-        <button id="play" type="button" aria-pressed="false">Play</button>
-      </div>
-    </div>
-
-    <div id="perf" class="panel panel--perf" hidden></div>
-    <div id="notice" class="notice" hidden></div>
-
+  <body class="shell-page">
+    <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

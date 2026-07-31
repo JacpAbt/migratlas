@@ -21,12 +21,48 @@
   // state, since a class with its own listeners is not reactive by itself.
   const clock = new Clock();
   let day = $state(clock.state.day);
+  let minute = $state(clock.state.minute);
 
   // Derived, not constructed once: a value captured at init is a value that cannot change, and the
   // Svelte compiler is right to say so even where this particular prop never does.
   const surfaces = $derived(new SpeciesSurfaces(base));
 
-  $effect(() => clock.subscribe((state) => (day = state.day)));
+  $effect(() =>
+    clock.subscribe((state) => {
+      day = state.day;
+      minute = state.minute;
+    }),
+  );
+
+  // Rebuilt from the mirrored parts rather than read off the clock, so the terminator is downstream
+  // of reactive state instead of a value the effect graph cannot see change.
+  const instant = $derived(new Date(Date.UTC(clock.state.year, 0, 1 + day, 0, minute)));
+
+  let shell: HTMLDivElement;
+
+  /**
+   * Reserve the attribution's real height, measured.
+   *
+   * It was a token, and a token cannot be right: the bar lists one credit per visible source and
+   * wraps, so it is two lines on a laptop and four on a phone with every layer drawn. The fixed
+   * 3.25rem held until the assessment added a fourth credit, and then the licence notice printed
+   * across the bottom of the claim's own text again -- the exact failure the reservation existed to
+   * prevent, returning through the one thing about it that was a guess.
+   */
+  $effect(() => {
+    // Depends on `layers` so it re-runs once the map exists. MapLibre creates the attribution when
+    // it adds its controls, which is after this component mounts -- the first version read `null`,
+    // returned early, and never looked again, so the measurement silently stayed a guess.
+    if (layers.length === 0) return;
+    const attrib = shell.querySelector(".maplibregl-ctrl-attrib");
+    if (!attrib) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const height = entry?.borderBoxSize?.[0]?.blockSize ?? entry?.contentRect.height ?? 0;
+      shell.style.setProperty("--attrib", `${Math.ceil(height) + 8}px`);
+    });
+    observer.observe(attrib);
+    return () => observer.disconnect();
+  });
 
   /**
    * Three states, and the third is not a lesser version of the second.
@@ -71,11 +107,12 @@
   }
 </script>
 
-<div class="shell" class:shell--reading={mode === "reading"}>
+<div class="shell" class:shell--reading={mode === "reading"} bind:this={shell}>
   <Globe
     {base}
     {view}
     week={Math.floor(day / 7)}
+    {instant}
     onready={(report) => {
       layers = report.layers;
       detectability = report.detectability;
@@ -117,6 +154,7 @@
         {layers}
         {clock}
         {day}
+        {minute}
         {selection}
         {surfaces}
         {detectability}

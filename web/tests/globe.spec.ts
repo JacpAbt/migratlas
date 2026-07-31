@@ -13,31 +13,86 @@ import { expect, test, type Page } from "@playwright/test";
  * basemap is bundled, so a run cannot be reddened by someone else's CDN.
  */
 
-interface ReadyReport {
-  basemap: "detail" | "outline";
-  layers: string[];
-  cells: Record<string, number>;
-  centers: Record<string, [number, number]>;
+interface LoadedLayer {
+  meta: { name: string; value_kind: string };
+  cells: number;
+  center: [number, number];
 }
 
 interface Hook {
   migratlas: {
     map: maplibregl.Map;
-    clock: { set: (patch: object) => void };
-    ready: Promise<ReadyReport>;
+    loaded: LoadedLayer[];
   };
 }
 
+interface ReadyReport {
+  layers: string[];
+  cells: Record<string, number>;
+  centers: Record<string, [number, number]>;
+}
+
 /**
- * Load the app and wait for it to declare its layers added.
+ * Load the app and wait for the globe to declare its layers added.
  *
  * Relative, not "/?debug=1": a leading slash replaces the whole path of baseURL, which lands on
  * the origin root instead of the project subpath. `vite preview` happens to redirect the root to
  * its base, so an absolute path passes locally and would fetch somebody else's site on Pages.
+ *
+ * Polls for the hook rather than awaiting a promise on it: the shell publishes it once every layer
+ * has loaded, and the arrival card is interactive well before the 50,000-feature assessment lands.
  */
 async function ready(page: Page): Promise<ReadyReport> {
   await page.goto("?debug=1");
-  return page.evaluate(() => (window as unknown as Hook).migratlas.ready);
+  await expect
+    .poll(
+      () => page.evaluate(() => (window as unknown as Hook).migratlas?.loaded?.length ?? 0),
+      { timeout: 20_000 },
+    )
+    .toBeGreaterThan(0);
+
+  return page.evaluate(() => {
+    const { loaded } = (window as unknown as Hook).migratlas;
+    return {
+      layers: loaded.map((l) => l.meta.name),
+      cells: Object.fromEntries(loaded.map((l) => [l.meta.name, l.cells])),
+      centers: Object.fromEntries(loaded.map((l) => [l.meta.name, l.center])),
+    };
+  });
+}
+
+/**
+ * Get to the tools, which is where the layer toggles and the clock now live.
+ *
+ * Waits for the camera to stop before returning. Entering explore mode starts a 2.2s flight to the
+ * whole sphere, and a test that then jumps the camera is fighting an animation that still owns it --
+ * which showed up as a layer reporting zero rendered features while being visible, source-loaded,
+ * and pointed at, i.e. as a bug in the app rather than in the test.
+ */
+async function explore(page: Page): Promise<void> {
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+  await expect(page.locator(".explore")).toBeVisible();
+  await settle(page);
+}
+
+/** Two consecutive identical camera readings. `flyTo` has no arrival event worth trusting. */
+async function settle(page: Page): Promise<void> {
+  let previous = "";
+  await expect
+    .poll(
+      async () => {
+        const now = await page.evaluate(() => {
+          const { map } = (window as unknown as Hook).migratlas;
+          const at = map.getCenter();
+          return `${at.lng.toFixed(2)},${at.lat.toFixed(2)},${map.getZoom().toFixed(2)}`;
+        });
+        const still = now === previous;
+        previous = now;
+        return still;
+      },
+      { timeout: 15_000, intervals: [250] },
+    )
+    .toBe(true);
 }
 
 /** How many features the last frame actually drew for a layer. */
@@ -111,50 +166,54 @@ async function focusOn(page: Page, report: ReadyReport, name: string, layerId: s
     (at) => (window as unknown as Hook).migratlas.map.jumpTo({ center: at, zoom: 2.2 }),
     center as [number, number],
   );
+  await settle(page);
   await expectDrawn(page, layerId);
 }
 
 
 test("the globe reaches a usable style with coastlines", async ({ page }) => {
-  const report = await ready(page);
-  expect(report.basemap).toBe("outline");
-  await expect(page.locator("#globe canvas")).toBeVisible();
+  await ready(page);
+  await expect(page.locator(".globe canvas")).toBeVisible();
   // Bundled land, so a globe always looks like a globe.
   await expectDrawn(page, "land");
 });
 
+/**
+ * Every layer draws, in one test over one page load.
+ *
+ * Split into a test per layer once, for a better failure message, and reverted: each one reloads the
+ * page and re-decodes 125,000 features across four layers, so the split cost four times the work to
+ * buy a name that `expectDrawn` already reports. The budget is measured rather than guessed -- one
+ * load plus four camera settles plus four draw polls -- and generous enough that a slow machine is
+ * not a failure while a wedged map still is.
+ */
 test("every layer draws features once it is switched on", async ({ page }) => {
+  test.setTimeout(150_000);
   const report = await ready(page);
   expect(report.layers.length).toBeGreaterThan(0);
-  // Each layer gets its own patience, so the test's budget has to cover all of them plus the
-  // load. Leaving it at the 30 s default meant the third layer was blamed for the deadline.
-  //
-  // Widened when the detectability assessment became a fourth layer. It is 50,000 features against
-  // the next largest at 29,000, and the run measured 42 s against a 68 s budget -- which passes
-  // alone and fails under the whole suite, i.e. exactly the flake that gets re-run rather than
-  // fixed. Per-layer allowance rather than a bigger constant, so a fifth layer scales it too.
-  test.setTimeout(25_000 + report.layers.length * (DRAW_TIMEOUT_MS + 9000));
+  await explore(page);
 
   for (const [index, name] of report.layers.entries()) {
     const id = await mapLayerFor(page, name);
     expect(id, `no map layer for entry ${name}`).not.toBe("");
 
-    // Switched on first. Not every layer ships visible -- the detectability assessment starts off
-    // deliberately -- and asserting on the arrival state would either fail on that layer or, if
-    // the loop simply skipped hidden ones, let a broken layer pass by staying hidden.
-    const toggle = page.locator("#layer-list input").nth(index);
+    // Switched on first. Not every layer ships visible -- the assessment starts off deliberately --
+    // and asserting on the arrival state would either fail on that layer or, if the loop simply
+    // skipped hidden ones, let a broken layer pass by staying hidden.
+    const toggle = page.locator(".explore .layers input").nth(index);
     if (!(await toggle.isChecked())) await toggle.check();
 
-    // The assertion the last failure needed: not "the layer exists" but "it drew something".
+    // The assertion an earlier failure needed: not "the layer exists" but "it drew something".
     await focusOn(page, report, name, id);
   }
 });
 
 test("the layer panel publishes its generalisation statement", async ({ page }) => {
   await ready(page);
+  await explore(page);
   // Required, not decorative: published data must never be separable from the terms it was
   // published under.
-  await expect(page.locator("#layer-terms")).not.toBeEmpty();
+  await expect(page.locator(".explore .terms")).not.toBeEmpty();
 
   await page.locator(".maplibregl-ctrl-attrib-button").click();
   await expect(page.locator(".maplibregl-ctrl-attrib-inner")).toContainText("resolution");
@@ -162,6 +221,7 @@ test("the layer panel publishes its generalisation statement", async ({ page }) 
 
 test("advancing the clock re-times the series layer without rebuilding it", async ({ page }) => {
   const report = await ready(page);
+  await explore(page);
   const id = "series-aerial-passage";
   await focusOn(page, report, "aerial-passage", id);
 
@@ -180,7 +240,9 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
   });
 
   const before = await weekIndex();
-  await page.evaluate(() => (window as unknown as Hook).migratlas.clock.set({ day: 250 }));
+  // Through the slider rather than a hook on `window`: the clock is internal to the shell
+  // now, and driving it the way a visitor does tests the wiring as well as the filter.
+  await page.locator(".explore .time input").fill("250");
 
   await expect.poll(weekIndex).toBe("35");
   expect(before).not.toBe("35");
@@ -190,6 +252,8 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
 
 test("a station popup states the caveat with the number", async ({ page }) => {
   const report = await ready(page);
+  // In explore mode: a claim sheet covers the sphere, so there would be nothing to click.
+  await explore(page);
   await focusOn(page, report, "aerial-passage", "series-aerial-passage");
 
   const point = await page.evaluate(() => {
@@ -200,7 +264,7 @@ test("a station popup states the caveat with the number", async ({ page }) => {
     return { x: Math.round(x), y: Math.round(y) };
   });
 
-  await page.locator("#globe canvas").click({ position: point });
+  await page.locator(".globe canvas").click({ position: point });
   const popup = page.locator(".maplibregl-popup-content");
   await expect(popup).toContainText("Autumn passage shift");
   // The radar cannot tell a bird from a bat from an insect, so no reading of this layer may
@@ -208,80 +272,14 @@ test("a station popup states the caveat with the number", async ({ page }) => {
   await expect(popup).toContainText("aerial biomass, not birds");
 });
 
-test("the findings panel publishes a result with its scope and caveat", async ({ page }) => {
-  await page.goto("/");
-  const panel = page.locator(".panel--findings");
-  await expect(panel).toBeVisible();
-
-  // At least one of each: a change, a null, and a limit of the work. A panel showing only the
-  // changes would be lying by selection, and the null results here took as much work as the
-  // positive one.
-  const findings = panel.locator(".finding");
-  await expect(findings.first()).toBeVisible();
-  for (const direction of ["change", "null", "limit"]) {
-    await expect(
-      panel.locator(`.finding--${direction}`),
-      `no ${direction} finding is published`,
-    ).not.toHaveCount(0);
-  }
-
-  // Every card states where it holds and what would make it wrong. A number on a globe reads as
-  // settled fact, so this is the assertion that stops one being published bare.
-  const count = await findings.count();
-  for (let index = 0; index < count; index += 1) {
-    const card = findings.nth(index);
-    await expect(card.locator("dt", { hasText: "Where and when" })).toHaveCount(1);
-    await expect(card.locator("dt", { hasText: "Caveat" })).toHaveCount(1);
-    await expect(card.locator(".finding__method")).toHaveAttribute("href", /docs\/methods\//);
-
-    // The risk-of-bias assessment, rendered rather than merely present in the JSON. A schema that
-    // carries the audit and a panel that does not show it would be worse than not having it: the
-    // data would claim an honesty the page does not deliver.
-    await expect(
-      card.locator(".bias__domain"),
-      "a claim is published with no visible risk-of-bias assessment",
-    ).not.toHaveCount(0);
-    await expect(card.locator(".bias__status").first()).toBeVisible();
-  }
-
-  // And at least one `open` status somewhere in the set. Every domain reading "addressed" would
-  // mean either that nothing is unresolved -- which is false, the 2012 step is -- or that the
-  // assessment is being written to reassure rather than to inform.
-  await expect(
-    panel.locator(".bias--open"),
-    "nothing is marked open, which would mean the audit is decorative",
-  ).not.toHaveCount(0);
-});
-
-test("the counterfactual draws three lines and states how little they part", async ({ page }) => {
-  await page.goto("/");
-  const panel = page.locator(".panel--ribbon");
-  await expect(panel).toBeVisible();
-
-  // Three lines: observed, without human forcing, and without any warming. Two would leave the
-  // reader unable to see how much of the warming the models call natural.
-  await expect(panel.locator(".ribbon__line")).toHaveCount(3);
-  await expect(panel.locator(".ribbon__line--observed")).toBeVisible();
-  await expect(panel.locator(".ribbon__line--counterfactual")).toBeVisible();
-
-  // The year-to-year scatter, which is the reference the divergence has to be judged against. A
-  // ribbon showing only the fitted lines would make a 0.89-day gap look like whatever the axis
-  // chose to make it look like.
-  const years = panel.locator(".ribbon__year");
-  await expect(await years.count()).toBeGreaterThan(20);
-
-  // And the number, in words, under the chart. This is the assertion that stops the panel being
-  // "fixed" into a dramatic diverging wedge: whatever the drawing does, the size is stated.
-  await expect(panel.locator(".ribbon__size")).toContainText(/part by \d+\.\d+ days/);
-  await expect(panel.locator(".ribbon__caveat")).toContainText("trend");
-  await expect(panel.locator(".finding__method")).toHaveAttribute("href", /docs\/methods\//);
-});
-
 test("the counterfactual is drawn to the scatter, not to the gap", async ({ page }) => {
   // The one geometric property worth pinning. If the axis were ever scaled to the divergence, the
   // gap between the two lines would grow to fill the plot -- so it must stay small relative to the
   // spread of the observed points, which is what makes the picture honest about the signal's size.
-  await page.goto("/");
+  await ready(page);
+  await page.getByRole("button", { name: /show me how you know/i }).click();
+  await page.locator(".tab", { hasText: /Human forcing/i }).click();
+  await expect(page.locator(".ribbon__chart")).toBeVisible();
   const measured = await page.evaluate(() => {
     const y = (selector: string) => {
       const line = document.querySelector(selector) as SVGLineElement | null;
@@ -305,31 +303,33 @@ test("the counterfactual is drawn to the scatter, not to the gap", async ({ page
 
 test("the detectability layer draws, and most of it is not detectable", async ({ page }) => {
   const report = await ready(page);
-  const legend = page.locator(".detectability-legend li");
-  await expect(legend).toHaveCount(4);
+  await explore(page);
 
   // Off on arrival: a first-time visitor should meet the animals before the epistemology.
-  const toggle = page.locator("#layer-list input").last();
+  const toggle = page.locator(".explore .layers input").last();
   await expect(toggle).not.toBeChecked();
   await toggle.check();
   await focusOn(page, report, "detectability", "detectability");
 
-  // The finding, asserted through the legend the viewer actually reads. If "detectable" were ever
+  // The finding, asserted through the key the viewer actually reads. If "detectable" were ever
   // the largest share, either the lake changed profoundly or the assessment stopped assessing.
-  const shares = await page.locator(".detectability-legend em").allTextContents();
+  await expect(page.locator(".explore .key li")).toHaveCount(4);
+  const shares = await page.locator(".explore .key em").allTextContents();
   const detectable = Number.parseFloat(shares[0] ?? "0");
   expect(detectable, "nothing is detectable, so the layer is broken").toBeGreaterThan(0);
   expect(detectable, "most of the world is detectable, which is not true").toBeLessThan(50);
 });
 
-test("a missing findings file leaves the globe usable", async ({ page }) => {
-  // The layers are still worth showing if the findings fail to load, so the panel degrades and
-  // the map carries on. Asserted because the alternative -- an unhandled rejection taking the
-  // globe down with it -- is invisible until it happens in production.
+test("a missing ledger says so rather than showing an empty globe", async ({ page }) => {
+  // The old page degraded to a globe with a broken panel, because the layers were the subject.
+  // Here the claims are, so there is nothing to carry on with, and the honest failure is to say
+  // what happened. Asserted because the alternative -- an unhandled rejection and a blank
+  // sphere -- is invisible until it happens in production.
   await page.route("**/findings.json", (route) => route.fulfill({ status: 404, body: "" }));
   const report = await ready(page);
-  expect(report.layers.length).toBeGreaterThan(0);
-  await expect(page.locator(".finding__error")).toBeVisible();
+  expect(report.layers.length, "the globe should still have its layers").toBeGreaterThan(0);
+  await expect(page.locator(".shell__failure")).toBeVisible();
+  await expect(page.locator(".shell__detail")).toContainText("404");
 });
 
 /**
@@ -434,6 +434,7 @@ test("searching a species draws its own surface", async ({ page }) => {
   // layer yet". Every index entry now has a per-taxon surface behind it, so a hit that draws
   // nothing means the index and the shards have gone out of step.
   await ready(page);
+  await explore(page);
 
   const index = await page.request
     .get("taxon-index.json")
@@ -443,13 +444,14 @@ test("searching a species draws its own surface", async ({ page }) => {
   // The widest-ranging taxon is first, which makes this deterministic.
   const target = index.taxa[0]!;
   await page.locator("#taxon-search").fill(target.scientific.split(" ")[0]!);
-  const results = page.locator("#taxon-results li");
+  const results = page.locator(".hits button");
   await expect(results.first()).toBeVisible();
   await results.first().click();
 
   await expectDrawn(page, "selected-species");
-  // The notice names the layer and carries the generalisation statement with it.
-  await expect(page.locator("#notice")).toContainText("occupied cells");
+  // Named back to the reader, with the layer it came from: a map that changed for no stated
+  // reason is worse than one that did not change.
+  await expect(page.locator(".chosen")).toContainText(target.scientific.split(" ")[0]!);
 });
 
 test("a species shard is fetched only when a species is chosen", async ({ page }) => {
@@ -461,6 +463,7 @@ test("a species shard is fetched only when a species is chosen", async ({ page }
   });
 
   await ready(page);
+  await explore(page);
   await page.locator("#taxon-search").fill("zz-no-such-animal");
   expect(shardRequests, "no shard should load before a selection").toHaveLength(0);
 });

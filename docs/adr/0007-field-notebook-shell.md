@@ -201,7 +201,21 @@ The tools — layer toggles with their generalisation statements, the clock, spe
 assessment's key — live in explore mode, which is what is left when no claim is in hand. The old page
 put them around the globe permanently, which is what made a *layer* the first-class thing.
 
-`index.html` still has to hand over. What remains is a swap and a deletion, not new work.
+**The swap happened 2026-07-31.** `index.html` is the shell; the old page, its stylesheet, its two
+panel modules and the `claims.html` preview are deleted. One entry point again.
+
+Two things were carried across rather than lost with it. The **station popup** came free, since it
+lives in `layers/series.ts` and the shell reuses that. The **night terminator** did not, and it was
+ported deliberately: this globe's headline layer is *nocturnal* passage, so where night currently is
+says something about when the animals fly. Its time-of-day control came back with it.
+
+The old page's tests were **retargeted, not deleted.** That was a correction: the claim that they were
+superseded was wrong, and checking properly found five assertions that are about the app rather than
+its markup — the performance budget, the off-origin guarantee, clock-driven filter swapping without a
+refetch, a grid decoding to the cell count its sidecar declares, and species shards staying lazy. Two
+were genuinely superseded and were dropped. All three suites now target the one shipped page, split by
+concern instead: `globe.spec.ts` is the map and the budget, `notebook.spec.ts` is type and contrast and
+the refusals, `shell.spec.ts` is the modes and the navigation.
 
 **Settled by building rather than by describing.** The hand face was chosen from four candidates
 rendered as the real claim card in the real palette, because a text mockup cannot convey a pen. That
