@@ -142,7 +142,12 @@ test("every claim shows an instrument rather than a creature", async ({ page }) 
 });
 
 test("the audit is rendered beside every claim, not behind a control", async ({ page }) => {
+  // Walks every claim, and each walk is a camera flight. Budgeted rather than left on the 30s
+  // default, which it exceeded on CI -- and the second walk this test used to make was pure waste.
+  test.setTimeout(90_000);
   await ready(page);
+
+  let open = 0;
   await eachClaim(page, async () => {
     const claim = page.locator(".claim").first();
 
@@ -152,15 +157,13 @@ test("the audit is rendered beside every claim, not behind a control", async ({ 
     await expect(claim.locator(".bias__domain").first()).toBeVisible();
     await expect(claim.locator(".margin details, .margin [hidden]")).toHaveCount(0);
     await expect(claim.locator(".claim__caveat")).not.toBeEmpty();
+
+    // Counted in the same pass. At least one domain must read "open" across the set: every domain
+    // "addressed" would mean either that nothing is unresolved -- false, the 2012 step is -- or that
+    // the audit is written to reassure rather than to inform.
+    open += await claim.locator(".bias__status--open").count();
   });
 
-  // And at least one domain reading "open" across the set: every domain "addressed" would mean
-  // either that nothing is unresolved -- false, the 2012 step is -- or that the audit is written to
-  // reassure rather than to inform.
-  let open = 0;
-  await eachClaim(page, async () => {
-    open += await page.locator(".bias__status--open").count();
-  });
   expect(open, "nothing is marked open, which would mean the audit is decorative").toBeGreaterThan(0);
 });
 
