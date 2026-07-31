@@ -2,14 +2,22 @@
   import Coverage from "./Coverage.svelte";
   import Ribbon from "./Ribbon.svelte";
   import Rule from "../notebook/Rule.svelte";
+  import Sandbox from "../sandbox/Sandbox.svelte";
   import type { DetectabilityDocument } from "../../layers/detectability";
   import type { Finding } from "../ledger";
+  import type { SandboxDocument } from "../sandbox/sandbox";
 
   let {
     finding,
     base,
     detectability,
-  }: { finding: Finding; base: string; detectability: DetectabilityDocument | null } = $props();
+    sandbox,
+  }: {
+    finding: Finding;
+    base: string;
+    detectability: DetectabilityDocument | null;
+    sandbox: SandboxDocument | null;
+  } = $props();
 
   /**
    * Which claims have a figure, and what it is.
@@ -44,6 +52,10 @@
     {/if}
   </section>
 {/if}
+
+<!-- Outside the figure block: a claim can have knobs without having a chart, and the two claims with
+     the most knobs are exactly the two without one. -->
+<Sandbox doc={sandbox} claim={finding.key} />
 
 <style>
   .evidence {

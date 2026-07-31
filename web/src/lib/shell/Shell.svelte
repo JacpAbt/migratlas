@@ -9,6 +9,7 @@
   import Index from "./Index.svelte";
   import { loadLedger, type Finding, type Ledger } from "../ledger";
   import { arrivalOf, exploreView, viewFor, type View } from "../story";
+  import { loadSandbox, type SandboxDocument } from "../sandbox/sandbox";
   import type { DetectabilityDocument } from "../../layers/detectability";
   import type { LoadedLayer } from "../../layers/types";
   import type { SpeciesSelection } from "../../layers/selection";
@@ -80,10 +81,21 @@
   /** What the globe actually loaded, so explore mode can show all of it without a second list. */
   let layers = $state<LoadedLayer[]>([]);
   let detectability = $state<DetectabilityDocument | null>(null);
+  let sandbox = $state<SandboxDocument | null>(null);
   let selection = $state<SpeciesSelection | null>(null);
   let map: MapLibreMap | undefined;
 
   const available = $derived(layers.map((layer) => layer.meta.name));
+
+  // Fetched alongside the ledger rather than lazily per claim: 8 KB, and every claim card that has
+  // knobs needs it the moment it opens.
+  $effect(() => {
+    loadSandbox(base)
+      .then((loaded) => (sandbox = loaded))
+      // Not fatal. The claims are the page; the sandbox is a way to interrogate them, and losing it
+      // should cost the knobs rather than the argument.
+      .catch(() => (sandbox = null));
+  });
 
   $effect(() => {
     loadLedger(base)
@@ -142,7 +154,7 @@
             <Claim finding={current} />
             <!-- The figure belongs to the claim, not to a panel of its own: for the attribution it
                  IS the argument, and for the coverage limit it is the number. -->
-            <Evidence finding={current} {base} {detectability} />
+            <Evidence finding={current} {base} {detectability} {sandbox} />
           {/key}
         </div>
         <p class="shell__because">{view?.because}</p>

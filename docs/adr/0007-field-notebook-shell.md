@@ -125,6 +125,27 @@ its **final state on frame one**.
 No idle globe spin, no parallax, and above all **no number counts up to its value**. A counting
 number reads as a score. `−0.56 ± 0.25` is a measurement with an interval on it.
 
+### 7a. A figure and a sandbox belong to the claim they are evidence for
+
+Not to a panel of their own. The counterfactual is the attribution's argument, the detectability
+assessment is the coverage limit's number, and the confound knobs are the safeguards behind whichever
+claim they were computed against. Each renders inside its own claim and nowhere else, so a reader
+never has to carry a number from one part of the page to another.
+
+The sandbox is the exception that proves the margin rule. **One control on the page hides something,
+and it is the OBIS refusal's figure** — a `+4.42°` apparent poleward shift against an audited
+−0.011 °/decade. It is behind a button that says exactly what it will show, because printing a number
+we assert is unsupported at full size beside the numbers we assert *are* supported would put both in
+the same register. Clicking is the reader choosing to see the mistake, not being shown it as a
+result.
+
+One thing the panel must never imply, and it took reading the values to notice: **switching the
+safeguards off makes the effect larger, not smaller.** Dropping the speed weighting takes the autumn
+advance from −0.56 to −0.65; fitting a break at the detected outage takes it to −0.90. Three of the
+four break specifications exceed the published one. So the published number is the conservative
+choice among defensible ones — the opposite of the story an interactive "switch the safeguards off"
+panel usually tells, and the panel says so in its own opening line.
+
 ### 7. One thing at a time, with a margin that is always there
 
 A claim fills the page. Its five bias domains, its survived tests and its method link sit in a

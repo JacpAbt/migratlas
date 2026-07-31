@@ -419,3 +419,100 @@ test("searching an animal draws it and says which one is shown", async ({ page }
   await page.locator(".chosen__clear").click();
   await expect(page.locator(".chosen")).toHaveCount(0);
 });
+
+/**
+ * The confound sandbox.
+ *
+ * Its whole claim is that switching a safeguard off shows what the published number owes to that
+ * safeguard, and the claim collapses if the default does not reproduce what the ledger says. That
+ * invariant is already asserted in `tests/test_sandbox.py` against the computed values; here it is
+ * asserted against what a reader actually sees, which is a different failure mode.
+ */
+
+test("the sandbox default reproduces the number on the claim it sits under", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /show me how you know/i }).click();
+
+  const published = await page.locator(".claim__value").first().textContent();
+  const match = published?.match(/-?\d+\.\d+/);
+  expect(match, `no number in the claim value "${published}"`).toBeTruthy();
+
+  // Every knob on this claim, at its published setting, must show the claim's own figure. A panel
+  // that disagreed with the card above it would undermine both.
+  const knobs = page.locator(".knob");
+  await expect(knobs.first()).toBeVisible();
+  const count = await knobs.count();
+  expect(count).toBeGreaterThan(1);
+
+  for (let index = 0; index < count; index += 1) {
+    const knob = knobs.nth(index);
+    await expect(knob.locator(".option--on em")).toHaveText("published");
+    await expect(knob.locator(".knob__value")).toContainText(match![0].replace("-", "−"));
+    await expect(knob.locator(".knob__delta--published")).toBeVisible();
+  }
+});
+
+test("switching a safeguard off moves the number and says which way", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /show me how you know/i }).click();
+
+  const knob = page.locator(".knob").filter({ hasText: /hardware upgrade/i });
+  const before = await knob.locator(".knob__value").textContent();
+
+  await knob.locator(".option", { hasText: "break at detected outage" }).click();
+  const after = await knob.locator(".knob__value").textContent();
+  expect(after).not.toBe(before);
+
+  // The direction is the point, and this project's answer is the unusual one: fitting a break makes
+  // the advance *larger*, so the published number is the conservative choice. A panel that only said
+  // "the number moved" would waste that.
+  await expect(knob.locator(".knob__delta")).toContainText(/larger effect than the number we publish/);
+  await expect(knob.locator(".knob__value--alternative")).toBeVisible();
+  await expect(knob.locator(".option--on em")).toHaveCount(0);
+});
+
+test("the shuffled-years control collapses the trend to nothing", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /show me how you know/i }).click();
+
+  // The strongest single thing in the panel: destroy the order of the years and the trend goes with
+  // it, which is what shows the result is order and not arithmetic.
+  const knob = page.locator(".knob").filter({ hasText: /years were shuffled/i });
+  await knob.locator(".option", { hasText: "years shuffled" }).click();
+  const shuffled = await knob.locator(".knob__value").textContent();
+  const value = Number.parseFloat(shuffled!.replace("−", "-"));
+  expect(Math.abs(value), `shuffling left ${shuffled}`).toBeLessThan(0.05);
+});
+
+test("the refusal is on the claim it refutes, and its wrong answer takes a click", async ({
+  page,
+}) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /show me how you know/i }).click();
+
+  // Not on the autumn advance: it is the marine null's counter-analysis.
+  await expect(page.locator(".refusal")).toHaveCount(0);
+  await page.locator(".tab", { hasText: /poleward/i }).click();
+
+  const refusal = page.locator(".refusal");
+  await expect(refusal).toBeVisible();
+  await expect(refusal.locator(".refusal__question")).not.toBeEmpty();
+
+  // The one place in this project where something is behind a control, and deliberately: the figure
+  // is a number we say is unsupported, so a reader chooses to see the mistake rather than meeting it
+  // as a result. The button has to say what it will show.
+  await expect(refusal.locator(".refusal__rows")).toHaveCount(0);
+  const reveal = refusal.getByRole("button");
+  await expect(reveal).toContainText(/wrong answer/i);
+  await reveal.click();
+
+  await expect(refusal.locator(".refusal__rows dt")).toHaveCount(4);
+  // +4.42 degrees of apparent poleward movement, against an audited -0.011 per decade.
+  await expect(refusal.locator(".refusal__rows")).toContainText("4.42");
+  // Years are counted, not measured to two decimals.
+  await expect(refusal.locator(".refusal__rows")).toContainText("1985 year");
+  await expect(refusal.locator(".refusal__rows")).not.toContainText("1985.00");
+
+  // And the verdict is present whether or not the figure was revealed.
+  await expect(refusal.locator(".refusal__verdict")).toContainText(/not runnable/i);
+});
