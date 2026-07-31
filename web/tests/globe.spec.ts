@@ -339,6 +339,55 @@ test("each counterfactual is drawn to the scatter, and both to one frame", async
   expect(new Set(gaps).size, `both gaps render at ${gaps[0]}px`).toBeGreaterThan(1);
 });
 
+test("no ribbon is drawn past its own frame, and each shades where its evidence stops", async ({
+  page,
+}) => {
+  // Three things I found by looking at a screenshot rather than by a failing test, which is why they
+  // are here: a label that printed past the SVG's right edge, a leader that crossed the shaded years
+  // as a straight diagonal and read as the line continuing through them, and only one of the two
+  // charts shading at all -- which told a reader DAMIP carried evidence to 2025 when `f` is fitted to
+  // 2014. Eyes do not run in CI.
+  await ready(page);
+  await page.getByRole("button", { name: /show me how you know/i }).click();
+  await page.locator(".tab", { hasText: /Human forcing/i }).click();
+  await expect(page.locator(".chart__svg").first()).toBeVisible();
+
+  const measured = await page.locator(".chart__svg").evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const box = node.viewBox.baseVal;
+      const labels = [...node.querySelectorAll<SVGTextElement>(".chart__label, .chart__rate")];
+      return {
+        overflowing: labels
+          .filter((label) => label.getBBox().x + label.getBBox().width > box.width)
+          .map((label) => label.textContent?.trim()),
+        // The plot's right edge, so a band can be told apart from no band at all.
+        band: node.querySelector<SVGRectElement>(".chart__beyond")?.x.baseVal.value ?? null,
+        lineEnds: [...node.querySelectorAll<SVGLineElement>(".chart__line")].map((line) =>
+          Math.round(line.x2.baseVal.value),
+        ),
+      };
+    }),
+  );
+
+  for (const chart of measured) {
+    expect(chart.overflowing, "labels printing past the chart's own box").toEqual([]);
+    // Both lines in a ribbon end at the same x -- its window's end. One reaching further would be a
+    // counterfactual drawn over years its own method never saw.
+    expect(new Set(chart.lineEnds).size).toBe(1);
+  }
+
+  // Every chart declares where its attribution stops, and they stop in different places: DAMIP's
+  // share is fitted to 2014, ATTRICI's counterfactual series ends in 2019.
+  const bands = measured.map((chart) => chart.band);
+  expect(bands.every((band) => band !== null), "a chart with no limit drawn").toBe(true);
+  expect(new Set(bands).size, "both charts shade from the same year").toBeGreaterThan(1);
+
+  // And the two labels say different things, because they are different kinds of limit -- a series
+  // that ran out against a ratio carried past what fitted it.
+  const said = await page.locator(".chart__beyond-label").allTextContents();
+  expect(new Set(said.map((text) => text.trim())).size).toBe(said.length);
+});
+
 test("the detectability layer draws, and most of it is not detectable", async ({ page }) => {
   test.setTimeout(90_000);
   const report = await ready(page);

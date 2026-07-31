@@ -55,13 +55,35 @@ several days. Two things follow:
 The horizontal axis is shared for the same reason. DAMIP runs to 2025 and ATTRICI's counterfactual
 ends in 2019, so fitting each chart to its own window would stretch the shorter one and make a
 shallower slope look steeper. Sharing the axis costs ATTRICI's chart an empty right-hand quarter,
-which is the point: it is shaded, labelled *no counterfactual after 2019*, and the reader watches the
-evidence run out six years early instead of reading about it in a caption.
+which is the point: the reader watches the evidence run out six years early instead of reading about
+it in a caption.
+
+### Each chart shades where its own attribution stops
+
+And it is *not* the same year as the drawing window, which is the correction that turned one shaded
+chart into two. The first version shaded only ATTRICI — the chart whose counterfactual visibly ran
+out — and left DAMIP's running clean to 2025. But `f` is a **scalar fitted to 1995–2014**, because
+CMIP6's `historical` runs stop there, and it is then applied to the whole observed trend. DAMIP's
+counterfactual line runs eleven years past anything that constrained it, and nothing about a drawn
+line distinguishes fitted from carried-on.
+
+So `Ribbon.attributed_through` is a field, both charts shade from it, and the labels distinguish the
+two kinds of limit:
+
+| ribbon | attributed through | label | what the line does in the band |
+| --- | --- | --- | --- |
+| DAMIP | 2014 | *share fitted only to 2014* | continues, on an extrapolated ratio |
+| ATTRICI | 2019 | *no counterfactual after 2019* | stops, because the series does |
+
+The observed points still show inside the band and sit on top of the tint: the observations exist
+there, and it is the attribution that does not reach.
 
 `globe.spec.ts` measures all of this on the rendered SVG — each drawn gap under 35% of the drawn
-scatter, identical tick heights across charts, and the two gaps rendering at *different* pixel heights
-— because these are properties of the picture, not of the data, and only the picture can be checked
-for them.
+scatter, identical tick heights across charts, the two gaps rendering at *different* pixel heights,
+both charts carrying a band, the bands starting at *different* years, no label printing past the
+chart's own box, and both of a ribbon's lines ending at the same x. Every one of those is a property
+of the picture rather than of the data, and three of them were bugs found by looking at a screenshot,
+which is not a thing that runs in CI.
 
 One correction inside that decision. The first version set the range from the points **plus their
 intervals**, and those reach ±3.1 days on the sparsest years. But that interval is a 95% interval on a

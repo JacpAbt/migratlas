@@ -27,9 +27,13 @@
       end: scale.yOf(ribbon.lines[index]!.end),
     })),
   );
-  // Where this ribbon's own window ends inside the shared one. Equal for the longer ribbon; short of
-  // the right edge for the other, which is how the window mismatch becomes visible.
-  const short = $derived(ribbon.window[1] < frame.years[1]);
+  // Where this ribbon's attribution stops inside the shared frame, and what kind of limit that is.
+  //
+  // ATTRICI's counterfactual series ends in 2019 and its line stops there. DAMIP's share is a scalar
+  // fitted to 2014 and applied to the whole observed trend, so its line runs on through years that
+  // never constrained it. Both are limits worth drawing, and they are not the same limit.
+  const unbacked = $derived(ribbon.attributed_through < frame.years[1]);
+  const extrapolated = $derived(ribbon.attributed_through < ribbon.window[1]);
 </script>
 
 <!--
@@ -80,29 +84,33 @@
       >
     {/each}
 
-    {#if short}
-      <!-- The years this counterfactual does not cover, shaded rather than left blank. An empty
-           quarter reads as missing data; a shaded one with a label reads as a stated limit. -->
+    {#if unbacked}
+      <!-- The years the attribution does not reach, shaded rather than left to the caveat. An empty
+           quarter reads as missing data; a shaded one with a label reads as a stated limit. And where
+           the line *continues* into the band, the shading is the only thing saying it is extrapolated
+           -- nothing about a drawn line distinguishes fitted from carried-on. -->
       <rect
         class="chart__beyond"
-        x={scale.xOf(ribbon.window[1])}
+        x={scale.xOf(ribbon.attributed_through)}
         y={PAD.top}
-        width={scale.xOf(frame.years[1]) - scale.xOf(ribbon.window[1])}
+        width={scale.xOf(frame.years[1]) - scale.xOf(ribbon.attributed_through)}
         height={scale.plotHeight}
       />
       <line
         class="chart__edge"
-        x1={scale.xOf(ribbon.window[1])}
-        x2={scale.xOf(ribbon.window[1])}
+        x1={scale.xOf(ribbon.attributed_through)}
+        x2={scale.xOf(ribbon.attributed_through)}
         y1={PAD.top}
         y2={PAD.top + scale.plotHeight}
       />
       <text
         class="chart__beyond-label"
-        x={scale.xOf(ribbon.window[1]) + 5}
+        x={scale.xOf(ribbon.attributed_through) + 5}
         y={PAD.top + scale.plotHeight - 6}
       >
-        no counterfactual after {ribbon.window[1]}
+        {extrapolated
+          ? `share fitted only to ${ribbon.attributed_through}`
+          : `no counterfactual after ${ribbon.attributed_through}`}
       </text>
     {/if}
 

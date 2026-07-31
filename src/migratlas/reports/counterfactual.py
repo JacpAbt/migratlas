@@ -78,6 +78,19 @@ class Ribbon:
     """How it answers that question, in one line."""
 
     window: tuple[int, int]
+    """What is drawn."""
+
+    attributed_through: int
+    """Last year this ribbon's attribution is fitted on. Beyond it the counterfactual is an
+    extrapolation, and the chart shades the difference rather than leaving it to the caveat.
+
+    Not the same as `window[1]`, and the two ribbons differ in *why*. ATTRICI's counterfactual
+    series ends in 2019, so its line stops there. DAMIP's `f` is a scalar fitted to 2014 and then
+    applied to the whole observed trend, so its line runs to 2025 on a ratio that nothing after
+    2014 constrained.
+    Shading only ATTRICI would have told a reader DAMIP's evidence covers thirty years. It does not.
+    """
+
     years: list[YearPoint]
     lines: list[Line]
     terms: dict[str, float]
@@ -168,6 +181,7 @@ class Draft:
     note: str
     observed_slope: float
     removed: float
+    attributed_through: int
     years: list[YearPoint]
     terms: dict[str, float]
     caveat: str
@@ -195,6 +209,7 @@ def _ribbon(draft: Draft) -> Ribbon:
         question=draft.question,
         method_note=draft.method_note,
         window=window,
+        attributed_through=draft.attributed_through,
         years=draft.years,
         lines=[
             line(
@@ -260,6 +275,7 @@ def collect(max_year: int = 2025) -> Comparison:
                 ),
                 observed_slope=seen.advance,
                 removed=damip_removed,
+                attributed_through=primary.window[1],
                 years=years,
                 terms={
                     "sensitivity_days_per_degree": seen.sensitivity,
@@ -318,6 +334,7 @@ def collect(max_year: int = 2025) -> Comparison:
                     ),
                     observed_slope=seen.advance,
                     removed=answer.advance,
+                    attributed_through=window[1],
                     # Windowed to where the counterfactual exists, so the chart is not drawn over
                     # years it says nothing about.
                     years=[point for point in years if window[0] <= point.year <= window[1]],

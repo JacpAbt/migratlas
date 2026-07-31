@@ -354,8 +354,13 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
     .evaluateAll((nodes) => nodes.map((n) => getComputedStyle(n).transitionDelay));
   expect(new Set(delays).size, "the lines all draw at once").toBeGreaterThan(1);
 
-  // The shorter counterfactual says so on the chart, not only in its caveat.
-  await expect(page.locator(".chart__beyond-label")).toHaveCount(1);
+  // Both charts say where their own attribution stops, not only in the caveat -- and they say
+  // different things, because ATTRICI's counterfactual series ran out where DAMIP's share is a ratio
+  // carried past the window that fitted it. globe.spec.ts checks the geometry; this checks the words.
+  const limits = await page.locator(".chart__beyond-label").allTextContents();
+  expect(limits).toHaveLength(2);
+  expect(limits.join(" ")).toMatch(/no counterfactual after 2019/);
+  expect(limits.join(" ")).toMatch(/share fitted only to 2014/);
 
   // Each size stated in words, which is what stops a chart being "improved" into a diverging wedge.
   await expect(page.locator(".chart__size").first()).toContainText(/part by \d+\.\d+ days/);

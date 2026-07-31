@@ -12,6 +12,11 @@
  * to its own window would stretch the shorter one and make a shallower slope look steeper. Sharing
  * both axes costs the second chart an empty right-hand quarter, which is exactly the point: the
  * reader sees the counterfactual run out six years early instead of reading it in a caption.
+ *
+ * **And every chart shades where its own attribution stops.** ATTRICI's counterfactual series ends in
+ * 2019 and its line stops with it; DAMIP's `f` is a scalar fitted to 2014 and then applied to the
+ * whole observed trend, so its line runs on through years that never constrained it. Two different
+ * limits, and shading only the first would have told a reader DAMIP carries thirty years of evidence.
  */
 
 export interface YearPoint {
@@ -36,6 +41,8 @@ export interface RibbonDocument {
   question: string;
   method_note: string;
   window: [number, number];
+  /** Last year this ribbon's attribution is fitted on. Past it the counterfactual is extrapolated. */
+  attributed_through: number;
   years: YearPoint[];
   lines: Line[];
   terms: Record<string, number>;

@@ -189,6 +189,32 @@ def test_no_ribbon_is_drawn_over_years_its_counterfactual_does_not_cover(
         )
 
 
+def test_every_ribbon_says_where_its_attribution_stops(ribbons: list[dict[str, Any]]) -> None:
+    """The asymmetry this field exists to close, kept closed.
+
+    Shading only ATTRICI's chart was the first version, and it read as though DAMIP carried evidence
+    to 2025. It does not: `f` is a scalar fitted to 2014 and then applied to the whole observed
+    trend, so its line runs on through years that never constrained it. Both limits are real, they
+    are not the same limit, and neither may be left to the caveat.
+    """
+    for ribbon in ribbons:
+        through = ribbon["attributed_through"]
+        window = ribbon["window"]
+        assert window[0] < through <= window[1], (
+            f"{ribbon['key']} is attributed through {through}, outside its window {window}"
+        )
+        assert str(through) in ribbon["caveat"], (
+            f"{ribbon['key']} is attributed through {through} and its caveat does not say so"
+        )
+
+    reach = {ribbon["attributed_through"] for ribbon in ribbons}
+    if len(ribbons) > 1:
+        assert len(reach) > 1, (
+            "both ribbons are attributed through the same year, so one of them is being credited "
+            f"with the other's reach: {sorted(reach)}"
+        )
+
+
 def test_the_terms_are_shipped_so_the_arithmetic_can_be_checked_by_hand(
     ribbons: list[dict[str, Any]],
 ) -> None:

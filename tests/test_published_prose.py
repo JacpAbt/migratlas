@@ -7,8 +7,8 @@ still in it. Nothing failed -- every other test read the *numbers*, and the numb
 The class of bug is broader than the one instance. Everything a reader is told on this site is a
 Python string assembled from computed terms, and the ways that goes wrong leave their signature in
 the text rather than in the data: a brace that never got substituted, a doubled space where a clause
-was cut, a sentence ending in a comma. So the check is over the text of every artifact at once rather
-than per report, because the next one will be somewhere else.
+was cut, a sentence ending in a comma. So the check is over the text of every artifact at once,
+rather than per report, because the next one will be somewhere else.
 """
 
 import json
