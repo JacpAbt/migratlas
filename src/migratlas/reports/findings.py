@@ -27,6 +27,7 @@ import polars as pl
 
 from migratlas.evidence import EvidenceType, Realm, TaxonScope
 from migratlas.lake.reader import scan, scan_dataset
+from migratlas.lake.reader import sources as lake_sources
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -264,30 +265,40 @@ ATTRIBUTION_BIAS: Final = _domains(
     ),
 )
 
-COVERAGE_BIAS: Final = _domains(
-    geographic=(
-        "open",
-        "This claim *is* the geographic bias. Every source with a usable time axis is northern "
-        "temperate; the two with global reach cannot support a trend.",
-    ),
-    temporal=(
-        "bounded",
-        "Measured from the lake rather than asserted, and recomputed on every build, so the day a "
-        "southern source lands the number moves on its own.",
-    ),
-    taxonomic=(
-        "bounded",
-        "No longer birds-only on land: seven Movebank track sources add elk, caribou, reindeer, "
-        "bison, Arctic fox and wolf, so `track` is the fifth evidence type in use. None of them "
-        "supports a trend — collar effort is not a measured denominator — so they widen the "
-        "coverage without widening what can be measured. Insects and reptiles are still absent.",
-    ),
-    environmental=(
-        "open",
-        "Long digitised radar and trawl series exist where they were funded, so the environmental "
-        "space this project covers is a funding history rather than a sample.",
-    ),
-)
+
+def _coverage_bias(evidence_types: int) -> list[BiasDomain]:
+    """The coverage limit's ROBITT block, with the one number in it read from the lake.
+
+    A function rather than a constant because the taxonomic line counts evidence types, and a
+    count is exactly the kind of sentence that goes quietly false: it shipped as "the fifth
+    evidence type in use" while four were in use, having been written when a fifth looked
+    imminent. The rest of the block is prose re-expressing a method note and stays typed.
+    """
+    return _domains(
+        geographic=(
+            "open",
+            "This claim *is* the geographic bias. Every source with a usable time axis is "
+            "northern temperate; the two with global reach cannot support a trend.",
+        ),
+        temporal=(
+            "bounded",
+            "Measured from the lake rather than asserted, and recomputed on every build, so the "
+            "day a southern source lands the number moves on its own.",
+        ),
+        taxonomic=(
+            "bounded",
+            "No longer birds-only on land: seven Movebank track sources add elk, caribou, "
+            "reindeer, bison, Arctic fox and wolf, bringing the evidence types carrying data to "
+            f"{evidence_types} of {len(EvidenceType)}. None of them supports a trend — collar "
+            "effort is not a measured denominator — so they widen the coverage without widening "
+            "what can be measured. Insects and reptiles are still absent.",
+        ),
+        environmental=(
+            "open",
+            "Long digitised radar and trawl series exist where they were funded, so the "
+            "environmental space this project covers is a funding history rather than a sample.",
+        ),
+    )
 
 
 def _radar_coverage() -> tuple[int, int, int]:
@@ -333,13 +344,22 @@ def _wind_coverage() -> tuple[int, int, int]:
     return frame.height, int(years.min()), int(years.max())
 
 
+def _evidence_types_in_use() -> int:
+    """How many of the canonical evidence types actually hold data.
+
+    From the lake rather than from the registry: a source can be registered and never ingested
+    -- `darkecology_profiles` has been for months -- and "in use" means what it says.
+    """
+    return sum(1 for kind in EvidenceType if lake_sources(kind))
+
+
 def collect() -> list[Finding]:
     """Compute every finding. Re-runs the analyses, so this takes minutes rather than seconds."""
     # Imported here rather than at module scope: the reports import this module's siblings,
     # so a top-level import would close a cycle.
     from migratlas.metrics import range as range_metrics  # noqa: PLC0415
     from migratlas.reports import phase1b  # noqa: PLC0415
-    from migratlas.reports.phase1 import load_conus_nights, station_slopes  # noqa: PLC0415
+    from migratlas.reports.phase1 import AUTUMN, load_conus_nights, station_slopes  # noqa: PLC0415
 
     _, first_year, last_year = _radar_coverage()
     southern = _southern_share()
@@ -422,37 +442,57 @@ def collect() -> list[Finding]:
     )
 
     # --- The measurement itself, audited ----------------------------------
-    nights, wind_first, wind_last = _wind_coverage()
-    findings.append(
-        Finding(
-            key="composition-stable",
-            realm=Realm.AERIAL.value,
-            taxon_scope=TaxonScope.UNATTRIBUTED.value,
-            evidence_type=EvidenceType.FLUX.value,
-            bias=COMPOSITION_BIAS,
-            claim=(
-                "The autumn signal is not drifting from birds towards insects — what the radar "
-                "measures in 2025 means what it meant in 1995."
-            ),
-            value="airspeed trend -0.06 ± 0.08 m/s per decade (flat)",
-            scope=(
-                f"{nights:,} station-night wind samples, {wind_first}-{wind_last}, from an "
-                "independent regional reanalysis rather than from the radar."
-            ),
-            caveat=(
-                "Spring behaves differently: its airspeed rose, which is either a real change or "
-                "migrants flying higher than the fixed wind level assumes. Separating those needs "
-                "the vertical radar profiles. Spring carries no trend claim here either way."
-            ),
-            method="docs/methods/phase1c-homogeneity.md",
-            direction="change",
-            supporting=[
-                "Mean autumn airspeed sits in the range for migrating songbirds, not insects.",
-                "A 2012 discontinuity in the dataset's own rain filtering was traced, and ruled "
-                "out as weather using independent precipitation data.",
-            ],
+    # Published only while the fit it asserts still holds. The claim is that the mixture did not
+    # drift; an airspeed trend distinguishable from zero makes the sentence false, and a ledger
+    # that kept printing it would be contradicting its own number. Same shape as `shortfall`
+    # below: the condition for publishing is the finding.
+    from migratlas.reports import phase1c  # noqa: PLC0415
+
+    drift = phase1c.airspeed_trend(AUTUMN, max_year=last_year)
+    if drift is None:
+        log.warning("composition-stable withheld: no airspeed series, so the claim is untested")
+    elif not drift.flat:
+        log.warning(
+            "composition-stable withheld: autumn airspeed moves at %+.2f +/- %.2f m/s per decade",
+            drift.mean,
+            drift.ci95,
         )
-    )
+    else:
+        nights, wind_first, wind_last = _wind_coverage()
+        findings.append(
+            Finding(
+                key="composition-stable",
+                realm=Realm.AERIAL.value,
+                taxon_scope=TaxonScope.UNATTRIBUTED.value,
+                evidence_type=EvidenceType.FLUX.value,
+                bias=COMPOSITION_BIAS,
+                claim=(
+                    "The autumn signal is not drifting from birds towards insects — what the "
+                    "radar measures in 2025 means what it meant in 1995."
+                ),
+                value=(
+                    f"airspeed trend {drift.mean:+.2f} ± {drift.ci95:.2f} m/s per decade (flat)"
+                ),
+                scope=(
+                    f"{nights:,} station-night wind samples, {wind_first}-{wind_last}, from an "
+                    "independent regional reanalysis rather than from the radar."
+                ),
+                caveat=(
+                    "Spring behaves differently: its airspeed rose, which is either a real change "
+                    "or migrants flying higher than the fixed wind level assumes. Separating those "
+                    "needs the vertical radar profiles. Spring carries no trend claim here either "
+                    "way."
+                ),
+                method="docs/methods/phase1c-homogeneity.md",
+                direction="change",
+                supporting=[
+                    f"Mean autumn airspeed of {drift.level:.2f} m/s sits in the range for "
+                    "migrating songbirds, not insects.",
+                    "A 2012 discontinuity in the dataset's own rain filtering was traced, and "
+                    "ruled out as weather using independent precipitation data.",
+                ],
+            )
+        )
 
     # --- The causal step ----------------------------------------------------
     # Published only if the model ensemble is whole. `shortfall` exists because a third of it can
@@ -550,7 +590,7 @@ def collect() -> list[Finding]:
             realm="all",
             taxon_scope="all",
             evidence_type="all",
-            bias=COVERAGE_BIAS,
+            bias=_coverage_bias(_evidence_types_in_use()),
             claim=(
                 "Everything above is northern-hemisphere. The data that can measure change and "
                 "the data that covers the globe are, so far, different data."

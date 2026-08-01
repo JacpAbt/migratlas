@@ -135,7 +135,7 @@
    ],
    "direction": "change",
    "supporting": [
-    "Mean autumn airspeed sits in the range for migrating songbirds, not insects.",
+    "Mean autumn airspeed of 8.65 m/s sits in the range for migrating songbirds, not insects.",
     "A 2012 discontinuity in the dataset's own rain filtering was traced, and ruled out as weather using independent precipitation data."
    ]
   },
@@ -212,7 +212,7 @@
     {
      "domain": "taxonomic",
      "status": "bounded",
-     "finding": "No longer birds-only on land: seven Movebank track sources add elk, caribou, reindeer, bison, Arctic fox and wolf, so `track` is the fifth evidence type in use. None of them supports a trend \u2014 collar effort is not a measured denominator \u2014 so they widen the coverage without widening what can be measured. Insects and reptiles are still absent."
+     "finding": "No longer birds-only on land: seven Movebank track sources add elk, caribou, reindeer, bison, Arctic fox and wolf, bringing the evidence types carrying data to 4 of 7. None of them supports a trend \u2014 collar effort is not a measured denominator \u2014 so they widen the coverage without widening what can be measured. Insects and reptiles are still absent."
     },
     {
      "domain": "environmental",

@@ -6,6 +6,7 @@ nothing can be published without its scope, its caveat and a method note that ex
 """
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -178,6 +179,43 @@ def test_every_published_finding_names_its_realm_taxon_scope_and_evidence_type()
     for item in document["findings"]:
         for required in ("realm", "taxon_scope", "evidence_type"):
             assert item[required].strip(), f"{item['key']} has no {required}"
+
+
+def test_the_coverage_block_counts_evidence_types_rather_than_naming_a_number() -> None:
+    """The bug this pins shipped for a while and nothing could have caught it.
+
+    The taxonomic line read "`track` is the fifth evidence type in use" while four were in use --
+    written when a fifth looked imminent, and then true of nothing. It is a count of the lake, so
+    it is substituted rather than typed, and asserting it twice with different counts is what makes
+    "substituted" mean something.
+    """
+    for count in (4, 6):
+        taxonomic = next(
+            entry for entry in findings._coverage_bias(count) if entry.domain == "taxonomic"
+        )
+        assert f"{count} of 7" in taxonomic.finding
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_a_published_interval_agrees_with_the_word_beside_it() -> None:
+    """A value that calls itself flat must have an interval that covers zero.
+
+    The composition claim asserts the mixture did not drift, and `collect` withholds it when the
+    fit says otherwise. This is the same check from the other end: a value that says "(flat)" while
+    its own interval excludes zero is a sentence contradicting its own number, and that is exactly
+    what a typed value drifting away from a recomputed one looks like.
+    """
+    pattern = re.compile(r"([+-]?\d+\.\d+)\s*±\s*(\d+\.\d+)")
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    for item in document["findings"]:
+        if "(flat)" not in item["value"]:
+            continue
+        match = pattern.search(item["value"])
+        assert match, f"{item['key']} calls itself flat with no interval to check: {item['value']}"
+        estimate, interval = float(match.group(1)), float(match.group(2))
+        assert abs(estimate) < interval, (
+            f"{item['key']} is published as flat at {estimate:+} ± {interval}, which excludes zero"
+        )
 
 
 @pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
