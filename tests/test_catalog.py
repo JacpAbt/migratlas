@@ -10,7 +10,11 @@ from migratlas.catalog import provenance
 from migratlas.catalog.loader import UnregisteredSourceError, admit, get, load
 from migratlas.catalog.models import Redistribution, Source, TaxonSensitivity
 from migratlas.evidence import EvidenceType, Granularity, Realm, TaxonScope
-from migratlas.redact import Sensitivity
+from migratlas.redact import (
+    PublicationRefusedError,
+    Sensitivity,
+    clear_for_publication,
+)
 
 PERMISSIVE = Redistribution(allowed=True)
 
@@ -258,3 +262,124 @@ def test_the_committed_provenance_document_is_current() -> None:
     committed = Path(__file__).resolve().parents[1] / "docs" / "data" / "PROVENANCE.md"
     assert committed.is_file(), "run `make provenance`"
     assert committed.read_text(encoding="utf-8") == provenance.render(), "run `make provenance`"
+
+
+# --- The registered track sources --------------------------------------------
+#
+# The first `track` sources in the lake, so the first to exercise the per-taxon rule. Registered in
+# docs/methods/phase1d-tracks.md, which commits to what each one may publish. These assert the
+# registry still says what that note says, because the note is the argued version and the registry
+# is the enforced one.
+TRACK_SOURCES = {
+    "movebank_yahatinda_elk": (2440958, Sensitivity.MODERATE),
+    "movebank_mountain_caribou_bc": (5220114, Sensitivity.HIGH),
+    "movebank_missouri_bison": (2441176, Sensitivity.LOW),
+    "movebank_bylot_fox_gps": (5219303, Sensitivity.LOW),
+    "movebank_bylot_fox_argos": (5219303, Sensitivity.LOW),
+    "movebank_svalbard_reindeer": (5220114, Sensitivity.MODERATE),
+    "movebank_hebblewhite_wolves": (5219173, Sensitivity.HIGH),
+}
+
+
+@pytest.mark.parametrize(("source_id", "expected"), TRACK_SOURCES.items())
+def test_track_source_classifies_its_own_taxon(
+    source_id: str, expected: tuple[int, Sensitivity]
+) -> None:
+    taxon_key, sensitivity = expected
+    assert get(source_id).sensitivity_for(taxon_key) is sensitivity
+
+
+def test_the_same_species_is_classified_differently_in_two_populations() -> None:
+    """Rangifer tarandus is `high` in British Columbia and `moderate` on Svalbard.
+
+    The reason `TaxonSensitivity` is per source rather than global. Southern mountain caribou live
+    in herds of tens and several went extinct inside the study window; Svalbard's are ~20,000,
+    protected, and hunted under quota. One flag per binomial would be wrong for one of them, and
+    which one depends on which way it was set.
+    """
+    caribou = 5220114
+    assert get("movebank_mountain_caribou_bc").sensitivity_for(caribou) is Sensitivity.HIGH
+    assert get("movebank_svalbard_reindeer").sensitivity_for(caribou) is Sensitivity.MODERATE
+
+
+@pytest.mark.parametrize("source_id", TRACK_SOURCES)
+def test_a_track_sources_licence_field_describes_its_licence_and_nothing_else(
+    source_id: str,
+) -> None:
+    """Written after getting this wrong: the ethics refusal must not be encoded as a licence fact.
+
+    Both `high` sources were first registered with `redistribution.allowed: false`, to record that
+    nothing would be served. It worked -- and made the gate refuse with "its licence does not permit
+    redistribution", about two CC BY datasets whose licences permit exactly that. Two costs, and the
+    second is worse than the first: an operator reading that message goes to renegotiate a licence
+    that was never the obstacle, and `PROVENANCE.md` is generated from this field, so the site would
+    have published a false claim about someone else's terms.
+
+    Licence and animal safety are independent reasons to refuse, and `clear_for_publication` says so
+    in its own docstring. They stay in separate fields.
+    """
+    source = get(source_id)
+    assert source.licence.startswith("CC")
+    assert source.redistribution.allowed, (
+        f"{source_id} is {source.licence}, which permits redistribution. If the ethics gate should "
+        "refuse it, that belongs in default_sensitivity, not here."
+    )
+
+
+def test_the_gate_refuses_the_two_high_sources_for_the_reason_it_should() -> None:
+    """And the message names sensitivity, not the licence."""
+    for source_id in ("movebank_mountain_caribou_bc", "movebank_hebblewhite_wolves"):
+        source = get(source_id)
+        taxon_key = TRACK_SOURCES[source_id][0]
+        with pytest.raises(PublicationRefusedError, match="policy withholds"):
+            clear_for_publication(
+                source_id=source.id,
+                evidence_type=EvidenceType.TRACK,
+                realm=Realm.TERRESTRIAL,
+                sensitivity=source.sensitivity_for(taxon_key),
+                taxon_scope=TaxonScope.EXACT,
+                taxon_key=taxon_key,
+                redistribution_allowed=source.redistribution.allowed,
+            )
+
+
+def test_the_other_five_publish_only_coarsened_and_delayed() -> None:
+    """No track is ever published as recorded, whatever its classification.
+
+    Even `low` gets a 0.25-degree grid, a 30-day delay and its individual identifiers removed. The
+    safe path has to be the default path rather than the one taken when someone remembers to ask.
+    """
+    withheld = {"movebank_mountain_caribou_bc", "movebank_hebblewhite_wolves"}
+    publishable = set(TRACK_SOURCES) - withheld
+    for source_id in publishable:
+        source = get(source_id)
+        taxon_key = TRACK_SOURCES[source_id][0]
+        clearance = clear_for_publication(
+            source_id=source.id,
+            evidence_type=EvidenceType.TRACK,
+            realm=Realm.TERRESTRIAL,
+            sensitivity=source.sensitivity_for(taxon_key),
+            taxon_scope=TaxonScope.EXACT,
+            taxon_key=taxon_key,
+            redistribution_allowed=source.redistribution.allowed,
+        )
+        generalization = clearance.generalization
+        assert generalization.grid_deg is not None
+        assert generalization.grid_deg >= 0.25
+        assert generalization.delay_days >= 30
+        assert generalization.drop_individual_id
+
+
+def test_the_terrestrial_realm_is_no_longer_only_birds() -> None:
+    """The structural gap these sources were added to close.
+
+    Asserted on the registry rather than on a comment, because the last three sources added before
+    these were all birds and nothing objected.
+    """
+    terrestrial = [
+        source
+        for source in load().values()
+        if source.realm is Realm.TERRESTRIAL and source.provides_evidence
+    ]
+    assert any(source.evidence_type is EvidenceType.TRACK for source in terrestrial)
+    assert len({source.evidence_type for source in terrestrial}) > 1

@@ -27,6 +27,13 @@ each source carries its own terms.
 | [Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991](https://www.gbif.org/dataset/282d0ccb-4fa0-40f9-8593-105c77e88417) | `survey_index` | `terrestrial` | CC BY 4.0 | permitted |
 | [North American Breeding Bird Survey — route counts, 1966–2025](https://www.usgs.gov/centers/eesc/science/north-american-breeding-bird-survey) | `survey_index` | `terrestrial` | CC0 1.0 | permitted |
 | [Southern African Bird Atlas Project 2 (SABAP2) — atlas cards, 2007–2026](https://www.gbif.org/dataset/906e6978-e292-4a8b-9c39-adf6bb0f3323) | `survey_index` | `terrestrial` | CC BY 4.0 | permitted |
+| [Ya Ha Tinda elk project, Banff National Park, 2001-2024 (females)](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study897981076) | `track` | `terrestrial` | CC0 1.0 | permitted |
+| [Mountain caribou in British Columbia (South Peace Northern Caribou)](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study216040785) | `track` | `terrestrial` | CC BY 4.0 | permitted |
+| [Missouri Bison Tracking Project](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study8019591) | `track` | `terrestrial` | CC BY 4.0 | permitted |
+| [Arctic fox Bylot - GPS-UHF tracking](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study1241071371) | `track` | `terrestrial` | CC0 1.0 | permitted |
+| [Arctic fox Bylot - Argos tracking](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study942774711) | `track` | `terrestrial` | CC0 1.0 | permitted |
+| [Svalbard Reindeer Project - Nordenskiold Land](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study2608802883) | `track` | `terrestrial` | CC BY-NC 4.0 | permitted |
+| [Hebblewhite Alberta-BC Wolves](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study209824313) | `track` | `terrestrial` | CC BY 4.0 | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -263,3 +270,147 @@ Roadside by design, so the sample is not a random sample of the landscape and th
 **Caveats**
 
 Citizen science, so effort is not fixed by design the way a trawl survey's is: cards per pentad under the full protocol run from 1 at the tenth percentile to 32 at the ninetieth and 3,963 at the maximum, so the consistent-footprint rule from Phase 1b has to be applied before any comparison. Two protocols are landed **separately, never pooled** — a full-protocol card averages 52 species and an ad-hoc list 9.5, so one denominator cannot serve both; the protocol travels in the `protocol` field and 4,408,227 of 25,687,526 rows are ad-hoc. Presence only, so an absence is the absence of a row and the denominator comes from the cards. 390,194 rows carry no accepted species key, being unidentified or coarser than species, and are dropped and counted. Years in the archive run from 1930, early for a project that began in 2007 but not impossible for a retrospective card, so the ingest keeps 1900–2027 and the analysis window (2007–2025) excludes both the stragglers and the partial 2026. For 117,960 full-protocol rows the pentad embedded in the card identifier disagrees with the record's own `verbatimLocality`; the locality is taken as the authority and the disagreement reported rather than reconciled. Coverage is overwhelmingly South Africa. Comparing against SABAP1 means rolling nine pentads into each quarter-degree cell, and the two atlases differ in card duration as well as in grid.
+
+## Ya Ha Tinda elk project, Banff National Park, 2001-2024 (females)
+
+- **id** `movebank_yahatinda_elk`
+- **evidence type** `track` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study897981076
+- **DOI** [10.5441/001/1.5g4h5t6c](https://doi.org/10.5441/001/1.5g4h5t6c)
+- **licence** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- **redistribution** permitted, attribution required
+  - CC0 waives rights; the citation is an academic obligation regardless. The Movebank study covers 2001-2024 while the deposited repository DOI covers 2001-2020, so the later years are cited to the study rather than to the DOI.
+- **sensitivity** `moderate` by default
+  - GBIF `2440958` → `moderate`: Cervus elaphus is abundant and managed, so not vulnerable in the endangerment sense. But this herd is partially migratory and leaves Banff for hunted ground, which is the subject of the study - the disclosure and the harm concern the same boundary.
+- **credential** `MIGRATLAS_CRED_MOVEBANK_USER` required
+
+**Cite as**
+
+> Hebblewhite M, Merrill EH, Martin H, Berg JE, Bohm H, Eggeman SL. 2020. Data from: Study "Ya Ha Tinda elk project, Banff National Park, 2001-2020 (females)". Movebank Data Repository. https://doi.org/10.5441/001/1.5g4h5t6c
+
+**Caveats**
+
+Female elk only, so nothing here describes male movement or the sexes together. Locations are GPS, one sensor type, which is why this study carries no protocol break. The Movebank event API needs both MIGRATLAS_CRED_MOVEBANK_USER and MIGRATLAS_CRED_MOVEBANK_PASSWORD, and serves data only after a licence handshake.
+
+## Mountain caribou in British Columbia (South Peace Northern Caribou)
+
+- **id** `movebank_mountain_caribou_bc`
+- **evidence type** `track` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study216040785
+- **DOI** [10.5441/001/1.p5bn656k](https://doi.org/10.5441/001/1.p5bn656k)
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+  - CC BY permits redistribution with attribution, and this field records that and only that. The ethics gate refuses this source anyway on `high` sensitivity - but the two are independent reasons and must stay independent, because PROVENANCE.md is generated from here and `allowed: false` would publish a false claim about someone else's licence. A trend computed from the data may still be reported: see phase1d-tracks.md section 2.
+- **sensitivity** `high` by default
+  - GBIF `5220114` → `high`: Southern mountain caribou are among the most endangered large mammals in North America, in herds of tens of animals, and several herds went extinct inside this study's 1988-2016 window. A small herd's locations are a small herd's whereabouts. Classified per source rather than per species: Svalbard's reindeer are the same species and are not in this position.
+- **credential** `MIGRATLAS_CRED_MOVEBANK_USER` required
+
+**Cite as**
+
+> Seip DR, Price E. 2019. Data from: Science update for the South Peace Northern Caribou (Rangifer tarandus caribou pop. 15) in British Columbia. Movebank Data Repository. https://doi.org/10.5441/001/1.p5bn656k
+
+**Caveats**
+
+Mixes GPS with older radio transmitters, and fix rates differ between them by an order of magnitude - a fix-rate change is indistinguishable from a behaviour change unless it is modelled, so a break term per sensor type is mandatory. Ends in 2016. This is one population, not the species.
+
+## Missouri Bison Tracking Project
+
+- **id** `movebank_missouri_bison`
+- **evidence type** `track` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study8019591
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+  - CC BY permits redistribution with attribution. Attribution is awkward here because the study names no author; the study record is the only citable object.
+- **sensitivity** `low` by default
+  - GBIF `2441176` → `low`: A conservation herd on managed, fenced ground. No market, no persecution pressure, and no disturbance route that a coarse gridded surface would open.
+- **credential** `MIGRATLAS_CRED_MOVEBANK_USER` required
+
+**Cite as**
+
+> Missouri Bison Tracking Project. Movebank study 8019591. https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study8019591 (No citation supplied by the study; cite the study record.)
+
+**Caveats**
+
+A fenced conservation herd, so its movement is bounded by a fence rather than by habitat or weather - it cannot speak to migration, and any timing metric computed from it describes movement inside an enclosure. Carries an Acceleration sensor alongside GPS.
+
+## Arctic fox Bylot - GPS-UHF tracking
+
+- **id** `movebank_bylot_fox_gps`
+- **evidence type** `track` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study1241071371
+- **licence** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- **redistribution** permitted, attribution required
+  - CC0 waives rights; the citation is an academic obligation regardless.
+- **sensitivity** `low` by default
+  - GBIF `5219303` → `low`: Vulpes lagopus is trapped for fur across much of its range, so the harmful activity exists. Bylot Island is a national park with no resident trapping, and the population is neither localised nor targeted, so disclosure at a 0.25-degree grid thirty days stale opens no route to it.
+- **credential** `MIGRATLAS_CRED_MOVEBANK_USER` required
+
+**Cite as**
+
+> Clermont J, Grenier-Potvin A, Duchesne E, Couchoux C, Dulude-de Broin F, Beardsell A, Bety J, Berteaux D. 2021. The predator activity landscape predicts the anti-predator behavior and distribution of prey in a tundra community. Ecosphere 12(12):e03858. https://doi.org/10.1002/ecs2.3858
+
+**Caveats**
+
+2018-2025 and 69 individuals, a different period and a different instrument from the Argos study at the same site - the two are registered separately and must not be concatenated into one series without a break term. Arctic foxes range onto sea ice, so a strictly terrestrial reading of these tracks is wrong.
+
+## Arctic fox Bylot - Argos tracking
+
+- **id** `movebank_bylot_fox_argos`
+- **evidence type** `track` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study942774711
+- **DOI** [10.5441/001/1.3gg33bd4](https://doi.org/10.5441/001/1.3gg33bd4)
+- **licence** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- **redistribution** permitted, attribution required
+  - CC0 waives rights; the citation is an academic obligation regardless.
+- **sensitivity** `low` by default
+  - GBIF `5219303` → `low`: Same population and the same reasoning as the GPS-UHF study at Bylot: trapped elsewhere, not here, not localised, not targeted.
+- **credential** `MIGRATLAS_CRED_MOVEBANK_USER` required
+
+**Cite as**
+
+> Berteaux D. 2021. Data from: Study "Arctic fox Bylot - Argos tracking". Movebank Data Repository. https://doi.org/10.5441/001/1.3gg33bd4
+
+**Caveats**
+
+Argos Doppler positions, so location error is hundreds of metres to kilometres rather than the metres a GPS fix gives - 64,489 locations over 2007-2021 from 170 individuals is a sparse, coarse record. Its error is far below the 0.25-degree publication grid but not below a daily displacement, so a movement metric must account for it.
+
+## Svalbard Reindeer Project - Nordenskiold Land
+
+- **id** `movebank_svalbard_reindeer`
+- **evidence type** `track` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study2608802883
+- **licence** [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
+- **redistribution** permitted, attribution required, non-commercial only
+  - CC BY-NC. The only non-commercial source in the lake, so anything derived from it carries that restriction onward and it cannot be pooled into a product offered on commercial terms.
+- **sensitivity** `moderate` by default
+  - GBIF `5220114` → `moderate`: The same species as the BC caribou and deliberately not the same classification. Svalbard's population is roughly 20,000, protected, and hunted under quota on Nordenskiold Land; there is no persecution pressure and no tiny herd to locate. Sensitivity is a property of the population, not of the binomial.
+- **credential** `MIGRATLAS_CRED_MOVEBANK_USER` required
+
+**Cite as**
+
+> Loe LE, Hansen BB, Stien A, Albon SD, Bischof R, Carlsson A, Irvine RJ, Meland M, Rivrud IM, Ropstad E, Veiberg V, Mysterud A. 2016. Behavioral buffering of extreme weather events in a high-Arctic herbivore. Ecosphere 7(6):e01374. https://doi.org/10.1002/ecs2.1374
+
+**Caveats**
+
+Svalbard reindeer are a sedentary high-Arctic subspecies that does not undertake long migrations, so a migration-timing metric applied here measures small seasonal range shifts and not migration. Carries Accessory Measurements alongside GPS.
+
+## Hebblewhite Alberta-BC Wolves
+
+- **id** `movebank_hebblewhite_wolves`
+- **evidence type** `track` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study209824313
+- **DOI** [10.5441/001/1.662](https://doi.org/10.5441/001/1.662)
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+  - CC BY permits redistribution with attribution, and this field records the licence and nothing else. The gate refuses this source on `high` sensitivity instead, which is a separate reason and produces the message an operator needs to read.
+- **sensitivity** `high` by default
+  - GBIF `5219173` → `high`: The one demonstrated pathway in the literature. An anti-wolf site published instructions for locating collared wolves by telemetry; Idaho subsequently made telemetry-aided hunting specifically illegal; four of the eleven collared wolves on Yellowstone's Northern Range were shot in a single season. Alberta runs wolf culls. Cooke et al. 2017, Conservation Biology, cobi.12895.
+- **credential** `MIGRATLAS_CRED_MOVEBANK_USER` required
+
+**Cite as**
+
+> Hebblewhite M. 2025. Data from: Study "Hebblewhite Alberta-BC Wolves". Movebank Data Repository. https://doi.org/10.5441/001/1.662
+
+**Caveats**
+
+Twelve years and 68 individuals, below the fifteen-year floor this project applies to change detection, so this source is here to exercise the gate and to fill the terrestrial carnivore gap rather than to carry a trend. Note that the Canis lupus key also covers domestic dogs, and most Movebank studies carrying it are dogs rather than wolves - the key does not identify the risk, the population does.
