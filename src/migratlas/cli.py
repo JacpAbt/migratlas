@@ -21,6 +21,7 @@ from migratlas.ingest import (
     ebird_st,
     fishglob,
     megamove,
+    movebank,
     obis,
     sabap1,
     sabap2,
@@ -162,6 +163,30 @@ def ingest_sabap1() -> None:
     result = sabap1.ingest()
     print(f"{result.rows:,} rows -> {result.path}")
     print(f"run {result.run_id}")
+
+
+@ingest_app.command("movebank")
+def ingest_movebank(
+    source: Annotated[
+        str, typer.Option(help="One registered study source id, or 'all' for every one.")
+    ] = "all",
+) -> None:
+    """Land terrestrial mammal tracks (TRACK, terrestrial). The lake's first individual data.
+
+    Seven Movebank studies, five species, about 6 million locations. Each study is an
+    all-or-nothing download behind a licence handshake -- Movebank ignores request limits -- so the
+    responses are cached and the accepted terms are stored beside them.
+
+    Two of the seven publish nothing: `high` sensitivity at individual granularity withholds the
+    data entirely. They still land in the lake, because a trend computed from them may be reported
+    even where a map may not. See docs/methods/phase1d-tracks.md.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    wanted = [study.source_id for study in movebank.STUDIES] if source == "all" else [source]
+    for source_id in wanted:
+        result = movebank.ingest_study(source_id)
+        print(f"{result.rows:,} rows -> {result.path}")
+        print(f"run {result.run_id}")
 
 
 @app.command("ingest-narr")
