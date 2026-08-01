@@ -47,6 +47,39 @@
       </tbody>
     </table>
 
+    {#if doc.withheld.length > 0}
+      <!--
+        Named, not omitted. A map that silently skipped these would read as a map with no wolves in
+        it, which is the opposite of true: the lake holds them and will not draw one fix. Listing
+        them is also the only way a reader can tell a refusal from a gap in coverage.
+      -->
+      <section class="held" aria-labelledby="coverage-held">
+        <h4 id="coverage-held">Held, and never drawn</h4>
+        <p class="held__lead">
+          {doc.withheld.length} source{doc.withheld.length === 1 ? "" : "s"} in this lake
+          {doc.withheld.length === 1 ? "is" : "are"} classified as high sensitivity. Individual
+          locations are withheld entirely — not coarsened, not delayed. Nothing below is on the map.
+        </p>
+        <ul class="held__list">
+          {#each doc.withheld as source (source.source_id)}
+            <li>
+              <p class="held__who">
+                <em>{source.taxon}</em>
+                <span class="held__meta">
+                  {source.span[0]}–{source.span[1]} · {source.individuals} animals · {source.realm}
+                </span>
+              </p>
+              <p class="held__why">{source.reason}</p>
+            </li>
+          {/each}
+        </ul>
+        <p class="held__note">
+          A trend computed from them may still be reported: a rate of change over a population
+          locates no animal. It is the map that is refused, never the finding.
+        </p>
+      </section>
+    {/if}
+
     <p class="coverage__caveat">{doc.caveat}</p>
   </section>
 {/if}
@@ -55,6 +88,65 @@
   .coverage {
     font-size: 0.8rem;
     line-height: 1.5;
+  }
+
+  .held {
+    margin-top: var(--gap-wide);
+    padding: var(--gap);
+    border: 1px solid var(--rule);
+    /* The same rust edge the ledger gives a refusal, so a reader who has met one recognises this. */
+    border-left: 3px solid var(--rust);
+    border-radius: var(--radius);
+    background: var(--paper-sunken);
+  }
+
+  .held h4 {
+    margin: 0 0 var(--gap-tight);
+    font-family: var(--font-hand);
+    font-size: 1.05rem;
+    font-weight: 400;
+    line-height: var(--leading-hand);
+  }
+
+  .held__lead {
+    margin: 0;
+  }
+
+  .held__list {
+    margin: var(--gap) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .held__list li + li {
+    margin-top: var(--gap-tight);
+    padding-top: var(--gap-tight);
+    border-top: 1px dotted var(--rule);
+  }
+
+  .held__who {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .held__meta {
+    margin-left: var(--gap-tight);
+    color: var(--pencil);
+    font-family: var(--font-mono);
+    font-size: var(--size-margin);
+    font-weight: 400;
+  }
+
+  .held__why {
+    margin: var(--gap-hair) 0 0;
+    color: var(--ink-soft);
+    font-size: 0.76rem;
+  }
+
+  .held__note {
+    margin: var(--gap) 0 0;
+    color: var(--pencil);
+    font-size: 0.76rem;
   }
 
   .coverage__lead {

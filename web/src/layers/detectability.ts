@@ -27,18 +27,30 @@ interface Coverage {
   years: [number, number];
 }
 
+/** A source the gate holds and never draws. Rendered as a list, never as an absence. */
+export interface Withheld {
+  source_id: string;
+  realm: string;
+  taxon: string;
+  sensitivity: string;
+  reason: string;
+  span: [number, number];
+  individuals: number;
+}
+
 interface DetectabilityDocument {
   schema_version: number;
   min_years: number;
   grid: GridPayload & { categories: string[] };
   coverage: Coverage[];
+  withheld: Withheld[];
   summary: Record<string, number>;
   caveat: string;
   method: string;
   supporting: string[];
 }
 
-const SUPPORTED_SCHEMA = 1;
+const SUPPORTED_SCHEMA = 2;
 
 const LAYER_ID = "detectability";
 

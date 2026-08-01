@@ -331,7 +331,7 @@ Mixes GPS with older radio transmitters, and fix rates differ between them by an
 
 **Caveats**
 
-A fenced conservation herd, so its movement is bounded by a fence rather than by habitat or weather - it cannot speak to migration, and any timing metric computed from it describes movement inside an enclosure. Carries an Acceleration sensor alongside GPS.
+A fenced conservation herd, so its movement is bounded by a fence rather than by habitat or weather - it cannot speak to migration, and any timing metric computed from it describes movement inside an enclosure. Carries an Acceleration sensor alongside GPS. KNOWN BAD DATA, not filtered: 617 of its rows sit at 52.43N 13.52E, which is Berlin - five collars bench-tested at the manufacturer between 2022-08-26 and 2022-08-31 before being shipped and fitted, recorded under the same animal ids as those animals' real Missouri tracks and marked deployed and visible. They put Berlin on this source's cells. Removing them needs a per-taxon speed filter; two simpler filters were tried and each deleted real data instead. See the comment at the top of ingest/movebank.py.
 
 ## Arctic fox Bylot - GPS-UHF tracking
 

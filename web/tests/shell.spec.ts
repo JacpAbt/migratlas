@@ -390,6 +390,23 @@ test("the detectability assessment is the coverage claim's own number", async ({
   await expect(coverage.locator(".coverage__legend li")).toHaveCount(4);
   // And every source, with the best it can do -- the point being that most of them can do nothing.
   await expect(coverage.locator("tbody tr")).not.toHaveCount(0);
+
+  // The two sources the gate refuses, named rather than omitted. A map that silently skipped them
+  // would read as a map with no wolves in it, when the lake holds 174,443 wolf fixes and will not
+  // draw one -- and a reader could not tell that refusal from a hole in the coverage.
+  const held = coverage.locator(".held");
+  await expect(held).toBeVisible();
+  await expect(held.locator("li")).toHaveCount(2);
+  await expect(held).toContainText("Rangifer tarandus");
+  await expect(held).toContainText("Canis lupus");
+  // Withheld means withheld, not coarsened -- the distinction the policy turns on.
+  await expect(held).toContainText(/withheld entirely/i);
+  // And the finding survives the refusal, which is the deliberate decision in phase1d-tracks.md §2.
+  await expect(held).toContainText(/locates no animal/i);
+
+  // The terrestrial realm is no longer birds-only, asserted through the panel rather than the ledger.
+  const sources = await coverage.locator("tbody tr th").allTextContents();
+  expect(sources.filter((name) => name.startsWith("movebank_")).length).toBeGreaterThan(0);
   await expect(coverage.locator(".coverage__ceiling").first()).not.toBeEmpty();
 });
 

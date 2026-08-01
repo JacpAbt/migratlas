@@ -87,9 +87,9 @@ def test_an_unparseable_timestamp_does_not_become_a_null_row() -> None:
 #
 # The correctness bug this ingest actually had. The event endpoint returns every fix a tag ever
 # transmitted: for the Bylot Argos study, 696,640 rows against the 64,489 its metadata calls
-# deployed locations. 618,915 of the positioned rows carry `visible = false`, the data owners' own
-# outlier flag. The first run landed 607,135 rows, 89% of them positions somebody had already marked
-# as wrong, and nothing failed -- the count only looked wrong beside the published one.
+# deployed locations. 618,915 of the positioned rows carry `visible = false`, which is the owners'
+# own outlier flag. The first run landed 607,135 rows, 89% of them positions somebody had already
+# marked as wrong, and nothing failed -- the count only looked wrong beside the published one.
 def test_fixes_the_owners_flagged_as_outliers_are_dropped() -> None:
     frame = movebank.parse(
         _csv(
@@ -259,3 +259,42 @@ def test_a_csv_response_is_recognised_as_data_and_an_html_one_is_not() -> None:
     assert movebank._looks_like_data('"individual_local_identifier",x\n')
     assert not movebank._looks_like_data("<html>\n<p>By accepting this document")
     assert not movebank._looks_like_data("<p>No data are available for download.</p>")
+
+
+# --- Coordinates -------------------------------------------------------------
+#
+# From real rows, and the detectability grid encoder is what noticed: it decodes a cell index back
+# to a longitude and returned -223.5.
+def test_a_longitude_past_the_antimeridian_is_wrapped_into_range() -> None:
+    """Two Bylot fox fixes arrive at -207 and -223 degrees, which are not coordinates."""
+    frame = movebank.parse(
+        _csv(
+            _row("A", "2010-06-01 12:00:00.000", "83.4", "-207.342167", "Vulpes lagopus"),
+            _row("A", "2011-06-01 12:00:00.000", "71.0", "-223.353917", "Vulpes lagopus"),
+        )
+    )
+    assert all(-180 <= value <= 180 for value in frame["location_long"].to_list())
+    assert frame["location_long"].to_list() == pytest.approx([152.657833, 136.646083])
+
+
+def test_bench_test_fixes_are_still_in_the_data_and_that_is_recorded() -> None:
+    """Not a filter, a documented gap. Two attempts to remove these were each wrong.
+
+    Dropping rows far from the study median removed Berlin and deleted 112 fixes of Arctic fox
+    MMRV's 3,000 km dispersal. Dropping animals never seen near home kept MMRV and kept Berlin,
+    because the bench-test fixes share an animal id with that collar's real Missouri track. The
+    discriminator both miss is implied speed, which needs a per-taxon ceiling and is not written.
+
+    This test exists so the gap is visible in the suite rather than only in a comment, and so that
+    whoever writes the speed filter has the shape of the input in front of them.
+    """
+    frame = movebank.parse(
+        _csv(
+            _row("Patti_PSP", "2022-08-26 15:00:00.000", "52.43", "13.52", "Bison bison"),
+            _row("Patti_PSP", "2022-09-27 15:00:00.000", "40.48", "-94.14", "Bison bison"),
+        )
+    )
+    assert frame.height == 2, "both survive: nothing here removes a bench test"
+    assert not hasattr(movebank, "near_home"), (
+        "a distance filter was reverted on purpose; if one is reintroduced it must keep MMRV"
+    )

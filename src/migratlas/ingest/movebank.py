@@ -89,6 +89,44 @@ Only the location sensors. Accelerometers and barometers appear in these studies
 a position, so they cannot reach a row that survived the position filter.
 """
 
+# --- A known data-quality issue, deliberately not filtered ---------------------
+#
+# Two things in this data are wrong and neither is fixed here, because two attempts to fix them were
+# each wrong in a different direction and a third guess is worse than a documented gap.
+#
+# **617 rows of the Missouri bison study sit at 52.43N, 13.52E, which is Berlin.** Five collars
+# named
+# ``Patti_PSP`` through ``Padme_PSP``, ~120 fixes each between 2022-08-26 and 2022-08-31, then
+# ~26,000
+# fixes each in Missouri from 2022-09-27. Collars bench-tested at the manufacturer, shipped, and
+# fitted -- under the *same* ``individual_local_identifier``, carrying a ``deployment_id``, marked
+# ``visible = true``. Nothing already in this ingest rejects them.
+#
+# **Two Bylot fox fixes sit at 136E and 152E**, one per animal, with no approach or departure. That
+# is
+# what a bad Argos position looks like.
+#
+# What was tried and why each failed:
+#
+# - *Drop rows far from the study median.* Removes Berlin, and deletes 112 fixes of Arctic fox
+# ``MMRV`` -- 1,502 fixes, five years at Bylot, then a connected westward path (-80, -91.6, -134.3)
+#   to the Mackenzie Delta, roughly 3,000 km. Documented Arctic fox dispersal, and arguably the most
+#   remarkable movement record in this lake. It left the animal looking sedentary.
+# - *Drop animals never seen near the study median.* Keeps MMRV, and keeps Berlin, because the
+#   bench-test fixes share an animal id with that animal's real Missouri track.
+#
+# The discriminator both miss is **implied speed between consecutive fixes**: Berlin to Missouri is
+# ~7,000 km across a four-week gap, where MMRV progresses through intermediate longitudes over
+# months. A speed filter is the standard tool and the right one, with a per-taxon ceiling -- Arctic
+# foxes are documented at ~150 km/day on sea ice, so a single global threshold would be wrong too.
+#
+# Until that exists: the 617 Berlin rows are in the lake and put Berlin on the bison layer. The
+# bison
+# source supports no finding (a fenced herd, no trend), so nothing published rests on them -- but
+# the
+# map is wrong in one place and this comment is why, rather than a filter that quietly deletes a
+# fox.
+
 MIN_STUDY_YEARS: Final = 2
 """A study spanning less than this contributes nothing and is refused.
 
@@ -233,23 +271,39 @@ def parse(body: str) -> pl.DataFrame:
         infer_schema_length=10000,
     )
     total = frame.height
-    frame = frame.with_columns(
-        # Parsed here rather than in the adapter, so the span check and the written rows agree about
-        # which timestamps are usable instead of each deciding separately.
-        pl.col("timestamp")
-        .str.to_datetime("%Y-%m-%d %H:%M:%S%.f", time_zone="UTC", strict=False)
-        .dt.cast_time_unit("ms")
-    ).filter(
-        pl.col("location_lat").is_not_null(),
-        pl.col("location_long").is_not_null(),
-        pl.col("individual_local_identifier").is_not_null(),
-        pl.col("timestamp").is_not_null(),
-        # The two filters that make this the study's data rather than everything its tags ever sent.
-        # `visible` is the owners' own outlier flag and `deployment_id` says a collar was on an
-        # animal. Both are reported below, because the fraction they remove is a property of the
-        # study worth seeing -- for Bylot Argos it is 91%.
-        pl.col("deployment_id").is_not_null(),
-        pl.col("visible"),
+    frame = (
+        frame.with_columns(
+            # Parsed here rather than in the adapter, so the span check and the written rows agree
+            # about
+            # which timestamps are usable instead of each deciding separately.
+            pl.col("timestamp")
+            .str.to_datetime("%Y-%m-%d %H:%M:%S%.f", time_zone="UTC", strict=False)
+            .dt.cast_time_unit("ms")
+        )
+        .filter(
+            pl.col("location_lat").is_not_null(),
+            pl.col("location_long").is_not_null(),
+            pl.col("individual_local_identifier").is_not_null(),
+            pl.col("timestamp").is_not_null(),
+            # The two filters that make this the study's data rather than everything its tags ever
+            # sent.
+            # `visible` is the owners' own outlier flag and `deployment_id` says a collar was on an
+            # animal. Both are reported below, because the fraction they remove is a property of the
+            # study worth seeing -- for Bylot Argos it is 91%.
+            pl.col("deployment_id").is_not_null(),
+            pl.col("visible"),
+        )
+        .with_columns(
+            # Wrapped into range before anything measures a distance with it. Two Bylot fox fixes
+            # arrive
+            # at -207 and -223 degrees, which are not coordinates -- and they broke the
+            # detectability
+            # grid encoder, which decodes an index back to a longitude and got -223.5.
+            # Cast first: an empty study infers the column as string and the arithmetic fails, which
+            # is
+            # reachable -- a study whose every fix is a flagged outlier parses to nothing.
+            location_long=(pl.col("location_long").cast(pl.Float64) + 180) % 360 - 180
+        )
     )
     if total != frame.height:
         dropped = total - frame.height

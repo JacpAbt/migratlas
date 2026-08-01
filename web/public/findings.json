@@ -193,7 +193,7 @@
    "claim": "Everything above is northern-hemisphere. The data that can measure change and the data that covers the globe are, so far, different data.",
    "value": "0.0% of the radar record and 0.0% of the survey record lie south of the equator",
    "scope": "Every source in this project that has a usable time axis.",
-   "caveat": "Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but it bounds every claim here to the northern temperate zone, and no model trained on it should be trusted elsewhere without being tested there first.",
+   "caveat": "Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but it bounds every claim here to the northern temperate zone, and no model trained on it should be trusted elsewhere without being tested there first. Two kinds of gap are worth telling apart on the map. Grey cells are places the lake reaches and cannot measure. And two sources are held and drawn nowhere at all: mountain caribou and wolves are classified high-sensitivity, so their locations are withheld entirely rather than coarsened. The map is not a map of everything this lake knows, and the coverage panel lists what is missing from it rather than letting an absence speak.",
    "method": "docs/methods/geographic-coverage.md",
    "realm": "all",
    "taxon_scope": "all",
@@ -211,8 +211,8 @@
     },
     {
      "domain": "taxonomic",
-     "status": "open",
-     "finding": "The terrestrial realm is entirely birds \u2014 three sources, one class. Four of the seven evidence types are unused, and they are where mammals, reptiles and insects live."
+     "status": "bounded",
+     "finding": "No longer birds-only on land: seven Movebank track sources add elk, caribou, reindeer, bison, Arctic fox and wolf, so `track` is the fifth evidence type in use. None of them supports a trend \u2014 collar effort is not a measured denominator \u2014 so they widen the coverage without widening what can be measured. Insects and reptiles are still absent."
     },
     {
      "domain": "environmental",

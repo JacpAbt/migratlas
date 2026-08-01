@@ -31,7 +31,8 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION: Final = 1
+SCHEMA_VERSION: Final = 2
+"""Bumped from 1: the document gained `withheld`, sources the gate holds and never draws."""
 
 CELL_DEG: Final = 1.0
 """One degree, matching every other gridded surface in the lake so the layers overlay."""
@@ -199,6 +200,93 @@ RULES: Final[tuple[SourceRule, ...]] = (
             "independent cross-check rather than as a layer."
         ),
     ),
+    # --- Terrestrial mammal tracks ---------------------------------------------
+    #
+    # Five of the seven registered track sources. The other two are `high` sensitivity, so the gate
+    # withholds them entirely and they appear in `withheld` below rather than on the map.
+    #
+    # Ceiling `effort-not-measured` for all of them, and the reason is structural rather than a
+    # property of any one study: a radar station is fixed infrastructure and a trawl survey has a
+    # design, but a collar goes on an animal that could be caught, in a place researchers could
+    # reach, in a year that was funded. `phase1d-tracks.md` §6 says the same thing about the claim.
+    #
+    # The unit is the cell, matching what `phase1d` fits -- a cell-year median across at least three
+    # animals -- rather than the individual. A collar lasts two or three years, so counting per
+    # individual would report every track source as too short and hide that Ya Ha Tinda has 21 years
+    # of continuously re-collared elk in one cell.
+    SourceRule(
+        source_id="movebank_yahatinda_elk",
+        evidence_type=EvidenceType.TRACK,
+        realm="terrestrial",
+        latitude="latitude",
+        longitude="longitude",
+        unit="cell",
+        ceiling="effort-not-measured",
+        reason=(
+            "21 years of re-collared elk in one cell, the deepest track series here -- but collar "
+            "effort is not a measured denominator, and this herd is female-only."
+        ),
+        effort_note=(
+            "phase1d fitted the one series that cleared the year floor and got "
+            "+1.21 +/- 21.51 days per decade: an interval eighteen times the estimate."
+        ),
+    ),
+    SourceRule(
+        source_id="movebank_svalbard_reindeer",
+        evidence_type=EvidenceType.TRACK,
+        realm="terrestrial",
+        latitude="latitude",
+        longitude="longitude",
+        unit="cell",
+        ceiling="effort-not-measured",
+        reason=(
+            "14 years, one short of the floor, and a sedentary high-Arctic subspecies -- so a "
+            "migration metric here measures small seasonal range shifts, not migration."
+        ),
+    ),
+    SourceRule(
+        source_id="movebank_bylot_fox_gps",
+        evidence_type=EvidenceType.TRACK,
+        realm="terrestrial",
+        latitude="latitude",
+        longitude="longitude",
+        unit="cell",
+        ceiling="effort-not-measured",
+        reason=(
+            "Pools with the Argos study at the same site to reach 17 years in one cell, and falls "
+            "to 13 once a cell-year needs three animals. Arctic foxes also range onto sea ice."
+        ),
+    ),
+    SourceRule(
+        source_id="movebank_bylot_fox_argos",
+        evidence_type=EvidenceType.TRACK,
+        realm="terrestrial",
+        latitude="latitude",
+        longitude="longitude",
+        unit="cell",
+        ceiling="effort-not-measured",
+        reason=(
+            "Argos Doppler positions, so location error is kilometres where the GPS study at the "
+            "same site gives metres. The two differ by 9.4 days on the same metric."
+        ),
+        effort_note=(
+            "An instrument change inside one place. phase1d reports the shift rather than "
+            "correcting it, because a correction would hide the thing worth knowing."
+        ),
+    ),
+    SourceRule(
+        source_id="movebank_missouri_bison",
+        evidence_type=EvidenceType.TRACK,
+        realm="terrestrial",
+        latitude="latitude",
+        longitude="longitude",
+        unit="cell",
+        ceiling="effort-not-measured",
+        reason=(
+            "A fenced conservation herd, so its movement is bounded by a fence rather than by "
+            "habitat or weather. It cannot speak to migration at all."
+        ),
+    ),
 )
 
 
@@ -233,11 +321,33 @@ class Grid:
 
 
 @dataclass(frozen=True, slots=True)
+class Withheld:
+    """A source held in the lake and never drawn, with the reason a reader can check."""
+
+    source_id: str
+    realm: str
+    taxon: str
+    sensitivity: str
+    reason: str
+    span: tuple[int, int]
+    individuals: int
+
+
+@dataclass(frozen=True, slots=True)
 class Detectability:
     schema_version: int
     min_years: int
     grid: Grid
     coverage: list[Coverage]
+    withheld: list[Withheld]
+    """Sources the ethics gate refuses to draw. Published *as a list* rather than omitted.
+
+    An absence explains nothing. A map that silently skipped the wolves and the mountain caribou
+    would read as a map with no wolves in it, which is the opposite of true -- the lake holds
+    174,443 wolf fixes and 249,450 caribou fixes and will not draw one. Saying so is the honest
+    version, and the only way a reader can tell a refusal from a gap in coverage.
+    """
+
     summary: dict[str, int]
     """Cells per status across the whole grid, which is the number the panel states."""
 
@@ -305,6 +415,79 @@ def _time_column(rule: SourceRule) -> str:
     return column
 
 
+WITHHELD_SOURCES: Final[tuple[str, ...]] = (
+    "movebank_mountain_caribou_bc",
+    "movebank_hebblewhite_wolves",
+)
+"""Track sources the gate refuses to draw. Named here, verified against the gate in `_withheld`."""
+
+
+def _withheld() -> list[Withheld]:
+    """The sources held and never drawn, with the refusal re-derived rather than asserted.
+
+    Every entry is checked against `clear_for_publication` before it is listed, so this cannot drift
+    into claiming a refusal that the gate would not actually make -- or, worse, listing a source as
+    withheld while the exporter happily draws it.
+    """
+    from migratlas.catalog import loader as catalog  # noqa: PLC0415
+    from migratlas.lake.reader import scan  # noqa: PLC0415
+    from migratlas.redact import PublicationRefusedError, clear_for_publication  # noqa: PLC0415
+
+    out: list[Withheld] = []
+    for source_id in WITHHELD_SOURCES:
+        source = catalog.get(source_id)
+        if source.taxon_scope is None or not source.taxon_sensitivity:
+            # Unreachable for a track source -- the model refuses one without either -- but the gate
+            # takes a concrete scope and a caller that guessed would be the wrong kind of confident.
+            msg = (
+                f"{source_id} has no taxon scope or no sensitivity rules; it cannot be classified."
+            )
+            raise RuntimeError(msg)
+        rule = source.taxon_sensitivity[0]
+        sensitivity = source.sensitivity_for(rule.taxon_key)
+        try:
+            clear_for_publication(
+                source_id=source_id,
+                evidence_type=EvidenceType.TRACK,
+                realm=source.realm,
+                sensitivity=sensitivity,
+                taxon_scope=source.taxon_scope,
+                taxon_key=rule.taxon_key,
+                redistribution_allowed=source.redistribution.allowed,
+            )
+        except PublicationRefusedError:
+            pass
+        else:
+            msg = (
+                f"{source_id} is listed as withheld but the gate cleared it. Either the "
+                f"classification changed or this list is stale; do not publish either way."
+            )
+            raise RuntimeError(msg)
+
+        frame = (
+            scan(EvidenceType.TRACK, source_id=source_id)
+            .select(
+                taxon=pl.col("taxon_label").drop_nulls().first(),
+                first=pl.col("timestamp").dt.year().min(),
+                last=pl.col("timestamp").dt.year().max(),
+                individuals=pl.col("individual_id").n_unique(),
+            )
+            .collect()
+        )
+        out.append(
+            Withheld(
+                source_id=source_id,
+                realm=str(source.realm),
+                taxon=str(frame["taxon"][0]),
+                sensitivity=str(sensitivity),
+                reason=" ".join(rule.rationale.split()),
+                span=(int(frame["first"][0]), int(frame["last"][0])),
+                individuals=int(frame["individuals"][0]),
+            )
+        )
+    return out
+
+
 def collect() -> Detectability:
     """Walk every registered source and reduce it to one status per cell."""
     coverage: list[Coverage] = []
@@ -369,12 +552,15 @@ def collect() -> Detectability:
             v=best["status"].to_list(),
         ),
         coverage=coverage,
+        withheld=_withheld(),
         summary=summary,
         caveat=(
             "A cell counted as detectable means some source there has a long enough series with a "
             "measurable effort denominator — not that a change has been detected, and not that "
             "any particular species could be tracked in it. Cells with no source at all are "
-            "absent from the grid rather than marked, because the lake says nothing about them."
+            "absent from the grid rather than marked, because the lake says nothing about them. "
+            "And two sources are held and never drawn at all: the map is not a map of everything "
+            "the lake knows, which is why they are listed rather than left out."
         ),
         method="docs/methods/detectability.md",
         supporting=[

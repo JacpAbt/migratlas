@@ -276,9 +276,11 @@ COVERAGE_BIAS: Final = _domains(
         "southern source lands the number moves on its own.",
     ),
     taxonomic=(
-        "open",
-        "The terrestrial realm is entirely birds — three sources, one class. Four of the seven "
-        "evidence types are unused, and they are where mammals, reptiles and insects live.",
+        "bounded",
+        "No longer birds-only on land: seven Movebank track sources add elk, caribou, reindeer, "
+        "bison, Arctic fox and wolf, so `track` is the fifth evidence type in use. None of them "
+        "supports a trend — collar effort is not a measured denominator — so they widen the "
+        "coverage without widening what can be measured. Insects and reptiles are still absent.",
     ),
     environmental=(
         "open",
@@ -563,7 +565,12 @@ def collect() -> list[Finding]:
                 "Inherited rather than chosen — long digitised radar and trawl series exist where "
                 "they were funded — but it bounds every claim here to the northern temperate zone, "
                 "and no model trained on it should be trusted elsewhere without being tested "
-                "there first."
+                "there first. Two kinds of gap are worth telling apart on the map. Grey cells are "
+                "places the lake reaches and cannot measure. And two sources are held and drawn "
+                "nowhere at all: mountain caribou and wolves are classified high-sensitivity, so "
+                "their locations are withheld entirely rather than coarsened. The map is not a map "
+                "of everything this lake knows, and the coverage panel lists what is missing from "
+                "it rather than letting an absence speak."
             ),
             method="docs/methods/geographic-coverage.md",
             direction="limit",
