@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from string.templatelib import Template
 
+import polars as pl
 import pyarrow as pa
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
@@ -16,6 +17,7 @@ from migratlas.lake.identifiers import (
     quote_identifier,
     render_sql,
 )
+from migratlas.lake.reader import scan
 from migratlas.lake.writer import UNDATED, write_evidence
 
 TS = pa.timestamp("ms", tz="UTC")
@@ -207,3 +209,59 @@ def test_render_sql_refuses_an_injected_identifier() -> None:
 def test_render_sql_takes_a_template_not_a_string() -> None:
     """Guards against someone passing an f-string, which would defeat the whole point."""
     assert isinstance(t"SELECT {1}", Template)
+
+
+# --- Grouping on a partition key ---------------------------------------------
+def test_grouping_on_the_partition_key_counts_sources_not_files(tmp_path: Path) -> None:
+    """The read that lied, and the reason `scan` projects before it hands a frame over.
+
+    On polars 1.43 a bare `scan_parquet(hive_partitioning=True).group_by("source_id")` returns one
+    row per *file*, each carrying that source's whole count rather than the file's share. Two
+    sources across four year-partitions came back as four groups summing to double the real total;
+    on the track tables it was seven sources reported as 66 groups summing to 32,403,199 against a
+    true 6,047,093.
+
+    Nothing raises. The query looks right, the numbers look plausible, and the only way to notice is
+    to have an independent count to compare against.
+    """
+    spec = spec_for(EvidenceType.FLUX)
+    write_evidence(
+        _flux_table("darkecology", years=(2019, 2020)), spec, source_id="darkecology", root=tmp_path
+    )
+    write_evidence(_flux_table("enram", years=(2019, 2020)), spec, source_id="enram", root=tmp_path)
+
+    counted = (
+        scan(EvidenceType.FLUX, source_id=None, root=tmp_path)
+        .group_by("source_id")
+        .agg(rows=pl.len())
+        .collect()
+    )
+    assert counted.height == 2, "one row per source, not one per partition file"
+    assert dict(counted.iter_rows()) == {"darkecology": 2, "enram": 2}
+    assert counted["rows"].sum() == 4
+
+
+def test_grouping_on_the_second_partition_key_was_never_affected(tmp_path: Path) -> None:
+    """`year` groups correctly with or without the projection, and that is worth recording.
+
+    Checked by reverting the fix: this passes either way, so it is a statement of scope rather than
+    a regression guard. The hazard is specific to `source_id`, the *first* partition level.
+
+    It also explains why nothing in the repository was ever wrong. Every existing lazy `group_by`
+    reaches for a `year` recomputed from a timestamp inside a preceding `select`, never for the hive
+    key -- so the one query shape that lies is the one nobody had written yet.
+    """
+    spec = spec_for(EvidenceType.FLUX)
+    write_evidence(
+        _flux_table("darkecology", years=(2019, 2020)), spec, source_id="darkecology", root=tmp_path
+    )
+    write_evidence(_flux_table("enram", years=(2019, 2020)), spec, source_id="enram", root=tmp_path)
+
+    counted = (
+        scan(EvidenceType.FLUX, source_id=None, root=tmp_path)
+        .group_by("year")
+        .agg(rows=pl.len())
+        .collect()
+    )
+    assert counted.height == 2, "one row per year, not one per file"
+    assert dict(counted.iter_rows()) == {2019: 2, 2020: 2}

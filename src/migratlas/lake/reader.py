@@ -42,11 +42,32 @@ def scan_dataset(
         msg = f"{name} has never been written to {base}. Ingest it first."
         raise FileNotFoundError(msg)
 
-    frame = pl.scan_parquet(f"{base}/**/*.parquet", hive_partitioning=True)
+    frame = _materialised(pl.scan_parquet(f"{base}/**/*.parquet", hive_partitioning=True))
     if source_id is None:
         return frame
     wanted = [source_id] if isinstance(source_id, str) else list(source_id)
     return frame.filter(pl.col("source_id").is_in(wanted))
+
+
+def _materialised(frame: pl.LazyFrame) -> pl.LazyFrame:
+    """Force the hive columns into the projection, because grouping on one otherwise lies.
+
+    On polars 1.43, ``scan_parquet(hive_partitioning=True).group_by("source_id").agg(pl.len())``
+    returns one row **per file** rather than per source, and each row carries that source's *whole*
+    count rather than the file's share. Seven sources came back as 66 groups summing to 32,403,199
+    against a true 6,047,093 -- five times the real number, from a query that looks obviously right
+    and raises nothing.
+
+    An eager ``collect()`` first is correct, and so is any explicit projection before the group_by;
+    a bare lazy group_by on the hive key is not. Every existing report happens to project first,
+    because they all recompute ``year`` from a timestamp, so nothing in the repository was wrong --
+    but that is luck, and the next caller to group by ``source_id`` would have inherited a
+    five-times error with no symptom.
+
+    ``select(pl.all())`` is the cheapest thing that fixes it, and it belongs here rather than in
+    each caller for the same reason the source filter does: this is the one way the lake is read.
+    """
+    return frame.select(pl.all())
 
 
 def scan(
@@ -74,7 +95,7 @@ def scan(
 
     # Globbed rather than handed the directory: polars refuses a directory containing mixed
     # extensions, and anything dropped beside the data would otherwise break every read.
-    frame = pl.scan_parquet(f"{base}/**/*.parquet", hive_partitioning=True)
+    frame = _materialised(pl.scan_parquet(f"{base}/**/*.parquet", hive_partitioning=True))
     if source_id is None:
         return frame
     wanted = [source_id] if isinstance(source_id, str) else list(source_id)
