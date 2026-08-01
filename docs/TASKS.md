@@ -1,0 +1,53 @@
+# Open work
+
+**Started 2026-08-01.** Until now the ordered work lived in `PLAN.md` (research), `DATASETS.md`
+(what a new source must earn) and the stop conditions inside each method note — all good documents,
+none of them a list you can point at. Two items also arrived from a session handoff numbered #29 and
+#30, and those numbers existed nowhere in the repository. This file is where numbered work lives
+now; the three documents above keep their jobs and are linked from the entries that depend on them.
+
+Numbers are permanent. A finished item keeps its number and moves to the bottom.
+
+## Now
+
+| # | Item | Notes |
+| --- | --- | --- |
+| 1 | Housekeeping: `LICENSE`, `CLAUDE.md`, README status line, this file | The README said "Phase 0, nothing is published yet" while five findings shipped. |
+| 2 | `composition-stable` computes its own number | `reports/findings.py` returns a literal for this one finding, against the module's own stated rule. Nothing would catch it drifting from `phase1c`. |
+| 3 | Re-resolve pre-fix taxon keys *(handoff #30)* | Blocks #7. Any join across FISHGLOB / OBIS / Movebank / SABAP is unsafe until every `taxon_scope: exact` row carries a key that resolves. |
+| 4 | Pre-register the SABAP atlas comparison | `docs/methods/phase1e-atlas.md`. Written before anything is computed, and before the frontend work, so nothing tempts a peek. Step zero inside it: confirm SABAP1's archive carries a card identifier, without which detection is not identifiable. |
+| 5 | Dual register: plain-language schema v3 | `plain`, `matters`, `plain_caveat` on every `Finding`, with the scientific sentence still rendered in full beneath. The dense register stays; a second one arrives above it. |
+| 6 | The sketchbook rebuild | ADR 0008. Ink library, paper as a surface, controls in the same hand, the page turn, a reachable night switch with a dark basemap, deep links. The architecture stays; the visual layer is rebuilt. |
+| 7 | Species pages, wave 1 | Marine cards from FISHGLOB's 2,240 species-region shifts, which Phase 1b currently collapses into one median — publishing them *is* the marine null's argument. Plus tracked mammals, the two withheld refusal pages, and honest extent-only cards. |
+| 8 | The 617 Missouri bison rows sitting in Berlin | Bench-tested collars, same animal ids as the real tracks, marked deployed and visible. Two filters were tried and reverted: per-row distance deletes 112 fixes of Arctic fox `MMRV`'s 3,000 km dispersal; per-animal keeps Berlin. The fix is a per-taxon implied-speed ceiling. |
+| 9 | SABAP occupancy-detection model, and the atlas finding | `models/occupancy.py` and `reports/phase1e.py`. First southern, first terrestrial, first non-radar finding. Must recover known parameters from simulated data before it touches SABAP. |
+| 10 | Species pages, wave 2 | Bird occupancy change per species, the detection-corrected value beside the naive reporting rate. Depends on #9. |
+| 11 | Factor panel and the interpretable model *(handoff #29)* | JRC surface-water change and GHSL built-up as explanatory-only factors, per `DATASETS.md` step 3, feeding an additive model with a drawable response curve per factor. |
+| 12 | The transfer test | Three climate-response sensitivities — aerial-north, marine-north, terrestrial-south. Fit on two, predict the third, publish the error. The experiment `coverage-bias` promises and nobody runs. Depends on #9. |
+
+## Queued, with a reason to wait
+
+| # | Item | Why it waits |
+| --- | --- | --- |
+| 13 | Forecast A: passage date under ScenarioMIP | `DATASETS.md` step 1. One new experiment list in `drivers/cmip6.py`; the novelty mask is the headline. Waits because #9 widens the evidence base it would be built on. |
+| 14 | Tighten the multi-realm ledger test to multi-class | `tests/test_findings.py` has the TODO. Land a finding whose realm is terrestrial and whose taxa are not birds first — #9 is birds, so this needs the tracks to produce a finding. |
+| 15 | Inline glossary, and a guided path through the five findings | Both strong for a non-technical reader; both explicitly out of scope for the current arc. Pick up on request. |
+| 16 | LUH2 route verification | Only if #11 finds a factor effect worth projecting. A projectable driver with no established effect is a solution without a problem. |
+
+## Refused, and why
+
+Kept here so they are not rediscovered as good ideas.
+
+| Item | Reason |
+| --- | --- |
+| FluxRGNN-style nocturnal-flux nowcast | 220 GiB of vertical profiles, GPU training, and direct competition with BirdCast on the same radar network. `docs/methods/literature-2026-07.md` §2. Revisit only as an explicitly-labelled engineering exercise, never as the novelty claim. |
+| ENRAM as a second radar network | One radar of ~190 has fifteen usable autumns, so it cannot carry a trend. Out, not deferred. |
+| eBird Status & Trends on the globe | The licence forbids redistribution and the gate enforces it. Analysis only. |
+| GRIP4 roads, offshore infrastructure, night lights | `DATASETS.md` gives each its own reason. |
+| More attempts at the 2012 latitude-graded step | Four candidate explanations tested, four failed. It stays exposed as an `open` bias domain, which is the honest treatment. Worth one more look only if another source turns up a general instrument-change signature. |
+
+## Done
+
+Nothing yet under this numbering. History before 2026-08-01 is in the git log, whose messages are
+long-form findings rather than change summaries, and in the results sections appended to the method
+notes.
