@@ -97,6 +97,13 @@ def per_taxon_cells(source_id: str) -> pl.DataFrame:
         # rather than averaged: OBIS values are occurrence counts, which do add.
         .group_by("taxon_key", "taxon_label", "cell_longitude", "cell_latitude")
         .agg(pl.col("value").sum().alias("value"))
+        # Sorted because a group_by does not promise an order, and the export writes taxa into the
+        # shard files in whatever order it receives them. Two builds of identical data were
+        # producing 64 files that differed only in where each taxon sat -- same length, same
+        # content, every file marked modified. That buries a real change in noise: the human
+        # occurrence surface leaving the index arrived in the same diff as sixty-three files
+        # saying nothing.
+        .sort("taxon_key", "taxon_label")
         .collect()
     )
 
@@ -200,7 +207,9 @@ def build(layers: tuple[LayerSpec, ...], destination_root: Path | None = None) -
 
     for shard in range(SHARDS):
         path = root / f"species-{shard:02d}.json"
-        path.write_text(json.dumps(shards.get(shard, {}), separators=(",", ":")), encoding="utf-8")
+        taxa = shards.get(shard, {})
+        ordered = {key: taxa[key] for key in sorted(taxa, key=int)}
+        path.write_text(json.dumps(ordered, separators=(",", ":")), encoding="utf-8")
 
     if withheld:
         log.warning("%d taxa withheld by the gate: %s", len(withheld), "; ".join(withheld[:5]))
@@ -210,8 +219,26 @@ def build(layers: tuple[LayerSpec, ...], destination_root: Path | None = None) -
     return SpeciesExport(entries=entries, shards=SHARDS, withheld=withheld, too_small=too_small)
 
 
-def _vernacular_cache() -> Path:
+def _names_cache() -> Path:
     return get_settings().cache_dir / "vernaculars.json"
+
+
+def _read_cache() -> dict[str, dict[str, str]]:
+    """The names cache, in either shape it has had.
+
+    It began as ``{key: vernacular}`` and now holds ``{key: {vernacular, scientific}}``. The old
+    shape is read rather than discarded because filling it is twenty minutes of GBIF requests, and
+    a format change is no reason to spend that again -- an entry read from the old shape simply has
+    no scientific name yet, which is what ``warm_names`` then goes and fetches.
+    """
+    cache = _names_cache()
+    if not cache.exists():
+        return {}
+    raw = json.loads(cache.read_text(encoding="utf-8"))
+    return {
+        str(key): ({"vernacular": str(value)} if isinstance(value, str) else dict(value))
+        for key, value in raw.items()
+    }
 
 
 def vernaculars() -> dict[int, str]:
@@ -220,18 +247,33 @@ def vernaculars() -> dict[int, str]:
     A search box matching scientific names alone is close to useless, since nobody types
     ``Physeter macrocephalus``, so the names are worth two GBIF calls per taxon. But 3,600 taxa is
     ~7,200 requests and twenty minutes, which has no business inside ``build-layers``: the build
-    should be offline and deterministic. ``warm_vernaculars`` does the fetching as its own step and
-    this reads whatever it has produced so far.
+    should be offline and deterministic. ``warm_names`` does the fetching as its own step and this
+    reads whatever it has produced so far.
     """
-    cache = _vernacular_cache()
-    if not cache.exists():
-        return {}
-    known = json.loads(cache.read_text(encoding="utf-8"))
-    return {int(key): str(name) for key, name in known.items() if name}
+    return {
+        int(key): entry["vernacular"]
+        for key, entry in _read_cache().items()
+        if entry.get("vernacular")
+    }
 
 
-def warm_vernaculars(keys: list[int], *, flush_every: int = 100) -> int:
-    """Fetch missing common names into the cache. Resumable, returns how many were added.
+def canonical_names() -> dict[int, str]:
+    """Cached Backbone scientific names, keyed by usage key.
+
+    The display name for a taxon cannot come from ``taxon_label``: that is the verbatim string one
+    source published, and where two sources disagree -- 95 keys in this lake do -- the index would
+    show whichever was read first. This is the same taxon's name as the Backbone has it, so two
+    sources naming one animal differently still produce one row.
+    """
+    return {
+        int(key): entry["scientific"]
+        for key, entry in _read_cache().items()
+        if entry.get("scientific")
+    }
+
+
+def warm_names(keys: list[int], *, flush_every: int = 100) -> int:
+    """Fetch missing names into the cache. Resumable, returns how many keys were fetched.
 
     Flushed periodically rather than once at the end: this is twenty minutes of network for a few
     thousand taxa, and an earlier version that wrote only on completion would have thrown away
@@ -239,36 +281,71 @@ def warm_vernaculars(keys: list[int], *, flush_every: int = 100) -> int:
     """
     from migratlas.taxonomy import gbif  # noqa: PLC0415 -- keeps the tiles layer import-light
 
-    cache = _vernacular_cache()
-    known: dict[str, str] = {}
-    if cache.exists():
-        known = {str(k): str(v) for k, v in json.loads(cache.read_text(encoding="utf-8")).items()}
-
-    missing = [key for key in keys if str(key) not in known]
+    known = _read_cache()
+    # A key needs fetching if either name is absent, so an entry carried over from the old
+    # vernacular-only cache is topped up rather than treated as complete.
+    missing = [key for key in keys if "scientific" not in known.get(str(key), {})]
     if not missing:
         log.info("all %d taxa already have a cached name decision", len(keys))
         return 0
 
+    cache = _names_cache()
     cache.parent.mkdir(parents=True, exist_ok=True)
 
     def flush() -> None:
         cache.write_text(json.dumps(known, indent=1, sort_keys=True) + "\n", encoding="utf-8")
 
-    log.info("resolving %d common names against GBIF", len(missing))
+    log.info("resolving %d names against GBIF", len(missing))
     with gbif.client() as http:
         for index, key in enumerate(missing, start=1):
             try:
+                found = gbif.names_for(http, key)
                 # An empty string is a real answer -- GBIF has no English name for this taxon --
                 # and caching it stops the next run asking again.
-                known[str(key)] = gbif.vernacular_name(http, key) or ""
+                known[str(key)] = {
+                    "vernacular": found.vernacular,
+                    "scientific": found.scientific,
+                }
             except (gbif.TaxonomyError, OSError) as error:
-                log.debug("no common name for %d: %s", key, error)
-                known[str(key)] = ""
+                log.debug("no names for %d: %s", key, error)
+                known[str(key)] = {"vernacular": "", "scientific": ""}
             if index % flush_every == 0:
                 flush()
                 log.info("  %d/%d", index, len(missing))
     flush()
     return len(missing)
+
+
+def _display_names(entries: list[SpeciesEntry]) -> dict[int, str]:
+    """One scientific name per taxon key, however many labels its sources published.
+
+    The Backbone's canonical name wins where the cache has one, because that is the same taxon's
+    name regardless of which dataset is speaking. Where it does not -- a cold cache, or a key GBIF
+    would not resolve -- the widest-ranging label is used, so the choice is at least deterministic
+    and the same on every build. Which of the two happened is logged rather than assumed.
+    """
+    canonical = canonical_names()
+    fallback: dict[int, tuple[int, str]] = {}
+    for entry in entries:
+        best = fallback.get(entry.taxon_key)
+        if best is None or (entry.cells, entry.scientific_name) > best:
+            fallback[entry.taxon_key] = (entry.cells, entry.scientific_name)
+
+    resolved = {key: canonical.get(key) or label for key, (_cells, label) in fallback.items()}
+    disagreeing = {
+        entry.taxon_key for entry in entries if entry.scientific_name != resolved[entry.taxon_key]
+    }
+    if disagreeing:
+        uncached = sorted(key for key in disagreeing if key not in canonical)
+        log.info(
+            "%d taxa renamed to one spelling for the index%s",
+            len(disagreeing),
+            f"; {len(uncached)} from the widest label rather than the Backbone, "
+            "run `make taxon-names`"
+            if uncached
+            else "",
+        )
+    return resolved
 
 
 def write_index(export: SpeciesExport, destination: Path) -> int:
@@ -277,11 +354,15 @@ def write_index(export: SpeciesExport, destination: Path) -> int:
     Replaces a hand-written seed list of thirty animals. Every entry here has a surface behind it,
     so a search hit can never be a dead end -- which the previous index could not promise.
     """
+    # A taxon does appear more than once here on purpose, once per layer that drew it, because
+    # "recorded in OBIS" and "space use in MegaMove" are different answers. What it must not do is
+    # appear twice under two spellings of one name, which is a different animal to the reader.
     names = vernaculars()
+    scientific = _display_names(export.entries)
     payload = [
         {
             "key": entry.taxon_key,
-            "scientific": entry.scientific_name,
+            "scientific": scientific[entry.taxon_key],
             "vernacular": names.get(entry.taxon_key, ""),
             "layer": entry.layer,
             "layer_title": entry.layer_title,

@@ -80,6 +80,22 @@ def test_every_shard_file_exists_even_when_empty(
         assert (tmp_path / f"species-{shard:02d}.json").is_file()
 
 
+def test_a_shard_is_written_in_a_stable_order(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Numerically, so two builds of the same data produce the same bytes.
+
+    They did not. A `group_by` promises no order, so each build wrote the taxa into a shard
+    wherever they came out -- 64 files marked modified, identical in length and content, differing
+    only in arrangement. The cost is not the churn: it is that a real change cannot be seen in a
+    diff like that, and one was hiding in one.
+    """
+    frame = pl.concat([_cells(key, 4, label=f"Taxon {key}") for key in (192, 64, 128)])
+    _build(monkeypatch, frame, tmp_path)
+    shard = json.loads((tmp_path / "species-00.json").read_text(encoding="utf-8"))
+    assert list(shard) == ["64", "128", "192"]
+
+
 def test_a_taxon_lands_in_the_shard_the_index_claims(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -186,3 +202,105 @@ def test_the_index_is_ordered_widest_ranging_first(
     tile_species.write_index(export, destination)
     taxa = json.loads(destination.read_text(encoding="utf-8"))["taxa"]
     assert [taxon["cells"] for taxon in taxa] == [40, 12, 4]
+
+
+# --- One taxon, one name ----------------------------------------------------
+def _entry(key: int, label: str, cells: int, layer: str = "a") -> tile_species.SpeciesEntry:
+    return tile_species.SpeciesEntry(
+        taxon_key=key,
+        scientific_name=label,
+        layer=layer,
+        layer_title=layer,
+        cells=cells,
+        shard=key % tile_species.SHARDS,
+        generalization="",
+    )
+
+
+def test_two_sources_naming_one_animal_differently_give_it_one_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The crabeater seal shipped as both *Lobodon carcinophaga* and *carcinophagus*.
+
+    Ninety-five keys in the lake carry two or more verbatim labels, mostly genuine taxonomic
+    revisions -- *Grus* and *Antigone canadensis* are one bird. Whichever the build happened to
+    read first became a second search result for an animal there is only one of.
+    """
+    monkeypatch.setattr(tile_species, "canonical_names", dict)
+    entries = [
+        _entry(2434762, "Lobodon carcinophagus", 40, layer="megamove"),
+        _entry(2434762, "Lobodon carcinophaga", 9, layer="obis"),
+    ]
+    resolved = tile_species._display_names(entries)
+    assert set(resolved) == {2434762}
+
+
+def test_the_backbone_name_beats_the_widest_label(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A cached name is the same taxon's name whoever is speaking, so it wins outright.
+
+    The fallback is only deterministic, not correct -- it takes the label carried by the most
+    cells, which is a fact about how much data a source published rather than about the animal.
+    """
+    monkeypatch.setattr(tile_species, "canonical_names", lambda: {7: "Antigone canadensis"})
+    entries = [_entry(7, "Grus canadensis", 900), _entry(7, "Antigone canadensis", 3)]
+    assert tile_species._display_names(entries)[7] == "Antigone canadensis"
+
+
+def test_an_uncached_key_falls_back_to_the_widest_label(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(tile_species, "canonical_names", dict)
+    entries = [_entry(7, "Grus canadensis", 900), _entry(7, "Antigone canadensis", 3)]
+    assert tile_species._display_names(entries)[7] == "Grus canadensis"
+
+
+def test_the_old_flat_names_cache_is_read_rather_than_discarded(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Filling it is twenty minutes of GBIF requests; a format change may not cost that twice."""
+    cache = tmp_path / "vernaculars.json"
+    cache.write_text(json.dumps({"11": "Sperm Whale", "12": ""}), encoding="utf-8")
+    monkeypatch.setattr(tile_species, "_names_cache", lambda: cache)
+
+    assert tile_species.vernaculars() == {11: "Sperm Whale"}
+    # No scientific names in the old shape, so those keys still need warming rather than looking
+    # complete -- which is what would happen if the reader defaulted them to the empty string.
+    assert tile_species.canonical_names() == {}
+
+
+# --- The shipped index ------------------------------------------------------
+SHIPPED = Path(__file__).resolve().parents[1] / "web" / "public" / "taxon-index.json"
+
+
+@pytest.mark.skipif(not SHIPPED.is_file(), reason="taxon-index.json not built")
+def test_the_shipped_index_has_the_shape_the_frontend_parses() -> None:
+    """One command writes this file, and a second one used to overwrite it with another shape.
+
+    `taxonomy build-index` built a thirty-animal seed list as a bare JSON array, and `make
+    taxon-index` invoked it. Running that target replaced a 3,073-taxon index with something
+    `web/src/search/taxon.ts` cannot read -- silently, since nothing type-checks a JSON file
+    across two languages. The command is gone; this is what stops it coming back.
+    """
+    document = json.loads(SHIPPED.read_text(encoding="utf-8"))
+    assert isinstance(document, dict), "the index is a bare array, so a seed builder wrote it"
+    assert document["shards"] == tile_species.SHARDS
+    assert document["taxa"], "the index is empty"
+    for taxon in document["taxa"]:
+        assert set(taxon) == {
+            "key",
+            "scientific",
+            "vernacular",
+            "layer",
+            "layer_title",
+            "cells",
+            "shard",
+        }
+        assert taxon["shard"] == taxon["key"] % tile_species.SHARDS
+
+
+@pytest.mark.skipif(not SHIPPED.is_file(), reason="taxon-index.json not built")
+def test_no_animal_appears_in_the_shipped_index_under_two_names() -> None:
+    """A taxon may be listed once per layer that drew it, but never under two spellings."""
+    spellings: dict[int, set[str]] = {}
+    for taxon in json.loads(SHIPPED.read_text(encoding="utf-8"))["taxa"]:
+        spellings.setdefault(taxon["key"], set()).add(taxon["scientific"])
+    doubled = {key: sorted(names) for key, names in spellings.items() if len(names) > 1}
+    assert not doubled, f"one animal, two names: {doubled}"

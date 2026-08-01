@@ -98,12 +98,11 @@ sandbox:  ## Recompute the analysis with each safeguard off -> web/public/sandbo
 provenance:  ## Regenerate docs/data/PROVENANCE.md from the source registry
 	$(RUN) migratlas catalog provenance
 
-.PHONY: taxon-index
-taxon-index:  ## Rebuild the frontend species index from the GBIF Backbone
-	$(RUN) migratlas taxonomy build-index --out web/public/taxon-index.json
+# No taxon-index target: the search index is written by build-layers, from what was
+# actually published. A second command writing that file is how it got clobbered once.
 
 .PHONY: taxon-names
-taxon-names:  ## Resolve common names for published taxa into the cache (slow, resumable)
+taxon-names:  ## Resolve display names for published taxa into the cache (slow, resumable)
 	$(RUN) migratlas taxonomy warm-names
 
 .PHONY: lake-check

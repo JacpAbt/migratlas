@@ -3,7 +3,6 @@ command rather than a notebook cell someone ran once."""
 
 import json
 import logging
-from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Annotated
@@ -44,7 +43,6 @@ from migratlas.reports import (
     phase2a_timing,
     sandbox,
 )
-from migratlas.taxonomy import index as taxon_index
 from migratlas.tiles import layers as tile_layers
 from migratlas.tiles import species as tile_species
 
@@ -515,40 +513,21 @@ def write_provenance(
     print(f"{len(catalog.load())} sources -> {out} ({size / 1024:.1f} KiB)")
 
 
-@taxonomy_app.command("build-index")
-def build_taxon_index(
-    out: Annotated[Path, typer.Option(help="Destination JSON file.")] = Path(
-        "web/public/taxon-index.json"
-    ),
-    limit: Annotated[int | None, typer.Option(help="Resolve only the first N seed taxa.")] = None,
-) -> None:
-    """Build the static species index the frontend searches."""
-    report = taxon_index.build(limit=limit)
-    size = taxon_index.write(report, out)
-
-    by_realm = Counter(entry.realm for entry in report.entries)
-    print(f"{len(report.entries)} taxa -> {out} ({size / 1024:.1f} KiB)")
-    for realm, count in sorted(by_realm.items()):
-        print(f"  {realm:<12} {count}")
-
-    if report.unresolved:
-        print(f"\n{len(report.unresolved)} unresolved:")
-        for name, reason in report.unresolved:
-            print(f"  {name}: {reason}")
-        raise typer.Exit(1)
-
-
 @taxonomy_app.command("warm-names")
 def warm_names() -> None:
-    """Resolve common names for every published taxon into the cache. Resumable.
+    """Resolve display names for every published taxon into the cache. Resumable.
 
     Separate from build-layers on purpose: this is thousands of GBIF requests, and a build should
     be offline and deterministic. Run it once, then rebuilds pick the names up from the cache.
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     export = tile_layers.build_all_species(Path("web/public/layers"))
-    added = tile_species.warm_vernaculars(sorted({e.taxon_key for e in export.entries}))
-    print(f"{added:,} names resolved; {len(tile_species.vernaculars()):,} cached in total")
+    added = tile_species.warm_names(sorted({e.taxon_key for e in export.entries}))
+    print(
+        f"{added:,} taxa resolved; "
+        f"{len(tile_species.vernaculars()):,} common and "
+        f"{len(tile_species.canonical_names()):,} scientific names cached"
+    )
 
 
 @app.command()

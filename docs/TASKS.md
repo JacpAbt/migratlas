@@ -14,7 +14,7 @@ Numbers are permanent. A finished item keeps its number and moves to the bottom.
 | --- | --- | --- |
 | 1 | Housekeeping: `LICENSE`, `CLAUDE.md`, README status line, this file | The README said "Phase 0, nothing is published yet" while five findings shipped. |
 | 2 | `composition-stable` computes its own number | `reports/findings.py` returns a literal for this one finding, against the module's own stated rule. Nothing would catch it drifting from `phase1c`. |
-| 3 | Re-resolve pre-fix taxon keys *(handoff #30)* | Blocks #7. Any join across FISHGLOB / OBIS / Movebank / SABAP is unsafe until every `taxon_scope: exact` row carries a key that resolves. |
+| 17 | Delete the *Homo sapiens* rows the lake still holds | `obis_speciesgrids` was ingested before the never-ingested floor existed, so the rows are in storage. The gate refuses them at publication and its own message says to delete rather than coarsen them. Needs a targeted purge and a check that no evidence table holds a floor key. |
 | 4 | Pre-register the SABAP atlas comparison | `docs/methods/phase1e-atlas.md`. Written before anything is computed, and before the frontend work, so nothing tempts a peek. Step zero inside it: confirm SABAP1's archive carries a card identifier, without which detection is not identifiable. |
 | 5 | Dual register: plain-language schema v3 | `plain`, `matters`, `plain_caveat` on every `Finding`, with the scientific sentence still rendered in full beneath. The dense register stays; a second one arrives above it. |
 | 6 | The sketchbook rebuild | ADR 0008. Ink library, paper as a surface, controls in the same hand, the page turn, a reachable night switch with a dark basemap, deep links. The architecture stays; the visual layer is rebuilt. |
@@ -48,6 +48,11 @@ Kept here so they are not rediscovered as good ideas.
 
 ## Done
 
-Nothing yet under this numbering. History before 2026-08-01 is in the git log, whose messages are
-long-form findings rather than change summaries, and in the results sections appended to the method
-notes.
+| # | Item | Outcome |
+| --- | --- | --- |
+| 1 | Housekeeping | `LICENSE`, `CLAUDE.md`, this file, README status and phase table. |
+| 2 | Two published numbers nothing recomputed | The composition claim's airspeed now comes from the fit `phase1c` prints, and is withheld if that fit stops being flat. The coverage limit counted evidence types in use and said five; four are, so it counts them from the lake now. |
+| 3 | Re-resolve pre-fix taxon keys *(handoff #30)* | **The premise did not hold.** 1,329 taxon keys appear in more than one source and every one agrees, so a join on `taxon_key` was already safe and nothing was blocked. What was wrong was `taxon_label`: 95 keys carry two or more verbatim names across sources, and the search index took whichever it read first. Display names now resolve from the key. Two things were found underneath it — a live human occurrence surface on the site (see below) and `make taxon-index`, which would have replaced the 3,072-taxon search index with a thirty-animal seed list in a shape the frontend cannot parse. Both fixed. |
+
+History before 2026-08-01 is in the git log, whose messages are long-form findings rather than
+change summaries, and in the results sections appended to the method notes.
