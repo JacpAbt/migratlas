@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SURFACE_LABEL, SURFACES, type Surface } from "../../state/surface";
+  import Boxed from "./Boxed.svelte";
 
   let { surface, onchoose }: { surface: Surface; onchoose: (next: Surface) => void } = $props();
 </script>
@@ -27,6 +28,7 @@
         checked={surface === option}
         onchange={() => onchoose(option)}
       />
+      <Boxed seed="surface-{option}" shape="lasso" active={surface === option} />
       <span>{SURFACE_LABEL[option]}</span>
     </label>
   {/each}
@@ -38,14 +40,16 @@
     margin: 0;
     padding: 0;
     border: 0;
-    gap: 1px;
+    gap: 0.15rem;
   }
 
+  /* Circled, not boxed. Three segments of a bordered control is an interface widget; three words
+     with one of them looped is what a choice looks like on paper. The loop is only drawn on the
+     one in force, so the other two are just words -- which is also why they need no hover fill. */
   .surface__option {
-    /* One drawn box split in three, rather than three boxes: the options are one control. */
     position: relative;
-    padding: 0.25rem 0.5rem;
-    border: 1px solid var(--rule);
+    padding: 0.3rem 0.6rem;
+    border: 0;
     font-family: var(--font-mono);
     font-size: var(--size-label);
     letter-spacing: 0.06em;
@@ -57,21 +61,11 @@
       color var(--fade);
   }
 
-  .surface__option:first-of-type {
-    border-radius: var(--radius) 0 0 var(--radius);
-  }
-
-  .surface__option:last-of-type {
-    border-radius: 0 var(--radius) var(--radius) 0;
-  }
-
   .surface__option:hover {
-    background: var(--paper-sunken);
+    color: var(--ink);
   }
 
   .surface__option--on {
-    background: var(--paper-sunken);
-    border-color: var(--pencil);
     color: var(--ink);
   }
 

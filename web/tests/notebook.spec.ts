@@ -355,6 +355,41 @@ test("the drawn edge stays put while the claim scrolls under it", async ({ page 
   expect(after?.y).toBeCloseTo(before?.y ?? 0, 0);
 });
 
+test("a control is drawn, not bordered", async ({ page }) => {
+  await page.goto("?debug=1");
+  await expect(page.locator(".arrival__card")).toBeVisible();
+
+  for (const selector of [".way--primary", ".way:not(.way--primary)"]) {
+    const button = page.locator(selector);
+    expect(
+      await button.evaluate((node) => getComputedStyle(node).borderTopWidth),
+      `${selector} still has a border`,
+    ).toBe("0px");
+    const length = await button
+      .locator(".boxed__stroke")
+      .first()
+      .evaluate((node) => (node as unknown as SVGPathElement).getTotalLength());
+    // Longer than the perimeter would be if it were a rectangle drawn exactly: the corners
+    // overshoot, which is the whole reason it reads as drawn rather than as a border.
+    expect(length, `${selector} has no drawn box`).toBeGreaterThan(100);
+  }
+
+  // Pressed and chosen are a second pass of the pen, not a fill. A hand has "drawn" and "gone over
+  // twice"; it does not have a hover colour.
+  await expect(page.locator(".way--primary .boxed__stroke")).toHaveCount(2);
+  await expect(page.locator(".way:not(.way--primary) .boxed__stroke")).toHaveCount(1);
+});
+
+test("only the chosen option is circled", async ({ page }) => {
+  await ready(page);
+  // Looping all three would say nothing. The unchosen ones are meant to be just words, which is
+  // also why they carry no fill and no border to distinguish them.
+  const options = page.locator(".surface__option");
+  await expect(options).toHaveCount(3);
+  await expect(page.locator(".surface .boxed__stroke")).toHaveCount(2);
+  await expect(page.locator(".surface__option--on .boxed__stroke")).toHaveCount(2);
+});
+
 test("a rule is one continuous stroke, not a dashed line", async ({ page }) => {
   await ready(page);
   // The regression. The first version stretched a 100-unit viewBox with `non-scaling-stroke`, which

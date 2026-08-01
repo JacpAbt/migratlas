@@ -2,6 +2,7 @@
   import Instrument from "../notebook/Instrument.svelte";
   import Rule from "../notebook/Rule.svelte";
   import Sheet from "../notebook/Sheet.svelte";
+  import Boxed from "../notebook/Boxed.svelte";
   import { instrumentFor, type Finding } from "../ledger";
 
   let {
@@ -37,9 +38,13 @@
 
     <div class="arrival__ways">
       <button type="button" class="way way--primary" onclick={onshow}>
+        <Boxed seed="way-show" tone="rust" active />
         Show me how you know
       </button>
-      <button type="button" class="way" onclick={onexplore}> Just let me explore </button>
+      <button type="button" class="way" onclick={onexplore}>
+        <Boxed seed="way-explore" />
+        Just let me explore
+      </button>
     </div>
 
     <!-- The caveat is on the arrival screen too, not one screen later. This is the first number a
@@ -139,26 +144,40 @@
     margin-top: var(--gap-wide);
   }
 
+  /* No border and no radius: the box is drawn. The padding is a shade wider than it was, because a
+     drawn line overshoots its corners and needs the room to do it in. */
   .way {
-    padding: 0.5rem 0.9rem;
+    position: relative;
+    padding: 0.55rem 1.05rem;
     background: transparent;
-    border: 1px solid var(--rule);
-    border-radius: var(--radius);
+    border: 0;
     font-family: var(--font-mono);
     font-size: 0.78rem;
     color: var(--ink);
     cursor: pointer;
-    transition: background-color var(--fade), border-color var(--fade);
+    transition: color var(--fade);
   }
 
-  .way:hover {
+  /* A wash rather than a fill, and under the drawn box rather than inside it -- the ink is on the
+     paper, so a hover has to happen to the paper. */
+  .way::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: transparent;
+    transition: background-color var(--fade);
+  }
+
+  .way:hover::before {
     background: var(--paper-sunken);
-    border-color: var(--pencil);
   }
 
+  /* The one thing on the screen you are meant to do, stamped rather than coloured in: rust ink,
+     letterspaced, and set down a fraction off square the way a stamp lands. */
   .way--primary {
-    border-color: var(--rust);
     color: var(--rust);
+    letter-spacing: 0.04em;
+    transform: rotate(-0.5deg);
   }
 
   .arrival__caveat {

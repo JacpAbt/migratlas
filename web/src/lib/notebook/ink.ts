@@ -145,6 +145,50 @@ export function sheetEdge(key: string, width: number, height: number): string {
   ].join(" ");
 }
 
+/**
+ * A lasso: the loop drawn round something on a page to mean *this one*.
+ *
+ * An ellipse that does not close and overshoots where it started, because that is what happens
+ * when a hand comes back round to a point it is not looking at. The gap is at the top left, where
+ * a right-handed loop drawn clockwise from the lower left tends to end.
+ *
+ * Used where a checked state would otherwise be a background colour. A circled option reads as a
+ * choice someone made; a filled pill reads as a setting the interface has.
+ */
+export function lasso(key: string, width: number, height: number): string {
+  if (width <= 0 || height <= 0) return "";
+  const next = jitter(hash(key) ^ 0x13a7f0e9);
+  const [cx, cy] = [width / 2, height / 2];
+  const [rx, ry] = [width / 2 - 1, height / 2 - 1];
+
+  // From just past the top left, clockwise, and a little past the start again.
+  const from = -2.5;
+  const to = 3.9;
+  const steps = 22;
+  const points: string[] = [];
+  for (let step = 0; step <= steps; step += 1) {
+    const angle = from + ((to - from) * step) / steps;
+    const wobble = 1 + next() * 0.035;
+    points.push(
+      `${(cx + Math.cos(angle) * rx * wobble).toFixed(1)} ` +
+        `${(cy + Math.sin(angle) * ry * wobble).toFixed(1)}`,
+    );
+  }
+  return `M ${points.join(" L ")}`;
+}
+
+/** A tick, in two strokes as a hand makes it: a short fall and a long rise. */
+export function tick(key: string, size: number): string {
+  if (size <= 0) return "";
+  const next = jitter(hash(key) ^ 0x4d2b9f31);
+  const nudge = () => next() * 0.5;
+  return (
+    `M ${(size * 0.18 + nudge()).toFixed(1)} ${(size * 0.52 + nudge()).toFixed(1)} ` +
+    `L ${(size * 0.42 + nudge()).toFixed(1)} ${(size * 0.78 + nudge()).toFixed(1)} ` +
+    `L ${(size * 0.86 + nudge()).toFixed(1)} ${(size * 0.2 + nudge()).toFixed(1)}`
+  );
+}
+
 /** Width of the box a margin bracket is drawn in. */
 export const BRACKET_WIDTH = 8;
 
