@@ -1,4 +1,4 @@
-import { namedFlavor } from "@protomaps/basemaps";
+import { type Flavor, namedFlavor } from "@protomaps/basemaps";
 
 /**
  * An earthy pastel basemap: parchment land, soft blue water, muted sage vegetation.
@@ -54,24 +54,142 @@ export const EARTH_FLAVOR = {
   },
 };
 
-// The bundled outline basemap. Kept in the same file as the detailed flavour so the two cannot
-// drift into looking like different maps.
-/** Ocean, and the sphere wherever there is no land. */
-export const OCEAN_COLOUR = "#c3dbe6";
-/** Land, matching the detailed flavour's `earth` so the two are interchangeable. */
-export const LAND = "#f3ece0";
-/** Coastline. Warm and thin: it should delineate, not draw attention. */
-export const COAST = "#c0ab93";
-/** National borders, dashed and fainter still than the coast. */
-export const BORDER = "#cdbba6";
+/**
+ * The same globe at night, and it is a different object rather than the day one dimmed.
+ *
+ * The reference is a globe seen by lamplight, not a satellite photograph of the dark side: land
+ * stays the lighter of the two masses because that is what a paper globe does, and the ocean drops
+ * to near-black. Inverting -- pale water, dark land -- was tried on the ramps and read as a
+ * negative rather than as night.
+ *
+ * ADR 0007 scoped this at "roughly fifteen keys and a week", and the fifteen keys were right.
+ */
+export const NIGHT_FLAVOR = {
+  ...namedFlavor("dark"),
+
+  background: "#0b0a08",
+  earth: "#2a251d",
+
+  water: "#10161c",
+  ocean_label: "#5c6a76",
+
+  park_a: "#232a20",
+  park_b: "#2b3427",
+  wood_a: "#212a1f",
+  wood_b: "#293325",
+  scrub_a: "#272a1f",
+  scrub_b: "#2f3325",
+  zoo: "#272c22",
+  sand: "#31291d",
+  beach: "#342b1d",
+  glacier: "#3a3a38",
+
+  city_label: "#d8cdb8",
+  city_label_halo: "#100e0b",
+  state_label: "#8e836f",
+  state_label_halo: "#100e0b",
+  country_label: "#a3947c",
+  subplace_label: "#8a7f6c",
+  subplace_label_halo: "#100e0b",
+
+  landcover: {
+    grassland: "rgba(37, 43, 31, 1)",
+    barren: "rgba(45, 39, 28, 1)",
+    urban_area: "rgba(41, 38, 33, 1)",
+    farmland: "rgba(41, 45, 30, 1)",
+    glacier: "rgba(58, 58, 56, 1)",
+    scrub: "rgba(41, 41, 30, 1)",
+    forest: "rgba(31, 41, 30, 1)",
+  },
+};
 
 /**
- * Shared data-layer ramps, warm-to-cool so a value reads the same way on any layer.
+ * Every colour the bundled outline basemap and the data ramps use, per surface.
  *
- * Ordered pale sand → clay → terracotta. Sequential and roughly monotonic in lightness, which
- * is what makes a quantity readable; a rainbow would look livelier and mislead.
+ * One object rather than eight exports, because the globe now has to swap all of them together the
+ * moment the surface changes -- and because a palette half-swapped is worse than either surface.
+ *
+ * The ramps are re-picked rather than reused. Day's pale-sand-to-terracotta is monotonic in
+ * lightness *upwards from a light paper*; on black the pale end vanishes into the ocean and the
+ * ramp loses its low half. Night's runs the other way, from a dim ember to a bright one.
  */
-export const WARM_RAMP = ["#dfe6e6", "#e8d9bb", "#d9ab7c", "#b9743f", "#8d4a2c"] as const;
+export type Ramp = readonly [string, string, string, string, string];
 
-/** The same idea in blue for water-realm layers, so realm is legible at a glance. */
-export const COOL_RAMP = ["#e6e0d4", "#b9d2de", "#7fadc4", "#4c7f9c", "#2e5a73"] as const;
+export interface Palette {
+  /** Ocean, and the sphere wherever there is no land. */
+  ocean: string;
+  /** Land, matching the detailed flavour's `earth` so the two are interchangeable. */
+  land: string;
+  /** Coastline. Thin: it should delineate, not draw attention. */
+  coast: string;
+  /** National borders, dashed and fainter still than the coast. */
+  border: string;
+  /**
+   * Sequential, roughly monotonic in lightness. A rainbow would look livelier and mislead.
+   *
+   * A fixed-length tuple rather than an array, because the layer modules index into it -- `ramp[2]`
+   * for a resting colour, `ramp[4]` for the loudest one -- and `noUncheckedIndexedAccess` is right
+   * that an arbitrary-length array cannot promise those exist.
+   */
+  warm: Ramp;
+  /** The same idea in blue for water-realm layers, so realm is legible at a glance. */
+  cool: Ramp;
+  /** The detailed opt-in Protomaps flavour that goes with this surface. */
+  flavor: Flavor;
+}
+
+export const DAY: Palette = {
+  ocean: "#c3dbe6",
+  land: "#f3ece0",
+  coast: "#c0ab93",
+  border: "#cdbba6",
+  warm: ["#dfe6e6", "#e8d9bb", "#d9ab7c", "#b9743f", "#8d4a2c"],
+  cool: ["#e6e0d4", "#b9d2de", "#7fadc4", "#4c7f9c", "#2e5a73"],
+  flavor: EARTH_FLAVOR,
+};
+
+export const NIGHT: Palette = {
+  ocean: "#10161c",
+  land: "#2a251d",
+  coast: "#5a5040",
+  border: "#443c30",
+  warm: ["#3a3428", "#6b4f30", "#a3703c", "#cf9450", "#f0c07a"],
+  cool: ["#26313a", "#33566a", "#3f7f9c", "#5aa6c4", "#8fcbe4"],
+  flavor: NIGHT_FLAVOR,
+};
+
+export function paletteFor(night: boolean): Palette {
+  return night ? NIGHT : DAY;
+}
+
+/**
+ * The palette in force, as module state.
+ *
+ * Deliberately mutable and deliberately global, which is the unusual choice here. The alternative
+ * is threading a palette through `addSeries`, `addSurface`, `addDetectability`, `SpeciesSelection`
+ * and every paint expression each of them builds -- and every one of those would then need the
+ * same value at *two* times, once at construction and again on every repaint. One module-level
+ * value read at call time is what makes a repaint "set it and redraw" rather than a parameter
+ * change in nine signatures.
+ *
+ * It is safe because there is exactly one globe on the page and exactly one surface at a time.
+ */
+let active: Palette = DAY;
+
+export function setPalette(night: boolean): Palette {
+  active = paletteFor(night);
+  return active;
+}
+
+export function palette(): Palette {
+  return active;
+}
+
+// Kept as the day names the existing layer modules import, so the surface swap did not have to
+// touch every call site in the same change.
+export const OCEAN_COLOUR = DAY.ocean;
+export const LAND = DAY.land;
+export const COAST = DAY.coast;
+export const BORDER = DAY.border;
+export const WARM_RAMP = DAY.warm;
+export const COOL_RAMP = DAY.cool;

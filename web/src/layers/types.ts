@@ -34,6 +34,13 @@ export interface LoadedLayer {
   setVisible: (visible: boolean) => void;
   /** Called when the clock crosses into a new week. Only time-indexed layers implement it. */
   showWeek?: (week: number) => void;
+  /**
+   * Recolour for the surface now in force.
+   *
+   * Optional because not every layer has a colour of its own to change, and because a layer that
+   * forgets to implement it should render in the wrong palette rather than fail to render.
+   */
+  repaint?: () => void;
 }
 
 export async function fetchLayer<T>(

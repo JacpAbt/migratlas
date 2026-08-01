@@ -1,6 +1,6 @@
 import type { ExpressionSpecification, Map as MapLibreMap } from "maplibre-gl";
 
-import { COOL_RAMP } from "../globe/flavor";
+import { palette } from "../globe/flavor";
 
 import {
   attributionFor,
@@ -26,6 +26,7 @@ function paint(maxValue: number): {
   radius: ExpressionSpecification;
   opacity: ExpressionSpecification;
 } {
+  const ramp = palette().cool;
   // Counts are heavily skewed: a handful of well-sampled cells dwarf the rest, so the ramp
   // is placed on log10 to keep the typical cell visible rather than uniformly dark.
   const logMax = Math.max(Math.log10(maxValue), 1);
@@ -36,8 +37,8 @@ function paint(maxValue: number): {
       "interpolate",
       ["linear"],
       ["log10", ["max", ["get", "value"], 1]],
-      ...COOL_RAMP.flatMap((colour, index) => [
-        (logMax * index) / (COOL_RAMP.length - 1),
+      ...ramp.flatMap((colour, index) => [
+        (logMax * index) / (ramp.length - 1),
         colour,
       ]),
     ] as ExpressionSpecification,
@@ -122,6 +123,11 @@ export async function addSurface(
       if (map.getLayer(sourceId)) {
         map.setLayoutProperty(sourceId, "visibility", visible ? "visible" : "none");
       }
+    },
+    repaint: () => {
+      if (!map.getLayer(sourceId)) return;
+      const next = paint(maxValue);
+      map.setPaintProperty(sourceId, "circle-color", next.color);
     },
   };
 }

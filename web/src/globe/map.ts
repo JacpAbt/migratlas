@@ -23,7 +23,7 @@ import {
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Protocol } from "pmtiles";
 
-import { BORDER, COAST, EARTH_FLAVOR, LAND, OCEAN_COLOUR } from "./flavor";
+import { palette } from "./flavor";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -60,23 +60,39 @@ function outlineSources(baseUrl: string): Record<string, SourceSpecification> {
 }
 
 function outlineLayers(): LayerSpecification[] {
+  const skin = palette();
   return [
     // Drawn beneath everything, so the sphere reads as a globe even before any data lands.
-    { id: "ocean", type: "background", paint: { "background-color": OCEAN_COLOUR } },
-    { id: "land", type: "fill", source: "land", paint: { "fill-color": LAND } },
+    { id: "ocean", type: "background", paint: { "background-color": skin.ocean } },
+    { id: "land", type: "fill", source: "land", paint: { "fill-color": skin.land } },
     {
       id: "coast",
       type: "line",
       source: "land",
-      paint: { "line-color": COAST, "line-width": 0.7 },
+      paint: { "line-color": skin.coast, "line-width": 0.7 },
     },
     {
       id: "borders",
       type: "line",
       source: "borders",
-      paint: { "line-color": BORDER, "line-width": 0.5, "line-dasharray": [3, 2] },
+      paint: { "line-color": skin.border, "line-width": 0.5, "line-dasharray": [3, 2] },
     },
   ];
+}
+
+/**
+ * Recolour the sphere for the surface now in force.
+ *
+ * Four `setPaintProperty` calls rather than `setStyle`, which would drop every data source and
+ * re-fetch the layers -- a second of blank globe and 450 KiB, to change four colours. The paint
+ * properties survive a style that is already loaded, and the data layers repaint themselves.
+ */
+export function repaintBasemap(map: MapLibreMap): void {
+  const skin = palette();
+  if (map.getLayer("ocean")) map.setPaintProperty("ocean", "background-color", skin.ocean);
+  if (map.getLayer("land")) map.setPaintProperty("land", "fill-color", skin.land);
+  if (map.getLayer("coast")) map.setPaintProperty("coast", "line-color", skin.coast);
+  if (map.getLayer("borders")) map.setPaintProperty("borders", "line-color", skin.border);
 }
 
 function style(baseUrl: string): StyleSpecification {
@@ -97,7 +113,7 @@ function style(baseUrl: string): StyleSpecification {
       protomaps: { type: "vector", url: `pmtiles://${DETAIL_PMTILES}` },
     },
     // Above the outline, which then shows through only where detail tiles have not arrived.
-    layers: [...base.layers, ...layers("protomaps", EARTH_FLAVOR, { lang: "en" })],
+    layers: [...base.layers, ...layers("protomaps", palette().flavor, { lang: "en" })],
   };
 }
 

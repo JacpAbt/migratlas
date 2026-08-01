@@ -137,9 +137,23 @@
         id: "night-shade",
         type: "fill",
         source: "night",
-        paint: { "fill-color": "#41566b", "fill-opacity": 0.17 },
+        paint: { "fill-color": nightShade(), "fill-opacity": 0.17 },
       },
       firstSymbol,
+    );
+  }
+
+  /**
+   * The dusk veil's colour, from the token.
+   *
+   * It has to invert with the surface and not merely shift. On parchment the unlit side is a cool
+   * darkening; on black paper a darkening is invisible, so the token holds a pale blue there and
+   * the same 17% fill reads as moonlight instead of as a hole.
+   */
+  function nightShade(): string {
+    return (
+      getComputedStyle(document.documentElement).getPropertyValue("--night-shade").trim() ||
+      "#41566b"
     );
   }
 

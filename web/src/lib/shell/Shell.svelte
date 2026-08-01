@@ -15,6 +15,16 @@
   import type { SpeciesSelection } from "../../layers/selection";
   import { SpeciesSurfaces } from "../../search/taxon";
   import { Clock } from "../../state/time";
+  import Surface from "../notebook/Surface.svelte";
+  import {
+    applySurface,
+    isNight,
+    storedSurface,
+    watchSystem,
+    type Surface as SurfaceChoice,
+  } from "../../state/surface";
+  import { setPalette } from "../../globe/flavor";
+  import { repaintBasemap } from "../../globe/map";
 
   let { base }: { base: string } = $props();
 
@@ -38,6 +48,40 @@
   // Rebuilt from the mirrored parts rather than read off the clock, so the terminator is downstream
   // of reactive state instead of a value the effect graph cannot see change.
   const instant = $derived(new Date(Date.UTC(clock.state.year, 0, 1 + day, 0, minute)));
+
+  /**
+   * Which paper this is read on.
+   *
+   * Applied on mount rather than initialised from it: the stored choice has to reach
+   * `document.documentElement` before anything reads a token off it, and the globe's palette is
+   * set from the same value so the sphere and the page can never disagree about what surface it is.
+   */
+  let surface = $state<SurfaceChoice>("system");
+
+  $effect(() => {
+    surface = applySurface(storedSurface());
+  });
+
+  // The globe's colours are JavaScript, not CSS, so nothing repaints them on its own. Runs on the
+  // stored choice too, not only on a click -- otherwise a reader who chose night last week gets a
+  // black page around a parchment globe.
+  $effect(() => {
+    setPalette(isNight(surface));
+    if (!map) return;
+    repaintBasemap(map);
+    for (const layer of layers) layer.repaint?.();
+  });
+
+  // And when the machine changes its mind while the choice is "system".
+  $effect(() =>
+    watchSystem(() => {
+      if (surface !== "system") return;
+      setPalette(isNight(surface));
+      if (!map) return;
+      repaintBasemap(map);
+      for (const layer of layers) layer.repaint?.();
+    }),
+  );
 
   let shell: HTMLDivElement;
 
@@ -174,6 +218,10 @@
       />
     {/if}
 
+    <div class="shell__surface">
+      <Surface {surface} onchoose={(next) => (surface = applySurface(next))} />
+    </div>
+
     {#if mode !== "arriving"}
       <Index
         findings={ledger.findings}
@@ -190,6 +238,15 @@
     position: relative;
     height: 100%;
     overflow: hidden;
+  }
+
+  /* Top right, out of the reading path and above the sheet. Small on purpose: it is a preference,
+     not a claim, and ADR 0007 gives the page's emphasis to the argument. */
+  .shell__surface {
+    position: absolute;
+    top: var(--gap-tight);
+    right: var(--gap-tight);
+    z-index: 4;
   }
 
   /* Lifted clear of the index strip. MapLibre owns these nodes so they cannot be scoped, and they
@@ -227,7 +284,7 @@
     background-image: var(--grain);
     border: 1px solid var(--rule);
     border-radius: var(--radius);
-    box-shadow: 0 2px 24px rgb(47 61 79 / 14%);
+    box-shadow: var(--shadow-sheet);
     animation: settle var(--draw) var(--ease-pen) both;
   }
 

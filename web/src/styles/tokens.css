@@ -42,6 +42,20 @@
   --detect-no-effort: #8b9487;
   --detect-short: #d8bd7e;
   --detect-yes: #b4522e;
+  /* A category the assessment does not know. Drawn rather than skipped, because a hole in a
+     coverage map reads as "nothing here" and this means "not classified". */
+  --detect-unknown: #b5afa3;
+
+  /* On the globe rather than on the paper, so they escaped the token set until the night surface
+     went looking for them. The unlit hemisphere, and the stroke that lifts a chosen species off
+     the pooled layers under it. */
+  --night-shade: #41566b;
+  --selection-halo: #fdf8f0;
+
+  /* A sheet laid on a desk casts one soft shadow. Three components had written this literal, in
+     day ink, so at night the cards floated on a blue-grey blur that nothing else on the page
+     shared. */
+  --shadow-sheet: 0 2px 24px rgb(47 61 79 / 14%);
 
   /* Paper grain: two offset gradients at very low alpha. Cheap, tiles forever, survives zoom, and
      is not a photograph of paper -- a photographic texture reads as a skin over a website. */
@@ -96,71 +110,98 @@
 }
 
 /**
- * Night field notes.
+ * Night field notes: black paper, written in chalk.
  *
  * Not the day palette inverted -- a different object, the way a notebook read by torchlight is a
- * different thing from one on a desk. The ember is deliberately not the rust: #b4522e on slate
- * loses the saturation that makes it read as *change* and *detectable*, so it moves warmer and
- * lighter to keep doing that job.
+ * different thing from one on a desk. It began as a slate blue-grey (#232b33), which was a dark
+ * *interface* rather than a dark *artifact*: it read as this website with the lights off. Black
+ * paper is a real thing you can buy and write on, and cream on near-black is what it looks like.
  *
- * `[data-surface]` wins over the media query in both directions, so an explicit choice always
- * beats the system preference -- including choosing day on a machine set to dark.
+ * The paper is warm rather than neutral (#16130f, not #111), for the same reason the day paper is
+ * not white: a true grey black beside a warm ink reads as a rendering fault.
+ *
+ * The ember is deliberately not the rust. #a3441f on black loses the saturation that makes it read
+ * as *change* and *detectable*, so it moves warmer and lighter to keep doing that job.
+ *
+ * Every value below clears the contrast floor `web/tests/notebook.spec.ts` measures -- 4.5:1 for
+ * text, 3:1 for a mark that carries meaning -- and the two greys at the bottom of the detectability
+ * ramp are the tight ones, at 3.16 and 3.46.
+ *
+ * The block is written twice, and that is not an oversight. A media query cannot join a selector
+ * list, and the alternative -- `light-dark()` -- breaks `layers/detectability.ts`, which reads
+ * these tokens with `getComputedStyle().getPropertyValue()` and would receive the unresolved
+ * function text rather than a colour MapLibre can parse. So: duplicated, and a test asserts the
+ * two surfaces resolve identically whether night was chosen or inherited from the system.
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-surface="day"]) {
-    --paper: #232b33;
-    --paper-sunken: #1c232a;
-    --ink: #d9d3c4;
-    --ink-soft: #b3ac9c;
+    --paper: #16130f;
+    --paper-sunken: #0e0c09;
+    --ink: #ece3d0;
+    --ink-soft: #b9b0a0;
     --rust: #e59a6b;
     --rust-ink: #d9814a;
-    --pencil: #a8a294;
-    --rule: #3d4750;
-    --rule-faint: #313a42;
+    --pencil: #9a9384;
+    --rule: #3a352d;
+    --rule-faint: #2a261f;
 
     --status-open: #e59a6b;
-    --status-bounded: #a8a294;
-    --status-addressed: #7fa189;
+    --status-bounded: #9a9384;
+    --status-addressed: #84ab8e;
 
     --line-observed: #d9814a;
     --line-counterfactual: #7fb0cc;
-    --line-scatter: #8a8578;
-    --detect-none: #4a5259;
-    --detect-no-effort: #47544c;
-    --detect-short: #8f7f4f;
+    --line-scatter: #a09684;
+    --detect-none: #6a6459;
+    --detect-no-effort: #5f6f60;
+    --detect-short: #b39a5c;
     --detect-yes: #d9814a;
+    --detect-unknown: #6f695d;
+
+    /* The unlit hemisphere on a black globe is a lightening rather than a darkening: at night the
+       shade has to read as "this side is not in sunlight" against a ground that is already dark. */
+    --night-shade: #8fa6bd;
+    --selection-halo: #16130f;
+
+    --shadow-sheet: 0 2px 28px rgb(0 0 0 / 55%);
 
     /* Lighter still than the day grain: the same alpha over a dark ground reads as dirt. */
-    --grain: repeating-linear-gradient(103deg, rgb(217 211 196 / 2%) 0 1px, transparent 1px 4px),
-      repeating-linear-gradient(11deg, rgb(217 211 196 / 1.5%) 0 1px, transparent 1px 6px);
+    --grain: repeating-linear-gradient(103deg, rgb(236 227 208 / 2%) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(11deg, rgb(236 227 208 / 1.5%) 0 1px, transparent 1px 6px);
   }
 }
 
 :root[data-surface="night"] {
-  --paper: #232b33;
-  --paper-sunken: #1c232a;
-  --ink: #d9d3c4;
-  --ink-soft: #b3ac9c;
+  --paper: #16130f;
+  --paper-sunken: #0e0c09;
+  --ink: #ece3d0;
+  --ink-soft: #b9b0a0;
   --rust: #e59a6b;
   --rust-ink: #d9814a;
-  --pencil: #a8a294;
-  --rule: #3d4750;
-  --rule-faint: #313a42;
+  --pencil: #9a9384;
+  --rule: #3a352d;
+  --rule-faint: #2a261f;
 
   --status-open: #e59a6b;
-  --status-bounded: #a8a294;
-  --status-addressed: #7fa189;
+  --status-bounded: #9a9384;
+  --status-addressed: #84ab8e;
 
   --line-observed: #d9814a;
   --line-counterfactual: #7fb0cc;
-  --line-scatter: #8a8578;
-  --detect-none: #4a5259;
-  --detect-no-effort: #47544c;
-  --detect-short: #8f7f4f;
+  --line-scatter: #a09684;
+  --detect-none: #6a6459;
+  --detect-no-effort: #5f6f60;
+  --detect-short: #b39a5c;
   --detect-yes: #d9814a;
+  --detect-unknown: #6f695d;
 
-  --grain: repeating-linear-gradient(103deg, rgb(217 211 196 / 2%) 0 1px, transparent 1px 4px),
-    repeating-linear-gradient(11deg, rgb(217 211 196 / 1.5%) 0 1px, transparent 1px 6px);
+  --night-shade: #8fa6bd;
+  --selection-halo: #16130f;
+
+  --shadow-sheet: 0 2px 28px rgb(0 0 0 / 55%);
+
+  --grain: repeating-linear-gradient(103deg, rgb(236 227 208 / 2%) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(11deg, rgb(236 227 208 / 1.5%) 0 1px, transparent 1px 6px);
 }
 
 /**

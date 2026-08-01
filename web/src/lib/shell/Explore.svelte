@@ -187,7 +187,7 @@
     background-image: var(--grain);
     border: 1px solid var(--rule);
     border-radius: var(--radius);
-    box-shadow: 0 2px 18px rgb(47 61 79 / 12%);
+    box-shadow: var(--shadow-sheet);
     font-size: 0.8rem;
   }
 

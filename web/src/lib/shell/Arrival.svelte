@@ -72,7 +72,7 @@
     border: 1px solid var(--rule);
     /* A page laid on a globe, not a modal: one soft shadow, no radius beyond the token. */
     border-radius: var(--radius);
-    box-shadow: 0 2px 24px rgb(47 61 79 / 14%);
+    box-shadow: var(--shadow-sheet);
     animation: settle var(--draw-slow) var(--ease-pen) both;
   }
 

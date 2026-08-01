@@ -34,6 +34,16 @@ async function ready(page: Page): Promise<void> {
   await page.evaluate(() => document.fonts.ready);
 }
 
+/**
+ * Choose a surface through the control a reader would use.
+ *
+ * Scoped to `.surface`, because the confound sandbox's knobs are radiogroups too and an unscoped
+ * `getByRole("radio")` reaches into whichever one loaded first.
+ */
+async function surfaceIs(page: Page, name: string): Promise<void> {
+  await page.locator(".surface").getByRole("radio", { name, exact: true }).check();
+}
+
 /** Every claim in turn, by clicking the index. */
 async function eachClaim(page: Page, visit: (index: number) => Promise<void>): Promise<void> {
   const tabs = page.locator(".tab").filter({ hasNotText: "Just the map" });
@@ -76,10 +86,11 @@ for (const surface of ["day", "night"] as const) {
   test(`every text colour clears AA on the ${surface} surface`, async ({ page }) => {
     await ready(page);
     if (surface === "night") {
-      // Stamped directly. The shell has no surface switch yet -- ADR 0007 scopes night as a week of
-      // work -- but the token set is written for both, and an unrendered palette is a guess. This is
-      // exactly what a switch will do when there is one.
-      await page.evaluate(() => document.documentElement.setAttribute("data-surface", "night"));
+      // Through the switch a reader would use, not by stamping the attribute. This test used to do
+      // the latter with a comment saying the shell had no switch yet -- so the palette was measured
+      // in a state nobody could reach, and the day it became reachable nothing here would have
+      // noticed if the control set the wrong value.
+      await surfaceIs(page, "Night");
       await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
     }
 
@@ -114,6 +125,46 @@ for (const surface of ["day", "night"] as const) {
     }
   });
 }
+
+test("the surface is a three-way choice, and it survives a reload", async ({ page }) => {
+  await ready(page);
+
+  // Three, not a toggle. "Follow the system" is a choice: a reader whose machine dims at sunset
+  // wants the paper to dim with it, and one who picked day wants day at midnight. A two-state
+  // switch cannot say the difference, so the first click would opt out of the system for good.
+  await expect(page.locator(".surface").getByRole("radio")).toHaveCount(3);
+
+  await surfaceIs(page, "Night");
+  await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
+
+  await page.reload();
+  await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
+
+  // And "system" is the absence of the attribute rather than a third value of it, so the media
+  // query in tokens.css gets to decide again.
+  await surfaceIs(page, "System");
+  await expect(page.locator(":root")).not.toHaveAttribute("data-surface", /.*/);
+});
+
+test("the globe follows the paper it is read on", async ({ page }) => {
+  await ready(page);
+  // The one thing CSS cannot do for us. MapLibre paint is set in JavaScript, so without an explicit
+  // repaint a reader who switches to night gets black paper around a parchment sphere -- which is
+  // the state this project shipped in for the whole time the palette existed and the switch did not.
+  const ocean = () =>
+    page.evaluate(() => {
+      const map = (window as unknown as { migratlas?: { map?: unknown } }).migratlas?.map as
+        | { getPaintProperty: (id: string, property: string) => unknown }
+        | undefined;
+      return String(map?.getPaintProperty("ocean", "background-color") ?? "");
+    });
+
+  const byDay = await ocean();
+  expect(byDay, "no ocean colour to read").toBeTruthy();
+
+  await surfaceIs(page, "Night");
+  await expect.poll(ocean).not.toBe(byDay);
+});
 
 test("an addressed status is legible too, and is not the only signal", async ({ page }) => {
   await ready(page);
