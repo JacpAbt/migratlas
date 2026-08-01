@@ -58,6 +58,93 @@ export function underline(key: string, width: number): string {
   return `M ${points.join(" L ")}`;
 }
 
+/**
+ * A rectangle drawn by hand: four wobbled sides, and the corners overshoot.
+ *
+ * The overshoot is the whole thing. A wobbled rectangle whose corners meet exactly reads as a
+ * border with a rendering fault; one where the pen carries a couple of pixels past the turn reads
+ * as drawn. Real hand-drawn boxes overshoot because stopping a pen exactly on a corner is harder
+ * than not.
+ *
+ * One continuous path rather than four, so it can stroke on in a single dash animation and so a
+ * reader watches it being drawn in the order a hand would draw it.
+ */
+export function boxDrawn(key: string, width: number, height: number, overshoot = 3): string {
+  if (width <= 0 || height <= 0) return "";
+  const next = jitter(hash(key) ^ 0x2f6a88c1);
+  const wobble = () => next() * 0.8;
+
+  // Along each side, a control point roughly every 60px, same cadence as `underline`. Fewer and
+  // the side is a straight line with a kink; more and it reads as a squiggle.
+  const along = (
+    from: [number, number],
+    to: [number, number],
+    perpendicular: [number, number],
+  ): string[] => {
+    const span = Math.hypot(to[0] - from[0], to[1] - from[1]);
+    const steps = Math.max(2, Math.round(span / 60));
+    const points: string[] = [];
+    for (let step = 1; step <= steps; step += 1) {
+      const t = step / steps;
+      const drift = Math.sin(t * Math.PI) * 0.6 + wobble();
+      points.push(
+        `${(from[0] + (to[0] - from[0]) * t + perpendicular[0] * drift).toFixed(1)} ` +
+          `${(from[1] + (to[1] - from[1]) * t + perpendicular[1] * drift).toFixed(1)}`,
+      );
+    }
+    return points;
+  };
+
+  const [w, h, o] = [width, height, overshoot];
+  return [
+    `M ${o.toFixed(1)} ${(1 + wobble()).toFixed(1)}`,
+    `L ${along([o, 1], [w - 1, 1], [0, -1]).join(" L ")}`,
+    `L ${along([w - 1, 1], [w - 1, h - 1], [1, 0]).join(" L ")}`,
+    `L ${along([w - 1, h - 1], [1, h - 1], [0, 1]).join(" L ")}`,
+    `L ${along([1, h - 1], [1, 1], [-1, 0]).join(" L ")}`,
+    // Past the start, which is what makes it a drawn box rather than a closed shape.
+    `L ${(1 + o).toFixed(1)} ${(1 - wobble()).toFixed(1)}`,
+  ].join(" ");
+}
+
+/**
+ * The outline of a sheet of paper, torn out along its left edge.
+ *
+ * A closed path, so it can be filled as the card's ground and clipped to. Only the left edge is
+ * ragged: this is a leaf torn from a bound notebook, not hand-made paper with a deckle on all four
+ * sides. One irregular edge reads as "removed from something"; four read as an effect.
+ *
+ * The right and bottom edges get a much smaller waver -- a cut edge is straight, and a cut edge
+ * that is *perfectly* straight beside a torn one gives the whole card away as a rectangle with a
+ * decoration attached to one side.
+ */
+export function sheetEdge(key: string, width: number, height: number): string {
+  if (width <= 0 || height <= 0) return "";
+  const next = jitter(hash(key) ^ 0x71c3d2a5);
+
+  // A tear is a low-frequency wander with high-frequency nicks in it, and the nicks are what stop
+  // it reading as a wave. Every 9px, because at 20 the tear looks like a coastline and at 4 the
+  // path gets long enough to matter in a clip.
+  const tears: string[] = [];
+  const steps = Math.max(6, Math.round(height / 9));
+  for (let step = steps; step >= 0; step -= 1) {
+    const y = (step / steps) * height;
+    const wander = Math.sin((step / steps) * Math.PI * 1.7) * 1.6;
+    const nick = next() * 1.4 + (step % 3 === 0 ? next() * 1.1 : 0);
+    tears.push(`${Math.max(0, wander + nick + 2).toFixed(1)} ${y.toFixed(1)}`);
+  }
+
+  const cut = (at: number) => (at + next() * 0.35).toFixed(2);
+  return [
+    `M 2 0`,
+    `L ${cut(width)} 0`,
+    `L ${cut(width)} ${cut(height)}`,
+    `L 2 ${height.toFixed(1)}`,
+    `L ${tears.join(" L ")}`,
+    "Z",
+  ].join(" ");
+}
+
 /** Width of the box a margin bracket is drawn in. */
 export const BRACKET_WIDTH = 8;
 

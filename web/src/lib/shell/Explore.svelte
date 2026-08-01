@@ -185,8 +185,6 @@
     padding: var(--gap);
     background-color: var(--paper);
     background-image: var(--grain);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius);
     box-shadow: var(--shadow-sheet);
     font-size: 0.8rem;
   }

@@ -183,12 +183,19 @@ test("the globe reaches a usable style with coastlines", async ({ page }) => {
  *
  * Split into a test per layer once, for a better failure message, and reverted: each one reloads the
  * page and re-decodes 125,000 features across four layers, so the split cost four times the work to
- * buy a name that `expectDrawn` already reports. The budget is measured rather than guessed -- one
- * load plus four camera settles plus four draw polls -- and generous enough that a slow machine is
- * not a failure while a wedged map still is.
+ * buy a name that `expectDrawn` already reports.
+ *
+ * The budget was measured, and measured wrong. 150s came from timing this alone -- it takes 66s --
+ * and doubling. Under the suite it runs with two other workers each driving their own WebGL globe
+ * on one machine, where it takes 130 to 150s and had been passing at 98% of its own deadline all
+ * along. It finally went over, on a change that touched a CSS filter.
+ *
+ * So: 240s, from the contended number rather than the isolated one. This costs no signal, because
+ * the deadline was never the diagnostic. A wedged map fails in eight seconds at `DRAW_TIMEOUT_MS`
+ * with a state dump; this timeout exists only so a hung run ends.
  */
 test("every layer draws features once it is switched on", async ({ page }) => {
-  test.setTimeout(150_000);
+  test.setTimeout(240_000);
   const report = await ready(page);
   expect(report.layers.length).toBeGreaterThan(0);
   await explore(page);

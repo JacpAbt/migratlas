@@ -1,6 +1,7 @@
 <script lang="ts">
   import Instrument from "../notebook/Instrument.svelte";
   import Rule from "../notebook/Rule.svelte";
+  import Sheet from "../notebook/Sheet.svelte";
   import { instrumentFor, type Finding } from "../ledger";
 
   let {
@@ -21,7 +22,8 @@
   and made you click for the figure would be doing the opposite of what this project is for.
 -->
 <section class="arrival" aria-labelledby="arrival-claim">
-  <div class="arrival__card">
+  <Sheet seed="arrival">
+   <div class="arrival__card">
     <header class="arrival__head">
       <Instrument kind={instrumentFor(finding)} size={40} />
       <p class="arrival__kicker">Migratlas · what the radar saw</p>
@@ -47,7 +49,8 @@
          being softened: the plain sentence is the whole of what a first-time reader can carry, and
          a visitor who bounces off fourteen hundred characters leaves with no caveat at all. -->
     <p class="arrival__caveat">{finding.plain_caveat}</p>
-  </div>
+   </div>
+  </Sheet>
 </section>
 
 <style>
@@ -63,17 +66,16 @@
     pointer-events: none;
   }
 
-  .arrival__card {
+  /* The paper is `Sheet`'s job now -- ground, grain, torn edge, shadow. What is left here is the
+     room the words need and the way the leaf lands. */
+  .arrival :global(.sheet) {
     pointer-events: auto;
     max-width: 34rem;
-    padding: var(--gap-wide);
-    background-color: var(--paper);
-    background-image: var(--grain);
-    border: 1px solid var(--rule);
-    /* A page laid on a globe, not a modal: one soft shadow, no radius beyond the token. */
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-sheet);
     animation: settle var(--draw-slow) var(--ease-pen) both;
+  }
+
+  .arrival__card {
+    padding: var(--gap-wide) var(--gap-wide) var(--gap-wide) calc(var(--gap-wide) + 0.4rem);
   }
 
   /* Lands rather than fades: a page put down on a desk. Zeroed with the motion token, where it
@@ -182,7 +184,7 @@
     }
 
     .arrival__card {
-      padding: var(--gap);
+      padding: var(--gap) var(--gap) var(--gap) calc(var(--gap) + 0.4rem);
     }
 
     /* Full width each, stacked: side by side at this width they were 44px tall and 3px apart, and

@@ -16,6 +16,7 @@
   import { SpeciesSurfaces } from "../../search/taxon";
   import { Clock } from "../../state/time";
   import Surface from "../notebook/Surface.svelte";
+  import Sheet from "../notebook/Sheet.svelte";
   import {
     applySurface,
     isNight,
@@ -194,12 +195,19 @@
     {:else if mode === "reading"}
       <article class="shell__reading" aria-live="polite">
         <div class="shell__sheet">
-          {#key current.key}
-            <Claim finding={current} />
-            <!-- The figure belongs to the claim, not to a panel of its own: for the attribution it
-                 IS the argument, and for the coverage limit it is the number. -->
-            <Evidence finding={current} {base} {detectability} {sandbox} />
-          {/key}
+          <Sheet seed={current.key}>
+            <!-- The scroll is inside the paper, not on it. A drawn edge inside a scrolling box is
+                 positioned against the padding box and slides away with the content, so the tear
+                 would travel up the screen as a reader scrolls. -->
+            <div class="shell__leaf">
+              {#key current.key}
+                <Claim finding={current} />
+                <!-- The figure belongs to the claim, not to a panel of its own: for the attribution
+                     it IS the argument, and for the coverage limit it is the number. -->
+                <Evidence finding={current} {base} {detectability} {sandbox} />
+              {/key}
+            </div>
+          </Sheet>
         </div>
         <p class="shell__because">{view?.because}</p>
       </article>
@@ -278,14 +286,26 @@
        the claim to a column of two-word lines. */
     max-width: 52rem;
     max-height: 100%;
-    padding: var(--gap-wide);
-    overflow-y: auto;
-    background-color: var(--paper);
-    background-image: var(--grain);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-sheet);
+    /* The paper is `Sheet`'s: ground, grain, torn edge, shadow. This is only where it sits. */
+    display: flex;
     animation: settle var(--draw) var(--ease-pen) both;
+  }
+
+  /* Column, and every link in the chain needs `min-height: 0`. Without the direction the leaf is a
+     row item with `overflow-y: auto` and collapses to a zero-height box -- the claim is still in the
+     DOM, still has its text, and is not visible, which is how the suite found it. */
+  .shell__sheet :global(.sheet) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .shell__leaf {
+    flex: 1;
+    min-height: 0;
+    padding: var(--gap-wide) var(--gap-wide) var(--gap-wide) calc(var(--gap-wide) + 0.4rem);
+    overflow-y: auto;
   }
 
   @keyframes settle {

@@ -315,6 +315,46 @@ test("the margin moves below the claim on a phone rather than disappearing", asy
   expect(overflow, `${overflow}px of horizontal overflow`).toBeLessThanOrEqual(1);
 });
 
+test("a claim is on a sheet of paper, not in a bordered box", async ({ page }) => {
+  await ready(page);
+  const sheet = page.locator(".shell__sheet .sheet");
+  await expect(sheet).toBeVisible();
+
+  // No border and no radius: a stroked rounded rectangle is a UI card, and it was the single most
+  // un-notebook-like thing on the page. The edge is drawn instead, and it overshoots its corners.
+  const box = await sheet.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { border: style.borderTopWidth, radius: style.borderTopLeftRadius };
+  });
+  expect(box.border).toBe("0px");
+  expect(box.radius).toBe("0px");
+
+  // The ground is clipped to a torn path rather than filling the rectangle.
+  const clip = await page
+    .locator(".shell__sheet .sheet__ground")
+    .evaluate((node) => getComputedStyle(node).clipPath);
+  expect(clip, "the paper is still a rectangle").toContain("path(");
+
+  // And the shadow follows the tear. `clip-path` and `box-shadow` do not compose -- the shadow is
+  // painted and then clipped away -- so this has to be a drop-shadow filter on an ancestor.
+  const lift = await page
+    .locator(".shell__sheet .sheet__lift")
+    .evaluate((node) => getComputedStyle(node).filter);
+  expect(lift, "no shadow, or one that the clip will have eaten").toContain("drop-shadow");
+});
+
+test("the drawn edge stays put while the claim scrolls under it", async ({ page }) => {
+  await ready(page);
+  const leaf = page.locator(".shell__leaf");
+  // The regression this exists for: an absolutely-positioned edge inside a scrolling box is placed
+  // against the padding box, so the tear travels up the screen as a reader scrolls.
+  const before = await page.locator(".shell__sheet .sheet__ink").boundingBox();
+  await leaf.evaluate((node) => node.scrollBy(0, 400));
+  await expect.poll(async () => (await leaf.evaluate((n) => n.scrollTop)) > 0).toBe(true);
+  const after = await page.locator(".shell__sheet .sheet__ink").boundingBox();
+  expect(after?.y).toBeCloseTo(before?.y ?? 0, 0);
+});
+
 test("a rule is one continuous stroke, not a dashed line", async ({ page }) => {
   await ready(page);
   // The regression. The first version stretched a 100-unit viewBox with `non-scaling-stroke`, which
