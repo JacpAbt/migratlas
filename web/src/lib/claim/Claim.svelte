@@ -30,8 +30,17 @@
       <p class="claim__banner">{DIRECTION_LABEL[finding.direction]}</p>
     </header>
 
-    <h2 class="claim__title">{finding.claim}</h2>
+    <!--
+      Two registers, and which one is the heading is the decision. The plain sentence carries the
+      finding to a reader with no statistics; `claim` is the scientific statement and is rendered
+      here in full, unshortened, immediately under it. ADR 0007 refuses to let the layout decide
+      what the science says, and nothing here shortens anything -- a second register was added
+      above the first.
+    -->
+    <h2 class="claim__title">{finding.plain}</h2>
     <Rule seed={finding.key} {draw} />
+
+    <p class="claim__matters">{finding.matters}</p>
 
     <!--
       The value is mono in every context, no exceptions. ADR 0007: the hand face has no tabular
@@ -39,8 +48,13 @@
       to its value, because a counting number reads as a score rather than as an interval.
     -->
     <p class="claim__value">{finding.value}</p>
+    <p class="claim__short-caveat">{finding.plain_caveat}</p>
 
     <div class="claim__prose">
+      <p class="claim__precise">
+        <span class="claim__register">Precisely</span>
+        {finding.claim}
+      </p>
       <p class="claim__scope">{finding.scope}</p>
       <p class="claim__caveat">{finding.caveat}</p>
     </div>
@@ -113,6 +127,16 @@
     text-wrap: balance;
   }
 
+  /* Set at body size and full ink. Why a finding is worth knowing is not an aside to it, and
+     printing it in the caveat register would say the opposite of what it is for. */
+  .claim__matters {
+    margin: var(--gap) 0 0;
+    font-size: var(--size-body);
+    line-height: var(--leading-body);
+    max-width: 34rem;
+    color: var(--ink);
+  }
+
   .claim__value {
     margin: var(--gap) 0 0;
     font-family: var(--font-mono);
@@ -123,8 +147,21 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* Directly under the number, because that is the thing most likely to be repeated without it.
+     Smaller than the body, larger than the margin: a caveat has to arrive with the number, and it
+     does not have to arrive at the same size. */
+  .claim__short-caveat {
+    margin: var(--gap-tight) 0 0;
+    max-width: 34rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
   .claim__prose {
-    margin-top: var(--gap);
+    margin-top: var(--gap-wide);
+    padding-top: var(--gap);
+    border-top: 1px dotted var(--rule-faint);
     font-size: var(--size-body);
     line-height: var(--leading-body);
     max-width: 34rem;
@@ -134,8 +171,23 @@
     margin: 0 0 var(--gap-tight);
   }
 
-  .claim__scope {
+  /* The exact sentence, kept whole. The label exists so a reader can see this is the same finding
+     said again rather than a further one -- without it the two registers read as two claims. */
+  .claim__register {
+    font-family: var(--font-mono);
+    font-size: var(--size-label);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pencil);
+    margin-right: var(--gap-tight);
+  }
+
+  .claim__precise {
     color: var(--ink);
+  }
+
+  .claim__scope {
+    color: var(--ink-soft);
   }
 
   .claim__caveat {

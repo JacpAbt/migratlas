@@ -27,11 +27,11 @@
       <p class="arrival__kicker">Migratlas · what the radar saw</p>
     </header>
 
-    <h1 id="arrival-claim">{finding.claim}</h1>
+    <h1 id="arrival-claim">{finding.plain}</h1>
     <Rule seed="arrival" />
 
     <p class="arrival__value">{finding.value}</p>
-    <p class="arrival__scope">{finding.scope}</p>
+    <p class="arrival__matters">{finding.matters}</p>
 
     <div class="arrival__ways">
       <button type="button" class="way way--primary" onclick={onshow}>
@@ -41,8 +41,12 @@
     </div>
 
     <!-- The caveat is on the arrival screen too, not one screen later. This is the first number a
-         visitor sees and it is the one most likely to be repeated without its qualification. -->
-    <p class="arrival__caveat">{finding.caveat}</p>
+         visitor sees and it is the one most likely to be repeated without its qualification.
+
+         The short register here, and the full one on the claim itself. That is not the caveat
+         being softened: the plain sentence is the whole of what a first-time reader can carry, and
+         a visitor who bounces off fourteen hundred characters leaves with no caveat at all. -->
+    <p class="arrival__caveat">{finding.plain_caveat}</p>
   </div>
 </section>
 
@@ -120,7 +124,7 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .arrival__scope {
+  .arrival__matters {
     margin: var(--gap-tight) 0 0;
     font-size: var(--size-body);
     line-height: var(--leading-body);

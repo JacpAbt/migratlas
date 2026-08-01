@@ -83,8 +83,12 @@ test("a visitor lands on a claim, with its number and its caveat", async ({ page
   // The number in full, on the first screen, with its interval. An arrival that said "something is
   // changing" and made you click for the figure would invert what this project is for.
   await expect(page.locator(".arrival__value")).toHaveText(/[−-]?\d+\.\d+/);
-  await expect(page.locator(".arrival__scope")).not.toBeEmpty();
+  await expect(page.locator(".arrival__matters")).not.toBeEmpty();
   await expect(page.locator(".arrival__caveat")).not.toBeEmpty();
+
+  // The heading is the plain register, and it must not have gained a taxon the instrument cannot
+  // see. This is the one sentence most likely to be quoted, and the radar measures aerial biomass.
+  await expect(page.locator("#arrival-claim")).not.toHaveText(/\bbirds?\b/i);
 
   // Both ways out, offered together rather than one after the other.
   await expect(page.getByRole("button", { name: /show me how you know/i })).toBeVisible();
@@ -132,8 +136,11 @@ test("choosing another claim flies the camera and swaps the evidence", async ({ 
   await page.getByRole("button", { name: /show me how you know/i }).click();
   const before = await settled(page);
 
-  await page.locator(".tab", { hasText: /poleward/i }).click();
-  await expect(page.locator(".claim__title")).toHaveText(/poleward/i);
+  await page.locator('.tab[data-claim="marine-null"]').click();
+  // The heading is the plain sentence and the precise claim is rendered under it, so the swap is
+  // checked on both registers rather than on whichever one happens to be the heading today.
+  await expect(page.locator(".claim__title")).toHaveText(/fish/i);
+  await expect(page.locator(".claim__precise")).toHaveText(/poleward/i);
 
   const after = await settled(page);
   const moved = Math.abs(after.lon - before.lon) + Math.abs(after.lat - before.lat);
@@ -160,7 +167,7 @@ test("choosing another claim flies the camera and swaps the evidence", async ({ 
 test("just the map means the whole map, not the last claim's filter", async ({ page }) => {
   await arrive(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
-  await page.locator(".tab", { hasText: /poleward/i }).click();
+  await page.locator('.tab[data-claim="marine-null"]').click();
   await settled(page);
 
   await page.getByRole("button", { name: /just the map/i }).click();
@@ -326,7 +333,7 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   // Not on the first claim: a chart on every claim would be decoration.
   await expect(page.locator(".chart__svg")).toHaveCount(0);
 
-  await page.locator(".tab", { hasText: /Human forcing/i }).click();
+  await page.locator('.tab[data-claim="anthropogenic-share"]').click();
   const charts = page.locator(".chart__svg");
   await expect(charts.first()).toBeVisible();
 
@@ -380,7 +387,7 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
 test("the detectability assessment is the coverage claim's own number", async ({ page }) => {
   await arrive(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
-  await page.locator(".tab", { hasText: /northern-hemis/i }).click();
+  await page.locator('.tab[data-claim="coverage-bias"]').click();
 
   const coverage = page.locator(".coverage");
   await expect(coverage).toBeVisible();
@@ -545,7 +552,7 @@ test("the refusal is on the claim it refutes, and its wrong answer takes a click
 
   // Not on the autumn advance: it is the marine null's counter-analysis.
   await expect(page.locator(".refusal")).toHaveCount(0);
-  await page.locator(".tab", { hasText: /poleward/i }).click();
+  await page.locator('.tab[data-claim="marine-null"]').click();
 
   const refusal = page.locator(".refusal");
   await expect(refusal).toBeVisible();

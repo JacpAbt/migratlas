@@ -87,7 +87,11 @@ for (const surface of ["day", "night"] as const) {
     // label passes, the 1.35rem value using the same token does too.
     const samples: [string, string, number][] = [
       ["the claim title", ".claim__title", AA_SMALL],
+      ["why it matters", ".claim__matters", AA_SMALL],
       ["the measurement", ".claim__value", AA_SMALL],
+      ["the short caveat", ".claim__short-caveat", AA_SMALL],
+      ["the register label", ".claim__register", AA_SMALL],
+      ["the precise claim", ".claim__precise", AA_SMALL],
       ["the scope", ".claim__scope", AA_SMALL],
       ["the caveat", ".claim__caveat", AA_SMALL],
       ["the direction banner", ".claim__banner", AA_SMALL],
@@ -165,6 +169,47 @@ test("the audit is rendered beside every claim, not behind a control", async ({ 
   });
 
   expect(open, "nothing is marked open, which would mean the audit is decorative").toBeGreaterThan(0);
+});
+
+test("every claim is said twice, plainly and precisely, and both are on the page", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await ready(page);
+
+  // The precise sentence is the scientific statement and stays whole. The plain one carries the
+  // finding to a reader without statistics. Adding the second register is fine; the failure this
+  // guards is the next change, where someone notices the claim looks redundant under a heading
+  // that says almost the same thing and deletes one of them.
+  await eachClaim(page, async () => {
+    const claim = page.locator(".claim").first();
+    const plain = (await claim.locator(".claim__title").textContent())?.trim() ?? "";
+    const precise = (await claim.locator(".claim__precise").textContent())?.trim() ?? "";
+
+    expect(plain.length, "a claim with no plain sentence").toBeGreaterThan(20);
+    expect(precise.length, "a claim with no precise sentence").toBeGreaterThan(20);
+    expect(precise.replace(/^Precisely\s*/, "")).not.toBe(plain);
+
+    // Both caveats, and neither behind a control -- same rule as the audit margin.
+    await expect(claim.locator(".claim__short-caveat")).not.toBeEmpty();
+    await expect(claim.locator(".claim__caveat")).not.toBeEmpty();
+    await expect(claim.locator(".claim__matters")).not.toBeEmpty();
+    await expect(claim.locator(".claim details, .claim [hidden]")).toHaveCount(0);
+  });
+});
+
+test("the plain register is set larger than the precise one it introduces", async ({ page }) => {
+  await ready(page);
+  // Which register is the heading is the decision, so it has to be legible as one. A plain
+  // sentence typeset at the same size as the sentence beneath it is not a heading, it is a
+  // duplicate -- and a reader would have to work out which of the two to read first.
+  const sizeOf = (selector: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+
+  expect(await sizeOf(".claim__title")).toBeGreaterThan(await sizeOf(".claim__precise"));
 });
 
 test("no number animates to its value", async ({ page }) => {

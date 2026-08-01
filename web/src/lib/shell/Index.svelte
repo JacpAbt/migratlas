@@ -32,15 +32,21 @@
   <ul>
     {#each findings as finding (finding.key)}
       <li>
+        <!-- `data-claim` is the stable handle. The suite used to reach a tab by a fragment of its
+             sentence, so rewording one claim broke six navigation tests that were not about
+             wording at all. A key does not change when prose does. -->
         <button
           type="button"
           class="tab tab--{finding.direction}"
           class:tab--on={selected === finding.key}
+          data-claim={finding.key}
           aria-current={selected === finding.key ? "true" : undefined}
           onclick={() => onchoose(finding)}
         >
           <span class="tab__what">{DIRECTION_LABEL[finding.direction]}</span>
-          <span class="tab__claim">{short(finding.claim)}</span>
+          <!-- The plain register, because a tab is forty-six characters and the precise sentence
+               is truncated to nothing useful at that width. The exact claim is on the card. -->
+          <span class="tab__claim">{short(finding.plain)}</span>
         </button>
       </li>
     {/each}

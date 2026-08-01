@@ -14,7 +14,7 @@ Numbers are permanent. A finished item keeps its number and moves to the bottom.
 | --- | --- | --- |
 | 1 | Housekeeping: `LICENSE`, `CLAUDE.md`, README status line, this file | The README said "Phase 0, nothing is published yet" while five findings shipped. |
 | 2 | `composition-stable` computes its own number | `reports/findings.py` returns a literal for this one finding, against the module's own stated rule. Nothing would catch it drifting from `phase1c`. |
-| 5 | Dual register: plain-language schema v3 | `plain`, `matters`, `plain_caveat` on every `Finding`, with the scientific sentence still rendered in full beneath. The dense register stays; a second one arrives above it. |
+| 18 | The second register for the other three documents | `counterfactual.json`'s disagreement paragraph, `detectability.json`'s withheld rationales, `sandbox.json`'s knob explanations. Same treatment as finding 5, and the same rule: a plain sentence may drop precision and may never add reach. |
 | 6 | The sketchbook rebuild | ADR 0008. Ink library, paper as a surface, controls in the same hand, the page turn, a reachable night switch with a dark basemap, deep links. The architecture stays; the visual layer is rebuilt. |
 | 7 | Species pages, wave 1 | Marine cards from FISHGLOB's 2,240 species-region shifts, which Phase 1b currently collapses into one median — publishing them *is* the marine null's argument. Plus tracked mammals, the two withheld refusal pages, and honest extent-only cards. |
 | 8 | The 617 Missouri bison rows sitting in Berlin | Bench-tested collars, same animal ids as the real tracks, marked deployed and visible. Two filters were tried and reverted: per-row distance deletes 112 fixes of Arctic fox `MMRV`'s 3,000 km dispersal; per-animal keeps Berlin. The fix is a per-taxon implied-speed ceiling. |
@@ -49,6 +49,7 @@ Kept here so they are not rediscovered as good ideas.
 | # | Item | Outcome |
 | --- | --- | --- |
 | 1 | Housekeeping | `LICENSE`, `CLAUDE.md`, this file, README status and phase table. |
+| 5 | Dual register: plain-language schema v3 | `plain`, `matters` and `plain_caveat` on every `Finding`, required by the schema and by four tests. The plain sentence is the heading, the precise claim is rendered in full underneath behind a "precisely" label, and the site says why a finding is worth knowing for the first time. |
 | 4 | Pre-register the SABAP atlas comparison | [`docs/methods/phase1e-atlas.md`](methods/phase1e-atlas.md). The feasibility question it was written to answer came back yes: every row is "recorded on *k* of *n* cards", so detection is identifiable without a card identifier and the stop condition does not fire. |
 | 2 | Two published numbers nothing recomputed | The composition claim's airspeed now comes from the fit `phase1c` prints, and is withheld if that fit stops being flat. The coverage limit counted evidence types in use and said five; four are, so it counts them from the lake now. |
 | 17 | Delete the *Homo sapiens* rows the lake held | 119 rows in `obis_speciesgrids`, ingested before the never-ingested floor existed, removed from nine year partitions with 17,192,885 kept. `migratlas lake-floor` reports and `--apply` deletes; `make lake-floor` is the report. The pooled `marine-taxa-recorded` layer had been counting them as a marine taxon in 44 ocean cells, which the per-taxon gate never saw. |

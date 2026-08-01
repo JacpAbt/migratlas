@@ -22,6 +22,9 @@ PUBLISHED = REPO / "web" / "public" / "findings.json"
 def _finding(**overrides: object) -> Finding:
     fields: dict[str, object] = {
         "key": "test",
+        "plain": "A thing is different now.",
+        "matters": "Because it is.",
+        "plain_caveat": "It might not be.",
         "claim": "Something changed.",
         "value": "+1.0 units",
         "scope": "Somewhere, sometime.",
@@ -60,7 +63,10 @@ def test_a_finding_round_trips_every_field_the_frontend_reads() -> None:
     [item] = document["findings"]
     assert set(item) == {
         "key",
+        "plain",
+        "matters",
         "claim",
+        "plain_caveat",
         "value",
         "scope",
         "caveat",
@@ -97,6 +103,74 @@ def test_every_published_finding_states_its_scope_and_caveat() -> None:
         assert item["caveat"].strip(), f"{item['key']} has no caveat"
         assert item["claim"].strip(), f"{item['key']} has no claim"
         assert item["value"].strip(), f"{item['key']} has no value"
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_every_published_finding_says_it_plainly_and_says_why_it_matters() -> None:
+    """The second register is required, exactly as the caveat is.
+
+    A precise sentence nobody outside the field can read is not a published finding, it is a
+    published artefact of one. Both registers or neither.
+    """
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    for item in document["findings"]:
+        for required in ("plain", "matters", "plain_caveat"):
+            assert item[required].strip(), f"{item['key']} has no {required}"
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_a_plain_sentence_stays_plain() -> None:
+    """Two ways it stops being the thing it was added to be.
+
+    Length, because a plain register that grows into a second dense paragraph has lost the reader
+    it exists for -- twice. And interval notation, because a sentence carrying `±` is not the plain
+    one: the measurement has its own field, set in a face with tabular figures, and duplicating it
+    here would be a second copy of a number that can drift.
+    """
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    for item in document["findings"]:
+        plain = item["plain"]
+        assert len(plain) <= findings.PLAIN_MAX_CHARS, (
+            f"{item['key']}'s plain sentence is {len(plain)} characters, "
+            f"over {findings.PLAIN_MAX_CHARS}"
+        )
+        assert "±" not in plain, f"{item['key']} puts an interval in its plain sentence"
+        assert "+/-" not in plain, f"{item['key']} puts an interval in its plain sentence"
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_the_precise_claim_is_still_published_in_full() -> None:
+    """The plain register is a second one, not a replacement.
+
+    ADR 0007 refuses to let the layout decide what the science says. Adding a shorter sentence
+    above the claim is fine; the failure this guards is the next change, where someone notices the
+    claim is now redundant and deletes it.
+    """
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    for item in document["findings"]:
+        assert item["claim"].strip(), f"{item['key']} has no claim"
+        assert item["claim"] != item["plain"], f"{item['key']} publishes one sentence twice"
+        assert item["caveat"] != item["plain_caveat"], f"{item['key']} publishes one caveat twice"
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_no_plain_sentence_claims_a_taxon_its_claim_does_not() -> None:
+    """The one way a plain rewrite can be dishonest rather than merely loose.
+
+    A plain sentence may drop precision. It may not add reach. `autumn-advance` is the live
+    temptation: "birds are migrating earlier" is what everyone wants it to say, the radar cannot
+    see a bird, and the whole of Phase 1c exists to bound exactly that.
+    """
+    creatures = re.compile(r"\bbird|\bbat\b|\bbats\b|\binsect|\bswallow|\bwarbler", re.IGNORECASE)
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    for item in document["findings"]:
+        if item["taxon_scope"] != "unattributed":
+            continue
+        named = creatures.search(item["plain"])
+        assert not named, (
+            f"{item['key']} is taxon_scope=unattributed but its plain sentence says "
+            f"{named.group(0)!r}"
+        )
 
 
 @pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")

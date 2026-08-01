@@ -34,7 +34,11 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION: Final = 2
+SCHEMA_VERSION: Final = 3
+
+# Enforced by a test rather than by trimming. A plain sentence that grows past this has become a
+# second dense paragraph, and the reader who needed it has been lost twice.
+PLAIN_MAX_CHARS: Final = 180
 
 # The domains ROBITT asks about (Boyd et al. 2022, Methods in Ecology and Evolution 13:1497), a
 # 17-question tool for risk of bias in studies of temporal trends, built on PRISMA's model. Adopted
@@ -80,8 +84,39 @@ class Finding:
     """One thing the work established, with everything needed to read it honestly."""
 
     key: str
+
+    plain: str
+    """The same finding for someone with no statistics, in one sentence.
+
+    A second register above the claim rather than a replacement for it. ADR 0007 refuses to let the
+    layout decide what the science says, and this does not: `claim` is still rendered in full,
+    unshortened, underneath. What changed is which one is the heading.
+
+    The rule that makes this safe is that a plain sentence may drop precision but may never add
+    reach. "Autumn night flights over the United States" is allowed where the claim says
+    "nocturnal autumn passage over the mid-latitude US"; "birds are migrating earlier" is not,
+    because the radar cannot see a bird and the whole of Phase 1c exists to bound that.
+    """
+
+    matters: str
+    """Why a reader should care. One or two sentences.
+
+    The site said what was measured and how confident to be about it, and never once said why any
+    of it was worth measuring. That is a strange omission for a page whose entire argument is that
+    the reader should look closer.
+    """
+
     claim: str
     """One sentence, in the strongest form the evidence supports and no stronger."""
+
+    plain_caveat: str
+    """The one limit a reader must carry away, in plain words. Always rendered.
+
+    `caveat` is the complete statement and stays complete -- the attribution one runs to fourteen
+    hundred characters, because that is how long it takes to say something true about two
+    disagreeing counterfactuals. A reader who bounces off that paragraph currently leaves with no
+    caveat at all, which is worse than leaving with the short one.
+    """
 
     value: str
     """The number, formatted for display, with its interval."""
@@ -383,6 +418,21 @@ def collect() -> list[Finding]:
             taxon_scope=TaxonScope.UNATTRIBUTED.value,
             evidence_type=EvidenceType.FLUX.value,
             bias=AUTUMN_ADVANCE_BIAS,
+            # "Whatever flies", not "birds". The plain register may drop precision and may never
+            # add reach, and this is the sentence where the temptation is strongest.
+            plain=(
+                "Whatever flies over the middle of the United States on autumn nights is passing "
+                "earlier in the year than it did thirty years ago."
+            ),
+            matters=(
+                "Timing is most of how migration works: animals move when weather, daylight and "
+                "food line up. When the calendar shifts and the things it is tuned to do not, "
+                "animals arrive somewhere that has already moved on without them."
+            ),
+            plain_caveat=(
+                "Weather radar sees a mass of animals in the air, not species. Some of it is bats, "
+                "and some is insects."
+            ),
             claim="Nocturnal autumn passage over the mid-latitude US is happening earlier.",
             value=f"{mean:+.2f} ± {ci:.2f} days per decade",
             scope=(
@@ -419,6 +469,19 @@ def collect() -> list[Finding]:
             taxon_scope=TaxonScope.EXACT.value,
             evidence_type=EvidenceType.SURVEY_INDEX.value,
             bias=MARINE_NULL_BIAS,
+            plain=(
+                "Fish are not all moving towards the poles. Different seas are doing different "
+                "things, and some are doing the opposite of others."
+            ),
+            matters=(
+                '"Fish are moving polewards as the sea warms" is one of the best-known '
+                "sentences in climate ecology. Across two thousand species it is not one story, "
+                "and a single global number would erase every difference worth planning around."
+            ),
+            plain_caveat=(
+                "These are trawl surveys in the North Atlantic and North Pacific. Nowhere else has "
+                "been counted the same way for long enough to be included."
+            ),
             claim=(
                 "There is no single global poleward shift in fish distribution — surveys "
                 "disagree even in its direction."
@@ -466,6 +529,21 @@ def collect() -> list[Finding]:
                 taxon_scope=TaxonScope.UNATTRIBUTED.value,
                 evidence_type=EvidenceType.FLUX.value,
                 bias=COMPOSITION_BIAS,
+                plain=(
+                    "The radar is watching the same kind of traffic now as in 1995, so the "
+                    "earlier timing is a real change and not a change in what is being counted."
+                ),
+                matters=(
+                    "Every long record has this problem. If what an instrument measures quietly "
+                    "changes, a trend appears that nothing caused — and it looks exactly like a "
+                    "discovery. Ruling that out is the difference between a finding and an "
+                    "artefact."
+                ),
+                plain_caveat=(
+                    "Spring behaves differently and gets no claim here. Its speeds rose, and we "
+                    "cannot yet separate a real change from animals flying higher than the wind "
+                    "data assumes."
+                ),
                 claim=(
                     "The autumn signal is not drifting from birds towards insects — what the "
                     "radar measures in 2025 means what it meant in 1995."
@@ -545,6 +623,21 @@ def collect() -> list[Finding]:
                 taxon_scope=TaxonScope.UNATTRIBUTED.value,
                 evidence_type=EvidenceType.FLUX.value,
                 bias=ATTRIBUTION_BIAS,
+                plain=(
+                    "About half of that earlier timing traces back to warming people caused. The "
+                    "other half does not follow temperature at all, and is unexplained."
+                ),
+                matters=(
+                    "Showing that something changed is not showing why. This runs climate models "
+                    "twice — once with human emissions and once with the world we would have had "
+                    "without them — and asks how much of the warming behind the shift only "
+                    "happened in one of those worlds."
+                ),
+                plain_caveat=(
+                    "This attributes the warming, not the animals. Two independent ways of "
+                    "building the world-without-us disagree with each other by more than a factor "
+                    "of two, and both are shown."
+                ),
                 claim=(
                     # "the animals", not "the birds". This claim's taxon scope is
                     # `unattributed` and the margin next to it says so, while `autumn-advance`
@@ -591,6 +684,20 @@ def collect() -> list[Finding]:
             taxon_scope="all",
             evidence_type="all",
             bias=_coverage_bias(_evidence_types_in_use()),
+            plain=(
+                "Everything on this site was measured north of the equator. The places with the "
+                "longest records and the places with the most animals are not the same places."
+            ),
+            matters=(
+                "A map of what is known is not a map of what is happening. Most of the world has "
+                "never been counted the same way twice, so it cannot appear here at all — and a "
+                "result from the north is not evidence about anywhere else until someone goes and "
+                "checks."
+            ),
+            plain_caveat=(
+                "Two sources are held back deliberately. Wolves and mountain caribou are hunted "
+                "by people who would use a map of them, so none of their locations are drawn."
+            ),
             claim=(
                 "Everything above is northern-hemisphere. The data that can measure change and "
                 "the data that covers the globe are, so far, different data."

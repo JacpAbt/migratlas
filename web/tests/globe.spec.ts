@@ -295,7 +295,7 @@ test("each counterfactual is drawn to the scatter, and both to one frame", async
   // two counterfactuals agreeing where the whole finding is that they do not.
   await ready(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
-  await page.locator(".tab", { hasText: /Human forcing/i }).click();
+  await page.locator('.tab[data-claim="anthropogenic-share"]').click();
   await expect(page.locator(".chart__svg").first()).toBeVisible();
 
   const charts = await page.locator(".chart__svg").evaluateAll((nodes) =>
@@ -349,7 +349,7 @@ test("no ribbon is drawn past its own frame, and each shades where its evidence 
   // 2014. Eyes do not run in CI.
   await ready(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
-  await page.locator(".tab", { hasText: /Human forcing/i }).click();
+  await page.locator('.tab[data-claim="anthropogenic-share"]').click();
   await expect(page.locator(".chart__svg").first()).toBeVisible();
 
   const measured = await page.locator(".chart__svg").evaluateAll((nodes) =>

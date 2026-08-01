@@ -25,7 +25,14 @@ export interface BiasDomain {
 
 export interface Finding {
   key: string;
+  /** The finding for a reader with no statistics. The heading. */
+  plain: string;
+  /** Why it is worth knowing. The page never said this before. */
+  matters: string;
+  /** The precise scientific statement, rendered in full underneath `plain` and never in place of it. */
   claim: string;
+  /** The one limit in plain words, always visible. `caveat` remains the complete statement. */
+  plain_caveat: string;
   value: string;
   scope: string;
   caveat: string;
@@ -43,7 +50,7 @@ export interface Ledger {
   findings: Finding[];
 }
 
-export const SUPPORTED_SCHEMA = 2;
+export const SUPPORTED_SCHEMA = 3;
 
 export const REPOSITORY = "https://github.com/JacpAbt/migratlas/blob/main/";
 
