@@ -26,6 +26,7 @@ from migratlas.ingest import (
     sabap2,
 )
 from migratlas.lake import check as lake_check
+from migratlas.lake import purge as lake_purge
 from migratlas.reports import (
     counterfactual,
     detectability,
@@ -580,6 +581,45 @@ def lake_check_command() -> None:
         if len(items) > DRIFT_SAMPLE:
             print(f"  ... and {len(items) - DRIFT_SAMPLE} more")
     raise typer.Exit(1)
+
+
+@app.command("lake-floor")
+def lake_floor(
+    # A CLI flag, which is what typer builds from a boolean parameter.
+    apply: Annotated[  # noqa: FBT002
+        bool, typer.Option(help="Actually delete the rows. Reports and exits 1 without it.")
+    ] = False,
+) -> None:
+    """Report, or delete, rows the ingest floor would refuse today.
+
+    Deleting data is not a thing to do by default, so the report is the default and `--apply` is
+    the deliberate act. Exits 1 when rows are found and not removed, so this can gate a build.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    found = lake_purge.floor_rows()
+    if not found:
+        print("no floor taxa in the lake")
+        return
+
+    for item in found:
+        print(
+            f"{item.evidence_type.value}/{item.source_id}: {item.rows:,} rows "
+            f"({', '.join(item.labels)}) across {len(item.partitions)} partitions"
+        )
+    if not apply:
+        print("\nnot removed. Re-run with --apply.")
+        raise typer.Exit(1)
+
+    for purged in lake_purge.purge_floor_taxa():
+        print(
+            f"{purged.evidence_type.value}/{purged.source_id}: "
+            f"{purged.removed:,} removed, {purged.kept:,} kept in the partitions touched"
+        )
+    remaining = lake_purge.floor_rows()
+    if remaining:
+        print(f"\n{sum(item.rows for item in remaining):,} rows still present")
+        raise typer.Exit(1)
+    print("\nnone remain. Rebuild any artifact that was exported before this.")
 
 
 if __name__ == "__main__":  # pragma: no cover

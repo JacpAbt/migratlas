@@ -109,6 +109,10 @@ taxon-names:  ## Resolve display names for published taxa into the cache (slow, 
 lake-check:  ## Report schema drift between the lake and the canonical schemas
 	$(RUN) migratlas lake-check
 
+.PHONY: lake-floor
+lake-floor:  ## Report rows the ingest floor would refuse today (add --apply to delete them)
+	$(RUN) migratlas lake-floor
+
 .PHONY: ingest-darkecology
 ingest-darkecology:  ## Dark Ecology radar profiles -> lake (FLUX, aerial)
 	$(RUN) migratlas ingest darkecology
