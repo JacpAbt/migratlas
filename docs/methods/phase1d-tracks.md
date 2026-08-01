@@ -158,3 +158,93 @@ that the terrestrial realm is no longer entirely birds.
 
 And a track measures where a collared animal went, not where the population went. Collars go on
 animals that can be caught, in places researchers can reach, in years that were funded.
+
+---
+
+## Results, 2026-08-01
+
+6,047,093 locations across seven studies, every study's row count matching its own published
+deployed-location figure exactly. `make report-phase1d` / `migratlas report phase1d-tracks`.
+
+**1,517 eligible individual-years** from 690 individuals, after the ≥30-fix and ≥6-month thresholds.
+
+### The coverage screen — prediction 1 HOLDS
+
+| | |
+| --- | --- |
+| 1° cells touched | **51** |
+| cells with ≥15 distinct years | **2** |
+
+Prediction 1 said fewer than fifteen would clear it. Two did:
+
+| cell | years | individual-years | sensors |
+| --- | --- | --- | --- |
+| 51°N, 116°W — Ya Ha Tinda / Banff | 21 (2002–2024) | 512 | 1 |
+| 72°N, 80°W — Bylot Island | 17 (2007–2025) | 183 | 2 |
+
+Three caribou cells and two Svalbard cells sit at **14 years**, one short. The upper bound from study
+centroids in `tracks-and-sensitivity.md` §7 put 7 of 115 cells over the line; the real answer on real
+fixes is 2 of 51. The bound was generous in the direction it was expected to be generous.
+
+### The metric answered a different question than the note thought
+
+**1,477 of 1,517 individual-years get a crossing date — 97%.** The pre-registration said residents
+would yield none, and pointed at Svalbard's sedentary reindeer as the case. That was wrong: *any*
+animal that moves at all crosses the middle of its own annual range, so the metric times movement
+without detecting whether the movement was a migration. It remains a phenology metric and the direct
+analogue of the radar's `q50_doy`; it is not a migration test, and deciding which animals migrate
+needs net-squared-displacement fitting, which this does not do.
+
+### The unit had to be corrected mid-run, and the reason is in the data
+
+Cell (51, 116°W) holds **elk and wolves**. Fitted per bare cell — as pre-registered — their medians
+pool, merging a predator's calendar with its prey's, and the run returned +2.14 d/decade for a series
+that was two species deep. A radar station measures one aggregate signal; a 1° cell does not.
+
+So the unit is **(cell × taxon)**. The cell still earns its place — Bylot's two fox studies pool into
+one 17-year series where neither reaches 15 alone — so the fix adds the taxon rather than abandoning
+the cell. That lands closer to `phase1b-marine`'s species-region unit than this note anticipated, and
+it is recorded as a correction because the pre-registered choice was tested and found wrong.
+
+### One series fits, and it is not distinguishable from zero
+
+| cell × taxon | years | individual-years | trend |
+| --- | --- | --- | --- |
+| 51°N 116°W, *Cervus elaphus* | 20 | 495 | **+1.21 ± 21.51 d/decade** |
+
+The interval is eighteen times the estimate. Nothing else reaches the floor: Bylot's foxes fall from
+17 coverage years to 13 once a cell-year needs three animals, and every caribou and reindeer cell
+falls with them.
+
+**So there is no terrestrial mammal timing trend to report, and that is the pre-registered outcome
+rather than a disappointment.** The output is a detectability entry — coverage present, change not
+measurable — which is the same shape as the marine null and belongs on the coverage claim.
+
+### Prediction 3 holds emphatically, and it is the more useful result
+
+Where a cell holds two instruments, the instrument moves the date more than any credible trend could:
+
+| cell × taxon | sensors | shift |
+| --- | --- | --- |
+| 54°N 123°W, *Rangifer tarandus* | GPS vs Radio Transmitter | **−46.8 days** |
+| 73°N 80°W, *Vulpes lagopus* | Argos vs GPS | **+9.4 days** |
+
+Forty-seven days against a trend of order one day per decade. The break term was pre-registered as
+mandatory and it turns out to be the whole story: the longest terrestrial series in the lake, 29 years
+of mountain caribou, cannot carry a timing trend because half of it was measured with a different
+instrument. That is worth more to the coverage map than a fitted number would have been.
+
+### Prediction 2 — HOLDS, and prediction 4 — HELD BY CONSTRUCTION
+
+The elk herd produced the only usable series and the wolves did not, as predicted from sample size
+alone. No pooled multi-species trend was computed at any point; the code groups by taxon and the
+report says so.
+
+### Incidental findings
+
+- **The elk study ships 10,438 rows with no taxon name** (1,784,888 of 1,795,326 are labelled). They
+  are dropped from the trend rather than pooled into an unlabelled series, and they would be refused
+  at publication anyway: `taxon_scope` is EXACT and the gate refuses an EXACT claim with no key.
+- **Movebank returns `sensor_type_id` as a bare number.** The caribou's two instruments arrive as 653
+  and 673. Resolved to names at ingest from `entity_type=tag_type`, because "GPS vs Radio Transmitter
+  differ by 46.8 days" is a warning where "653 vs 673" is a puzzle.

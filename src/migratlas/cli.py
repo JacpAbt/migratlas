@@ -37,6 +37,7 @@ from migratlas.reports import (
     phase1_robustness,
     phase1b,
     phase1c,
+    phase1d,
     phase2a_attribution,
     phase2a_attrici,
     phase2a_thermal,
@@ -407,6 +408,17 @@ def build_layers(
     if species.too_small:
         print(f"  {species.too_small} below the {tile_species.MIN_CELLS}-cell floor")
     print(f"search index -> {index} ({size / 1024:.0f} KiB)")
+
+
+@report_app.command("phase1d-tracks")
+def report_phase1d() -> None:
+    """Terrestrial mammal movement timing, and whether the tracks can carry a trend.
+
+    Screens per-cell coverage first and fits nothing if no cell clears fifteen years, which is the
+    stop condition docs/methods/phase1d-tracks.md pre-registered.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    print(phase1d.render())
 
 
 @report_app.command("phase1")

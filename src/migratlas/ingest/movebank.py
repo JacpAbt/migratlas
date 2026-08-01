@@ -65,6 +65,30 @@ Filtering on both reproduces the published count exactly. Without them the first
 607,135 rows, 89% of them positions the data owners had already marked as wrong.
 """
 
+SENSOR_NAMES: Final[dict[str, str]] = {
+    "397": "Bird Ring",
+    "653": "GPS",
+    "673": "Radio Transmitter",
+    "2365682": "Natural Mark",
+    "3886361": "Solar Geolocator",
+    "82798": "Argos Doppler Shift",
+    "1239574236": "Acoustic Telemetry",
+    "2299894820": "Sigfox Geolocation",
+    "3090218812": "Geolocation API",
+    "3090218818": "GNSS",
+    "4342918458": "ATLAS Geolocation",
+}
+"""Movebank's location-sensor ids, from ``entity_type=tag_type``, resolved rather than guessed.
+
+The event API returns ``sensor_type_id`` as a bare number: the caribou study's two instruments come
+back as 653 and 673. Stored as names, because this column exists so a reader can see an instrument
+change -- and "GPS against Radio Transmitter, 46.8 days apart" is a warning where "653 against 673"
+is a puzzle.
+
+Only the location sensors. Accelerometers and barometers appear in these studies too but never carry
+a position, so they cannot reach a row that survived the position filter.
+"""
+
 MIN_STUDY_YEARS: Final = 2
 """A study spanning less than this contributes nothing and is refused.
 
@@ -271,7 +295,12 @@ def to_evidence(study: Study, frame: pl.DataFrame, keys: dict[str, int]) -> pa.T
         latitude=pl.col("location_lat").cast(pl.Float64),
         altitude_m=pl.lit(None, dtype=pl.Float64),
         location_error_m=pl.lit(None, dtype=pl.Float64),
-        sensor_type=pl.col("sensor_type_id"),
+        # Mapped to names, with the raw id kept where it is unknown rather than nulled: an
+        # unrecognised sensor is something to notice, not something to hide.
+        sensor_type=pl.col("sensor_type_id")
+        .cast(pl.String)
+        .replace(SENSOR_NAMES)
+        .alias("sensor_type"),
     )
 
     schema = spec_for(EvidenceType.TRACK).schema
