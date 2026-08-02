@@ -34,14 +34,31 @@ body {
   margin: 0;
   min-height: 100%;
   background-color: var(--paper);
+  /* Only the grain here, and only one blend mode, because the blend list is applied per layer and
+     repeats when it is shorter than the image list. `--stars` is nine gradients, so a three-value
+     list put soft-light on whichever layers happened to land on the third slot. The sky goes on a
+     pseudo-element instead, which also puts it above the grain where it belongs. */
   background-image: var(--grain);
+  background-size: var(--grain-size);
+  background-blend-mode: var(--grain-blend);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: var(--size-body);
+  font-size: calc(var(--size-body) * var(--font-scale-body));
   line-height: var(--leading-body);
-  /* The grain is 1px lines, and unsnapped subpixel text over it shimmers on scroll. */
+  letter-spacing: var(--tracking-body);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+/* The sky: a wash of depth and, at night, a faint scatter of stars. Fixed rather than scrolling,
+   so the page moves under the sky instead of dragging it along. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--stars), var(--sky);
 }
 
 /* The shell is a fixed viewport with a globe in it, while the preview page is a document that

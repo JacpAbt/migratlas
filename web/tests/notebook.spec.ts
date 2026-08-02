@@ -275,21 +275,40 @@ test("no number animates to its value", async ({ page }) => {
   expect(first).toMatch(/\d/);
 });
 
-test("the hand face is never used for a number or a label", async ({ page }) => {
+test("a figure is never set in a face that cannot line one up", async ({ page }) => {
   await ready(page);
-  // The constraint is the decision, not a caveat on it: the hand face has no tabular figures, so a
-  // measurement set in it stops reading as a measurement.
+  /*
+    Retargeted rather than dropped, and the retarget is the point. This used to name Architects
+    Daughter, which pinned the invariant to whichever face the site happened to use -- so the day
+    the type became a setting the test failed for a reason that had nothing to do with what it was
+    protecting.
+
+    What it protects is the reason ADR 0007 gave, and that reason has not moved: no handwriting
+    face has tabular digits. Virgil's widest digit is half again its narrowest. So the measurement
+    stays mono under every preset, and the assertion reads the token rather than a family name.
+  */
   const faceOf = (selector: string) =>
     page
       .locator(selector)
       .first()
       .evaluate((node) => getComputedStyle(node).fontFamily);
 
-  expect(await faceOf(".claim__title")).toContain("Architects Daughter");
-  for (const selector of [".claim__value", ".claim__banner", ".bias__domain", ".specimen p"]) {
-    expect(await faceOf(selector), `${selector} is set in the hand face`).not.toContain(
-      "Architects Daughter",
+  const token = (name: string) =>
+    page.evaluate(
+      (property) => getComputedStyle(document.documentElement).getPropertyValue(property).trim(),
+      name,
     );
+
+  const hand = (await token("--font-hand")).split(",")[0]!.replaceAll('"', "").trim();
+  const mono = (await token("--font-mono")).split(",")[0]!.replaceAll('"', "").trim();
+
+  // The heading is the hand, whichever hand the reader has chosen.
+  expect(await faceOf(".claim__title")).toContain(hand);
+
+  // And every figure is mono, which is the half that is not negotiable.
+  expect(await faceOf(".claim__value")).toContain(mono);
+  for (const selector of [".claim__banner", ".bias__domain", ".specimen p"]) {
+    expect(await faceOf(selector), `${selector} is set in the hand face`).not.toContain(hand);
   }
 });
 

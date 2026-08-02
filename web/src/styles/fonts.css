@@ -5,19 +5,85 @@
  * absolute `/fonts/...` would 404 on the GitHub Pages subpath, where `base` is `/migratlas/` --
  * and a missing font fails quietly into the fallback rather than loudly, so it would have shipped.
  *
- * `font-display: swap` on the body and mono faces so text is readable before they land, and
- * `optional` on the hand face: it is headings only, and a heading that reflows 200 ms after paint
- * is worse than one that arrives in the fallback and stays there.
+ * **Take the latin subset, not the first one.** Google's `css2` endpoint lists `@font-face` blocks
+ * ordered by unicode-range with latin *last*, so taking the first URL returns a Cyrillic subset
+ * with no letters in it -- which then falls back silently and looks like a font that was never
+ * chosen. Seven of these were downloaded wrong that way. The same applies to Excalifont, which
+ * ships seven hashed subsets in its package and only one carries latin.
+ *
+ * `font-display: swap` throughout. `optional` was right when the hand face was headings only; it
+ * is now the body face in one of the presets, and a page of body text that never arrives because
+ * the font was 120 ms late is a worse trade than one line reflowing.
  */
 
+/* --- The hands ----------------------------------------------------------- */
+
+/* Virgil: the original Excalidraw hand. Looser and more written than its successor, which is why
+   it is the heading face of the all-hand preset rather than the legible one. */
 @font-face {
-  font-family: "Architects Daughter";
-  src: url("../assets/fonts/ArchitectsDaughter.woff2") format("woff2");
+  font-family: "Virgil";
+  src: url("../assets/fonts/Virgil.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
-  font-display: optional;
+  font-display: swap;
 }
 
+/* Excalifont: Virgil's successor, drawn to keep the hand and fix the legibility. */
+@font-face {
+  font-family: "Excalifont";
+  src: url("../assets/fonts/Excalifont.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Shantell Sans: a marker face drawn for interfaces, so it survives 13px where a looser hand
+   turns into texture. This is what lets the small parts stop being typed. */
+@font-face {
+  font-family: "Shantell Sans";
+  src: url("../assets/fonts/ShantellSans.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- The ways out, and neither is a preference --------------------------- */
+
+/* Atkinson Hyperlegible: drawn by the Braille Institute, with letterforms separated on the
+   features that blur first at low vision. */
+@font-face {
+  font-family: "Atkinson Hyperlegible";
+  src: url("../assets/fonts/AtkinsonHyperlegible.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* OpenDyslexic: weighted bottoms, wide apertures, and no two letters that are each other
+   mirrored -- b/d and p/q are drawn as different shapes rather than one shape flipped. */
+@font-face {
+  font-family: "OpenDyslexic";
+  src: url("../assets/fonts/OpenDyslexic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- Kept ---------------------------------------------------------------- */
+
+/* Plex Mono stays, and it is the one face no preset may replace: a column of figures has to line
+   up, and no handwriting face has tabular digits. Virgil's widest digit is half again its
+   narrowest, which turns a table of per-survey shifts into a stack of ragged numbers. */
+@font-face {
+  font-family: "Plex Mono";
+  src: url("../assets/fonts/PlexMono-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Source Serif and Architects Daughter are still here because the type setting is a choice and
+   removing the shape the site had would make one of those choices unavailable. */
 @font-face {
   font-family: "Source Serif 4";
   src: url("../assets/fonts/SourceSerif4-400.woff2") format("woff2");
@@ -35,9 +101,9 @@
 }
 
 @font-face {
-  font-family: "Plex Mono";
-  src: url("../assets/fonts/PlexMono-500.woff2") format("woff2");
-  font-weight: 500;
+  font-family: "Architects Daughter";
+  src: url("../assets/fonts/ArchitectsDaughter.woff2") format("woff2");
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }

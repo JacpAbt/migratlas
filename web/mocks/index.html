@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Migratlas — three directions</title>
+    <link rel="stylesheet" href="/src/styles/fonts.css" />
+    <link rel="stylesheet" href="/mocks/mocks.css" />
+  </head>
+  <body>
+    <nav class="picker">
+      <span class="picker__what">Pick one</span>
+      <button type="button" data-go="a">A · Field notebook</button>
+      <button type="button" data-go="b">B · Naturalist's monograph</button>
+      <button type="button" data-go="c">C · The globe is the page</button>
+      <label class="picker__dark"><input type="checkbox" id="dark" /> dark</label>
+    </nav>
+
+    <!-- ============================================================ A -->
+    <section class="mock mock--a" id="a">
+      <header class="mock__tag">
+        <h1>A · Field notebook</h1>
+        <p>
+          A real notebook page: scanned paper, a ruled underlay, everything drawn with rough.js
+          rather than CSS borders. Sage and moss green with rust as the accent. Dark is a black
+          sketchbook page in white and coloured pencil.
+        </p>
+      </header>
+
+      <div class="a-stage">
+        <div class="a-page">
+          <div class="a-page__rule"></div>
+          <div class="a-page__body">
+            <p class="a-kicker"><svg class="a-icon" data-rough="radar"></svg> what the radar saw</p>
+            <h2>
+              Whatever flies over the middle of the United States on autumn nights is passing
+              earlier in the year than it did thirty years ago.
+            </h2>
+            <svg class="a-underline" data-rough="underline"></svg>
+            <p class="a-value">−0.56 ± 0.25 <span>days per decade</span></p>
+            <p class="a-matters">
+              Timing is most of how migration works: animals move when weather, daylight and food
+              line up. When the calendar shifts and the things it is tuned to do not, animals
+              arrive somewhere that has already moved on without them.
+            </p>
+            <div class="a-ways">
+              <button type="button" class="a-btn a-btn--go" data-rough="btn">
+                Show me how you know
+              </button>
+              <button type="button" class="a-btn" data-rough="btn">Just let me explore</button>
+            </div>
+            <p class="a-caveat">
+              <svg class="a-aster" data-rough="aster"></svg> Weather radar sees a mass of animals in
+              the air, not species. Some of it is bats, and some is insects.
+            </p>
+          </div>
+          <aside class="a-margin">
+            <svg class="a-bracket" data-rough="bracket"></svg>
+            <p class="a-margin__h">risk of bias</p>
+            <dl>
+              <dt>geographic</dt><dd class="ok">bounded</dd>
+              <dt>temporal</dt><dd class="open">open</dd>
+              <dt>taxonomic</dt><dd class="ok">bounded</dd>
+              <dt>detectability</dt><dd class="done">addressed</dd>
+            </dl>
+            <p class="a-margin__h">survived</p>
+            <ul class="a-survived">
+              <li><svg data-rough="tick"></svg>Reproduces a published result first</li>
+              <li><svg data-rough="tick"></svg>Four break specifications</li>
+              <li><svg data-rough="tick"></svg>A permutation null</li>
+            </ul>
+            <div class="a-taped">
+              <svg class="a-tape" data-rough="tape"></svg>
+              <p>specimen · aerial · unattributed</p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ B -->
+    <section class="mock mock--b" id="b">
+      <header class="mock__tag">
+        <h1>B · Naturalist's monograph</h1>
+        <p>
+          A printed plate from a natural-history volume. Letterpress serif, an engraved rule, wide
+          margins, the number set as a caption. Quiet, authoritative, and the least like a website.
+          Dark is a photographic negative of a plate.
+        </p>
+      </header>
+
+      <div class="b-stage">
+        <article class="b-plate">
+          <p class="b-plate__no">Plate I · Aerial passage</p>
+          <div class="b-rule"></div>
+          <h2>
+            Whatever flies over the middle of the United States on autumn nights is passing earlier
+            in the year than it did thirty years ago.
+          </h2>
+          <p class="b-caption">
+            Timing is most of how migration works: animals move when weather, daylight and food
+            line up. When the calendar shifts and the things it is tuned to do not, animals arrive
+            somewhere that has already moved on without them.
+          </p>
+          <div class="b-figure">
+            <svg class="b-chart" data-rough="chart"></svg>
+            <p class="b-figure__cap">
+              Fig. 1 — median passage date, 78 stations, 37–50°N, 1995–2025.
+            </p>
+          </div>
+          <p class="b-value">−0.56 ± 0.25 days per decade</p>
+          <div class="b-rule b-rule--thin"></div>
+          <p class="b-note">
+            <em>Caveat.</em> Weather radar sees a mass of animals in the air, not species. Some of
+            it is bats, and some is insects.
+          </p>
+          <div class="b-ways">
+            <button type="button" class="b-btn">Show me how you know</button>
+            <button type="button" class="b-btn b-btn--quiet">Just let me explore</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ C -->
+    <section class="mock mock--c" id="c">
+      <header class="mock__tag">
+        <h1>C · The globe is the page</h1>
+        <p>
+          The map is the whole screen and the birds are moving on it. Text lives on a slip of paper
+          clipped to one edge, and gets out of the way. The globe earns being visible because
+          something is happening on it.
+        </p>
+      </header>
+
+      <div class="c-stage">
+        <canvas class="c-globe" id="c-globe"></canvas>
+        <div class="c-slip">
+          <p class="c-kicker">what the radar saw</p>
+          <h2>Whatever flies over the middle of the United States is passing earlier.</h2>
+          <p class="c-value">−0.56 ± 0.25 <span>days / decade</span></p>
+          <p class="c-matters">
+            When the calendar shifts and the things it is tuned to do not, animals arrive somewhere
+            that has already moved on without them.
+          </p>
+          <button type="button" class="c-btn" data-rough="btn">Show me how you know</button>
+          <p class="c-caveat">Aerial biomass, not birds. Some of it is bats.</p>
+        </div>
+        <p class="c-legend">
+          <span class="c-dot"></span> live: 4,000 tracks, autumn 2025 · <em>illustrative motion</em>
+        </p>
+      </div>
+    </section>
+
+    <script type="module" src="/mocks/mocks.ts"></script>
+  </body>
+</html>

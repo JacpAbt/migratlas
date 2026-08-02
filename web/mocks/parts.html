@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A · the parts</title>
+    <link rel="stylesheet" href="/src/styles/fonts.css" />
+    <link rel="stylesheet" href="/mocks/parts.css" />
+  </head>
+  <body>
+    <nav class="bar">
+      <span>A · the parts</span>
+      <label><input type="checkbox" id="dark" /> night</label>
+      <label>sky
+        <select id="sky">
+          <option value="">ink wash</option>
+          <option value="sky-indigo">indigo</option>
+          <option value="sky-stars">starfield</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="pale" /> paler paper</label>
+      <a href="/mocks/">← the three directions</a>
+    </nav>
+
+    <div class="sheetwrap">
+      <div class="sheet">
+        <div class="sheet__rule"></div>
+        <div class="sheet__in">
+          <!-- ============================================ green -->
+          <h3 class="h">1 · how green can the green be</h3>
+          <p class="say">
+            Text has to clear 4.5:1 on the paper and a drawn mark only 3:1, so they are two greens,
+            the same split the rust already has. Everything below is measured against the paper
+            actually behind it, not judged. Pick a row.
+          </p>
+          <div class="swatches" id="swatches"></div>
+
+          <!-- ============================================ sliders -->
+          <h3 class="h">2 · the sliders</h3>
+          <p class="say">
+            A ruled scale, drawn. The twelve graduations on the first one are months, so the marks
+            carry information; the thumb is a pencil stub, drawn with the pen the rest of the page
+            uses rather than a CSS rounded rectangle.
+          </p>
+          <div class="ctl">
+            <p class="ctl__lab">Time of year <em>18 September · week 38</em></p>
+            <div class="slider" data-slider="year">
+              <svg data-rough="track"></svg>
+              <input type="range" min="0" max="365" value="261" aria-label="Day of year" />
+              <svg class="slider__thumb" data-rough="pencil"></svg>
+            </div>
+            <div class="ctl__row">
+              <button type="button" class="btn btn--sm" data-rough="btn">▶ play the year</button>
+              <span class="ctl__hint">watch the passage move down the continent</span>
+            </div>
+          </div>
+          <div class="ctl">
+            <p class="ctl__lab">Time of day, UTC <em>21:40</em></p>
+            <div class="slider" data-slider="day">
+              <svg data-rough="track"></svg>
+              <input type="range" min="0" max="1439" value="1300" aria-label="Minute of day" />
+              <svg class="slider__thumb" data-rough="pencil"></svg>
+            </div>
+          </div>
+
+          <!-- ============================================ layers -->
+          <h3 class="h">3 · what is drawn</h3>
+          <ul class="layers">
+            <li>
+              <label>
+                <input type="checkbox" checked />
+                <svg data-rough="tickbox"></svg>
+                <span>Nightly aerial passage <em>reflectivity traffic</em></span>
+              </label>
+            </li>
+            <li>
+              <label>
+                <input type="checkbox" checked />
+                <svg data-rough="tickbox"></svg>
+                <span>Marine space use <em>residency proportion</em></span>
+              </label>
+            </li>
+            <li>
+              <label>
+                <input type="checkbox" />
+                <svg data-rough="tickbox"></svg>
+                <span>Could change be measured here? <em>assessment</em></span>
+              </label>
+            </li>
+          </ul>
+
+          <!-- ============================================ knob -->
+          <h3 class="h">4 · switch the safeguards off</h3>
+          <p class="say">What if the metric were not weighted by flight speed?</p>
+          <div class="knob">
+            <label class="opt opt--on"><input type="radio" name="k" checked /><svg data-rough="lasso"></svg><span>reflectivity traffic</span><em>published</em></label>
+            <label class="opt"><input type="radio" name="k" /><svg data-rough="lasso"></svg><span>reflectivity hours</span></label>
+          </div>
+          <p class="knob__out">−0.56 <span>days per decade</span></p>
+
+          <!-- ============================================ search -->
+          <h3 class="h">5 · find an animal</h3>
+          <div class="find">
+            <div class="find__box">
+              <svg data-rough="box"></svg>
+              <input type="search" value="Scomber" aria-label="Search for an animal" />
+            </div>
+            <ul class="hits">
+              <li><b>Scomber scombrus</b><i>Atlantic Mackerel</i><em>study</em></li>
+              <li><b>Scomber japonicus</b><i>Chub Mackerel</i><em>study</em></li>
+              <li><b>Scomberesox saurus</b><i>Atlantic Saury</i><em>412 cells</em></li>
+            </ul>
+          </div>
+
+          <!-- ============================================ species -->
+          <h3 class="h">6 · one animal's page</h3>
+          <div class="spec">
+            <div class="spec__head">
+              <svg class="spec__sil" data-rough="fish"></svg>
+              <div>
+                <h4>Scomber scombrus</h4>
+                <p>Atlantic Mackerel</p>
+              </div>
+            </div>
+            <svg class="ul" data-rough="ul"></svg>
+            <p class="spec__line">Moved north in 9 surveys and south in 2.</p>
+            <p class="spec__val">+0.109 <span>°latitude per decade</span></p>
+            <dl class="spec__rows">
+              <div><dt>NS-IBTS-1</dt><dd><b>+0.723</b> 52 yr, north</dd></div>
+              <div><dt>NEUS-Spring</dt><dd><b>+0.396</b> 53 yr, north</dd></div>
+              <div><dt>GSL-N</dt><dd><b>−0.061</b> 21 yr, south</dd></div>
+              <div><dt>SCS-SUMMER</dt><dd><b>−0.016</b> 51 yr, flat</dd></div>
+            </dl>
+          </div>
+
+          <!-- ============================================ scrollbar -->
+          <h3 class="h">9 · the scrollbar</h3>
+          <p class="say">
+            The browser's own, and the last borrowed thing on the page. The track is a ruled line
+            generated with the same pen as everything else and handed to CSS as a data URI; the
+            thumb is a pencil stub seen end-on, graphite with a rust cap. Scroll the box, and the
+            page's own bar on the right is the same.
+          </p>
+          <div class="scrolldemo">
+            <p>
+              A collar goes on an animal someone could catch, in a place they could reach, in a
+              year that was funded. That is why no track source in this project can carry a trend:
+              effort is not a measured denominator, and the places a collar reaches are not a
+              sample of anywhere.
+            </p>
+            <p>
+              The radar is different. A weather radar is fixed infrastructure running one protocol
+              every night whether or not anybody is watching, which is the only reason thirty-one
+              years of it can be compared with itself.
+            </p>
+            <p>
+              And a trawl survey is different again: the effort is the design. The same gear, the
+              same stations, the same season, for sixty years — which is what made the marine null
+              worth trusting when it came back saying nothing had happened.
+            </p>
+          </div>
+
+          <!-- ============================================ type -->
+          <h3 class="h">10 · the type</h3>
+          <p class="say">
+            Seven pairings, all self-hosted and all OFL, at the same generous spacing so what is
+            being compared is the letterforms rather than one having been given more room. The
+            heading face is the hand; the body face is chosen for reading, not for character —
+            handwriting at 15px stops being legible and starts being a texture.
+          </p>
+          <div class="type">
+          <div class="spec-card p-excali">
+            <p class="spec-card__id"><b>Excalifont + Atkinson Hyperlegible</b><span>Excalidraw's own, built to keep Virgil's hand and fix its legibility. Pairs rough.js by design.</span></p>
+            <h4>Whatever flies over the middle of the United States on autumn nights is passing earlier in the year than it did thirty years ago.</h4>
+            <p>Timing is most of how migration works: animals move when weather, daylight and food line up. When the calendar shifts and the things it is tuned to do not, animals arrive somewhere that has already moved on without them.</p>
+            <p class="num">−0.56 ± 0.25 days per decade</p>
+          </div>
+          <div class="spec-card p-patrick">
+            <p class="spec-card__id"><b>Patrick Hand + Atkinson Hyperlegible</b><span>The most legible handwriting on Google Fonts: generous spacing, even letterforms.</span></p>
+            <h4>Whatever flies over the middle of the United States on autumn nights is passing earlier in the year than it did thirty years ago.</h4>
+            <p>Timing is most of how migration works: animals move when weather, daylight and food line up. When the calendar shifts and the things it is tuned to do not, animals arrive somewhere that has already moved on without them.</p>
+            <p class="num">−0.56 ± 0.25 days per decade</p>
+          </div>
+          <div class="spec-card p-kalam">
+            <p class="spec-card__id"><b>Kalam + Source Serif</b><span>Warmer and more written; keeps the serif body you already have.</span></p>
+            <h4>Whatever flies over the middle of the United States on autumn nights is passing earlier in the year than it did thirty years ago.</h4>
+            <p>Timing is most of how migration works: animals move when weather, daylight and food line up. When the calendar shifts and the things it is tuned to do not, animals arrive somewhere that has already moved on without them.</p>
+            <p class="num">−0.56 ± 0.25 days per decade</p>
+          </div>
+          <div class="spec-card p-caveat">
+            <p class="spec-card__id"><b>Caveat + Atkinson Hyperlegible</b><span>Looser and faster. Real contextual alternates, so a double letter is not two of the same shape.</span></p>
+            <h4>Whatever flies over the middle of the United States on autumn nights is passing earlier in the year than it did thirty years ago.</h4>
+            <p>Timing is most of how migration works: animals move when weather, daylight and food line up. When the calendar shifts and the things it is tuned to do not, animals arrive somewhere that has already moved on without them.</p>
+            <p class="num">−0.56 ± 0.25 days per decade</p>
+          </div>
+          <div class="spec-card p-gaegu">
+            <p class="spec-card__id"><b>Gaegu + Atkinson Hyperlegible</b><span>Rounder, softer, closest to a pencil rather than a pen.</span></p>
+            <h4>Whatever flies over the middle of the United States on autumn nights is passing earlier in the year than it did thirty years ago.</h4>
+            <p>Timing is most of how migration works: animals move when weather, daylight and food line up. When the calendar shifts and the things it is tuned to do not, animals arrive somewhere that has already moved on without them.</p>
+            <p class="num">−0.56 ± 0.25 days per decade</p>
+          </div>
+          <div class="spec-card p-virgil">
+            <p class="spec-card__id"><b>Virgil + Source Serif</b><span>The old Excalidraw font. More character than Excalifont, less legible.</span></p>
+            <h4>Whatever flies over the middle of the United States on autumn nights is passing earlier in the year than it did thirty years ago.</h4>
+            <p>Timing is most of how migration works: animals move when weather, daylight and food line up. When the calendar shifts and the things it is tuned to do not, animals arrive somewhere that has already moved on without them.</p>
+            <p class="num">−0.56 ± 0.25 days per decade</p>
+          </div>
+          <div class="spec-card p-current">
+            <p class="spec-card__id"><b>Architects Daughter + Source Serif</b><span>What the site has now, at its current spacing, for comparison.</span></p>
+            <h4>Whatever flies over the middle of the United States on autumn nights is passing earlier in the year than it did thirty years ago.</h4>
+            <p>Timing is most of how migration works: animals move when weather, daylight and food line up. When the calendar shifts and the things it is tuned to do not, animals arrive somewhere that has already moved on without them.</p>
+            <p class="num">−0.56 ± 0.25 days per decade</p>
+          </div>
+          </div>
+
+          <!-- ============================================ font setting -->
+          <h3 class="h">11 · type as a setting</h3>
+          <p class="say">
+            The default is hand-drawn everywhere, small parts included. The other two are not
+            preferences: someone with dyslexia or low vision needs a way out that is one click,
+            not a browser extension. Each face carries its own scale and leading, because they do
+            not share an x-height — so switching changes the letterforms and nothing else.
+          </p>
+          <div class="fontpick" id="fontpick"></div>
+
+          <!-- ============================================ colour vision -->
+          <h3 class="h">12 - colour vision</h3>
+          <p class="say">
+            Green and orange is the one pairing red-green dichromats cannot separate, and that is
+            around eight per cent of men, so this palette is the case worth checking rather than
+            assuming. Simulated below; the figure on each row is the perceptual distance between
+            the green and the rust.
+          </p>
+          <div class="cv" id="cvd"></div>
+
+          <!-- ============================================ tabs -->
+          <h3 class="h">7 · the index</h3>
+          <div class="tabs">
+            <button class="tab tab--on"><svg data-rough="dogear"></svg><i>change detected</i><b>Whatever flies over the middle…</b></button>
+            <button class="tab"><i>no change detected</i><b>Fish are not all moving…</b></button>
+            <button class="tab"><i>limit of this work</i><b>Everything here was measured…</b></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================ map furniture -->
+      <div class="mapdemo">
+        <p class="mapdemo__say">
+          8 · the map furniture. These are MapLibre's own nodes — the attribution is a licence
+          notice and has to stay legible and present, but nothing says it has to look borrowed.
+          Left is stock, right is the same markup with the notebook's CSS on it.
+        </p>
+        <div class="mapdemo__pair">
+          <div class="mapdemo__one">
+            <span class="mapdemo__tag">stock</span>
+            <div class="fake-map" data-skin="stock">
+              <div class="maplibregl-ctrl-bottom-right">
+                <div class="maplibregl-ctrl maplibregl-ctrl-group">
+                  <button class="maplibregl-ctrl-zoom-in" type="button" aria-label="Zoom in"><span>+</span></button>
+                  <button class="maplibregl-ctrl-zoom-out" type="button" aria-label="Zoom out"><span>−</span></button>
+                  <button class="maplibregl-ctrl-compass" type="button" aria-label="Reset north"><span>◈</span></button>
+                </div>
+                <div class="maplibregl-ctrl maplibregl-ctrl-attrib">
+                  <div class="maplibregl-ctrl-attrib-inner">
+                    <a href="#">Natural Earth</a> | Nightly aerial passage (CC BY 4.0) — Published at source resolution
+                  </div>
+                </div>
+              </div>
+              <div class="maplibregl-ctrl-bottom-left">
+                <div class="maplibregl-ctrl maplibregl-ctrl-scale">1000 km</div>
+              </div>
+            </div>
+          </div>
+          <div class="mapdemo__one">
+            <span class="mapdemo__tag">in the same hand</span>
+            <div class="fake-map" data-skin="ink">
+              <div class="maplibregl-ctrl-bottom-right">
+                <div class="maplibregl-ctrl maplibregl-ctrl-group">
+                  <button class="maplibregl-ctrl-zoom-in" type="button" aria-label="Zoom in"><span>+</span></button>
+                  <button class="maplibregl-ctrl-zoom-out" type="button" aria-label="Zoom out"><span>−</span></button>
+                  <button class="maplibregl-ctrl-compass" type="button" aria-label="Reset north"><span>◈</span></button>
+                </div>
+                <div class="maplibregl-ctrl maplibregl-ctrl-attrib">
+                  <div class="maplibregl-ctrl-attrib-inner">
+                    <a href="#">Natural Earth</a> | Nightly aerial passage (CC BY 4.0) — Published at source resolution
+                  </div>
+                </div>
+              </div>
+              <div class="maplibregl-ctrl-bottom-left">
+                <div class="maplibregl-ctrl maplibregl-ctrl-scale"><svg data-rough="scale"></svg><span>1000 km</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/mocks/parts.ts"></script>
+  </body>
+</html>
