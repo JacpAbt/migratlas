@@ -16,17 +16,38 @@
     active?: boolean;
   } = $props();
 
+  let host = $state<SVGSVGElement | null>(null);
   let width = $state(0);
   let height = $state(0);
 
-  const drawn = $derived(
-    shape === "lasso" ? lasso(seed, width, height) : boxDrawn(seed, width, height, 2),
+  const stroke = $derived(
+    tone === "rust" ? "var(--rust-ink)" : active ? "var(--pencil)" : "var(--rule)",
   );
-  // A second pass from a different seed, so the two strokes do not sit exactly on each other --
-  // which is what going over a line actually looks like.
-  const again = $derived(
-    shape === "lasso" ? lasso(`${seed}:again`, width, height) : boxDrawn(`${seed}:again`, width, height, 3),
-  );
+
+  $effect(() => {
+    if (!host || width <= 0 || height <= 0) return;
+    host.replaceChildren();
+
+    // A box is always drawn: it is the control's shape, and a button with no edge is a word.
+    // A lasso is only drawn round the one in force -- looping every option would say nothing,
+    // and the unchosen ones are meant to be just words.
+    if (shape === "box") {
+      boxDrawn(host, seed, width, height, stroke, tone === "rust" ? 1.7 : 1.4);
+    } else if (active) {
+      lasso(host, seed, width, height, "var(--rust-ink)");
+    }
+
+    if (active && shape === "box") {
+      // A second pass from a different seed, so the two strokes do not sit exactly on each other,
+      // which is what going over a line actually looks like. Lighter, because going over a line
+      // thickens it unevenly rather than doubling the ink.
+      const before = host.childElementCount;
+      boxDrawn(host, `${seed}:again`, width, height, stroke, 1.2);
+      for (const node of [...host.children].slice(before)) {
+        (node as SVGElement).style.opacity = "0.55";
+      }
+    }
+  });
 </script>
 
 <!--
@@ -40,23 +61,12 @@
   twice" -- so pressed and selected are the second pass rather than a fill.
 -->
 <span
-  class="boxed boxed--{tone}"
-  class:boxed--active={active}
+  class="boxed"
   bind:clientWidth={width}
   bind:clientHeight={height}
   aria-hidden="true"
 >
-  <svg viewBox="0 0 {Math.max(width, 1)} {Math.max(height, 1)}">
-    <!-- A box is always drawn: it is the control's shape, and a button with no edge is a word.
-         A lasso is only drawn when it is the one in force -- looping every option would say
-         nothing, and the unchosen ones are meant to be just words. -->
-    {#if shape === "box" || active}
-      <path class="boxed__stroke" d={drawn} />
-    {/if}
-    {#if active}
-      <path class="boxed__stroke boxed__stroke--again" d={again} />
-    {/if}
-  </svg>
+  <svg bind:this={host} viewBox="0 0 {Math.max(width, 1)} {Math.max(height, 1)}"></svg>
 </span>
 
 <style>
@@ -72,31 +82,10 @@
     overflow: visible;
   }
 
-  .boxed__stroke {
+  .boxed :global(path) {
     fill: none;
-    stroke: var(--rule);
-    stroke-width: 1.3;
     stroke-linecap: round;
     stroke-linejoin: round;
     transition: stroke var(--fade);
-  }
-
-  .boxed--rust .boxed__stroke {
-    stroke: var(--rust-ink);
-    stroke-width: 1.6;
-  }
-
-  .boxed--active .boxed__stroke {
-    stroke: var(--pencil);
-  }
-
-  .boxed--rust.boxed--active .boxed__stroke {
-    stroke: var(--rust-ink);
-  }
-
-  /* Lighter than the first pass. Going over a line does not double the ink, it thickens it
-     unevenly, and two strokes at full weight read as a rendering error. */
-  .boxed__stroke--again {
-    opacity: 0.55;
   }
 </style>

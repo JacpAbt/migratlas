@@ -443,7 +443,7 @@ test("a control is drawn, not bordered", async ({ page }) => {
       `${selector} still has a border`,
     ).toBe("0px");
     const length = await button
-      .locator(".boxed__stroke")
+      .locator(".ink-box path")
       .first()
       .evaluate((node) => (node as unknown as SVGPathElement).getTotalLength());
     // Longer than the perimeter would be if it were a rectangle drawn exactly: the corners
@@ -453,8 +453,8 @@ test("a control is drawn, not bordered", async ({ page }) => {
 
   // Pressed and chosen are a second pass of the pen, not a fill. A hand has "drawn" and "gone over
   // twice"; it does not have a hover colour.
-  await expect(page.locator(".way--primary .boxed__stroke")).toHaveCount(2);
-  await expect(page.locator(".way:not(.way--primary) .boxed__stroke")).toHaveCount(1);
+  await expect(page.locator(".way--primary .ink-box")).toHaveCount(2);
+  await expect(page.locator(".way:not(.way--primary) .ink-box")).toHaveCount(1);
 });
 
 test("only the chosen option is circled", async ({ page }) => {
@@ -463,8 +463,8 @@ test("only the chosen option is circled", async ({ page }) => {
   // also why they carry no fill and no border to distinguish them.
   const options = page.locator(".surface__option");
   await expect(options).toHaveCount(3);
-  await expect(page.locator(".surface .boxed__stroke")).toHaveCount(2);
-  await expect(page.locator(".surface__option--on .boxed__stroke")).toHaveCount(2);
+  await expect(page.locator(".surface .ink-lasso")).toHaveCount(1);
+  await expect(page.locator(".surface__option--on .ink-lasso")).toHaveCount(1);
 });
 
 test("nothing on the page is still a bordered control", async ({ page }) => {
@@ -495,7 +495,7 @@ test("switching a layer on draws a tick rather than filling a box", async ({ pag
   // that the tick animates in from nothing instead of appearing -- and that reduced motion, which
   // zeroes `--draw-quick`, still lands it in the final state.
   const offset = () =>
-    row.locator(".ticked__tick").evaluate((node) => getComputedStyle(node).strokeDashoffset);
+    row.locator(".ticked .ink-tick path").first().evaluate((node) => getComputedStyle(node).strokeDashoffset);
 
   const before = await offset();
   await row.locator("input").click();
@@ -598,7 +598,7 @@ test("nothing on the page is still set in a type face that came with a glyph", a
 
   // Bare in a list, boxed in a control: a list of things a claim survived is not a set of
   // checkboxes, and drawing boxes round them would invite a reader to untick one.
-  await expect(survived.locator(".ticked__box")).toHaveCount(0);
+  await expect(survived.locator(".ticked .ink-box")).toHaveCount(0);
 });
 
 test("the tools are on the same paper as the claims", async ({ page }) => {
@@ -608,7 +608,7 @@ test("the tools are on the same paper as the claims", async ({ page }) => {
 
   // The panel was the last thing left with a plain background and no edge, which read as a
   // different material sitting next to the cards.
-  await expect(page.locator(".explore .sheet__edge")).toHaveCount(1);
+  await expect(page.locator(".explore .sheet__ink .ink-box")).toHaveCount(1);
   const clip = await page
     .locator(".explore .sheet__ground")
     .evaluate((node) => getComputedStyle(node).clipPath);

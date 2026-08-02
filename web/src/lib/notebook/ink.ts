@@ -1,21 +1,30 @@
 /**
- * Hand-drawn geometry: the paths that make a rule read as drawn and an instrument as sketched.
+ * Hand-drawn geometry, on top of rough.js.
  *
- * All of it is deterministic. A wobble seeded from `Math.random()` would redraw differently on every
- * render, which turns a quiet line into a flicker, and would make a screenshot test meaningless. The
- * seed comes from the claim's own key instead, so each claim has its own consistent hand and the
- * same claim looks the same forever.
+ * This file used to roll its own wobble: an FNV-1a hash, a linear congruential jitter, and a
+ * control point every 55px. It worked and it was a much worse version of a library that already
+ * exists. rough.js is 9 KB gzipped, is what Excalidraw draws with, and does the thing properly --
+ * every stroke is drawn twice with controlled divergence, which is what a pen actually does and
+ * what a single wobbled path never quite looks like.
  *
- * **Paths are generated at the real pixel size, never stretched.** The first version drew a rule in
- * a 100-unit box and stretched it with `preserveAspectRatio="none"` plus `vector-effect:
- * non-scaling-stroke`. Those two do not compose: the path stays in user units while the dash pattern
- * is applied in screen units, so a `stroke-dasharray: 110` meant to cover the whole line became four
- * dashes and a gap. Generating at the measured width costs a `clientWidth` read and removes the
- * whole class of problem -- the stroke is uniform because nothing is scaled.
+ * Two properties carried over from the hand-rolled version, because both are load-bearing:
+ *
+ * **Deterministic.** Every call takes a seed derived from a stable string -- usually the claim's
+ * own key -- so a claim's hand never changes between renders. rough.js redraws differently on
+ * every call without one, which turns a quiet line into a flicker and makes a screenshot test
+ * meaningless.
+ *
+ * **Generated at the real pixel size, never stretched.** A path drawn in a 100-unit box and
+ * stretched with `preserveAspectRatio="none"` keeps its geometry in user units while the stroke
+ * and any dash pattern are applied in screen units: a 2px pen becomes 2px by 9px, and a dasharray
+ * meant to cover a line becomes four dashes and a gap. Every helper here takes the measured size.
  */
 
-/** FNV-1a, 32-bit. Any small stable string hash would do; this one is four lines and has no bias. */
-function hash(text: string): number {
+import rough from "roughjs";
+import type { Options } from "roughjs/bin/core";
+
+/** FNV-1a, 32-bit. rough.js wants a numeric seed and the callers all have a string. */
+export function seedOf(text: string): number {
   let value = 0x811c9dc5;
   for (let index = 0; index < text.length; index += 1) {
     value ^= text.charCodeAt(index);
@@ -24,107 +33,180 @@ function hash(text: string): number {
   return value >>> 0;
 }
 
-/** A deterministic sequence in [-1, 1] from a seed. Not good randomness; good enough for a pen. */
-function jitter(seed: number): () => number {
-  let state = seed || 1;
-  return () => {
-    state = (Math.imul(state, 1103515245) + 12345) >>> 0;
-    return (state / 0xffffffff) * 2 - 1;
-  };
+/** A generator bound to one `<svg>`, so a component can draw into itself in one line. */
+export function pen(host: SVGSVGElement) {
+  return rough.svg(host);
 }
+
+/**
+ * Append a drawing and name what it is.
+ *
+ * rough.js hands back an anonymous `<g>` of `<path>`s, which is fine to look at and useless to
+ * select: the browser suite reaches for these by name, and "the second path inside the third svg"
+ * is not a contract anybody can keep. Every mark this file makes carries an `ink-*` class saying
+ * which mark it is.
+ */
+function mark(host: SVGSVGElement, name: string, node: SVGGElement): void {
+  node.classList.add(`ink-${name}`);
+  host.append(node);
+}
+
+/**
+ * House defaults.
+ *
+ * `roughness` around 1.5 is a pen held normally; above 2.5 it reads as a shake rather than a
+ * hand. `bowing` is how much a straight line drifts off true over its length, and a little of it
+ * is what stops a long rule looking like a ruler.
+ */
+export const HAND: Options = { roughness: 1.6, bowing: 1.3, strokeWidth: 1.5 };
 
 /** Height of the box a rule is drawn in, so the component and the generator agree on one number. */
-export const RULE_HEIGHT = 8;
+export const RULE_HEIGHT = 10;
 
-/**
- * An underline that does not sit flat, generated across `width` pixels.
- *
- * One control point about every 55px: closer and the wobble reads as noise, further and the line
- * looks like a deliberate curve. A drawn line drifts across its length *and* wobbles locally, so
- * there is a low-frequency arc plus per-point jitter, both kept under about 1.5px — more than that
- * stops reading as a line and starts reading as a squiggle.
- */
-export function underline(key: string, width: number): string {
-  if (width <= 0) return "";
-  const next = jitter(hash(key));
-  const steps = Math.max(4, Math.round(width / 55));
-  const points: string[] = [];
-  for (let step = 0; step <= steps; step += 1) {
-    const x = (step / steps) * width;
-    const drift = Math.sin((step / steps) * Math.PI) * 0.8;
-    const y = RULE_HEIGHT / 2 + drift + next() * 0.7;
-    points.push(`${x.toFixed(1)} ${y.toFixed(2)}`);
-  }
-  return `M ${points.join(" L ")}`;
+/** Width of the box a margin bracket is drawn in. */
+export const BRACKET_WIDTH = 9;
+
+/** An underline that does not sit flat, drawn across `width` pixels. */
+export function underline(host: SVGSVGElement, key: string, width: number, stroke: string): void {
+  if (width <= 0) return;
+  mark(
+    host,
+    "rule",
+    pen(host).line(2, RULE_HEIGHT / 2 + 1, width - 4, RULE_HEIGHT / 2 - 1, {
+      ...HAND,
+      stroke,
+      strokeWidth: 2.2,
+      bowing: 2.1,
+      seed: seedOf(key),
+    }),
+  );
+}
+
+/** A bracket for the margin: a vertical stroke with hooked ends, as drawn beside a paragraph. */
+export function bracket(host: SVGSVGElement, key: string, height: number, stroke: string): void {
+  if (height <= 0) return;
+  mark(
+    host,
+    "bracket",
+    pen(host).linearPath(
+      [
+        [BRACKET_WIDTH - 2, 1],
+        [2, 7],
+        [2, height - 7],
+        [BRACKET_WIDTH - 2, height - 1],
+      ],
+      { ...HAND, stroke, strokeWidth: 1.3, roughness: 2.1, seed: seedOf(key) },
+    ),
+  );
 }
 
 /**
- * A rectangle drawn by hand: four wobbled sides, and the corners overshoot.
+ * A rectangle drawn by hand, for a control you press.
  *
- * The overshoot is the whole thing. A wobbled rectangle whose corners meet exactly reads as a
- * border with a rendering fault; one where the pen carries a couple of pixels past the turn reads
- * as drawn. Real hand-drawn boxes overshoot because stopping a pen exactly on a corner is harder
- * than not.
- *
- * One continuous path rather than four, so it can stroke on in a single dash animation and so a
- * reader watches it being drawn in the order a hand would draw it.
+ * rough.js overshoots its corners on its own, which is the thing that separates a drawn box from
+ * a border: a hand does not stop a pen exactly on a corner.
  */
-export function boxDrawn(key: string, width: number, height: number, overshoot = 3): string {
-  if (width <= 0 || height <= 0) return "";
-  const next = jitter(hash(key) ^ 0x2f6a88c1);
-  const wobble = () => next() * 0.8;
+export function boxDrawn(
+  host: SVGSVGElement,
+  key: string,
+  width: number,
+  height: number,
+  stroke: string,
+  strokeWidth = 1.5,
+): void {
+  if (width <= 0 || height <= 0) return;
+  mark(
+    host,
+    "box",
+    pen(host).rectangle(3, 3, width - 6, height - 6, {
+      ...HAND,
+      stroke,
+      strokeWidth,
+      roughness: 2.1,
+      bowing: 1.5,
+      seed: seedOf(key),
+    }),
+  );
+}
 
-  // Along each side, a control point roughly every 60px, same cadence as `underline`. Fewer and
-  // the side is a straight line with a kink; more and it reads as a squiggle.
-  const along = (
-    from: [number, number],
-    to: [number, number],
-    perpendicular: [number, number],
-  ): string[] => {
-    const span = Math.hypot(to[0] - from[0], to[1] - from[1]);
-    const steps = Math.max(2, Math.round(span / 60));
-    const points: string[] = [];
-    for (let step = 1; step <= steps; step += 1) {
-      const t = step / steps;
-      const drift = Math.sin(t * Math.PI) * 0.6 + wobble();
-      points.push(
-        `${(from[0] + (to[0] - from[0]) * t + perpendicular[0] * drift).toFixed(1)} ` +
-          `${(from[1] + (to[1] - from[1]) * t + perpendicular[1] * drift).toFixed(1)}`,
-      );
-    }
-    return points;
-  };
+/**
+ * The mark round a chosen thing, and the shape follows the thing.
+ *
+ * An ellipse inscribed in a box touches it at four points, so the corners of the text poke out --
+ * which is exactly what a wide row looks like when it is circled. Circumscribing properly needs
+ * semi-axes of 1.41x, and a loop that tall reads as an accident. So: a loop for a short pill, a
+ * drawn box for anything wide. Both mean "this one", and neither leaves a word outside the mark.
+ */
+export const LASSO_MAX_WIDTH = 190;
 
-  const [w, h, o] = [width, height, overshoot];
-  return [
-    `M ${o.toFixed(1)} ${(1 + wobble()).toFixed(1)}`,
-    `L ${along([o, 1], [w - 1, 1], [0, -1]).join(" L ")}`,
-    `L ${along([w - 1, 1], [w - 1, h - 1], [1, 0]).join(" L ")}`,
-    `L ${along([w - 1, h - 1], [1, h - 1], [0, 1]).join(" L ")}`,
-    `L ${along([1, h - 1], [1, 1], [-1, 0]).join(" L ")}`,
-    // Past the start, which is what makes it a drawn box rather than a closed shape.
-    `L ${(1 + o).toFixed(1)} ${(1 - wobble()).toFixed(1)}`,
-  ].join(" ");
+export function lasso(
+  host: SVGSVGElement,
+  key: string,
+  width: number,
+  height: number,
+  stroke: string,
+): void {
+  if (width <= 0 || height <= 0) return;
+  const rc = pen(host);
+  const seed = seedOf(key);
+  mark(
+    host,
+    "lasso",
+    width > LASSO_MAX_WIDTH
+      ? rc.rectangle(2, 2, width - 4, height - 4, {
+          ...HAND,
+          stroke,
+          strokeWidth: 1.6,
+          roughness: 2.3,
+          bowing: 1.4,
+          seed,
+        })
+      : rc.ellipse(width / 2, height / 2, width * 1.02, height * 1.06, {
+          ...HAND,
+          stroke,
+          strokeWidth: 1.6,
+          roughness: 2.4,
+          bowing: 2,
+          seed,
+        }),
+  );
+}
+
+/** A tick, in the two strokes a hand makes: a short fall and a long rise, overshooting its box. */
+export function tick(host: SVGSVGElement, key: string, size: number, stroke: string): void {
+  mark(
+    host,
+    "tick",
+    pen(host).linearPath(
+      [
+        [size * 0.16, size * 0.52],
+        [size * 0.4, size * 0.8],
+        [size * 0.92, size * 0.06],
+      ],
+      { ...HAND, stroke, strokeWidth: 2.1, roughness: 1.4, seed: seedOf(key) },
+    ),
+  );
 }
 
 /**
  * The outline of a sheet of paper, torn out along its left edge.
  *
- * A closed path, so it can be filled as the card's ground and clipped to. Only the left edge is
- * ragged: this is a leaf torn from a bound notebook, not hand-made paper with a deckle on all four
- * sides. One irregular edge reads as "removed from something"; four read as an effect.
- *
- * The right and bottom edges get a much smaller waver -- a cut edge is straight, and a cut edge
- * that is *perfectly* straight beside a torn one gives the whole card away as a rectangle with a
- * decoration attached to one side.
+ * Not a rough.js shape: this is a closed path used as a `clip-path`, so it has to be geometry
+ * rather than a stroked drawing. Only the left edge is ragged -- a leaf torn from a bound
+ * notebook, not hand-made paper with a deckle on four sides. One irregular edge reads as "removed
+ * from something"; four read as an effect.
  */
 export function sheetEdge(key: string, width: number, height: number): string {
   if (width <= 0 || height <= 0) return "";
-  const next = jitter(hash(key) ^ 0x71c3d2a5);
+  let state = seedOf(key) || 1;
+  const next = (): number => {
+    state = (Math.imul(state, 1103515245) + 12345) >>> 0;
+    return (state / 0xffffffff) * 2 - 1;
+  };
 
   // A tear is a low-frequency wander with high-frequency nicks in it, and the nicks are what stop
-  // it reading as a wave. Every 9px, because at 20 the tear looks like a coastline and at 4 the
-  // path gets long enough to matter in a clip.
+  // it reading as a wave. Every 9px: at 20 it looks like a coastline, at 4 the path gets long
+  // enough to matter in a clip.
   const tears: string[] = [];
   const steps = Math.max(6, Math.round(height / 9));
   for (let step = steps; step >= 0; step -= 1) {
@@ -134,81 +216,17 @@ export function sheetEdge(key: string, width: number, height: number): string {
     tears.push(`${Math.max(0, wander + nick + 2).toFixed(1)} ${y.toFixed(1)}`);
   }
 
+  // A cut edge is straight, and one that is *perfectly* straight beside a torn one gives the card
+  // away as a rectangle with a decoration attached to one side.
   const cut = (at: number) => (at + next() * 0.35).toFixed(2);
   return [
-    `M 2 0`,
+    "M 2 0",
     `L ${cut(width)} 0`,
     `L ${cut(width)} ${cut(height)}`,
     `L 2 ${height.toFixed(1)}`,
     `L ${tears.join(" L ")}`,
     "Z",
   ].join(" ");
-}
-
-/**
- * A lasso: the loop drawn round something on a page to mean *this one*.
- *
- * An ellipse that does not close and overshoots where it started, because that is what happens
- * when a hand comes back round to a point it is not looking at. The gap is at the top left, where
- * a right-handed loop drawn clockwise from the lower left tends to end.
- *
- * Used where a checked state would otherwise be a background colour. A circled option reads as a
- * choice someone made; a filled pill reads as a setting the interface has.
- */
-export function lasso(key: string, width: number, height: number): string {
-  if (width <= 0 || height <= 0) return "";
-  const next = jitter(hash(key) ^ 0x13a7f0e9);
-  const [cx, cy] = [width / 2, height / 2];
-  const [rx, ry] = [width / 2 - 1, height / 2 - 1];
-
-  // From just past the top left, clockwise, and a little past the start again.
-  const from = -2.5;
-  const to = 3.9;
-  const steps = 22;
-  const points: string[] = [];
-  for (let step = 0; step <= steps; step += 1) {
-    const angle = from + ((to - from) * step) / steps;
-    const wobble = 1 + next() * 0.035;
-    points.push(
-      `${(cx + Math.cos(angle) * rx * wobble).toFixed(1)} ` +
-        `${(cy + Math.sin(angle) * ry * wobble).toFixed(1)}`,
-    );
-  }
-  return `M ${points.join(" L ")}`;
-}
-
-/** A tick, in two strokes as a hand makes it: a short fall and a long rise. */
-export function tick(key: string, size: number): string {
-  if (size <= 0) return "";
-  const next = jitter(hash(key) ^ 0x4d2b9f31);
-  const nudge = () => next() * 0.5;
-  return (
-    `M ${(size * 0.18 + nudge()).toFixed(1)} ${(size * 0.52 + nudge()).toFixed(1)} ` +
-    `L ${(size * 0.42 + nudge()).toFixed(1)} ${(size * 0.78 + nudge()).toFixed(1)} ` +
-    `L ${(size * 0.86 + nudge()).toFixed(1)} ${(size * 0.2 + nudge()).toFixed(1)}`
-  );
-}
-
-/** Width of the box a margin bracket is drawn in. */
-export const BRACKET_WIDTH = 8;
-
-/**
- * A bracket for the margin: a vertical stroke with hooked ends, as drawn beside a paragraph.
- *
- * Generated across `height` pixels for the same reason as `underline`. The hooks are a fixed 3px
- * whatever the height, which is the point: stretched, a 400px-tall margin turned a 2px hook into an
- * 8px flag.
- */
-export function bracket(key: string, height: number): string {
-  if (height <= 0) return "";
-  const next = jitter(hash(key) ^ 0x5bf03635);
-  const steps = Math.max(4, Math.round(height / 70));
-  const spine: string[] = [];
-  for (let step = 0; step <= steps; step += 1) {
-    const y = 3 + (step / steps) * (height - 6);
-    spine.push(`${(BRACKET_WIDTH - 2.5 + next() * 0.7).toFixed(2)} ${y.toFixed(1)}`);
-  }
-  return `M 2.5 1 L ${spine.join(" L ")} L 2.5 ${(height - 1).toFixed(1)}`;
 }
 
 /**

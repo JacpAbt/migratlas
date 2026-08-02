@@ -9,7 +9,13 @@
   // Measured for the same reason the rule is: stretched, a 3px hook on a 400px column becomes an
   // 8px flag, and the spine's wobble smears into a curve.
   let height = $state(0);
-  const spine = $derived(bracket(finding.key, height));
+  let spine = $state<SVGSVGElement | null>(null);
+
+  $effect(() => {
+    if (!spine || height <= 0) return;
+    spine.replaceChildren();
+    bracket(spine, finding.key, height, "var(--pencil)");
+  });
 
   // A domain reading "not applicable" is a real answer and is shown as one. What must never happen
   // is a domain missing from the block entirely, which would read as "no risk here".
@@ -26,13 +32,13 @@
 -->
 <aside class="margin" aria-label="How this claim could be wrong">
   <svg
+    bind:this={spine}
     class="margin__spine"
     bind:clientHeight={height}
     viewBox="0 0 {BRACKET_WIDTH} {Math.max(height, 1)}"
     width={BRACKET_WIDTH}
     aria-hidden="true"
   >
-    <path d={spine} />
   </svg>
 
   <div class="margin__body">

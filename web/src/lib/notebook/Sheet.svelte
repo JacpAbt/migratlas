@@ -13,7 +13,16 @@
   let height = $state(0);
 
   const ground = $derived(sheetEdge(seed, width, height));
-  const edge = $derived(boxDrawn(seed, width, height));
+
+  let ink = $state<SVGSVGElement | null>(null);
+
+  // Redrawn on resize and on a palette change. rough.js draws each stroke twice, so the edge has
+  // to be regenerated rather than restyled -- there is no single path to recolour.
+  $effect(() => {
+    if (!ink || width <= 0 || height <= 0) return;
+    ink.replaceChildren();
+    boxDrawn(ink, seed, width, height, "var(--rule)", 1.4);
+  });
 </script>
 
 <!--
@@ -37,9 +46,12 @@
   <div class="sheet__lift" aria-hidden="true">
     <div class="sheet__ground" style={ground ? `clip-path: path('${ground}')` : undefined}></div>
   </div>
-  <svg class="sheet__ink" viewBox="0 0 {Math.max(width, 1)} {Math.max(height, 1)}" aria-hidden="true">
-    <path class="sheet__edge" d={edge} />
-  </svg>
+  <svg
+    bind:this={ink}
+    class="sheet__ink"
+    viewBox="0 0 {Math.max(width, 1)} {Math.max(height, 1)}"
+    aria-hidden="true"
+  ></svg>
   {@render children()}
 </div>
 
@@ -85,10 +97,8 @@
     z-index: 0;
   }
 
-  .sheet__edge {
+  .sheet__ink :global(path) {
     fill: none;
-    stroke: var(--rule);
-    stroke-width: 1.4;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
