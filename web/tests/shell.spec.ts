@@ -191,6 +191,64 @@ test("a link to a claim opens the claim, not the arrival card", async ({ page })
   await expect(page.locator(".claim__precise")).toHaveText(/human forcing/i);
 });
 
+test("choosing an animal says what is known about it, not just where it is", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+  await expect(page.locator(".explore")).toBeVisible();
+
+  // Atlantic mackerel: measured in fourteen bottom-trawl surveys, which disagree.
+  await page.getByRole("searchbox").fill("Scomber scombrus");
+  await page.locator(".hits button").first().click();
+
+  const study = page.locator(".study");
+  await expect(study).toBeVisible();
+  await expect(study.locator("h3")).toHaveText(/Scomber scombrus/);
+
+  // The rows are the point. `marine-null` claims surveys disagree in direction, and until these
+  // were published the only number on the site was the median that averages them out.
+  const rows = study.locator(".study__rows div");
+  expect(await rows.count()).toBeGreaterThan(3);
+  await expect(study.locator(".study__caveat")).not.toBeEmpty();
+});
+
+test("an animal the gate refuses has a page saying so, with no location on it", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+  await page.getByRole("searchbox").fill("Canis lupus");
+  await page.locator(".hits button").first().click();
+
+  const withheld = page.locator(".study__one--withheld");
+  await expect(withheld).toBeVisible();
+  await expect(withheld).toContainText(/held back/i);
+  // The rationale, not just the refusal. An unexplained refusal cannot be reviewed.
+  await expect(withheld.locator(".study__caveat")).toContainText(/Cooke et al/);
+
+  // And nothing on it could put anyone within reach of an animal.
+  const prose = (await withheld.textContent()) ?? "";
+  expect(prose).not.toMatch(/-?\d{1,3}\.\d{3,}/);
+});
+
+test("a species page is fetched only when a species is chosen", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+  await expect(page.locator(".explore")).toBeVisible();
+
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    if (/species-study-\d+\.json/.test(request.url())) asked.push(request.url());
+  });
+
+  // Typing must not cost a shard. 2.2 MB of study pages has no business loading for a reader who
+  // is looking at the globe.
+  await page.getByRole("searchbox").fill("Scomber");
+  await expect(page.locator(".hits button").first()).toBeVisible();
+  expect(asked, "a keystroke fetched a study shard").toEqual([]);
+
+  await page.locator(".hits button").first().click();
+  await expect(page.locator(".study")).toBeVisible();
+  expect(asked.length, "choosing a species fetched more than its own shard").toBe(1);
+});
+
 test("just the map means the whole map, not the last claim's filter", async ({ page }) => {
   await arrive(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();

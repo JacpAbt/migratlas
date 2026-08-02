@@ -236,3 +236,7 @@ ingest-sabap1:  ## SABAP1 atlas cards -> SURVEY_INDEX (terrestrial, southern hem
 .PHONY: ingest-cmip6
 ingest-cmip6:  ## CMIP6 historical + DAMIP hist-nat pre-season temperature -> lake (simulated)
 	$(RUN) migratlas ingest-cmip6
+
+.PHONY: build-species
+build-species:  ## One study page per animal -> web/public/species-study-NN.json
+	$(RUN) migratlas build-species

@@ -15,7 +15,6 @@ Numbers are permanent. A finished item keeps its number and moves to the bottom.
 | 1 | Housekeeping: `LICENSE`, `CLAUDE.md`, README status line, this file | The README said "Phase 0, nothing is published yet" while five findings shipped. |
 | 2 | `composition-stable` computes its own number | `reports/findings.py` returns a literal for this one finding, against the module's own stated rule. Nothing would catch it drifting from `phase1c`. |
 | 18 | The second register for the other three documents | `counterfactual.json`'s disagreement paragraph, `detectability.json`'s withheld rationales, `sandbox.json`'s knob explanations. Same treatment as finding 5, and the same rule: a plain sentence may drop precision and may never add reach. |
-| 7 | Species pages, wave 1 | Marine cards from FISHGLOB's 2,240 species-region shifts, which Phase 1b currently collapses into one median — publishing them *is* the marine null's argument. Plus tracked mammals, the two withheld refusal pages, and honest extent-only cards. |
 | 8 | The 617 Missouri bison rows sitting in Berlin | Bench-tested collars, same animal ids as the real tracks, marked deployed and visible. Two filters were tried and reverted: per-row distance deletes 112 fixes of Arctic fox `MMRV`'s 3,000 km dispersal; per-animal keeps Berlin. The fix is a per-taxon implied-speed ceiling. |
 | 9 | SABAP occupancy-detection model, and the atlas finding | `models/occupancy.py` and `reports/phase1e.py`. First southern, first terrestrial, first non-radar finding. Must recover known parameters from simulated data before it touches SABAP. |
 | 10 | Species pages, wave 2 | Bird occupancy change per species, the detection-corrected value beside the naive reporting rate. Depends on #9. |
@@ -48,6 +47,7 @@ Kept here so they are not rediscovered as good ideas.
 | # | Item | Outcome |
 | --- | --- | --- |
 | 1 | Housekeeping | `LICENSE`, `CLAUDE.md`, this file, README status and phase table. |
+| 7 | Species pages, wave 1 | 3,669 pages: 755 marine distribution shifts with their per-survey rows, 4 tracked mammals, 2 refusals, and 2,909 that say plainly that nothing here measures this animal. |
 | 20 | The sketchbook, finished | The tools panel is on the same torn paper as the claims, the sliders are ruled scales with a pencil-stub thumb, and the last U+2713 on the site is a drawn mark. |
 | 6 | The sketchbook rebuild | [ADR 0008](adr/0008-the-sketchbook-rebuild.md). Paper as a torn sheet, every control drawn, the page turn, and a claim with its own address. The architecture stayed; the visual layer was rebuilt. |
 | 19 | Night, reachable | A day/night/system switch that survives a reload, black paper in place of the slate blue-grey, a night basemap, and every layer repainting when the surface changes. Six colours that had escaped the token set are in it. |

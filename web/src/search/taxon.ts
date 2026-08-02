@@ -5,16 +5,22 @@
  * actually published and searched in memory. Keys are GBIF usage keys, so the frontend and the
  * pipeline agree on what a species is.
  *
- * Every entry has a surface behind it. The previous index was a hand-written list of thirty
- * animals and most hits led nowhere, which is a worse failure than a short list — a search box
- * that answers and then shrugs teaches the viewer not to trust it.
+ * Every entry has *something* behind it, and that is a weaker promise than the one this file used
+ * to make. It said every entry has a surface, which was true and left 689 of the 755 species that
+ * carry a measured distribution shift unreachable -- FISHGLOB is a survey, not a published layer,
+ * so the animals this project has the most to say about could not be found. A hit with a study and
+ * no map is a better answer than no hit.
+ *
+ * What has not changed is that a hit is never a dead end. The previous index was a hand-written
+ * list of thirty animals and most hits led nowhere: a search box that answers and then shrugs
+ * teaches the viewer not to trust it.
  */
 
 export interface TaxonEntry {
   key: number;
   scientific: string;
   vernacular: string;
-  /** Which published layer holds this taxon's surface. */
+  /** Which published layer holds this taxon's surface. Empty where there is no surface. */
   layer: string;
   /** Human name of that layer. 95 taxa appear in both marine sources, so the rows must differ. */
   layer_title: string;
@@ -22,6 +28,8 @@ export interface TaxonEntry {
   cells: number;
   /** Which shard file carries the surface. */
   shard: number;
+  /** Whether a study page exists. Absent on older index files, so read it as optional. */
+  studied?: boolean;
 }
 
 export interface TaxonHit extends TaxonEntry {
@@ -38,14 +46,28 @@ export class TaxonIndex {
   #haystack: string[] = [];
   shards = 0;
 
+  /**
+   * Load the drawn index, and the studied-but-undrawn one beside it.
+   *
+   * Two files with one writer each rather than one file two commands take turns clobbering --
+   * `build-layers` owns the surfaces and `build-species` owns the studies, and the last time this
+   * project had two commands writing one index the second silently replaced 3,072 taxa with
+   * thirty. The second file is optional: a build that has not run `build-species` yet still
+   * searches, with fewer answers.
+   */
   static async load(url: string): Promise<TaxonIndex> {
     const index = new TaxonIndex();
     const response = await fetch(url);
     if (!response.ok) throw new Error(`taxon index ${response.status}`);
     const file = (await response.json()) as TaxonIndexFile;
-    index.#entries = file.taxa;
+
+    const studied = await fetch(url.replace("taxon-index.json", "species-index.json"))
+      .then((extra) => (extra.ok ? (extra.json() as Promise<TaxonIndexFile>) : null))
+      .catch(() => null);
+
+    index.#entries = [...file.taxa, ...(studied?.taxa ?? [])];
     index.shards = file.shards;
-    index.#haystack = file.taxa.map((e) => `${e.scientific} ${e.vernacular}`.toLowerCase());
+    index.#haystack = index.#entries.map((e) => `${e.scientific} ${e.vernacular}`.toLowerCase());
     return index;
   }
 

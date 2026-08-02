@@ -3,6 +3,7 @@ command rather than a notebook cell someone ran once."""
 
 import json
 import logging
+from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Annotated
@@ -43,6 +44,7 @@ from migratlas.reports import (
     phase2a_thermal,
     phase2a_timing,
     sandbox,
+    species,
 )
 from migratlas.tiles import layers as tile_layers
 from migratlas.tiles import species as tile_species
@@ -581,6 +583,27 @@ def lake_check_command() -> None:
         if len(items) > DRIFT_SAMPLE:
             print(f"  ... and {len(items) - DRIFT_SAMPLE} more")
     raise typer.Exit(1)
+
+
+@app.command("build-species")
+def build_species(
+    out: Annotated[Path, typer.Option(help="Directory holding the published documents.")] = Path(
+        "web/public"
+    ),
+) -> None:
+    """One page per animal: what is known about it, and where nothing is.
+
+    Reads `taxon-index.json` for what was actually drawn, so this runs after `build-layers`.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    cards = species.collect(out)
+    size = species.write(cards, out)
+    searchable = species.write_index(cards, out)
+    kinds = Counter(study.kind for card in cards for study in card.studies)
+    print(f"{len(cards):,} species -> {out}/species-study-NN.json ({size / 1024:.0f} KiB)")
+    print(f"search index -> {out}/species-index.json ({searchable / 1024:.0f} KiB)")
+    for kind, count in sorted(kinds.items()):
+        print(f"  {kind:<10} {count:,}")
 
 
 @app.command("lake-floor")
