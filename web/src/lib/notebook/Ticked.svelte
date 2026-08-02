@@ -1,7 +1,12 @@
 <script lang="ts">
   import { boxDrawn, tick } from "./ink";
 
-  let { seed, on }: { seed: string; on: boolean } = $props();
+  let {
+    seed,
+    on,
+    /** A control has a box to tick. A list of things that passed is just the marks. */
+    box = true,
+  }: { seed: string; on: boolean; box?: boolean } = $props();
 
   const BOX = 14;
 
@@ -19,8 +24,10 @@
   The tick is two strokes as a hand makes one, a short fall and a long rise, and it overshoots the
   box like every other mark here. A tick that fits neatly inside its box is a glyph.
 -->
-<svg class="ticked" class:ticked--on={on} viewBox="0 0 {BOX} {BOX}" width={BOX} height={BOX} aria-hidden="true">
-  <path class="ticked__box" d={frame} />
+<svg class="ticked" class:ticked--on={on} class:ticked--bare={!box} viewBox="0 0 {BOX} {BOX}" width={BOX} height={BOX} aria-hidden="true">
+  {#if box}
+    <path class="ticked__box" d={frame} />
+  {/if}
   <path class="ticked__tick" d={mark} />
 </svg>
 
@@ -41,7 +48,7 @@
      `--draw-quick` is 0ms so it is simply there on the first frame. */
   .ticked__tick {
     fill: none;
-    stroke: var(--rust-ink);
+    stroke: var(--status-addressed);
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -52,5 +59,11 @@
 
   .ticked--on .ticked__tick {
     stroke-dashoffset: 0;
+  }
+
+  /* In a control the tick is the accent, because the control is a choice. In a list of things a
+     claim survived it is the "addressed" green, because that is what those items are. */
+  :global(.layers) .ticked__tick {
+    stroke: var(--rust-ink);
   }
 </style>

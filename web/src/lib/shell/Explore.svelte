@@ -1,6 +1,7 @@
 <script lang="ts">
   import Rule from "../notebook/Rule.svelte";
   import Ticked from "../notebook/Ticked.svelte";
+  import Sheet from "../notebook/Sheet.svelte";
   import Search from "./Search.svelte";
   import { legendRows, type DetectabilityDocument } from "../../layers/detectability";
   import type { Clock } from "../../state/time";
@@ -81,6 +82,8 @@
   terms, at what time of year, and a way to find one animal.
 -->
 <aside class="explore" aria-label="Layers and time">
+ <Sheet seed="explore">
+  <div class="explore__slip">
   <section>
     <h2>Drawn now</h2>
     <Rule seed="explore-layers" tone="pencil" />
@@ -169,6 +172,8 @@
     <Rule seed="explore-search" tone="pencil" />
     <Search {selection} {surfaces} {onfocus} />
   </section>
+  </div>
+ </Sheet>
 </aside>
 
 <style>
@@ -178,17 +183,84 @@
     right: var(--gap);
     z-index: 2;
     display: flex;
-    flex-direction: column;
-    gap: var(--gap);
     width: min(20rem, calc(100vw - 2 * var(--gap)));
     /* Clears the index strip below it and scrolls if it cannot fit, rather than growing under it. */
     max-height: calc(100% - var(--strip) - var(--attrib) - 2 * var(--gap));
-    overflow-y: auto;
-    padding: var(--gap);
-    background-color: var(--paper);
-    background-image: var(--grain);
-    box-shadow: var(--shadow-sheet);
     font-size: 0.8rem;
+  }
+
+  /* The paper is `Sheet`'s -- ground, grain, torn edge, shadow -- and the scroll is inside it, for
+     the reason the reading sheet already found: a drawn edge inside a scrolling box is positioned
+     against the padding box and slides away with the content. */
+  .explore :global(.sheet) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .explore__slip {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--gap) var(--gap) var(--gap) calc(var(--gap) + 0.35rem);
+  }
+
+  /*
+    A scale on paper, not a platform slider.
+
+    The track is a ruled line with graduations, which is what a scale printed on a page looks
+    like -- and on the day-of-year slider the twelve ticks are months, so the marks carry
+    information rather than decorating the line. The thumb is a pencil stub: a short body in
+    graphite with a rust point at its tip.
+
+    `appearance: none` and both vendor pseudo-elements, because a range input styles nothing in
+    common across engines and a half-styled one looks like a bug rather than a choice.
+  */
+  input[type="range"] {
+    appearance: none;
+    width: 100%;
+    height: 1.4rem;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  input[type="range"]:focus-visible {
+    outline: 2px solid var(--rust);
+    outline-offset: 2px;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track,
+  input[type="range"]::-moz-range-track {
+    height: 1.4rem;
+    background:
+      linear-gradient(var(--rule), var(--rule)) 0 50% / 100% 1.5px no-repeat,
+      repeating-linear-gradient(
+          to right,
+          var(--rule-faint) 0 1px,
+          transparent 1px calc(100% / 12)
+        )
+        0 calc(50% + 3px) / 100% 5px no-repeat;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 0.55rem;
+    height: 1.1rem;
+    margin-top: 0.15rem;
+    border-radius: 1px 1px 40% 40%;
+    background: linear-gradient(var(--pencil) 62%, var(--rust-ink) 62%);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 0.55rem;
+    height: 1.1rem;
+    border: 0;
+    border-radius: 1px 1px 40% 40%;
+    background: linear-gradient(var(--pencil) 62%, var(--rust-ink) 62%);
   }
 
   h2 {

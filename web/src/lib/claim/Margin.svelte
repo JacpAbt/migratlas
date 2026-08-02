@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ticked from "../notebook/Ticked.svelte";
   import Rule from "../notebook/Rule.svelte";
   import { BRACKET_WIDTH, bracket } from "../notebook/ink";
   import type { Finding } from "../ledger";
@@ -54,7 +55,7 @@
         <Rule seed={`${finding.key}-survived`} tone="rule" />
         <ul class="survived">
           {#each finding.supporting as line (line)}
-            <li>{line}</li>
+            <li><Ticked seed={line} on box={false} /><span>{line}</span></li>
           {/each}
         </ul>
       </section>
@@ -161,19 +162,20 @@
     list-style: none;
   }
 
+  /* A hanging tick, not a bullet, and now a drawn one rather than the U+2713 glyph -- which came
+     from whichever font had it and was the last mark on the page still set in type. Flex with the
+     mark on its own line-height, so a wrapping item still aligns under its first word. */
   .survived li {
+    display: flex;
+    gap: 0.3rem;
     font-family: var(--font-body);
     font-size: 0.76rem;
     line-height: 1.5;
-    /* A hanging tick, not a bullet: the marker is drawn in the gutter so wrapped lines align. */
-    padding-left: 0.85rem;
-    text-indent: -0.85rem;
     margin-bottom: var(--gap-hair);
   }
 
-  .survived li::before {
-    content: "✓ ";
-    color: var(--status-addressed);
+  .survived :global(.ticked) {
+    margin-top: 0.15rem;
   }
 
   .specimen p {
