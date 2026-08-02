@@ -390,6 +390,45 @@ test("only the chosen option is circled", async ({ page }) => {
   await expect(page.locator(".surface__option--on .boxed__stroke")).toHaveCount(2);
 });
 
+test("nothing on the page is still a bordered control", async ({ page }) => {
+  await ready(page);
+  // The sweep, rather than one assertion per widget. Every interactive thing on a claim was a
+  // rectangle with a border and a radius, and the point of this pass is that none of them are.
+  const bordered = await page.evaluate(() =>
+    [...document.querySelectorAll(".way, .option, .surface__option, .tab, .layers input")]
+      .filter((node) => {
+        const style = getComputedStyle(node);
+        return Number.parseFloat(style.borderTopWidth) > 0;
+      })
+      .map((node) => node.className || node.tagName),
+  );
+  expect(bordered, "these still carry a CSS border").toEqual([]);
+});
+
+test("switching a layer on draws a tick rather than filling a box", async ({ page }) => {
+  await page.goto("?debug=1");
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+  await expect(page.locator(".explore")).toBeVisible();
+
+  const row = page.locator(".layers li").first();
+  const mark = row.locator(".ticked");
+  await expect(mark).toBeVisible();
+
+  // Drawn on, so the state is a dash offset rather than a colour. Reading it this way also pins
+  // that the tick animates in from nothing instead of appearing -- and that reduced motion, which
+  // zeroes `--draw-quick`, still lands it in the final state.
+  const offset = () =>
+    row.locator(".ticked__tick").evaluate((node) => getComputedStyle(node).strokeDashoffset);
+
+  const before = await offset();
+  await row.locator("input").click();
+  await expect.poll(offset).not.toBe(before);
+
+  // And the checkbox is still the control: hidden natively, but the thing a pointer and a keyboard
+  // both reach. The tick is ink.
+  await expect(row.locator("input")).toBeFocused();
+});
+
 test("a rule is one continuous stroke, not a dashed line", async ({ page }) => {
   await ready(page);
   // The regression. The first version stretched a 100-unit viewBox with `non-scaling-stroke`, which

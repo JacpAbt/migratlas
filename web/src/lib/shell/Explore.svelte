@@ -1,5 +1,6 @@
 <script lang="ts">
   import Rule from "../notebook/Rule.svelte";
+  import Ticked from "../notebook/Ticked.svelte";
   import Search from "./Search.svelte";
   import { legendRows, type DetectabilityDocument } from "../../layers/detectability";
   import type { Clock } from "../../state/time";
@@ -92,6 +93,7 @@
               checked={shown.has(layer.meta.name)}
               onchange={(event) => toggle(layer, event.currentTarget.checked)}
             />
+            <Ticked seed={layer.meta.name} on={shown.has(layer.meta.name)} />
             <span class="layers__title" title={layer.meta.description}>{layer.meta.title}</span>
             <em>{layer.meta.value_kind.replace(/_/g, " ")}</em>
           </label>
@@ -219,8 +221,29 @@
     cursor: pointer;
   }
 
+  /* The native box is hidden and the drawn one stands in for it. Sized and stacked over the mark
+     rather than clipped to a pixel, so the checkbox is still what a pointer hits and still what a
+     keyboard reaches -- the tick beside it is ink, not a control. */
   .layers input {
-    accent-color: var(--rust-ink);
+    grid-area: 1 / 1;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    appearance: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  .layers :global(.ticked) {
+    grid-area: 1 / 1;
+    align-self: center;
+  }
+
+  .layers label:focus-within :global(.ticked__box) {
+    stroke: var(--rust);
+    stroke-width: 2;
   }
 
   .layers__title {
