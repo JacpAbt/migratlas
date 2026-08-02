@@ -429,6 +429,78 @@ test("switching a layer on draws a tick rather than filling a box", async ({ pag
   await expect(row.locator("input")).toBeFocused();
 });
 
+test("the paper turns and the world does not", async ({ page }) => {
+  await ready(page);
+
+  // Only the sheet is named, so only the sheet is captured. If the root were nameable the whole
+  // page would be snapshotted -- including MapLibre's canvas, which would freeze into a still
+  // image for the length of the turn and say the globe is a picture the card is printed over.
+  const named = await page.evaluate(() => ({
+    root: getComputedStyle(document.documentElement).viewTransitionName,
+    sheet: getComputedStyle(document.querySelector(".shell__sheet")!).viewTransitionName,
+  }));
+  expect(named.root, "the root would be snapshotted, freezing the globe").toBe("none");
+  expect(named.sheet).toBe("leaf");
+
+  // And it turns about the spine -- the left edge, the same one `sheetEdge` tears.
+  const origin = await page.evaluate(() => {
+    for (const sheet of [...document.styleSheets]) {
+      for (const rule of [...sheet.cssRules]) {
+        if (rule.cssText.includes("view-transition-old(leaf)")) return rule.cssText;
+      }
+    }
+    return "";
+  });
+  // `0px center` is how the CSSOM serialises `left center`, so match either rather than the text
+  // that happens to be authored.
+  expect(origin).toMatch(/transform-origin: (left|0px) center/);
+});
+
+test("changing claim never blocks the main thread for long", async ({ page }) => {
+  await ready(page);
+  // The guard that lets the rest of this go all out. Bytes are the wrong instrument for animation
+  // work -- a page turn adds no payload and can still cost a reader every frame of it -- so what
+  // is budgeted is the thing that would actually be felt.
+  //
+  // Not `buffered: true`, and that is the whole reliability of this test. A buffered longtask
+  // observer replays entries from before it existed, so the first thing it reports is the page
+  // load -- MapLibre booting and 125,000 features decoding. This measured a constant 229ms for
+  // every claim, including ones it had not clicked yet, and read as a page-turn cost. Unbuffered,
+  // a claim change is 52 to 90ms and the turn adds nothing measurable to it.
+  await page.evaluate(() => {
+    (window as unknown as { longTasks: number[] }).longTasks = [];
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        (window as unknown as { longTasks: number[] }).longTasks.push(entry.duration);
+      }
+    }).observe({ type: "longtask" });
+  });
+
+  for (const key of ["marine-null", "anthropogenic-share", "coverage-bias"]) {
+    await page.locator(`.tab[data-claim="${key}"]`).click();
+    await expect(page.locator(".claim__title")).toBeVisible();
+  }
+
+  const worst = await page.evaluate(() =>
+    Math.max(0, ...(window as unknown as { longTasks: number[] }).longTasks),
+  );
+  expect(worst, `a ${worst.toFixed(0)}ms task during a claim change`).toBeLessThan(200);
+});
+
+test("with motion turned down the next claim is simply there", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await ready(page);
+
+  // Not a faster turn -- no turn. `state/turn.ts` reads `--draw` and declines to start a
+  // transition at all, so the new claim is in its final state on the first frame.
+  await page.locator('.tab[data-claim="marine-null"]').click();
+  await expect(page.locator(".claim__title")).toHaveText(/fish/i);
+  expect(
+    await page.evaluate(() => document.getAnimations().some((a) => a.playState === "running")),
+    "something is still animating under reduced motion",
+  ).toBe(false);
+});
+
 test("a rule is one continuous stroke, not a dashed line", async ({ page }) => {
   await ready(page);
   // The regression. The first version stretched a 100-unit viewBox with `non-scaling-stroke`, which

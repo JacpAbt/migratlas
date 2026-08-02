@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import type { Map as MapLibreMap } from "maplibre-gl";
 
   import Globe from "../globe/Globe.svelte";
@@ -15,6 +16,7 @@
   import type { SpeciesSelection } from "../../layers/selection";
   import { SpeciesSurfaces } from "../../search/taxon";
   import { Clock } from "../../state/time";
+  import { turnPage } from "../../state/turn";
   import Surface from "../notebook/Surface.svelte";
   import Sheet from "../notebook/Sheet.svelte";
   import {
@@ -159,8 +161,14 @@
   );
 
   function choose(finding: Finding): void {
-    current = finding;
-    mode = "reading";
+    // `await tick()` inside, not around: the transition has to capture the *new* sheet, and one
+    // that resolves before Svelte has rendered it captures the old one twice and cross-fades
+    // nothing. Everything about whether this animates at all is `turnPage`'s decision.
+    turnPage(async () => {
+      current = finding;
+      mode = "reading";
+      await tick();
+    });
   }
 </script>
 
@@ -279,7 +287,15 @@
     pointer-events: none;
   }
 
+  /*
+    The leaf that turns.
+
+    Named so the View Transitions API captures this and nothing else -- `base.css` switches the
+    root snapshot off, so MapLibre's canvas is never frozen and the globe keeps rendering while the
+    paper turns over it. The paper turns, the world does not.
+  */
   .shell__sheet {
+    view-transition-name: leaf;
     pointer-events: auto;
     /* Full width by default. The `68vw` cap that keeps the globe visible beside it is only sane
        once there is a globe worth seeing: at 390px it left a useless 32% strip of sphere and shrank
