@@ -143,7 +143,13 @@ export function createGlobe(container: HTMLElement, baseUrl: string): MapLibreMa
 
   map.addControl(new NavigationControl({ visualizePitch: false }), "bottom-right");
   map.addControl(new GlobeControl(), "bottom-right");
-  map.addControl(new ScaleControl({ unit: "metric" }), "bottom-left");
+  // With the others rather than in the opposite corner, which is MapLibre's default and where a
+  // scale bar normally belongs. Here the bottom-left is the only part of the window contested by
+  // three things at once: the index strip, the licence notice -- which is the full width of the
+  // page, because it lists one credit per drawn layer -- and the claim sheet, which reaches the
+  // left margin. Lifted clear of the notice it went under the sheet; left where it was it went
+  // under the notice. The bottom-right corner is free at every width the scale is shown at.
+  map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right");
 
   return map;
 }

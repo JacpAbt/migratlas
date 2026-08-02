@@ -21,6 +21,7 @@
   import Surface from "../notebook/Surface.svelte";
   import TypeChoice from "../notebook/TypeChoice.svelte";
   import Sheet from "../notebook/Sheet.svelte";
+  import { drawFurniture } from "../notebook/furniture";
   import {
     applySurface,
     isNight,
@@ -73,24 +74,24 @@
     typeChoice = applyType(storedType());
   });
 
-  // The globe's colours are JavaScript, not CSS, so nothing repaints them on its own. Runs on the
-  // stored choice too, not only on a click -- otherwise a reader who chose night last week gets a
-  // black page around a parchment globe.
-  $effect(() => {
+  // The globe's colours are JavaScript, not CSS, so nothing repaints them on its own, and neither
+  // the scrollbar nor MapLibre's buttons can hold a `var()` -- their ink is baked into a data URI.
+  // Runs on the stored choice too, not only on a click, otherwise a reader who chose night last
+  // week gets a black page around a parchment globe with a parchment scrollbar down the side.
+  function follow(): void {
     setPalette(isNight(surface));
+    drawFurniture();
     if (!map) return;
     repaintBasemap(map);
     for (const layer of layers) layer.repaint?.();
-  });
+  }
+
+  $effect(follow);
 
   // And when the machine changes its mind while the choice is "system".
   $effect(() =>
     watchSystem(() => {
-      if (surface !== "system") return;
-      setPalette(isNight(surface));
-      if (!map) return;
-      repaintBasemap(map);
-      for (const layer of layers) layer.repaint?.();
+      if (surface === "system") follow();
     }),
   );
 
@@ -313,6 +314,152 @@
   .shell :global(.maplibregl-ctrl-bottom-right),
   .shell :global(.maplibregl-ctrl-bottom-left) {
     bottom: var(--strip);
+  }
+
+  /*
+    The map's own furniture, in the same hand as the rest.
+
+    These were the last white rounded boxes on the page: a 4px radius, a white fill and a grey
+    drop shadow, sitting on paper. Everything here is an override of MapLibre's stylesheet, so
+    every rule has to undo something before it sets anything -- and `:global` because these are
+    nodes MapLibre creates, which Svelte's scoping never sees.
+
+    Some selectors carry a clause they do not need to match -- `:not(:empty)` here,
+    `.maplibregl-ctrl` on the attribution below -- purely to reach the specificity of the rule they
+    override. Without it they tie, and a tie is settled by whichever stylesheet the bundler emitted
+    last, which is not a thing to leave to a build.
+
+    The drawings come from `notebook/furniture.ts` as data URIs, redrawn on a surface change.
+  */
+  .shell :global(.maplibregl-ctrl-group:not(:empty)) {
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .shell :global(.maplibregl-ctrl-group button) {
+    /* The separator line between stacked buttons: each has its own drawn box now, so a border
+       between them draws a straight line across two wobbling ones. */
+    border: 0;
+    margin-bottom: 3px;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  /* The icons are MapLibre's own SVG data URIs on an inner span, in a fixed near-black that follows
+     no surface. Cleared, and both the mark and the box drawn on the button itself. */
+  .shell :global(.maplibregl-ctrl-group .maplibregl-ctrl-icon) {
+    background-image: none;
+  }
+
+  .shell :global(.maplibregl-ctrl-zoom-in) {
+    background-image: var(--ctrl-zoom-in);
+  }
+
+  .shell :global(.maplibregl-ctrl-zoom-out) {
+    background-image: var(--ctrl-zoom-out);
+  }
+
+  .shell :global(.maplibregl-ctrl-globe) {
+    background-image: var(--ctrl-globe);
+  }
+
+  .shell :global(.maplibregl-ctrl-globe-enabled) {
+    background-image: var(--ctrl-globe-enabled);
+  }
+
+  .shell :global(.maplibregl-ctrl-group button:hover) {
+    background-color: transparent;
+    filter: contrast(1.4);
+  }
+
+  /* MapLibre paints its own blue glow on focus, including for a mouse click. Rust, and only for a
+     keyboard, which is the same rule `base.css` applies to everything else. */
+  .shell :global(.maplibregl-ctrl-group button:focus) {
+    box-shadow: none;
+  }
+
+  .shell :global(.maplibregl-ctrl-group button:focus-visible) {
+    outline: 2px solid var(--rust);
+    outline-offset: -2px;
+  }
+
+  /*
+    The scale bar: a measure, drawn.
+
+    Three images and only one of them stretches. MapLibre sets this element's width in pixels to
+    whatever the current zoom makes a round distance, so the rule has to follow that width exactly
+    -- it is the measurement. The end ticks are pinned to each end at their drawn size.
+  */
+  .shell :global(.maplibregl-ctrl-scale) {
+    border: 0;
+    padding: 0 2px 6px;
+    background-color: transparent;
+    background-image: var(--scale-rule), var(--scale-left), var(--scale-right);
+    background-repeat: no-repeat;
+    background-position:
+      center bottom,
+      left bottom,
+      right bottom;
+    background-size:
+      100% 6px,
+      auto,
+      auto;
+    font-family: var(--font-mono);
+    font-size: var(--size-label);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--tracking-label);
+    color: var(--ink-soft);
+    /* A halo rather than a panel. This is the one label on the page that can end up over open
+       ocean, coastline or a data surface depending on where the camera is, and a box of paper
+       under it would be a box of paper in the middle of the map. */
+    text-shadow:
+      0 0 3px var(--paper),
+      0 0 6px var(--paper);
+  }
+
+  /*
+    The attribution, which is a licence notice before it is furniture.
+
+    Restyled, never shrunk: it keeps the body's own reading size rather than MapLibre's 10px, and
+    it sits on opaque paper rather than a half-transparent white so it stays readable over an ocean
+    at any zoom. The radius goes, the fill becomes paper, and the links take the page's rust.
+  */
+  .shell :global(.maplibregl-ctrl.maplibregl-ctrl-attrib) {
+    padding: 0.2rem 0.5rem;
+    border-radius: 0;
+    background-color: var(--paper);
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: var(--size-margin);
+    line-height: 1.5;
+  }
+
+  .shell :global(.maplibregl-ctrl-attrib a) {
+    color: var(--rust);
+  }
+
+  /* The (i) that opens it. MapLibre's is a blue disc with a glyph in it; this is the same drawn box
+     the zoom buttons wear, with the mark left as a letter because a hand-drawn "i" at nine pixels
+     is a smudge rather than a character. */
+  .shell :global(.maplibregl-ctrl-attrib summary.maplibregl-ctrl-attrib-button) {
+    border-radius: 0;
+    background-color: transparent;
+    background-image: var(--ctrl-info);
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: var(--size-label);
+    font-style: italic;
+    text-align: center;
+    line-height: 24px;
+  }
+
+  .shell :global(.maplibregl-ctrl-attrib summary.maplibregl-ctrl-attrib-button)::before {
+    content: "i";
+  }
+
+  .shell :global(.maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-button) {
+    background-color: var(--paper-sunken);
   }
 
   .shell__reading {

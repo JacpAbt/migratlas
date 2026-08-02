@@ -20,6 +20,8 @@ Numbers are permanent. A finished item keeps its number and moves to the bottom.
 | 10 | Species pages, wave 2 | Bird occupancy change per species, the detection-corrected value beside the naive reporting rate. Depends on #9. |
 | 11 | Factor panel and the interpretable model *(handoff #29)* | JRC surface-water change and GHSL built-up as explanatory-only factors, per `DATASETS.md` step 3, feeding an additive model with a drawable response curve per factor. |
 | 12 | The transfer test | Three climate-response sensitivities — aerial-north, marine-north, terrestrial-south. Fit on two, predict the third, publish the error. The experiment `coverage-bias` promises and nobody runs. Depends on #9. |
+| 25 | The globe under the night sky, and a colour-vision test | `globe/flavor.ts` still carries a warm-black night, chosen before the paper became a night sky. And the separability of the token pairs under the two red-green dichromacies is measured in a comment rather than by anything that runs. |
+| 26 | The paper is not paper | The grain is a mid-grey displacement map blended `multiply` over cream, which resolves to concrete, and `Sheet`'s ground sets no blend mode at all so the texture replaces the paper colour outright. The contrast suite cannot see either, because it reads `--paper` rather than what is drawn. |
 
 ## Queued, with a reason to wait
 
@@ -46,6 +48,10 @@ Kept here so they are not rediscovered as good ideas.
 
 | # | Item | Outcome |
 | --- | --- | --- |
+| 24 | The furniture | The scrollbar is a ruled line with a pencil stub on it, the map's zoom and projection buttons are paper chips with drawn marks, and the scale bar is a drawn measure. All generated with the same pen and handed to CSS as data URIs, because none of these can hold an `<svg>`. |
+| 23 | Every mark on rough.js | The hand-rolled hash-and-jitter is gone, each mark carries a name the tests can select, and a mark can be regenerated on a palette change rather than restyled. |
+| 22 | Type as a setting | Three presets — hand throughout, hand for headings only with Atkinson Hyperlegible under it, and OpenDyslexic — each with its own scale and leading, because the faces do not share an x-height. |
+| 21 | The foundation: fonts, textures, tokens | Direction A under the real app. The green split for contrast the way the rust already was, night as a night sky rather than the day page with the lights off, and both the paper texture and the font subsets corrected after both turned out to be measurably not what I had said they were. |
 | 1 | Housekeeping | `LICENSE`, `CLAUDE.md`, this file, README status and phase table. |
 | 7 | Species pages, wave 1 | 3,669 pages: 755 marine distribution shifts with their per-survey rows, 4 tracked mammals, 2 refusals, and 2,909 that say plainly that nothing here measures this animal. |
 | 20 | The sketchbook, finished | The tools panel is on the same torn paper as the claims, the sliders are ruled scales with a pencil-stub thumb, and the last U+2713 on the site is a drawn mark. |

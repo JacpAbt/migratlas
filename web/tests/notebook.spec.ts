@@ -642,6 +642,135 @@ test("a slider is a ruled scale, not a platform control", async ({ page }) => {
   expect(await slider.inputValue()).not.toBe(before);
 });
 
+test("the scrollbar is drawn, and only one of the two APIs is styling it", async ({ page }) => {
+  await ready(page);
+
+  const drawn = await page.evaluate(() => {
+    const style = getComputedStyle(document.documentElement);
+    return {
+      track: style.getPropertyValue("--scroll-track").trim(),
+      thumb: ["--thumb-top", "--thumb-mid", "--thumb-bottom"].map((name) =>
+        style.getPropertyValue(name).trim(),
+      ),
+      width: style.scrollbarWidth,
+    };
+  });
+
+  expect(drawn.track, "no drawn track").toContain("data:image/svg+xml");
+  for (const part of drawn.thumb) expect(part).toContain("data:image/svg+xml");
+
+  // The whole reliability of the drawing. Chromium supports `scrollbar-width`, and setting it to
+  // anything but `auto` switches the `::-webkit-scrollbar-*` pseudo-elements off entirely -- which
+  // is how the first version silently un-styled itself and shipped a plain grey bar. The rule that
+  // sets it is behind `@supports not selector(::-webkit-scrollbar)`, so in this engine it must not
+  // apply. In Firefox it would, and the drawing is not available there anyway.
+  const webkit = await page.evaluate(() => CSS.supports("selector(::-webkit-scrollbar)"));
+  if (webkit) {
+    expect(drawn.width, "the standard property is on, so the drawn track is switched off").toBe(
+      "auto",
+    );
+  }
+});
+
+test("the map's own controls are in the same hand", async ({ page }) => {
+  await ready(page);
+
+  // MapLibre ships these as white rounded boxes with a grey shadow and near-black icons in fixed
+  // colours -- the last borrowed furniture on the page, and the only part of it that sits directly
+  // on the paper.
+  const group = page.locator(".maplibregl-ctrl-group").first();
+  const box = await group.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { radius: style.borderTopLeftRadius, shadow: style.boxShadow };
+  });
+  expect(box.radius).toBe("0px");
+  expect(box.shadow).toBe("none");
+
+  for (const role of ["zoom-in", "zoom-out"]) {
+    const button = page.locator(`.maplibregl-ctrl-${role}`);
+    const image = await button.evaluate((node) => getComputedStyle(node).backgroundImage);
+    // Two: the mark and the box it is in, both generated with the same pen as the page.
+    expect(image, `${role} is not drawn`).toContain("data:image/svg+xml");
+    expect(image.match(/data:image\/svg\+xml/g)?.length, `${role} has no drawn box`).toBe(2);
+
+    // And MapLibre's own icon is off rather than underneath, which would be two plus signs.
+    const inner = await button
+      .locator(".maplibregl-ctrl-icon")
+      .evaluate((node) => getComputedStyle(node).backgroundImage);
+    expect(inner, `${role} still carries MapLibre's icon`).toBe("none");
+  }
+
+  // The scale bar is a measure before it is a mark: its rule must span the element MapLibre sized,
+  // because the width *is* the distance printed beside it.
+  const scale = await page
+    .locator(".maplibregl-ctrl-scale")
+    .evaluate((node) => getComputedStyle(node).backgroundSize.split(",")[0]?.trim());
+  expect(scale).toBe("100% 6px");
+});
+
+test("the licence notice is restyled and not shrunk", async ({ page }) => {
+  await ready(page);
+  // The one piece of map furniture that is a legal obligation rather than a control. It may be
+  // recoloured and it may be moved; it may not be made smaller or fainter than the page's own
+  // smallest prose, and it has to clear AA against whatever it is sitting on.
+  const notice = page.locator(".maplibregl-ctrl-attrib").first();
+  // Resolved through a probe rather than parsed off the token, because `--size-margin` is a rem
+  // string and the comparison has to be in the pixels the reader actually gets.
+  const smallest = await page.evaluate(() => {
+    const probe = document.createElement("span");
+    probe.style.fontSize = "var(--size-margin)";
+    document.body.append(probe);
+    const resolved = Number.parseFloat(getComputedStyle(probe).fontSize);
+    probe.remove();
+    return resolved;
+  });
+  const size = await notice.evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+  expect(
+    size,
+    `the licence notice is ${size}px against the page's smallest prose at ${smallest}px`,
+  ).toBeGreaterThanOrEqual(smallest);
+
+  const ratio = await notice.evaluate((node) => {
+    const channel = (value: number) =>
+      value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    const luminance = (colour: string) => {
+      const parts = colour.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
+      const [r = 0, g = 0, b = 0] = parts.map((value) => channel(value / 255));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const style = getComputedStyle(node);
+    const ink = luminance(style.color);
+    const paper = luminance(style.backgroundColor);
+    const [high, low] = ink > paper ? [ink, paper] : [paper, ink];
+    return (high + 0.05) / (low + 0.05);
+  });
+  expect(ratio, `the licence notice is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_SMALL);
+});
+
+test("the furniture follows the paper it is drawn on", async ({ page }) => {
+  await ready(page);
+  // A data URI cannot carry a `var()`, so every one of these has a hex baked into it. That is the
+  // one thing about this approach that can rot: a scrollbar and a set of map buttons still drawn in
+  // day ink down the side of a black page, which is exactly what a token would have prevented.
+  const read = () =>
+    page.evaluate(() => {
+      const style = getComputedStyle(document.documentElement);
+      return ["--scroll-track", "--thumb-top", "--ctrl-zoom-in", "--scale-rule"].map((name) =>
+        style.getPropertyValue(name).trim(),
+      );
+    });
+
+  const day = await read();
+  await surfaceIs(page, "Night");
+  await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
+  await expect.poll(async () => (await read())[0]).not.toBe(day[0]);
+
+  const night = await read();
+  for (const [index, drawing] of night.entries()) {
+    expect(drawing, "this one was not redrawn for the night surface").not.toBe(day[index]);
+  }
+});
+
 test("a rule is one continuous stroke, not a dashed line", async ({ page }) => {
   await ready(page);
   // The regression. The first version stretched a 100-unit viewBox with `non-scaling-stroke`, which

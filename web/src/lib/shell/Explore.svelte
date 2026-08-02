@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Boxed from "../notebook/Boxed.svelte";
   import Rule from "../notebook/Rule.svelte";
   import Ticked from "../notebook/Ticked.svelte";
   import Sheet from "../notebook/Sheet.svelte";
@@ -139,12 +140,16 @@
       />
       <button
         type="button"
+        class="run"
         aria-pressed={playing}
         onclick={() => {
           clock.toggle();
           playing = clock.playing;
         }}
       >
+        <!-- Running is the second pass of the pen, the way every other state on this page is: the
+             box is gone over again rather than filled in. -->
+        <Boxed seed="explore-run" active={playing} />
         {playing ? "Pause" : "Play"}
       </button>
     </div>
@@ -313,7 +318,9 @@
     align-self: center;
   }
 
-  .layers label:focus-within :global(.ticked__box) {
+  /* Named, not positional. This read `.ticked__box` and had matched nothing since the marks moved
+     to rough.js, so a keyboard reaching a layer row left no visible trace on the box it was on. */
+  .layers label:focus-within :global(.ink-box path) {
     stroke: var(--rust);
     stroke-width: 2;
   }
@@ -396,19 +403,29 @@
     accent-color: var(--rust-ink);
   }
 
-  .time button {
+  .run {
+    position: relative;
     flex: none;
-    padding: 2px var(--gap-tight);
+    padding: 4px 0.6rem;
     background: transparent;
-    border: 1px solid var(--rule);
-    border-radius: var(--radius);
+    border: 0;
     font-family: var(--font-mono);
     font-size: 0.7rem;
     color: var(--ink);
     cursor: pointer;
   }
 
-  .time button:hover {
+  /* A wash under the drawn box rather than a fill inside it: the ink is on the paper, so a hover
+     has to happen to the paper. Same rule as the arrival buttons. */
+  .run::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: transparent;
+    transition: background-color var(--fade);
+  }
+
+  .run:hover::before {
     background: var(--paper-sunken);
   }
 
