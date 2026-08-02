@@ -17,6 +17,7 @@
   import { SpeciesSurfaces } from "../../search/taxon";
   import { Clock } from "../../state/time";
   import { turnPage } from "../../state/turn";
+  import { readClaim, watchHistory, writeClaim } from "../../state/route";
   import Surface from "../notebook/Surface.svelte";
   import Sheet from "../notebook/Sheet.svelte";
   import {
@@ -148,10 +149,30 @@
     loadLedger(base)
       .then((loaded) => {
         ledger = loaded;
-        current = arrivalOf(loaded.findings) ?? null;
+        // A claim named in the URL opens straight into its evidence, skipping the arrival card.
+        // Someone who follows a link to a specific finding has already been told what it is; the
+        // card would be an interstitial between them and the thing they clicked for.
+        const asked = loaded.findings.find((finding) => finding.key === readClaim());
+        current = asked ?? arrivalOf(loaded.findings) ?? null;
+        if (asked) mode = "reading";
       })
       .catch((error: unknown) => (failure = String(error)));
   });
+
+  // Back and forward. `writeClaim` pushes an entry per claim, so this is what makes the button do
+  // what a reader means by it -- an unhandled popstate would change the URL and leave the page on
+  // whatever it was showing, which is worse than not being linkable at all.
+  $effect(() =>
+    watchHistory(() => {
+      const asked = ledger?.findings.find((finding) => finding.key === readClaim());
+      if (asked) {
+        current = asked;
+        mode = "reading";
+      } else if (ledger) {
+        mode = "exploring";
+      }
+    }),
+  );
 
   // The camera follows whichever claim is in hand. While arriving it is already on the evidence
   // behind the card, which is the point of the card sitting on a live globe rather than on a picture
@@ -167,6 +188,7 @@
     turnPage(async () => {
       current = finding;
       mode = "reading";
+      writeClaim(finding.key);
       await tick();
     });
   }
@@ -198,7 +220,10 @@
       <Arrival
         finding={current}
         onshow={() => (mode = "reading")}
-        onexplore={() => (mode = "exploring")}
+        onexplore={() => {
+          mode = "exploring";
+          writeClaim(null);
+        }}
       />
     {:else if mode === "reading"}
       <article class="shell__reading" aria-live="polite">
@@ -243,7 +268,10 @@
         findings={ledger.findings}
         selected={mode === "reading" ? current.key : null}
         onchoose={choose}
-        onclear={() => (mode = "exploring")}
+        onclear={() => {
+          mode = "exploring";
+          writeClaim(null);
+        }}
       />
     {/if}
   {/if}

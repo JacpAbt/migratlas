@@ -164,6 +164,33 @@ test("choosing another claim flies the camera and swaps the evidence", async ({ 
   );
 });
 
+test("a claim has its own address, and the back button honours it", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /show me how you know/i }).click();
+
+  await page.locator('.tab[data-claim="marine-null"]').click();
+  await expect(page).toHaveURL(/c=marine-null/);
+
+  await page.locator('.tab[data-claim="coverage-bias"]').click();
+  await expect(page).toHaveURL(/c=coverage-bias/);
+
+  // `pushState` per claim, so back means the last claim read. The clock deliberately uses
+  // `replaceState` in the same hash -- animating it would push hundreds of entries -- and the two
+  // have to coexist without either erasing the other.
+  await page.goBack();
+  await expect(page).toHaveURL(/c=marine-null/);
+  await expect(page.locator(".claim__precise")).toHaveText(/poleward/i);
+});
+
+test("a link to a claim opens the claim, not the arrival card", async ({ page }) => {
+  // Someone following a link to a specific finding has already been told what it is. The card
+  // would be an interstitial between them and the thing they clicked for.
+  await page.goto("?debug=1#c=anthropogenic-share");
+  await expect(page.locator(".claim__title")).toBeVisible();
+  await expect(page.locator(".arrival__card")).toHaveCount(0);
+  await expect(page.locator(".claim__precise")).toHaveText(/human forcing/i);
+});
+
 test("just the map means the whole map, not the last claim's filter", async ({ page }) => {
   await arrive(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
