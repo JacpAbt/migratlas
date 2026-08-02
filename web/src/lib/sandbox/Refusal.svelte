@@ -81,7 +81,7 @@
   .refusal__question {
     margin: var(--gap-hair) 0 0;
     font-family: var(--font-hand);
-    font-size: 1.3rem;
+    font-size: calc(1.3rem * var(--font-scale-hand));
     line-height: var(--leading-hand);
     color: var(--ink);
   }

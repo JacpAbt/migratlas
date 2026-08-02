@@ -91,7 +91,9 @@
   */
   --font-mono: "Plex Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
 
-  --size-claim: clamp(1.55rem, 1.1rem + 1.9vw, 2.1rem);
+  /* Scaled by the preset, because the faces do not share an x-height. Folded into the token
+     rather than into each consumer: every use of this is a hand heading. */
+  --size-claim: calc(clamp(1.55rem, 1.1rem + 1.9vw, 2.1rem) * var(--font-scale-hand));
   --size-body: 0.95rem;
   --size-value: 1.35rem;
   --size-margin: 0.66rem;

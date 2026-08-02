@@ -19,6 +19,7 @@
   import { turnPage } from "../../state/turn";
   import { readClaim, watchHistory, writeClaim } from "../../state/route";
   import Surface from "../notebook/Surface.svelte";
+  import TypeChoice from "../notebook/TypeChoice.svelte";
   import Sheet from "../notebook/Sheet.svelte";
   import {
     applySurface,
@@ -27,6 +28,7 @@
     watchSystem,
     type Surface as SurfaceChoice,
   } from "../../state/surface";
+  import { applyType, storedType, type TypeChoice as TypeName } from "../../state/type";
   import { setPalette } from "../../globe/flavor";
   import { repaintBasemap } from "../../globe/map";
 
@@ -62,8 +64,13 @@
    */
   let surface = $state<SurfaceChoice>("system");
 
+  /** Which type the page is set in. Independent of the surface: black paper and a legible face is
+      a combination someone will want, and neither setting reads the other. */
+  let typeChoice = $state<TypeName>("hand");
+
   $effect(() => {
     surface = applySurface(storedSurface());
+    typeChoice = applyType(storedType());
   });
 
   // The globe's colours are JavaScript, not CSS, so nothing repaints them on its own. Runs on the
@@ -259,7 +266,8 @@
       />
     {/if}
 
-    <div class="shell__surface">
+    <div class="shell__settings">
+      <TypeChoice choice={typeChoice} onchoose={(next) => (typeChoice = applyType(next))} />
       <Surface {surface} onchoose={(next) => (surface = applySurface(next))} />
     </div>
 
@@ -286,11 +294,16 @@
 
   /* Top right, out of the reading path and above the sheet. Small on purpose: it is a preference,
      not a claim, and ADR 0007 gives the page's emphasis to the argument. */
-  .shell__surface {
+  .shell__settings {
     position: absolute;
     top: var(--gap-tight);
     right: var(--gap-tight);
     z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: var(--gap);
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   /* Lifted clear of the index strip. MapLibre owns these nodes so they cannot be scoped, and they

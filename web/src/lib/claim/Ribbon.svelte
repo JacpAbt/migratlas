@@ -92,7 +92,7 @@
   .pair__gap h4 {
     margin: 0 0 var(--gap-tight);
     font-family: var(--font-hand);
-    font-size: 1.15rem;
+    font-size: calc(1.15rem * var(--font-scale-hand));
     font-weight: 400;
     line-height: var(--leading-hand);
   }

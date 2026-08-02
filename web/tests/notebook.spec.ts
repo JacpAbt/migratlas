@@ -275,6 +275,57 @@ test("no number animates to its value", async ({ page }) => {
   expect(first).toMatch(/\d/);
 });
 
+test("the type is a setting a reader can reach, and it survives a reload", async ({ page }) => {
+  await ready(page);
+
+  // Beside the surface switch, not behind anything. Two of the three options exist for people who
+  // cannot comfortably read the first, and an accessibility provision in a menu is one nobody
+  // finds.
+  const picker = page.locator(".type");
+  await expect(picker.getByRole("radio")).toHaveCount(3);
+
+  await picker.getByRole("radio", { name: "Dyslexia", exact: true }).check();
+  await expect(page.locator(":root")).toHaveAttribute("data-type", "dyslexic");
+  await expect(page.locator(".claim__title")).toHaveCSS("font-family", /OpenDyslexic/);
+
+  await page.reload();
+  await expect(page.locator(":root")).toHaveAttribute("data-type", "dyslexic");
+});
+
+test("changing the type changes the letterforms and nothing else", async ({ page }) => {
+  await ready(page);
+  const picker = page.locator(".type");
+
+  // The faces do not share an x-height, so each preset carries its own scale and leading. Without
+  // that, switching makes the page look a size bigger or smaller rather than differently drawn --
+  // which is the whole of what "optimised" means for a type setting.
+  const measure = () =>
+    page.evaluate(() => {
+      const title = getComputedStyle(document.querySelector(".claim__title")!);
+      const body = getComputedStyle(document.querySelector(".claim__matters")!);
+      return {
+        title: Number.parseFloat(title.fontSize),
+        body: Number.parseFloat(body.fontSize),
+        leading: Number.parseFloat(body.lineHeight),
+      };
+    });
+
+  const seen: Record<string, Awaited<ReturnType<typeof measure>>> = {};
+  for (const name of ["Hand", "Clear", "Dyslexia"]) {
+    await picker.getByRole("radio", { name, exact: true }).check();
+    seen[name] = await measure();
+  }
+
+  // Every preset lands in a readable band rather than at the same nominal size.
+  for (const [name, size] of Object.entries(seen)) {
+    expect(size.title, `${name} heading is ${size.title}px`).toBeGreaterThan(15);
+    expect(size.body, `${name} body is ${size.body}px`).toBeGreaterThan(12);
+    expect(size.leading / size.body, `${name} leading`).toBeGreaterThan(1.4);
+  }
+  // And they are genuinely different settings, not three names for one.
+  expect(new Set(Object.values(seen).map((s) => s.title)).size).toBeGreaterThan(1);
+});
+
 test("a figure is never set in a face that cannot line one up", async ({ page }) => {
   await ready(page);
   /*
@@ -367,6 +418,13 @@ test("the drawn edge stays put while the claim scrolls under it", async ({ page 
   const leaf = page.locator(".shell__leaf");
   // The regression this exists for: an absolutely-positioned edge inside a scrolling box is placed
   // against the padding box, so the tear travels up the screen as a reader scrolls.
+  //
+  // Measured only once the sheet has stopped arriving. The card lands with an 8px `settle`, and a
+  // first reading taken mid-animation put this 1.7px out -- reported as the edge having moved,
+  // which is the one thing the test is meant to detect. Fonts finishing later made it likelier
+  // rather than causing it, so the wait belongs here rather than a longer one in `ready`.
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"));
+
   const before = await page.locator(".shell__sheet .sheet__ink").boundingBox();
   await leaf.evaluate((node) => node.scrollBy(0, 400));
   await expect.poll(async () => (await leaf.evaluate((n) => n.scrollTop)) > 0).toBe(true);

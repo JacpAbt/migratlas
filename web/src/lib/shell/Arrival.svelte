@@ -115,7 +115,7 @@
     margin: var(--gap-tight) 0 0;
     font-family: var(--font-hand);
     font-weight: 400;
-    font-size: clamp(1.7rem, 1.2rem + 2.2vw, 2.45rem);
+    font-size: calc(clamp(1.7rem, 1.2rem + 2.2vw, 2.45rem) * var(--font-scale-hand));
     line-height: var(--leading-hand);
     text-wrap: balance;
   }

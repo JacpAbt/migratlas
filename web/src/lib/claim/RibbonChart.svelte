@@ -194,7 +194,7 @@
   .chart__ask h4 {
     margin: 0;
     font-family: var(--font-hand);
-    font-size: 1.1rem;
+    font-size: calc(1.1rem * var(--font-scale-hand));
     font-weight: 400;
     line-height: var(--leading-hand);
   }

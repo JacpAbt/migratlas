@@ -56,7 +56,7 @@
     margin: 0;
     font-family: var(--font-hand);
     font-weight: 400;
-    font-size: 1.35rem;
+    font-size: calc(1.35rem * var(--font-scale-hand));
     line-height: var(--leading-hand);
   }
 
