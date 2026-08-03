@@ -57,29 +57,88 @@ async function eachClaim(page: Page, visit: (index: number) => Promise<void>): P
 }
 
 /**
- * Contrast of an element's own text against the page background, computed in the browser from
- * resolved values.
+ * The paper as it is actually painted, averaged over a patch of it.
  *
- * Reads the *page* background rather than walking up for the nearest painted ancestor, which is
- * sound here only because the notebook has one background: paper, with the grain over it. If a
- * component ever gets its own fill, this has to walk the tree instead of being trusted.
+ * Not `--paper`, and the difference is the whole reason this exists. The token is the colour the
+ * grain is blended *into*; what a reader looks at is the two composited, and for one release that
+ * was a texture centred on mid-grey multiplied over cream, which resolves to concrete. Every
+ * contrast number on the page was computed against a value nothing on the screen had.
+ *
+ * A screenshot, decoded in the browser, rather than the blend re-implemented here: re-implementing
+ * it would agree with itself no matter what the compositor did. The patch is averaged because
+ * grain is a distribution and text is read against its mean.
  */
-async function contrast(target: Locator): Promise<number> {
-  return target.evaluate((node) => {
-    const channel = (value: number) =>
-      value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+interface Patch {
+  /** Mean colour, which is what text is read against. */
+  rgb: [number, number, number];
+  /** Spread of the green channel: whether there is any grain in it at all. */
+  sd: number;
+}
 
-    const luminance = (colour: string): number => {
-      const parts = colour.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
-      const [r = 0, g = 0, b = 0] = parts.map((value) => channel(value / 255));
-      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+async function sheetPaper(page: Page): Promise<Patch> {
+  const sheet = await page.locator(".sheet").first().boundingBox();
+  expect(sheet, "no sheet to measure the paper on").toBeTruthy();
+  // The top-left of the ground, inside the torn edge and above the first line of the claim: the
+  // leaf's own top padding is 25.6px, and the drawn edge wanders no further in than about 6.
+  const shot = (
+    await page.screenshot({
+      clip: { x: sheet!.x + 12, y: sheet!.y + 11, width: 12, height: 12 },
+    })
+  ).toString("base64");
+
+  return page.evaluate(async (encoded) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${encoded}`;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d")!;
+    context.drawImage(image, 0, 0);
+    const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+    const total = [0, 0, 0];
+    let squares = 0;
+    for (let index = 0; index < data.length; index += 4) {
+      total[0]! += data[index]!;
+      total[1]! += data[index + 1]!;
+      total[2]! += data[index + 2]!;
+      squares += data[index + 1]! ** 2;
+    }
+    const count = data.length / 4;
+    const mean = total.map((sum) => sum / count) as [number, number, number];
+    return {
+      rgb: mean.map(Math.round) as [number, number, number],
+      sd: Math.sqrt(Math.max(0, squares / count - mean[1] ** 2)),
     };
+  }, shot);
+}
 
-    const ink = luminance(getComputedStyle(node).color);
-    const paper = luminance(getComputedStyle(document.body).backgroundColor);
-    const [high, low] = ink > paper ? [ink, paper] : [paper, ink];
-    return (high + 0.05) / (low + 0.05);
-  });
+/** Relative luminance of an `rgb(...)` string or a channel triple. */
+function luminance(colour: string | [number, number, number]): number {
+  const parts = typeof colour === "string" ? (colour.match(/[\d.]+/g)?.map(Number) ?? []) : colour;
+  const [r = 0, g = 0, b = 0] = parts
+    .slice(0, 3)
+    .map((value) => value / 255)
+    .map((value) => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function ratio(ink: number, paper: number): number {
+  const [high, low] = ink > paper ? [ink, paper] : [paper, ink];
+  return (high + 0.05) / (low + 0.05);
+}
+
+/**
+ * Contrast of an element's own text against the paper it is painted on.
+ *
+ * The paper is passed in rather than read off an ancestor, which is sound here only because the
+ * notebook has one background everywhere: the same colour under the same grain under the same
+ * blend. `every surface that paints paper paints it the same way` is the test that keeps that
+ * true; if a component ever gets a fill of its own, this has to walk the tree instead.
+ */
+async function contrast(target: Locator, paper: number): Promise<number> {
+  const ink = await target.evaluate((node) => getComputedStyle(node).color);
+  return ratio(luminance(ink), paper);
 }
 
 for (const surface of ["day", "night"] as const) {
@@ -115,16 +174,72 @@ for (const surface of ["day", "night"] as const) {
       ["the specimen line", ".specimen p", AA_SMALL],
     ];
 
+    // Measured off the sheet these words are printed on, not off `--paper`, and the two are not
+    // the same value: the grain is blended into the token, so what a reader sees is the composite.
+    const sheet = await sheetPaper(page);
+    const paper = luminance(sheet.rgb);
+
     for (const [what, selector, floor] of samples) {
       const target = page.locator(selector).first();
       await expect(target, `${what} is not on the page`).toBeVisible();
-      const ratio = await contrast(target);
-      expect(ratio, `${what} (${selector}) is ${ratio.toFixed(2)}:1, needs ${floor}:1`).toBeGreaterThanOrEqual(
-        floor,
-      );
+      const measured = await contrast(target, paper);
+      expect(
+        measured,
+        `${what} (${selector}) is ${measured.toFixed(2)}:1 on rgb(${sheet.rgb.join(" ")}), needs ${floor}:1`,
+      ).toBeGreaterThanOrEqual(floor);
     }
   });
 }
+
+test("every surface that paints paper paints it the same way", async ({ page }) => {
+  await ready(page);
+  // The bug this exists for: `Sheet` set the paper colour and the grain and no blend mode, so the
+  // texture was painted *over* the colour rather than into it and every card on the site was a grey
+  // slab in both surfaces. Nothing caught it, because the contrast suite read the token underneath.
+  //
+  // Structural rather than sampled, because these three declarations only mean anything together
+  // and a card can be measured only where it has no words on it.
+  const surfaces = await page.evaluate(() => {
+    const of = (node: Element | null) => {
+      if (!node) return null;
+      const style = getComputedStyle(node);
+      return [style.backgroundColor, style.backgroundImage, style.backgroundSize, style.backgroundBlendMode].join(
+        " | ",
+      );
+    };
+    return {
+      body: of(document.body),
+      sheet: of(document.querySelector(".sheet__ground")),
+      index: of(document.querySelector(".index")),
+    };
+  });
+
+  expect(surfaces.sheet, "the claim sheet is not the same paper as the page").toBe(surfaces.body);
+  expect(surfaces.index, "the index strip is not the same paper as the page").toBe(surfaces.body);
+});
+
+test("the grain is a texture, not a filter over the paper", async ({ page }) => {
+  await ready(page);
+  // A displacement map straight out of the archive is centred on mid-grey, because a height field
+  // carries no tone. Multiplied over cream that is a 40% neutral-density filter, and the page came
+  // out the colour of concrete while every token still said it was paper.
+  //
+  // So: the sheet as painted must be the cream it claims to be, within the rounding that a texture
+  // and an 8-bit blend cost. Two channels of slack, no more -- ten would let the whole failure back.
+  const sheet = await sheetPaper(page);
+  const token = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue("--paper").trim(),
+  );
+  const where = `the sheet is rgb(${sheet.rgb.join(" ")}) sd ${sheet.sd.toFixed(2)}, --paper is ${token}`;
+  for (const [index, channel] of sheet.rgb.entries()) {
+    const intended = [0xef, 0xe9, 0xd8][index]!;
+    expect(Math.abs(channel - intended), `${where}, and the design is #efe9d8`).toBeLessThanOrEqual(3);
+  }
+
+  // And the other half of it: a texture that shifts no tone is easy to arrive at by having no
+  // texture. There has to be grain in the patch, or this is a flat fill with a story attached.
+  expect(sheet.sd, `${where} -- no variation, so there is no grain`).toBeGreaterThan(1);
+});
 
 test("the surface is a three-way choice, and it survives a reload", async ({ page }) => {
   await ready(page);
@@ -170,7 +285,8 @@ test("an addressed status is legible too, and is not the only signal", async ({ 
   await ready(page);
   const addressed = page.locator(".bias__status--addressed").first();
   await expect(addressed).toBeVisible();
-  expect(await contrast(addressed)).toBeGreaterThanOrEqual(AA_SMALL);
+  const paper = luminance((await sheetPaper(page)).rgb);
+  expect(await contrast(addressed, paper)).toBeGreaterThanOrEqual(AA_SMALL);
 
   // Never colour alone. The status word is the signal; the colour only reinforces it, because a
   // red-green distinction is not available to every reader.

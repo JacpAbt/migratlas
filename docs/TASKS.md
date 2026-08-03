@@ -21,7 +21,6 @@ Numbers are permanent. A finished item keeps its number and moves to the bottom.
 | 11 | Factor panel and the interpretable model *(handoff #29)* | JRC surface-water change and GHSL built-up as explanatory-only factors, per `DATASETS.md` step 3, feeding an additive model with a drawable response curve per factor. |
 | 12 | The transfer test | Three climate-response sensitivities — aerial-north, marine-north, terrestrial-south. Fit on two, predict the third, publish the error. The experiment `coverage-bias` promises and nobody runs. Depends on #9. |
 | 25 | The globe under the night sky, and a colour-vision test | `globe/flavor.ts` still carries a warm-black night, chosen before the paper became a night sky. And the separability of the token pairs under the two red-green dichromacies is measured in a comment rather than by anything that runs. |
-| 26 | The paper is not paper | The grain is a mid-grey displacement map blended `multiply` over cream, which resolves to concrete, and `Sheet`'s ground sets no blend mode at all so the texture replaces the paper colour outright. The contrast suite cannot see either, because it reads `--paper` rather than what is drawn. |
 
 ## Queued, with a reason to wait
 
@@ -48,6 +47,7 @@ Kept here so they are not rediscovered as good ideas.
 
 | # | Item | Outcome |
 | --- | --- | --- |
+| 26 | The paper was not paper | Both textures re-centred on the neutral value of the blend that uses them, and the blend mode added to the two surfaces that painted paper without it and so showed the raw texture. The contrast suite measures the sheet as it is rendered now, not the token underneath it. |
 | 24 | The furniture | The scrollbar is a ruled line with a pencil stub on it, the map's zoom and projection buttons are paper chips with drawn marks, and the scale bar is a drawn measure. All generated with the same pen and handed to CSS as data URIs, because none of these can hold an `<svg>`. |
 | 23 | Every mark on rough.js | The hand-rolled hash-and-jitter is gone, each mark carries a name the tests can select, and a mark can be regenerated on a palette change rather than restyled. |
 | 22 | Type as a setting | Three presets — hand throughout, hand for headings only with Atkinson Hyperlegible under it, and OpenDyslexic — each with its own scale and leading, because the faces do not share an x-height. |

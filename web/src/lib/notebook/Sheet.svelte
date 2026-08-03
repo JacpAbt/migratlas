@@ -79,11 +79,17 @@
     filter: drop-shadow(var(--shadow-sheet));
   }
 
+  /* The blend is not optional and this is where that was learned. Without it the grain is painted
+     *over* the paper rather than into it, so every card on the site was the raw texture -- a grey
+     slab in both surfaces, with the paper colour underneath it and invisible. Anything that paints
+     paper takes all three of these together. */
   .sheet__ground {
     position: absolute;
     inset: 0;
     background-color: var(--paper);
     background-image: var(--grain);
+    background-size: var(--grain-size);
+    background-blend-mode: var(--grain-blend);
   }
 
   .sheet__ink {

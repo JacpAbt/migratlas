@@ -70,8 +70,11 @@
        both clear, so the strip has to be exactly that tall or the reservation is a guess. */
     height: var(--strip);
     padding: var(--gap-tight) var(--gap);
+    /* All three together, or the grain paints over the paper instead of into it. */
     background-color: var(--paper);
     background-image: var(--grain);
+    background-size: var(--grain-size);
+    background-blend-mode: var(--grain-blend);
     border-top: 1px solid var(--rule);
   }
 

@@ -12,7 +12,13 @@
 
 :root {
   /* --- Day: a naturalist's notebook on a desk ------------------------------ */
-  --paper: #efe9d8;
+  /*
+    The cream is #efe9d8 and this is not it, on purpose: the grain below multiplies over this
+    value, so what a reader sees is `--paper` times the texture's mean rather than `--paper`. At a
+    mean of 250.5 that is a factor of 0.982, and this is #efe9d8 divided back out by it. Every
+    contrast figure in this file is measured against the composite, which is what the eye gets.
+  */
+  --paper: #f3eddc;
   --paper-sunken: #e5dec9;
   --ink: #26302a;
   --ink-soft: #46524a;
@@ -55,11 +61,23 @@
   /*
     Paper, and this time it is paper.
 
-    A seamless CC0 scan from ambientCG, and specifically its *displacement* map. The first attempt
-    used the colour map, which in a PBR material is nearly flat -- luma standard deviation 1.6,
-    where the displacement map is 13.5. It looked like texture only because the ruled lines were
-    doing the work. Greyscale, because the blend modes only ever use luminance, and 384px because
-    grain is high-frequency noise that does not reward resolution: 37 KB for both surfaces.
+    A seamless CC0 scan from ambientCG, its *displacement* map rather than its colour map -- in a
+    PBR material the colour map is nearly flat, so the first version of this had no grain at all
+    and the ruled lines were doing the work.
+
+    The displacement map has the grain and, straight out of the archive, none of the tone: it is
+    centred on mid-grey, mean 152 of 255, because a height field says nothing about colour. Blended
+    `multiply` that is not a texture on cream paper, it is a 40% neutral-density filter over it,
+    and the page came out the colour of concrete. Both maps are re-centred on the neutral value of
+    the blend that uses them -- 250.5 for `multiply`, where 255 is "leave it alone", and 127.8 for
+    `soft-light`, where 128 is -- so each one now adds its variation and changes no tone. The
+    deviation is what a texture is; the mean was never part of it.
+
+        fibre  mean 152.2 sd 16.25  ->  mean 250.5 sd 4.93   (day, multiply)
+        rough  mean 139.8 sd 11.70  ->  mean 127.8 sd 11.70  (night, soft-light)
+
+    Greyscale, because the blend modes only ever use luminance, and 384px because grain is
+    high-frequency noise that does not reward resolution: 42 KB for both surfaces.
   */
   --grain: url("../assets/paper/fibre.webp");
   --grain-size: 384px;
