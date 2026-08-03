@@ -224,21 +224,32 @@ test("the grain is a texture, not a filter over the paper", async ({ page }) => 
   // carries no tone. Multiplied over cream that is a 40% neutral-density filter, and the page came
   // out the colour of concrete while every token still said it was paper.
   //
-  // So: the sheet as painted must be the cream it claims to be, within the rounding that a texture
-  // and an 8-bit blend cost. Two channels of slack, no more -- ten would let the whole failure back.
-  const sheet = await sheetPaper(page);
-  const token = await page.evaluate(() =>
-    getComputedStyle(document.documentElement).getPropertyValue("--paper").trim(),
-  );
-  const where = `the sheet is rgb(${sheet.rgb.join(" ")}) sd ${sheet.sd.toFixed(2)}, --paper is ${token}`;
-  for (const [index, channel] of sheet.rgb.entries()) {
-    const intended = [0xef, 0xe9, 0xd8][index]!;
-    expect(Math.abs(channel - intended), `${where}, and the design is #efe9d8`).toBeLessThanOrEqual(3);
-  }
+  // So: the sheet as painted must be the colour it claims to be, on both surfaces, within the
+  // rounding that a texture and an 8-bit blend cost. Three levels of slack, no more -- ten would
+  // let the whole failure back in.
+  for (const [surface, intended] of [
+    ["day", [0xef, 0xe9, 0xd8]],
+    ["night", [0x0d, 0x13, 0x1e]],
+  ] as const) {
+    if (surface === "night") await surfaceIs(page, "Night");
+    const sheet = await sheetPaper(page);
+    const where = `the ${surface} sheet is rgb(${sheet.rgb.join(" ")}) sd ${sheet.sd.toFixed(2)}`;
 
-  // And the other half of it: a texture that shifts no tone is easy to arrive at by having no
-  // texture. There has to be grain in the patch, or this is a flat fill with a story attached.
-  expect(sheet.sd, `${where} -- no variation, so there is no grain`).toBeGreaterThan(1);
+    for (const [index, channel] of sheet.rgb.entries()) {
+      expect(
+        Math.abs(channel - intended[index]!),
+        `${where}, and the palette says ${intended.map((v) => v.toString(16).padStart(2, "0")).join("")}`,
+      ).toBeLessThanOrEqual(3);
+    }
+
+    // And the other half of it, on the surface where the grain is meant to be seen: shifting no
+    // tone is easy to achieve by having no texture. Only the day paper is asserted to have any,
+    // because night is deliberately four times smoother -- its map is large-scale creases rather
+    // than fibre, and at any real amplitude on a near-black ground that reads as foil.
+    if (surface === "day") {
+      expect(sheet.sd, `${where} -- no variation, so there is no grain`).toBeGreaterThan(1);
+    }
+  }
 });
 
 test("the surface is a three-way choice, and it survives a reload", async ({ page }) => {

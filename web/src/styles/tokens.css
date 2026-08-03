@@ -73,11 +73,17 @@
     `soft-light`, where 128 is -- so each one now adds its variation and changes no tone. The
     deviation is what a texture is; the mean was never part of it.
 
-        fibre  mean 152.2 sd 16.25  ->  mean 250.5 sd 4.93   (day, multiply)
-        rough  mean 139.8 sd 11.70  ->  mean 127.8 sd 11.70  (night, soft-light)
+        fibre  mean 152.2 sd 16.25  ->  mean 250.5 sd 4.93  (day, multiply)
+        rough  mean 139.8 sd 11.70  ->  mean 127.8 sd 2.60  (night, soft-light)
+
+    Night is the smoother of the two on purpose, and by a factor of four. `rough` is a *crumple*
+    map: its variation is large-scale creases rather than fibre, and at full amplitude on a
+    near-black ground that reads as foil rather than as paper. The mock this palette was chosen
+    from measured 2.06, so this is the same scan at the amplitude that was actually agreed --
+    surface you notice when you are not reading, and nothing more.
 
     Greyscale, because the blend modes only ever use luminance, and 384px because grain is
-    high-frequency noise that does not reward resolution: 42 KB for both surfaces.
+    high-frequency noise that does not reward resolution: 35 KB for both surfaces.
   */
   --grain: url("../assets/paper/fibre.webp");
   --grain-size: 384px;
