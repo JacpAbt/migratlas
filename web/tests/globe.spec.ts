@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { readFile } from "node:fs/promises";
+
+import { JITTER, MIN_EXTENT, drawnCoast } from "../src/globe/coastline";
 import { graticuleSource } from "../src/globe/graticule";
 
 /**
@@ -726,4 +729,94 @@ test("the graticule is ruled by hand, bounded, and gone before it could mislead"
     expect(off, `a ${kind} wanders ${off.toFixed(2)} degrees off true`).toBeLessThanOrEqual(0.6);
     expect(off, `a ${kind} does not wander at all, so it is not drawn`).toBeGreaterThan(0.05);
   }
+});
+
+test("the drawn coastline is bounded, and hands over to the surveyed one", async ({ page }) => {
+  await ready(page);
+
+  const coast = await page.evaluate(() => {
+    const { map } = (window as unknown as Hook).migratlas;
+    const ids = map.getStyle().layers.map((layer) => layer.id);
+    const opacityAt = (layer: string, zoom: number) => {
+      const stops = map.getPaintProperty(layer, "line-opacity") as unknown[];
+      // The ramp is `interpolate linear zoom z0 v0 z1 v1 ...`; read the pairs off the tail.
+      const pairs: [number, number][] = [];
+      for (let index = 3; index < stops.length; index += 2) {
+        pairs.push([Number(stops[index]), Number(stops[index + 1])]);
+      }
+      const above = pairs.find(([z]) => z >= zoom) ?? pairs[pairs.length - 1]!;
+      const below = [...pairs].reverse().find(([z]) => z <= zoom) ?? pairs[0]!;
+      if (above[0] === below[0]) return above[1];
+      const share = (zoom - below[0]) / (above[0] - below[0]);
+      return below[1] + share * (above[1] - below[1]);
+    };
+    return {
+      ids,
+      drawnAt: [0, 1.8, 2.2, 2.6, 4].map((zoom) => opacityAt("coast-drawn", zoom)),
+      trueAt: [0, 1.8, 2.2, 2.6, 4].map((zoom) => opacityAt("coast", zoom)),
+    };
+  });
+
+  // Under the surveyed line, so the accurate one paints over the sketch rather than beneath it.
+  expect(coast.ids.indexOf("coast-drawn")).toBeLessThan(coast.ids.indexOf("coast"));
+
+  // The crossfade has to be complementary at every zoom sampled: there is no zoom at which the
+  // globe has no coastline, and none at which the drawn one is still up after the surveyed one has
+  // arrived. This is the assertion that makes the wobble defensible rather than merely small.
+  for (const [index, drawn] of coast.drawnAt.entries()) {
+    const surveyed = coast.trueAt[index]!;
+    expect(drawn + surveyed, `both coastlines faint together at sample ${index}`).toBeGreaterThan(
+      0.85,
+    );
+  }
+  expect(coast.drawnAt.at(-1), "the sketch is still drawn where a reader could measure").toBe(0);
+  expect(coast.trueAt.at(-1), "the surveyed coastline never reaches full strength").toBe(1);
+
+  // And the deviation itself, against the real Natural Earth geometry rather than a fixture: every
+  // drawn vertex within JITTER of the shore it is a sketch of, and every small island at exactly
+  // zero, because a ring half a degree across displaced by half a degree is a different island.
+  const land = JSON.parse(
+    await readFile("public/basemap/land.geojson", "utf8"),
+  ) as GeoJSON.FeatureCollection;
+  const drawn = drawnCoast(land);
+
+  const rings: number[][][] = [];
+  for (const feature of land.features) {
+    const geometry = feature.geometry;
+    if (geometry.type === "Polygon") rings.push(...geometry.coordinates);
+    else if (geometry.type === "MultiPolygon") rings.push(...geometry.coordinates.flat());
+  }
+
+  let worst = 0;
+  let untouched = 0;
+  let cursor = 0;
+  for (const ring of rings.filter((points) => points.length >= 4)) {
+    const lons = ring.map(([lon]) => lon!);
+    const lats = ring.map(([, lat]) => lat!);
+    const small =
+      Math.max(...lons) - Math.min(...lons) < MIN_EXTENT &&
+      Math.max(...lats) - Math.min(...lats) < MIN_EXTENT;
+    for (let pass = 0; pass < (small ? 1 : 2); pass += 1) {
+      const stroke = (drawn.features[cursor]!.geometry as GeoJSON.LineString).coordinates;
+      expect(stroke.length, "a pass changed the vertex count of its ring").toBe(ring.length);
+      let off = 0;
+      for (const [index, [lon, lat]] of stroke.entries()) {
+        const [trueLon, trueLat] = ring[index] as [number, number];
+        off = Math.max(off, Math.abs(lon! - trueLon), Math.abs(lat! - trueLat));
+      }
+      if (small) {
+        expect(off, "a small island was jittered").toBe(0);
+        untouched += 1;
+      }
+      worst = Math.max(worst, off);
+      cursor += 1;
+    }
+  }
+
+  expect(cursor, "the sketch and the survey disagree about how many rings there are").toBe(
+    drawn.features.length,
+  );
+  expect(worst, `a drawn shore is ${worst.toFixed(3)} degrees off true`).toBeLessThanOrEqual(JITTER);
+  expect(worst, "nothing wobbled, so nothing was drawn").toBeGreaterThan(0.1);
+  expect(untouched, "no island was small enough to be left alone").toBeGreaterThan(0);
 });

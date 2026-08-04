@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 
-  import { createGlobe, setHatch, styleReady } from "../../globe/map";
+  import { addDrawnCoast, createGlobe, setHatch, styleReady } from "../../globe/map";
   import { addSeries } from "../../layers/series";
   import { addSurface } from "../../layers/surface";
   import { loadManifest, type LoadedLayer } from "../../layers/types";
@@ -49,6 +49,13 @@
       // the image. Until this runs the land draws as a flat fill, which is why the layer keeps a
       // `fill-color` under its pattern.
       setHatch(instance);
+      // Survivable, and deliberately so: `addDrawnCoast` only dims the surveyed coastline once the
+      // drawn one is in the style, so losing this costs the hand rather than the shoreline.
+      try {
+        await addDrawnCoast(instance, base);
+      } catch (error) {
+        failures = [...failures, `coastline: ${String(error)}`];
+      }
       addNightShade(instance);
       const manifest = await loadManifest(base);
       const added: LoadedLayer[] = [];

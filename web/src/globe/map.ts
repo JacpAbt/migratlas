@@ -23,6 +23,7 @@ import {
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Protocol } from "pmtiles";
 
+import { DRAWN_COAST, drawnCoast, drawnOpacity, trueOpacity } from "./coastline";
 import { palette } from "./flavor";
 import { GRATICULE, graticuleLayer, graticuleSource } from "./graticule";
 import { HATCH, hatchTile } from "./hatch";
@@ -97,6 +98,39 @@ function outlineLayers(): LayerSpecification[] {
 }
 
 /**
+ * Add the drawn coastline, and only then let the surveyed one step back.
+ *
+ * The order is the safety. The style ships with the true coast at full strength; the crossfade is
+ * written here, after the drawn pass is actually in the style, so every way this can fail -- a fetch
+ * that 404s, geometry that will not parse -- leaves an accurate coastline on screen rather than none.
+ *
+ * The fetch is the same URL the `land` source already pulled, so it is a cache hit and costs no
+ * bytes. Building the strokes from the parsed data rather than shipping a second asset keeps the
+ * payload where it was and keeps one geometry as the source of both.
+ */
+export async function addDrawnCoast(map: MapLibreMap, baseUrl: string): Promise<void> {
+  const response = await fetch(`${baseUrl}basemap/land.geojson`);
+  if (!response.ok) throw new Error(`land.geojson: ${response.status}`);
+  const land = (await response.json()) as GeoJSON.FeatureCollection;
+
+  map.addSource(DRAWN_COAST, { type: "geojson", data: drawnCoast(land) });
+  map.addLayer(
+    {
+      id: DRAWN_COAST,
+      type: "line",
+      source: DRAWN_COAST,
+      paint: {
+        "line-color": palette().coast,
+        "line-width": 0.9,
+        "line-opacity": drawnOpacity() as never,
+      },
+    },
+    "coast",
+  );
+  map.setPaintProperty("coast", "line-opacity", trueOpacity() as never);
+}
+
+/**
  * Put the hatch tile into the style, replacing any tile already there.
  *
  * `updateImage` rather than remove-and-add: removing an image a layer is currently using makes
@@ -126,6 +160,7 @@ export function repaintBasemap(map: MapLibreMap): void {
   if (map.getLayer("coast")) map.setPaintProperty("coast", "line-color", skin.coast);
   if (map.getLayer("borders")) map.setPaintProperty("borders", "line-color", skin.border);
   if (map.getLayer(GRATICULE)) map.setPaintProperty(GRATICULE, "line-color", skin.coast);
+  if (map.getLayer(DRAWN_COAST)) map.setPaintProperty(DRAWN_COAST, "line-color", skin.coast);
   if (map.hasImage(HATCH)) setHatch(map);
 }
 
