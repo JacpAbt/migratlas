@@ -24,6 +24,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Protocol } from "pmtiles";
 
 import { palette } from "./flavor";
+import { GRATICULE, graticuleLayer, graticuleSource } from "./graticule";
 import { HATCH, hatchTile } from "./hatch";
 
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -57,6 +58,8 @@ function outlineSources(baseUrl: string): Record<string, SourceSpecification> {
   return {
     land: { type: "geojson", data: `${baseUrl}basemap/land.geojson`, attribution },
     borders: { type: "geojson", data: `${baseUrl}basemap/borders.geojson` },
+    // Computed, not fetched. Seventeen lines of geometry are cheaper to generate than to request.
+    [GRATICULE]: graticuleSource(),
   };
 }
 
@@ -75,6 +78,9 @@ function outlineLayers(): LayerSpecification[] {
       source: "land",
       paint: { "fill-color": skin.land, "fill-pattern": HATCH },
     },
+    // Between the land and its coastline, which is where a ruled grid sits on paper: over the fill,
+    // under the ink.
+    graticuleLayer(),
     {
       id: "coast",
       type: "line",
@@ -119,6 +125,7 @@ export function repaintBasemap(map: MapLibreMap): void {
   if (map.getLayer("land")) map.setPaintProperty("land", "fill-color", skin.land);
   if (map.getLayer("coast")) map.setPaintProperty("coast", "line-color", skin.coast);
   if (map.getLayer("borders")) map.setPaintProperty("borders", "line-color", skin.border);
+  if (map.getLayer(GRATICULE)) map.setPaintProperty(GRATICULE, "line-color", skin.coast);
   if (map.hasImage(HATCH)) setHatch(map);
 }
 

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { graticuleSource } from "../src/globe/graticule";
+
 /**
  * What this suite is for.
  *
@@ -668,5 +670,60 @@ test("the land is hatched, and the hatch tile meets its own edge", async ({ page
       Math.abs(channel! - tone.land[index]!),
       `the hatch averages rgb(${tone.mean.join(" ")}) where the land is rgb(${tone.land.join(" ")})`,
     ).toBeLessThanOrEqual(2);
+  }
+});
+
+test("the graticule is ruled by hand, bounded, and gone before it could mislead", async ({
+  page,
+}) => {
+  await ready(page);
+
+  const grid = await page.evaluate(() => {
+    const { map } = (window as unknown as Hook).migratlas;
+    return {
+      order: map.getStyle().layers.map((layer) => layer.id),
+      opacity: map.getPaintProperty("graticule", "line-opacity"),
+    };
+  });
+
+  // Over the fill and under the ink, which is where a ruled grid sits on paper.
+  expect(grid.order.indexOf("graticule")).toBeGreaterThan(grid.order.indexOf("land"));
+  expect(grid.order.indexOf("graticule")).toBeLessThan(grid.order.indexOf("coast"));
+
+  // The honesty constraint, and the reason a wobble is allowed here at all: a graticule is a
+  // coordinate claim -- a line that says "this is thirty degrees west" -- so a drawn one is only
+  // defensible while nobody can read a position off it. The opacity ramp has to reach zero, and
+  // reach it before half a degree is a visible distance.
+  const stops = grid.opacity as unknown[];
+  const lastStop = Number(stops[stops.length - 2]);
+  expect(stops.at(-1), `the graticule never fades out: ${JSON.stringify(stops)}`).toBe(0);
+  expect(
+    lastStop,
+    `still drawn at zoom ${lastStop}, where half a degree is a visible distance`,
+  ).toBeLessThanOrEqual(4);
+
+  // And the wobble is bounded rather than merely small-looking. Asserted against the generator
+  // rather than through the map, because the geometry is what has to be in bounds and MapLibre keeps
+  // a source's data private -- reading it back through `querySourceFeatures` would answer for the
+  // facing hemisphere only, which is a different question.
+  const source = graticuleSource() as { data: GeoJSON.FeatureCollection };
+  const worst: Record<string, number> = { meridian: 0, parallel: 0 };
+  for (const feature of source.data.features) {
+    const points = (feature.geometry as GeoJSON.LineString).coordinates as [number, number][];
+    const lons = points.map(([lon]) => lon);
+    const lats = points.map(([, lat]) => lat);
+    // A meridian varies in latitude by design and a parallel in longitude, so which axis carries
+    // the claim is decided by which one spans the globe.
+    const meridian = Math.max(...lats) - Math.min(...lats) > 90;
+    const values = meridian ? lons : lats;
+    const nominal = Math.round(values.reduce((sum, v) => sum + v, 0) / values.length / 30) * 30;
+    const off = Math.max(...values.map((v) => Math.abs(v - nominal)));
+    const kind = meridian ? "meridian" : "parallel";
+    worst[kind] = Math.max(worst[kind]!, off);
+  }
+
+  for (const [kind, off] of Object.entries(worst)) {
+    expect(off, `a ${kind} wanders ${off.toFixed(2)} degrees off true`).toBeLessThanOrEqual(0.6);
+    expect(off, `a ${kind} does not wander at all, so it is not drawn`).toBeGreaterThan(0.05);
   }
 });
