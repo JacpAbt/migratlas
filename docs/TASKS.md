@@ -20,7 +20,6 @@ Numbers are permanent. A finished item keeps its number and moves to the bottom.
 | 10 | Species pages, wave 2 | Bird occupancy change per species, the detection-corrected value beside the naive reporting rate. Depends on #9. |
 | 11 | Factor panel and the interpretable model *(handoff #29)* | JRC surface-water change and GHSL built-up as explanatory-only factors, per `DATASETS.md` step 3, feeding an additive model with a drawable response curve per factor. |
 | 12 | The transfer test | Three climate-response sensitivities — aerial-north, marine-north, terrestrial-south. Fit on two, predict the third, publish the error. The experiment `coverage-bias` promises and nobody runs. Depends on #9. |
-| 28 | The detectability layer is drawn while its box reads off | On first load in explore mode `detectability` is `visible` with its checkbox `false`. `Explore.svelte` reads the box from `layer.visible`, but nothing applies that initial value to MapLibre — only `setVisible` writes the layout property, and it runs from a change handler. It covers the whole sphere, and it is the layer that says where change *cannot* be measured. |
 
 ## Queued, with a reason to wait
 
@@ -48,6 +47,7 @@ Kept here so they are not rediscovered as good ideas.
 | # | Item | Outcome |
 | --- | --- | --- |
 | 25 | The globe under the night sky, and a colour-vision test | Every basemap value moved from warm brown into the page's own slate blue, and the Viénot simulation runs in the suite instead of sitting in a comment. It found `--detect-short` 43 from `--detect-unknown` under deuteranopia, and that the separations recorded in `tokens.css` did not reproduce. |
+| 28 | The detectability layer was drawn while its box read off | Not the diagnosis it was filed with: the initial visibility *was* applied. `exploreView` was handed every layer that loaded and switched them all on, including one declared off, while the panel went on reading the declared value. Explore mode now draws what the layers declare, and a test compares every checkbox against its layer's MapLibre visibility in both directions. |
 | 27 | The globe drawn in the same hand | Land hatched in pencil through `fill-pattern`, a hand-ruled graticule, and the coastline drawn twice — each with the bound it needs written as a test, because tiling, closure and positional error are the three things none of this can be eyeballed for. Not the data layers: a circle is a measurement, and wobbling it draws a shape the data does not have. |
 | 26 | The paper was not paper | Both textures re-centred on the neutral value of the blend that uses them, and the blend mode added to the two surfaces that painted paper without it and so showed the raw texture. The contrast suite measures the sheet as it is rendered now, not the token underneath it. |
 | 24 | The furniture | The scrollbar is a ruled line with a pencil stub on it, the map's zoom and projection buttons are paper chips with drawn marks, and the scale bar is a drawn measure. All generated with the same pen and handed to CSS as data URIs, because none of these can hold an `<svg>`. |

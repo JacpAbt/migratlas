@@ -29,7 +29,20 @@ export interface LoadedLayer {
   cells: number;
   /** Mean position of the layer's features -- where to point a camera to see it. */
   center: [number, number];
-  /** Whether it is drawn on arrival. Defaults to true; the layer list has to agree with the map. */
+  /**
+   * Whether it is drawn on arrival, defaulting to true.
+   *
+   * The *declared initial* value, and deliberately never written to afterwards -- `setVisible` does
+   * not update it. Two things read it and both need it to mean the same thing: the tools panel
+   * initialises its checkboxes from it, and `Shell.svelte` builds explore mode's layer list from it.
+   * Having `setVisible` write back here would make the second of those a function of the first, and
+   * the view effect re-applies visibility whenever the view changes -- which is a loop.
+   *
+   * The invariant that matters is the one between the panel and the map, and it is a test rather
+   * than a comment: `globe.spec.ts` asserts every layer's MapLibre visibility agrees with its
+   * checkbox, on first load and after a toggle. It exists because this field was read as the truth
+   * in one place and overridden in another, and nothing noticed for a release.
+   */
   visible?: boolean;
   setVisible: (visible: boolean) => void;
   /** Called when the clock crosses into a new week. Only time-indexed layers implement it. */

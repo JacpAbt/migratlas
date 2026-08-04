@@ -141,7 +141,22 @@
   let selection = $state<SpeciesSelection | null>(null);
   let map: MapLibreMap | undefined;
 
-  const available = $derived(layers.map((layer) => layer.meta.name));
+  /**
+   * What explore mode draws, which is not everything that loaded.
+   *
+   * `exploreView` used to be handed every layer, and that is how the panel and the map came to
+   * disagree: the detectability wash declares itself off -- fifty thousand cells over the whole
+   * sphere, and the layer about where change *cannot* be measured -- and entering explore mode
+   * switched it on, while the panel went on reading the declared value and showing it unticked. So a
+   * reader who asked for the map got a surface they had not asked for, over everything else, with a
+   * checkbox saying it was not there.
+   *
+   * Filtered here rather than in `story.ts`, because "off until somebody asks for it" is a property
+   * of the layer, and a view is only a list of names.
+   */
+  const drawnOnArrival = $derived(
+    layers.filter((layer) => layer.visible ?? true).map((layer) => layer.meta.name),
+  );
 
   // Fetched alongside the ledger rather than lazily per claim: 8 KB, and every claim card that has
   // knobs needs it the moment it opens.
@@ -186,7 +201,7 @@
   // behind the card, which is the point of the card sitting on a live globe rather than on a picture
   // of one. Exploring is the exception: no claim is in hand, so no claim frames the view.
   const view = $derived<View | null>(
-    mode === "exploring" ? exploreView(available) : current ? viewFor(current) : null,
+    mode === "exploring" ? exploreView(drawnOnArrival) : current ? viewFor(current) : null,
   );
 
   function choose(finding: Finding): void {

@@ -567,6 +567,12 @@ test("searching a species draws its own surface", async ({ page }) => {
   await expect(results.first()).toBeVisible();
   await results.first().click();
 
+  // Choosing a hit flies the camera, and this asserted the draw without waiting for it to land --
+  // the same mistake `explore` has a comment about, in a second place. It passes alone and failed
+  // in the full suite with the signature that comment describes: visible, source loaded, pointed at,
+  // and zero rendered features, because under two WebGL contexts the flight had not finished inside
+  // the eight seconds `expectDrawn` polls for.
+  await settle(page);
   await expectDrawn(page, "selected-species");
   // Named back to the reader, with the layer it came from: a map that changed for no stated
   // reason is worse than one that did not change.
@@ -596,8 +602,15 @@ test("the default build requests nothing off-origin", async ({ page }) => {
     if (!request.url().startsWith("http://localhost")) external.push(request.url());
   });
 
-  const report = await ready(page);
-  await focusOn(page, report, "aerial-passage", "series-aerial-passage");
+  await ready(page);
+  // Rendered, but without a camera flight to get there. The arrival view already frames the radar
+  // stations, so this layer has drawn by the time the layers report in -- and `focusOn`'s `jumpTo`
+  // plus its settle was most of what pushed this test through its 30s deadline once the suite grew
+  // past seventy tests. Nothing is given up: in the default build the style carries no `glyphs` and
+  // no `sprite`, so there is no off-origin request the *renderer* can make. Every request that could
+  // leave this origin -- fonts, the layer JSONs, the bundled basemap -- has already happened, which
+  // is exactly what `ready` waits for.
+  await expectDrawn(page, "series-aerial-passage");
   expect(external, `off-origin requests: ${external.join(", ")}`).toHaveLength(0);
 });
 
@@ -819,4 +832,73 @@ test("the drawn coastline is bounded, and hands over to the surveyed one", async
   expect(worst, `a drawn shore is ${worst.toFixed(3)} degrees off true`).toBeLessThanOrEqual(JITTER);
   expect(worst, "nothing wobbled, so nothing was drawn").toBeGreaterThan(0.1);
   expect(untouched, "no island was small enough to be left alone").toBeGreaterThan(0);
+});
+
+test("the panel and the map never disagree about what is drawn", async ({ page }) => {
+  // A small viewport, and it costs this test nothing: what is asserted is layout properties and
+  // checkbox state, neither of which depends on how many pixels MapLibre fills. What it saves is
+  // real -- the toggle sweep below switches on the fifty-thousand-cell detectability wash, and at
+  // the default 1280x720 that render competes with the other worker's WebGL context hard enough to
+  // push `the default build requests nothing off-origin` from 13s through its 30s deadline. The
+  // suite runs two workers for exactly this reason; this is the same lesson one test further on.
+  await page.setViewportSize({ width: 520, height: 720 });
+
+  await ready(page);
+  await explore(page);
+
+  /**
+   * Every checkbox against the layer it claims to control.
+   *
+   * The rows are read in DOM order and matched to the manifest in the same order, which is what
+   * `Explore.svelte` renders from -- so a row's index is its layer. Matching by name would need the
+   * panel to publish one, and the panel deliberately shows a title.
+   */
+  const compare = () =>
+    page.evaluate(() => {
+      const { map, loaded } = (window as unknown as Hook).migratlas;
+      const boxes = [...document.querySelectorAll<HTMLInputElement>(".layers input")];
+      return loaded.map((layer, index) => {
+        const id =
+          map
+            .getStyle()
+            .layers.map((entry) => entry.id)
+            .find((entry) => entry === layer.meta.name || entry.endsWith(`-${layer.meta.name}`)) ??
+          "";
+        return {
+          name: layer.meta.name,
+          drawn: id ? (map.getLayoutProperty(id, "visibility") ?? "visible") !== "none" : false,
+          ticked: boxes[index]?.checked ?? null,
+        };
+      });
+    });
+
+  const onArrival = await compare();
+  expect(onArrival.length, "no layers to compare").toBeGreaterThan(0);
+
+  // First load, before anything is touched. This is the state that was wrong: `exploreView` was
+  // handed every layer that loaded and switched them all on, including the detectability wash --
+  // which declares itself off, covers the whole sphere, and had its box showing unticked while it
+  // was drawn over everything else.
+  const disagreed = onArrival.filter((layer) => layer.drawn !== layer.ticked);
+  expect(
+    disagreed.map((l) => `${l.name}: drawn=${l.drawn} ticked=${String(l.ticked)}`),
+    "the panel and the map disagree on arrival",
+  ).toEqual([]);
+
+  // And the direction the old tests never covered. `every layer draws features once it is switched
+  // on` only ever turned things on, so switching one *off* and leaving the map drawing it would have
+  // passed -- which is the same class of fault as the one above, in the other direction.
+  const rows = page.locator(".layers li");
+  for (let index = 0; index < (await rows.count()); index += 1) {
+    await rows.nth(index).locator("input").click();
+  }
+  await expect
+    .poll(async () => (await compare()).filter((layer) => layer.drawn !== layer.ticked).length)
+    .toBe(0);
+
+  // Every one of them actually moved, or the loop above proved nothing.
+  const afterward = await compare();
+  for (const [index, layer] of afterward.entries()) {
+    expect(layer.ticked, `${layer.name} did not toggle`).not.toBe(onArrival[index]!.ticked);
+  }
 });
