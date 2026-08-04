@@ -245,10 +245,7 @@ Ranked by result-per-unit-work, which is not the same ranking as the table above
    `SURVEY_INDEX`, nothing to download. Pre-registered in `phase1e-atlas.md`, and its feasibility
    question already came back yes. This is the only candidate that produces a non-northern *finding*
    without a single new byte.
-2. **EBBA1 against EBBA2** — the European Breeding Bird Atlas pair, the design this project already
-   cites as the model for the SABAP comparison. Same shape, same pipeline, and it would do for Europe
-   what SABAP does for Africa. **Not yet assessed**: EBCC's terms and whether a gridded release is
-   redistributable are the open questions, and they decide it.
+2. **EBBA1 against EBBA2 — assessed 2026-08-04, and the answer is no.** See below.
 3. **The GBIF account exists now.** The blocker this note recorded for SABAP2's raw records —
    "requires a free account" — no longer applies; `MIGRATLAS_CRED_GBIF_*` are configured. A
    *within*-SABAP2 trend is therefore reachable, which the note previously ruled out.
@@ -262,3 +259,62 @@ on **held-out regions**, never held-out years, and any prediction into a region 
 ships behind a geographic novelty mask. What makes that testable is having a second region at all.
 SABAP is that region. So the order is unchanged and is the order already in `TASKS.md`: the atlas
 comparison before the model, because otherwise there is nothing to fail against.
+
+
+## EBBA — checked 2026-08-04, and Europe has no finding-grade atlas pair on open terms
+
+The section above listed the European Breeding Bird Atlas pair as the Europe-shaped equivalent of the
+SABAP comparison, with the licence as the open question. Checked, and the pair does not survive it.
+The two halves are not symmetric and only one of them is usable.
+
+**EBBA1 is fully open and ingestable today.** Published to GBIF by the EBCC as *EBCC Atlas of
+European Breeding Birds*, key `c779b049-28f3-4daf-bbf4-0a40830819b6`, DOI
+[10.15468/adtfvf](https://doi.org/10.15468/adtfvf), **CC BY 4.0**, **1,339,711 occurrence records**,
+temporal coverage 1972–1995 with the atlas core in 1985–1988. The Darwin Core archive is served from
+`orphans.gbif.org` — the same host, for the same reason, as SABAP1, whose publisher IPT is also gone.
+Nothing about this half is blocked.
+
+**EBBA2 is not on GBIF at all**, and its own terms do not give us the half we would need:
+
+- Only the **50-km occurrence** layer is open. Abundance, breeding evidence, modelled maps *and the
+  EBBA1→EBBA2 change maps* are © EBCC and released "by approval by the EBCC and its partner
+  organisations".
+- Access is a **request form**, not a bulk endpoint, and the site states data handling fees may be
+  charged. Map downloads are PNG; the data itself is CSV on request. Neither is an ingest.
+- The **exact Creative Commons variant is not published anywhere public** — the site says "a Creative
+  Commons licence" and the specifics live in a policy document behind the request. For a gate that
+  enforces redistribution rights independently of animal sensitivity, an unnamed licence is a refusal
+  by default rather than something to assume in our favour.
+- The community agreement raises **potential co-authorship** on papers using the data. That is a
+  collaboration to enter deliberately, not a download.
+
+**And the deeper problem, which would still bite if every one of those were solved.** The open EBBA2
+layer is presence/absence per 50-km square with no effort, no visit count and no cards. SABAP's whole
+scientific value is that its cards make detection probability *identifiable*, which is what separates
+"the birds changed" from "the observers changed" — the confound `phase1e-atlas.md` is built around and
+the one that sinks most atlas comparisons. EBBA cannot support that on the open layer. EBBA2's own
+change maps deal with it by restricting to squares well covered in both periods, and those maps are
+precisely the copyrighted product. So the best available EBBA comparison would be a naive occupancy
+change with an unmeasurable observer confound, published beside a SABAP result that has the confound
+handled. That is a worse claim standing next to a better one, which is not an improvement.
+
+**What Europe does still have.**
+
+- **EBBA1 alone**, as a historical distribution extent layer. CC BY 4.0, 1.3M records, ingestable
+  now, and honest as `extent` rather than as change — the same card kind 2,909 species already use.
+- **National two-epoch atlases on GBIF**, which are unexplored and may be the real answer at a
+  smaller geographic claim. Visible in one search: Flanders 2000–2002 (**CC0**, 330,046 records),
+  The First Atlas of Breeding Birds in Britain and Ireland 1968–1972 (CC BY 4.0, 63,985), and three
+  Scottish atlases (CC BY 4.0). Several others are CC BY-**NC** — Ontario 1981–85 and 2001–05,
+  Vermont 1976–81 and 2003–07, Bulgaria, Milan — and whether a non-commercial clause clears this
+  project's redistribution gate is a question nobody has put to it yet.
+
+  A national pair is a smaller claim than "Europe" and a much better one than a bad continental
+  claim. Whether any pair carries per-visit effort is the thing to check, and it is the same check
+  that made SABAP viable.
+
+**Recorded conclusion.** EBBA does not change the order of work. SABAP remains the only atlas
+comparison this project can make on open terms with detection identifiable, and it is already in the
+lake. Europe's finding-grade path, if one exists, runs through a national atlas pair rather than the
+continental one, and through a question about non-commercial licences that the gate has never been
+asked.
