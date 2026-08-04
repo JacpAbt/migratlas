@@ -153,9 +153,11 @@ African, Australian, New Zealand and Chilean demersal surveys exist and are the 
 place to look; none verified for access yet, so this stays a research item rather than a plan.
 
 **Still absent entirely.** Asia, at every latitude and in every realm. South America, for anything
-with a time axis. Terrestrial mammals anywhere — no `TRACK` or `DETECTION` source has been
-ingested, so the terrestrial realm is currently empty of everything except what OBIS incidentally
-carries.
+with a time axis.
+
+*Superseded 2026-08-04.* This paragraph also said terrestrial mammals were absent everywhere. Seven
+Movebank studies have since landed — 938 individuals of five species, 6.0M fixes — so the realm is
+no longer empty. It is, however, entirely North American plus Svalbard, which is the section below.
 
 ## The rule for the models, which matters more than the source list
 
@@ -189,3 +191,74 @@ Nothing here is scheduled ahead of Phase 2a. When it is:
 ENRAM has left this list: one radar has fifteen usable autumns, so it cannot carry a trend at all,
 and what it can still do is descriptive. It stays in the section above as a documented reassessment
 rather than as queued work.
+
+
+## Movebank outside North America — surveyed 2026-08-04
+
+The audit above predates the tracks, so the archive was never asked the obvious question. It has now
+been asked directly, against its own study catalogue (`entity_type=study`, 8,692 studies), filtered
+to what this project could actually register: a redistributable licence, download access, more than
+5,000 deployed locations, and a span of at least the two years `MIN_STUDY_YEARS` requires.
+
+| Region | Studies | Deployed locations | Individuals |
+| --- | --- | --- | --- |
+| **Europe** | 95 | **255,414,453** | 4,438 |
+| North America / other | 120 | 45,103,762 | 8,078 |
+| **Africa** | 25 | 13,732,760 | 1,004 |
+| **Asia** | 17 | 11,658,798 | 393 |
+| South America | 10 | 4,835,501 | 218 |
+| Oceania | 6 | 431,257 | 431 |
+
+**Europe is not a gap in the archive. It is a gap in this registry.** There is five and a half times
+more openly-licensed European tracking than North American, and none of the seven studies registered
+here is one of them. A single study — *LifeTrack White Stork SW Germany*, CC BY, 216 animals,
+2020–2026 — holds 89.7 million locations, more than the whole current lake.
+
+Three things about that list are worth stating before anyone acts on it.
+
+**A track cannot fix the bias in the findings, only in the map.** `phase1d-tracks.md` is binding:
+effort is not a measured denominator and the places a collar reaches are not a sample of anywhere, so
+no track source in this project carries a trend. Registering European storks widens what the globe
+*shows* and which taxa have a page; it does not produce a European result. The bias that
+`coverage-bias` publishes is about time series, and only a `SURVEY_INDEX` or `FLUX` source moves it.
+
+**One species covers both continents the request named.** White storks winter in Iberia and
+sub-Saharan Africa, so a LifeTrack study is a Europe-and-Africa track rather than a European one —
+and there are eight of them here spanning 2013–2026. That is unverified from the catalogue, whose
+`main_location` is the breeding colony; confirming the African leg is the first thing an ingest
+should print rather than something to assume.
+
+**Africa's list is mostly persecuted taxa, and that is an ethics surface rather than a download.**
+Hooded Vulture Africa (2013–2026), South Africa vultures, African lions in the Kalahari, wildebeest.
+Vultures are poisoned and lions are hunted; `redact.py` and the per-taxon sensitivity rules exist for
+exactly this, and every one of these needs a registry entry written by a person before it is fetched.
+The low-risk European set — storks, gulls, oystercatchers, red kites — carries no such problem.
+
+**Asia is thinner but not empty**, and the three worth a look are a Himalayan Griffon study in Bhutan
+(7.0M locations, 2014–2023), Black-necked crane in Bhutan, and LifeTrack White Stork Uzbekistan.
+
+### What actually moves the published bias
+
+Ranked by result-per-unit-work, which is not the same ranking as the table above:
+
+1. **SABAP1 against SABAP2 — already in the lake.** 3.1M and 16.6M rows, southern Africa,
+   `SURVEY_INDEX`, nothing to download. Pre-registered in `phase1e-atlas.md`, and its feasibility
+   question already came back yes. This is the only candidate that produces a non-northern *finding*
+   without a single new byte.
+2. **EBBA1 against EBBA2** — the European Breeding Bird Atlas pair, the design this project already
+   cites as the model for the SABAP comparison. Same shape, same pipeline, and it would do for Europe
+   what SABAP does for Africa. **Not yet assessed**: EBCC's terms and whether a gridded release is
+   redistributable are the open questions, and they decide it.
+3. **The GBIF account exists now.** The blocker this note recorded for SABAP2's raw records —
+   "requires a free account" — no longer applies; `MIGRATLAS_CRED_GBIF_*` are configured. A
+   *within*-SABAP2 trend is therefore reachable, which the note previously ruled out.
+4. **European tracks**, for the map and the taxon gap, not for a finding.
+
+### The model question, which this note already answered
+
+Training on the North American data first is not a compromise to be apologised for — it is the first
+half of the transfer test the project committed to, and the rule above binds it: skill is reported
+on **held-out regions**, never held-out years, and any prediction into a region with no training data
+ships behind a geographic novelty mask. What makes that testable is having a second region at all.
+SABAP is that region. So the order is unchanged and is the order already in `TASKS.md`: the atlas
+comparison before the model, because otherwise there is nothing to fail against.
