@@ -89,43 +89,109 @@ Only the location sensors. Accelerometers and barometers appear in these studies
 a position, so they cannot reach a row that survived the position filter.
 """
 
-# --- A known data-quality issue, deliberately not filtered ---------------------
+# --- Fixes the animal cannot have reached ---------------------------------------
 #
-# Two things in this data are wrong and neither is fixed here, because two attempts to fix them were
-# each wrong in a different direction and a third guess is worse than a documented gap.
+# Three things in this data are not the animal moving, and one filter removes all three because they
+# are one fault: a run of fixes that cannot be reached from the rest of the track.
 #
-# **617 rows of the Missouri bison study sit at 52.43N, 13.52E, which is Berlin.** Five collars
-# named
-# ``Patti_PSP`` through ``Padme_PSP``, ~120 fixes each between 2022-08-26 and 2022-08-31, then
-# ~26,000
-# fixes each in Missouri from 2022-09-27. Collars bench-tested at the manufacturer, shipped, and
-# fitted -- under the *same* ``individual_local_identifier``, carrying a ``deployment_id``, marked
-# ``visible = true``. Nothing already in this ingest rejects them.
+# **617 rows of the Missouri bison study sit at 52.43N, 13.52E, which is Berlin.** Five collars,
+# ``Padme_PSP`` through ``Polly_PSP``, 116 to 132 fixes each between 2022-08-26 and 2022-08-31, then
+# ~26,000 fixes each in Missouri from 2022-09-27. Collars bench-tested at the manufacturer, shipped,
+# and fitted -- under the *same* ``individual_local_identifier``, carrying a ``deployment_id``,
+# marked ``visible = true``, so nothing in the filters above rejects them.
 #
-# **Two Bylot fox fixes sit at 136E and 152E**, one per animal, with no approach or departure. That
-# is
-# what a bad Argos position looks like.
+# **The same collars were then driven west.** On 2022-10-17 ``Paige_PSP`` reports hourly from St
+# Louis, then runs (38.44,-90.90), (37.95,-91.79), (37.51,-92.84), (37.25,-93.25), (37.39,-94.06),
+# (37.53,-94.57) -- 90 km an hour in a straight line to the Kansas border. That is a truck. It was
+# not in this comment before because nobody had looked at the middle of the study, only at Berlin.
 #
-# What was tried and why each failed:
+# **Two Bylot fox fixes sit at 136E and 152E**, one per animal, with no approach or departure, which
+# is what a bad Argos position looks like.
+#
+# Two earlier attempts and why each failed, kept because they bound the design:
 #
 # - *Drop rows far from the study median.* Removes Berlin, and deletes 112 fixes of Arctic fox
-# ``MMRV`` -- 1,502 fixes, five years at Bylot, then a connected westward path (-80, -91.6, -134.3)
-#   to the Mackenzie Delta, roughly 3,000 km. Documented Arctic fox dispersal, and arguably the most
-#   remarkable movement record in this lake. It left the animal looking sedentary.
+#   ``MMRV`` -- 1,502 fixes, five years at Bylot, then a connected westward path to the Mackenzie
+#   Delta, roughly 3,000 km. Documented dispersal, and the most remarkable movement record in this
+#   lake. It left the animal looking sedentary.
 # - *Drop animals never seen near the study median.* Keeps MMRV, and keeps Berlin, because the
 #   bench-test fixes share an animal id with that animal's real Missouri track.
 #
-# The discriminator both miss is **implied speed between consecutive fixes**: Berlin to Missouri is
-# ~7,000 km across a four-week gap, where MMRV progresses through intermediate longitudes over
-# months. A speed filter is the standard tool and the right one, with a per-taxon ceiling -- Arctic
-# foxes are documented at ~150 km/day on sea ice, so a single global threshold would be wrong too.
+# The discriminator both miss is implied speed between consecutive fixes. Measured on the seven
+# cached studies before any threshold was chosen, two things about it are not obvious:
 #
-# Until that exists: the 617 Berlin rows are in the lake and put Berlin on the bison layer. The
-# bison
-# source supports no finding (a fenced herd, no trend), so nothing published rests on them -- but
-# the
-# map is wrong in one place and this comment is why, rather than a filter that quietly deletes a
-# fox.
+# **Raw implied speed is unusable.** Thousands of pairs sit under a minute apart, where a hundred
+# metres of GPS scatter implies hundreds of km per day: an elk pair 18.2 km apart with a
+# rounded-away gap reads as 82,694 km/day, and the bison study's 99th percentile is 1,028 km/day. So
+# a break has to clear a *distance* as well as a speed -- ``MIN_JUMP_KM`` -- and every real artefact
+# here is hundreds or thousands of km, while no scatter is fifty.
+#
+# **The decision is per segment, not per row.** Berlin is internally consistent; only the crossing
+# into Missouri is fast. Dropping "the row after a fast pair" would delete the first Missouri fix
+# and keep all 132 Berlin ones. So the track is cut at every break and whole stretches are judged.
+#
+# What decides a stretch is *where* it is, not how big it is -- ``MAX_STRAY_KM`` says why, and says
+# which two versions of this deleted real data before landing there. MMRV survives whole because its
+# 3,000 km dispersal is connected: its fastest step is 127.9 km/day against a ceiling of 160, so it
+# is never cut in the first place.
+#
+# On the seven cached studies this removes 1,382 rows of 6,047,093 -- 0.023%. The bison study loses
+# 1,362 of them: the 617 Berlin rows and 745 more from the drive west. The rest is bad positions,
+# one to five per animal, and three studies lose nothing at all. All 52 bison remain, and so do all
+# 1,502 of MMRV's fixes across its full longitude range.
+
+MIN_JUMP_KM: Final = 50.0
+"""How far apart two fixes must be before their implied speed is allowed to mean anything.
+
+Not a tuning knob, a floor on the measurement. Movebank timestamps here are minute-resolution and
+some pairs share one, so the denominator can be zero or nearly so while the numerator is GPS
+scatter. Every artefact this filter exists for is a displacement of hundreds to thousands of km.
+"""
+
+MAX_STRAY_KM: Final = 100.0
+"""How far an unreachable stretch may sit from the animal's own main record and still be believed.
+
+This is the whole discriminator, and it took two wrong versions to get to. Berlin is 7,150 km from
+its collar's Missouri track and the transport leg some 380 km; Bylot fox ``OBBB``'s isolated four
+days are in the same 200 m of tundra as the rest of its life.
+
+Size is not a substitute and cannot be made into one. Judging a stretch by its *share* of the
+animal's record deleted 1,176 real fixes of ``OBBB`` -- 107,229 in total, so a genuine four-day stay
+with one bad position on each side came to 1.1% and lost. Judging it by an absolute *count* deletes
+short segments near home and empties any track shorter than the count. Neither can tell a displaced
+stay from a real one that was merely cut off; distance is the only thing that can.
+
+It is the "distance from the median" idea that failed on its own, and it failed because MMRV's
+3,000 km dispersal is *connected*. Measured against a segment rather than against a whole animal,
+the connectivity has already been established by the step test before this is asked.
+"""
+
+MAX_KM_PER_DAY: Final[dict[str, float]] = {
+    "Vulpes lagopus": 160.0,
+    "Canis lupus": 200.0,
+    "Rangifer tarandus": 120.0,
+    "Cervus elaphus": 120.0,
+    "Bison bison": 80.0,
+}
+"""Fastest sustained daily displacement each taxon is credited with.
+
+Plausibility bounds, not published maxima, and deliberately generous: this filter can delete real
+data, so it is set to catch a truck and a bench test rather than to police ecology. Each is well
+above what the cached studies show for that taxon -- the Arctic fox figure is the one with a record
+behind it, Fuglei and Tarroux's Svalbard-to-Ellesmere disperser at about 155 km/day on sea ice, and
+the fox here tops out at 127.9.
+
+A single global ceiling cannot work: set for a bison it would delete the fox's dispersal, and set
+for the fox it would keep Berlin, whose crossing is 7,150 km in 27.0 days -- 265 km/day.
+"""
+
+DEFAULT_KM_PER_DAY: Final = 250.0
+"""For a taxon with no entry above.
+
+Higher than any terrestrial mammal sustains, so an unlisted taxon loses only the grossest artefacts
+rather than silently losing real movement -- and `test_ingest_movebank.py` fails if a registered
+study's species has no explicit ceiling.
+"""
 
 MIN_STUDY_YEARS: Final = 2
 """A study spanning less than this contributes nothing and is refused.
@@ -311,6 +377,186 @@ def parse(body: str) -> pl.DataFrame:
     return frame
 
 
+EARTH_KM: Final = 6371.0088
+"""Mean Earth radius. A sphere is right to well under the precision this filter needs."""
+
+
+def _implied(frame: pl.DataFrame) -> pl.DataFrame:
+    """Great-circle distance and implied speed from each fix to the previous one of the same animal.
+
+    Haversine rather than a projected distance, because these tracks run to 83N where a planar
+    approximation is wrong by more than the thing being measured.
+    """
+    over = "individual_local_identifier"
+    return (
+        frame.sort(over, "timestamp")
+        .with_columns(
+            _lat=pl.col("location_lat").cast(pl.Float64).radians(),
+            _lon=pl.col("location_long").cast(pl.Float64).radians(),
+        )
+        .with_columns(
+            _plat=pl.col("_lat").shift().over(over),
+            _plon=pl.col("_lon").shift().over(over),
+            _days=pl.col("timestamp").diff().over(over).dt.total_seconds() / 86_400,
+        )
+        .with_columns(
+            _km=2
+            * EARTH_KM
+            * (
+                (
+                    ((pl.col("_lat") - pl.col("_plat")) / 2).sin() ** 2
+                    + pl.col("_plat").cos()
+                    * pl.col("_lat").cos()
+                    * ((pl.col("_lon") - pl.col("_plon")) / 2).sin() ** 2
+                )
+                .sqrt()
+                .arcsin()
+            )
+        )
+    )
+
+
+SCRATCH: Final = (
+    "_lat",
+    "_lon",
+    "_plat",
+    "_plon",
+    "_days",
+    "_km",
+    "_ceiling",
+    "_break",
+    "_segment",
+)
+
+
+def _cut(frame: pl.DataFrame) -> pl.DataFrame:
+    """Label each animal's track with the segment number an impossible step puts it in.
+
+    A **break** is a step clearing both ``MIN_JUMP_KM`` and the taxon's ceiling: far enough to be a
+    change of place rather than scatter, and faster than the animal travels. A shared or
+    rounded-away timestamp with a real displacement is a break by definition, being infinitely fast.
+    """
+    over = "individual_local_identifier"
+    return (
+        _implied(frame)
+        .with_columns(
+            _ceiling=pl.col("individual_taxon_canonical_name").replace_strict(
+                MAX_KM_PER_DAY, default=DEFAULT_KM_PER_DAY, return_dtype=pl.Float64
+            )
+        )
+        .with_columns(
+            _break=(
+                (pl.col("_km") > MIN_JUMP_KM)
+                & (
+                    (pl.col("_days") <= 0)
+                    | ((pl.col("_km") / pl.col("_days")) > pl.col("_ceiling"))
+                )
+            )
+            # The first fix of an animal has no predecessor, so it cannot be a break.
+            .fill_null(value=False)
+        )
+        .with_columns(_segment=pl.col("_break").cum_sum().over(over))
+    )
+
+
+def unreachable(frame: pl.DataFrame) -> pl.DataFrame:
+    """Drop stretches of fixes the animal could not have reached from the rest of its own record.
+
+    The track is cut at every impossible step and whole stretches are judged, because the fault is a
+    run of fixes and not a row. Berlin is internally consistent and only its crossing into Missouri
+    is fast, so any rule that dropped "the row after a fast step" would delete the first Missouri
+    fix and keep all 132 Berlin ones.
+
+    A stretch is dropped when it is **somewhere the animal was not** -- further than `MAX_STRAY_KM`
+    from the centre of its own largest stretch -- or when it is a **lone fix**, unreachable from the
+    neighbour on either side, which is a bad position wherever it landed.
+
+    Then it runs again. Removing a bad position heals the two breaks it caused, so the stretches
+    either side of it rejoin and are re-measured together; without the second pass, a stretch
+    bracketed by two bad positions is judged on a length it only has because they were there. Three
+    passes at most -- the loop stops when a pass removes nothing, which on the cached studies is the
+    second or third.
+    """
+    if frame.is_empty():
+        return frame
+
+    over = "individual_local_identifier"
+    total = frame.height
+    working = frame
+    for _ in range(3):
+        cut = _cut(working)
+        # Where the animal actually lived: the centre of its largest stretch, which is the only
+        # reference point the step test has already established the animal can move within.
+        home = (
+            cut.group_by(over, "_segment")
+            .agg(n=pl.len(), lat=pl.col("_lat").mean(), lon=pl.col("_lon").mean())
+            .sort("n", descending=True)
+            .group_by(over)
+            .first()
+            .select(over, _home_lat="lat", _home_lon="lon")
+        )
+        judged = (
+            cut.join(home, on=over, how="left")
+            .with_columns(
+                _size=pl.len().over(over, "_segment"),
+                _pieces=pl.col("_segment").n_unique().over(over),
+            )
+            .with_columns(
+                _stray=2
+                * EARTH_KM
+                * (
+                    (
+                        (
+                            (pl.col("_lat").mean().over(over, "_segment") - pl.col("_home_lat")) / 2
+                        ).sin()
+                        ** 2
+                        + pl.col("_home_lat").cos()
+                        * pl.col("_lat").mean().over(over, "_segment").cos()
+                        * (
+                            (pl.col("_lon").mean().over(over, "_segment") - pl.col("_home_lon")) / 2
+                        ).sin()
+                        ** 2
+                    )
+                    .sqrt()
+                    .arcsin()
+                )
+            )
+        )
+        # Two ways to lose. Straying is the general one; a lone fix is the textbook one, a position
+        # unreachable from the neighbour on each side and so a bad position wherever it landed.
+        #
+        # `_pieces` is what stops the second from meaning "an animal with one fix". Five caribou
+        # in the South Peace study have exactly one location each, and a single fix has no
+        # neighbours to be unreachable from -- without this they went as spikes and the withheld
+        # page dropped from 260 animals to 255. An animal's only stretch is never a spike.
+        survivors = judged.filter(
+            (pl.col("_stray") <= MAX_STRAY_KM) & ((pl.col("_size") > 1) | (pl.col("_pieces") == 1))
+        )
+        if survivors.height == working.height:
+            break
+        working = survivors.drop(*SCRATCH, "_home_lat", "_home_lon", "_size", "_pieces", "_stray")
+
+    dropped = total - working.height
+    if dropped:
+        # Named, because a filter that can delete a real track has to say what it took, and the
+        # per-animal counts are what a reader checks against the study's own description.
+        worst = (
+            frame.join(working, on=frame.columns, how="anti", nulls_equal=True)
+            .group_by(over)
+            .agg(n=pl.len())
+            .sort("n", descending=True)
+            .head(6)
+        )
+        log.info(
+            "  %d of %d rows unreachable (%.2f%%): %s",
+            dropped,
+            total,
+            100 * dropped / total,
+            ", ".join(f"{row[0]} {row[1]}" for row in worst.iter_rows()),
+        )
+    return working
+
+
 def screen_taxa(source_id: str, frame: pl.DataFrame) -> list[str]:
     """Run every taxon in the study past the never-ingested floor before anything is written.
 
@@ -382,8 +628,17 @@ def ingest_study(source_id: str) -> WriteResult:
     log.info("ingesting %s (%s)", source.title, source.licence)
 
     body, digest = cached(study)
-    frame = parse(body)
+    parsed = parse(body)
 
+    # The floor screens what the study *contains*, before anything is dropped for being unreachable.
+    # A human row that the reachability filter happened to isolate must still stop the ingest: this
+    # gate is about what the taxon field says, and a filter is not allowed to answer it.
+    names = screen_taxa(source_id, parsed)
+
+    frame = unreachable(parsed)
+
+    # Measured on what survives, not on what arrived. A study whose only early fixes are a bench
+    # test would otherwise report a span it does not have.
     span = span_years(frame)
     if span < MIN_STUDY_YEARS:
         msg = (
@@ -392,7 +647,6 @@ def ingest_study(source_id: str) -> WriteResult:
         )
         raise ValueError(msg)
 
-    names = screen_taxa(source_id, frame)
     keys = taxon_keys(names)
     if names != [study.species]:
         # Not fatal on its own -- a study may legitimately carry more than one taxon -- but it means

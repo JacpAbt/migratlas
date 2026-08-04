@@ -5,6 +5,7 @@ worth pinning is what the ingest *refuses*, and a refusal is easiest to trust wh
 triggers it is visible in the test.
 """
 
+import polars as pl
 import pytest
 
 from migratlas.evidence import EvidenceType, spec_for
@@ -277,24 +278,150 @@ def test_a_longitude_past_the_antimeridian_is_wrapped_into_range() -> None:
     assert frame["location_long"].to_list() == pytest.approx([152.657833, 136.646083])
 
 
-def test_bench_test_fixes_are_still_in_the_data_and_that_is_recorded() -> None:
-    """Not a filter, a documented gap. Two attempts to remove these were each wrong.
+def test_a_bench_test_before_deployment_is_removed() -> None:
+    """The 617 Berlin rows. Five collars tested at the manufacturer under the same animal id as the
+    real Missouri track, carrying a deployment and marked visible, so nothing else here rejects
+    them.
 
-    Dropping rows far from the study median removed Berlin and deleted 112 fixes of Arctic fox
-    MMRV's 3,000 km dispersal. Dropping animals never seen near home kept MMRV and kept Berlin,
-    because the bench-test fixes share an animal id with that collar's real Missouri track. The
-    discriminator both miss is implied speed, which needs a per-taxon ceiling and is not written.
-
-    This test exists so the gap is visible in the suite rather than only in a comment, and so that
-    whoever writes the speed filter has the shape of the input in front of them.
+    Berlin to St Louis is 7,150 km across 27.0 days -- 265 km/day, against a bison ceiling of 80.
     """
     frame = movebank.parse(
         _csv(
-            _row("Patti_PSP", "2022-08-26 15:00:00.000", "52.43", "13.52", "Bison bison"),
-            _row("Patti_PSP", "2022-09-27 15:00:00.000", "40.48", "-94.14", "Bison bison"),
+            # Five days on a bench in Berlin.
+            *[
+                _row("Patti_PSP", f"2022-08-2{day} 15:00:00.000", "52.43", "13.52", "Bison bison")
+                for day in range(6, 10)
+            ],
+            # Then a month of standing in a Missouri field.
+            *[
+                _row(
+                    "Patti_PSP",
+                    f"2022-09-{day:02d} 15:00:00.000",
+                    "38.63",
+                    "-90.23",
+                    "Bison bison",
+                )
+                for day in range(27, 31)
+            ],
+            *[
+                _row(
+                    "Patti_PSP",
+                    f"2022-10-{day:02d} 15:00:00.000",
+                    "38.63",
+                    "-90.23",
+                    "Bison bison",
+                )
+                for day in range(1, 10)
+            ],
         )
     )
-    assert frame.height == 2, "both survive: nothing here removes a bench test"
-    assert not hasattr(movebank, "near_home"), (
-        "a distance filter was reverted on purpose; if one is reintroduced it must keep MMRV"
+    kept = movebank.unreachable(frame)
+    assert kept.height == 13, "the Missouri record survives"
+    assert not kept.filter(pl.col("location_long") > 0).height, "Berlin is gone"
+
+
+def test_a_connected_dispersal_survives_however_far_it_goes() -> None:
+    """Arctic fox MMRV: 3,000 km westward to the Mackenzie Delta, and the reason two earlier filters
+    were reverted. Its fastest real step is 127.9 km/day against a ceiling of 160.
+
+    Every fix here is 100 km further west than the last, one day apart -- so the *whole animal* is a
+    long way from where it started and no single step is impossible. A rule that measured distance
+    from the animal's median rather than across consecutive fixes deleted 112 of these.
+    """
+    frame = movebank.parse(
+        _csv(
+            *[
+                _row(
+                    "MMRV",
+                    f"2013-04-{day:02d} 16:00:00.000",
+                    "73.0",
+                    f"{-80.0 - 3.0 * day:.4f}",
+                    "Vulpes lagopus",
+                )
+                for day in range(1, 20)
+            ]
+        )
     )
+    kept = movebank.unreachable(frame)
+    assert kept.height == frame.height, "a connected track is one segment, however long"
+    assert kept["location_long"].min() == pytest.approx(-137.0)
+
+
+def test_one_bad_position_is_dropped_and_the_track_either_side_is_not() -> None:
+    """The regression that made the first version of this wrong.
+
+    Bylot fox `OBBB` has 107,229 fixes and a real four-day stretch of 1,176 of them had one bad
+    position on each side. Judged by *share* of the animal's record, that stretch was 1.1% and was
+    deleted -- 1,176 rows of an animal that never left the study area. Size alone cannot tell a
+    displaced stay from a real one that was merely cut off, which is why `MAX_STRAY_KM` exists.
+    """
+    ordinary = [
+        _row("OBBB", f"2019-06-{day:02d} 12:00:00.000", "72.88", "-79.95", "Vulpes lagopus")
+        for day in range(1, 10)
+    ]
+    frame = movebank.parse(
+        _csv(
+            *ordinary[:4],
+            # One Argos position 400 km out, then straight back.
+            _row("OBBB", "2019-06-05 06:00:00.000", "76.5", "-79.95", "Vulpes lagopus"),
+            *ordinary[4:],
+        )
+    )
+    kept = movebank.unreachable(frame)
+    assert kept.height == len(ordinary), "only the bad position goes"
+    assert kept["location_lat"].max() == pytest.approx(72.88)
+
+
+def test_scatter_across_a_rounded_away_gap_is_not_a_break() -> None:
+    """Timestamps here are minute-resolution and some pairs share one, so implied speed alone is
+    unusable: an elk pair 18.2 km apart with no measurable gap reads as 82,694 km/day, and the bison
+    study's 99th percentile is 1,028. `MIN_JUMP_KM` is the floor that makes the speed mean
+    something.
+    """
+    frame = movebank.parse(
+        _csv(
+            _row("A", "2021-10-02 11:00:00.000", "51.700", "-115.400", "Cervus elaphus"),
+            # 200 m in the same minute: 344 km/day implied, and nothing at all in truth.
+            _row("A", "2021-10-02 11:00:00.000", "51.7018", "-115.400", "Cervus elaphus"),
+            _row("A", "2021-10-02 12:00:00.000", "51.702", "-115.401", "Cervus elaphus"),
+            _row("A", "2021-10-03 12:00:00.000", "51.703", "-115.402", "Cervus elaphus"),
+            _row("A", "2021-10-04 12:00:00.000", "51.704", "-115.403", "Cervus elaphus"),
+            _row("A", "2021-10-05 12:00:00.000", "51.705", "-115.404", "Cervus elaphus"),
+            _row("A", "2021-10-06 12:00:00.000", "51.706", "-115.405", "Cervus elaphus"),
+            _row("A", "2021-10-07 12:00:00.000", "51.707", "-115.406", "Cervus elaphus"),
+            _row("A", "2021-10-08 12:00:00.000", "51.708", "-115.407", "Cervus elaphus"),
+        )
+    )
+    assert movebank.unreachable(frame).height == frame.height
+
+
+def test_an_animal_with_one_location_keeps_it() -> None:
+    """Five caribou in the South Peace study have exactly one location each.
+
+    A lone fix is the textbook bad position -- unreachable from the neighbour on either side -- but
+    only when it *has* neighbours. Judged on size alone these five were dropped as spikes, and the
+    withheld caribou page went from 260 animals to 255 before the page diff showed it.
+    """
+    frame = movebank.parse(
+        _csv(
+            _row("HR_151.535", "1991-10-25 12:00:00.000", "53.83", "-121.56", "Rangifer tarandus"),
+            _row("KE_car018", "1992-03-11 12:00:00.000", "54.90", "-121.30", "Rangifer tarandus"),
+        )
+    )
+    kept = movebank.unreachable(frame)
+    assert kept.height == 2
+    assert sorted(kept["individual_local_identifier"].to_list()) == ["HR_151.535", "KE_car018"]
+
+
+def test_every_registered_study_species_has_its_own_ceiling() -> None:
+    """`DEFAULT_KM_PER_DAY` is a fallback for a taxon nobody has thought about, not a place for the
+    seven studies actually registered. A new study lands here before it lands in the lake."""
+    missing = [
+        study.species for study in movebank.STUDIES if study.species not in movebank.MAX_KM_PER_DAY
+    ]
+    assert not missing, f"no implied-speed ceiling for {sorted(set(missing))}"
+
+
+def test_an_empty_frame_survives_the_reachability_filter() -> None:
+    """Reachable: a study whose every row is a flagged outlier parses to nothing."""
+    assert movebank.unreachable(movebank.parse(_csv())).height == 0
