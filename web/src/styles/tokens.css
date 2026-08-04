@@ -47,9 +47,19 @@
   --line-observed: #b4522e;
   --line-counterfactual: #3d6b85;
   --line-scatter: #8b7a68;
+  /*
+    The detectability choropleth, and the one set here that a reader has no words for. A legend
+    names each class, but a cell on the globe is a colour and nothing else, so these are the pairs
+    the colour-vision test holds to a floor -- see `notebook.spec.ts`.
+
+    The three "cannot be measured here" greys are alike on purpose and are exempt from it: they are
+    26, 34 and 57 apart in ordinary vision, because a reader does not need to tell no-data from
+    no-effort from unknown at a glance, only from measurable. `short` was #d8bd7e and sat 43 from
+    `unknown` under deuteranopia, which is a real class boundary collapsing.
+  */
   --detect-none: #a39c8d;
   --detect-no-effort: #8b9487;
-  --detect-short: #d8bd7e;
+  --detect-short: #f2cf7d;
   --detect-yes: #b4522e;
   --detect-unknown: #b5afa3;
 
@@ -187,10 +197,17 @@
  * The ink is moonlight rather than white on purpose. Pure white on this ground measures about
  * 19:1, and that is the number that makes a dark interface hurt after five minutes; this is 13.5.
  *
- * The green and the rust are retuned for colour blindness rather than for looks. At #6fc98a
- * against #f5a26a a deuteranope sees a separation of 63 -- above the ~60 floor, and not by enough
- * to survive the next change anybody makes. These two measure 130 and 146 under the two red-green
- * dichromacies while still clearing AA at 9.3 and 8.0.
+ * The green and the rust are retuned for colour blindness rather than for looks, and the figures
+ * that used to be written here -- "130 and 146" -- do not reproduce. `notebook.spec.ts` now runs
+ * the Viénot simulation these were supposed to have come from, and the pair measures 91 under
+ * protanopia and 88 under deuteranopia. Comfortably clear of the floor, and not what was claimed;
+ * the claim was written by hand and never re-derived, which is exactly the failure this project
+ * refuses for a published number and had left standing in its own stylesheet.
+ *
+ * The floor itself only binds where colour is the whole message, which here is the detectability
+ * choropleth. The statuses are the same red-against-green and they measure 52 apart under
+ * protanopia by day, which is *below* it -- and they are compliant anyway, because every one of
+ * them is rendered with the word it means beside it. That is asserted rather than assumed.
  *
  * Written twice because a media query cannot join a selector list, and `light-dark()` would break
  * `layers/detectability.ts`, which reads these tokens with `getPropertyValue` and would receive
@@ -220,7 +237,7 @@
     --line-scatter: #9aa8bd;
     --detect-none: #4a5768;
     --detect-no-effort: #4c6560;
-    --detect-short: #b39a5c;
+    --detect-short: #d5c08b;
     --detect-yes: #f79055;
     --detect-unknown: #5b6675;
 
@@ -267,7 +284,7 @@
   --line-scatter: #9aa8bd;
   --detect-none: #4a5768;
   --detect-no-effort: #4c6560;
-  --detect-short: #b39a5c;
+  --detect-short: #d5c08b;
   --detect-yes: #f79055;
   --detect-unknown: #5b6675;
 

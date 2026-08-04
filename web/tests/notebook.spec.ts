@@ -252,6 +252,135 @@ test("the grain is a texture, not a filter over the paper", async ({ page }) => 
   }
 });
 
+/**
+ * The two red-green dichromacies, simulated.
+ *
+ * Viénot, Brettel & Mollon (1999): to linear RGB, into LMS, collapse the missing cone's response
+ * onto the plane the other two span, and back. It is the standard construction and it is the one
+ * the palette was tuned against by hand -- what did not exist until now was anything that re-runs
+ * it, so the separations recorded in `tokens.css` were true when written and unguarded ever after.
+ */
+type Blindness = "protan" | "deutan";
+
+function dichromat(colour: string, kind: Blindness): [number, number, number] {
+  const [sr = 0, sg = 0, sb = 0] = (colour.match(/[\d.]+/g) ?? ["0", "0", "0"])
+    .slice(0, 3)
+    .map(Number)
+    .map((value) => value / 255)
+    .map((value) => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4));
+
+  const l = 17.8824 * sr + 43.5161 * sg + 4.11935 * sb;
+  const m = 3.45565 * sr + 27.1554 * sg + 3.86714 * sb;
+  const s = 0.0299566 * sr + 0.184309 * sg + 1.46709 * sb;
+
+  const [pl, pm, ps] =
+    kind === "protan" ? [2.02344 * m - 2.52581 * s, m, s] : [l, 0.494207 * l + 1.24827 * s, s];
+
+  return [
+    0.080944 * pl - 0.130504 * pm + 0.116721 * ps,
+    -0.0102485 * pl + 0.0540194 * pm - 0.113615 * ps,
+    -0.000365294 * pl - 0.00412163 * pm + 0.693513 * ps,
+  ].map((value) => {
+    const clamped = Math.min(1, Math.max(0, value));
+    const encoded = clamped <= 0.0031308 ? clamped * 12.92 : 1.055 * clamped ** (1 / 2.4) - 0.055;
+    return Math.round(encoded * 255);
+  }) as [number, number, number];
+}
+
+/**
+ * How far apart two colours are once a dichromat has seen them.
+ *
+ * Euclidean in sRGB, which is crude, and kept anyway: it is the metric the numbers already written
+ * into `tokens.css` are in, and changing the metric in the same commit that first measures anything
+ * would silently invalidate a recorded measurement. The scale runs to 441; 60 is the floor the
+ * night palette was retuned to clear.
+ */
+function separation(a: string, b: string, kind: Blindness): number {
+  const [ar, ag, ab] = dichromat(a, kind);
+  const [br, bg, bb] = dichromat(b, kind);
+  return Math.hypot(ar - br, ag - bg, ab - bb);
+}
+
+const SEPARATION_FLOOR = 60;
+
+/**
+ * Pairs where the colour is the whole message, so colour blindness would take the message away.
+ *
+ * WCAG 1.4.1 does not ask that colours be separable to a dichromat. It asks that colour is never
+ * the only channel. So the floor binds exactly where there *is* no other channel, and the honest
+ * work of this list is saying which pairs those are and paying for the ones it excludes.
+ *
+ * The detectability choropleth is the case. A cell on the globe is a colour and nothing else: the
+ * legend names the classes, but nothing on the sphere does, and a reader comparing two regions is
+ * comparing two fills. `--detect-short` was #d8bd7e and sat 43 from `--detect-unknown` under
+ * deuteranopia, which is a class boundary disappearing.
+ *
+ * Excluded, each with the second channel that makes it compliant:
+ *
+ *   - The bias statuses. Red against green, and by day they measure 52 apart under protanopia --
+ *     under the floor, and there is no value that clears it without leaving the red-green axis
+ *     entirely for purple, which is the palette. They do not need to: every status renders with
+ *     the word it means. `an addressed status ... is not the only signal` asserts that, for all
+ *     three, so this exclusion is checked rather than asserted.
+ *   - `--line-scatter` against the two series lines. Different mark, not a different colour: the
+ *     scatter is dots at 55% opacity with 1px whiskers, the series are 2.2px strokes with their own
+ *     end labels. `a chart says which line is which without colour` pins that.
+ *   - `--detect-none`, `--detect-no-effort` and `--detect-unknown` against each other. 26, 34 and
+ *     57 apart in ordinary vision, which is the design: all three are kinds of "this cannot be
+ *     measured here", and separating them would claim a distinction the reader has no use for.
+ *     Each is still held to the floor against the two colours that mean the opposite.
+ *   - The globe's warm and cool ramps. They separate realm, and they do it as amber against blue --
+ *     the one axis both red-green dichromacies leave intact.
+ */
+const CONFUSABLE: [string, string, string][] = [
+  ["measurable against short-series", "--detect-yes", "--detect-short"],
+  ["measurable against no data", "--detect-yes", "--detect-none"],
+  ["measurable against no effort", "--detect-yes", "--detect-no-effort"],
+  ["measurable against unknown", "--detect-yes", "--detect-unknown"],
+  ["short-series against no data", "--detect-short", "--detect-none"],
+  ["short-series against no effort", "--detect-short", "--detect-no-effort"],
+  ["short-series against unknown", "--detect-short", "--detect-unknown"],
+];
+
+for (const surface of ["day", "night"] as const) {
+  test(`no meaningful pair collapses under red-green colour blindness on ${surface}`, async ({
+    page,
+  }) => {
+    await ready(page);
+    if (surface === "night") await surfaceIs(page, "Night");
+
+    const resolved = await page.evaluate((names) => {
+      const style = getComputedStyle(document.documentElement);
+      // Through a probe, so a token arrives as `rgb(...)` rather than as whatever hex it was
+      // authored in -- the simulation needs channels, not a string it has to guess the format of.
+      const probe = document.createElement("span");
+      document.body.append(probe);
+      const out: Record<string, string> = {};
+      for (const name of names) {
+        probe.style.color = style.getPropertyValue(name).trim();
+        out[name] = getComputedStyle(probe).color;
+      }
+      probe.remove();
+      return out;
+    }, [...new Set(CONFUSABLE.flatMap(([, a, b]) => [a, b]))]);
+
+    const failures: string[] = [];
+    for (const [what, first, second] of CONFUSABLE) {
+      const a = resolved[first];
+      const b = resolved[second];
+      expect(a, `${first} resolves to nothing`).toBeTruthy();
+      expect(b, `${second} resolves to nothing`).toBeTruthy();
+      for (const kind of ["protan", "deutan"] as const) {
+        const apart = separation(a!, b!, kind);
+        if (apart < SEPARATION_FLOOR) {
+          failures.push(`${what} is ${apart.toFixed(0)} apart under ${kind} (floor ${SEPARATION_FLOOR})`);
+        }
+      }
+    }
+    expect(failures, failures.join("; ")).toEqual([]);
+  });
+}
+
 test("the surface is a three-way choice, and it survives a reload", async ({ page }) => {
   await ready(page);
 
@@ -299,9 +428,68 @@ test("an addressed status is legible too, and is not the only signal", async ({ 
   const paper = luminance((await sheetPaper(page)).rgb);
   expect(await contrast(addressed, paper)).toBeGreaterThanOrEqual(AA_SMALL);
 
-  // Never colour alone. The status word is the signal; the colour only reinforces it, because a
-  // red-green distinction is not available to every reader.
-  await expect(addressed).toHaveText(/addressed/);
+  // Never colour alone, and this is the assertion the colour-vision test leans on rather than a
+  // convention. Red against green measures 52 apart under protanopia by day, which is below the
+  // separability floor and cannot be fixed without leaving the palette; what makes it compliant is
+  // that the word is the signal and the colour only agrees with it. So: every status on the page,
+  // not just this one, has to read as its own meaning.
+  //
+  // Read in one `evaluate` rather than looped over a locator, because a page turn keeps the old
+  // claim in the DOM for the length of the transition: counting the nodes and then asserting on
+  // them are two moments, and the first version failed on a node that had been replaced between
+  // them. One synchronous pass over the live document has no such gap.
+  await eachClaim(page, async () => {
+    const silent = await page.evaluate(() =>
+      [...document.querySelectorAll("[class*='bias__status--']")]
+        .map((node) => {
+          const meaning = /bias__status--(\w+)/.exec(node.className)?.[1] ?? "";
+          return { meaning, text: (node.textContent ?? "").trim() };
+        })
+        .filter(({ meaning, text }) => !text.toLowerCase().includes(meaning))
+        .map(({ meaning, text }) => `${meaning} reads "${text}"`),
+    );
+    expect(silent, silent.join("; ")).toEqual([]);
+  });
+});
+
+test("a chart says which line is which without colour", async ({ page }) => {
+  await ready(page);
+  // The other exclusion from the colour-vision floor, and the same deal: the scatter sits 16 from
+  // the counterfactual line under both dichromacies at night, and does not need to move because it
+  // is not the same *kind* of mark. Dots against strokes is a second channel; a second hue is not.
+  //
+  // On the attribution claim specifically: a chart on every claim would be decoration, so this is
+  // the one claim that has one.
+  await page.locator('.tab[data-claim="anthropogenic-share"]').click();
+  const chart = page.locator(".chart__svg").first();
+  await expect(chart).toBeVisible();
+
+  const marks = await chart.evaluate((node) => {
+    const read = (selector: string) => {
+      const found = node.querySelector(selector);
+      if (!found) return null;
+      const style = getComputedStyle(found);
+      return { tag: found.tagName, width: Number.parseFloat(style.strokeWidth) || 0 };
+    };
+    return {
+      scatter: read(".chart__year"),
+      observed: read(".chart__line--observed"),
+      counterfactual: read(".chart__line--counterfactual"),
+    };
+  });
+
+  // The scatter is a filled circle per year; the two series are stroked lines, and thick ones.
+  expect(marks.scatter?.tag, "the scatter is not a point mark").toBe("circle");
+  expect(marks.observed?.tag, "the observed series is not a stroke").toBe("line");
+  expect(marks.counterfactual?.tag, "the counterfactual is not a stroke").toBe("line");
+  expect(marks.observed?.width ?? 0, "a series line thin enough to read as scatter").toBeGreaterThan(
+    1.5,
+  );
+
+  // And the two lines, which *are* the same mark, carry their own labels rather than relying on the
+  // legend to say which is which.
+  await expect(chart.locator(".chart__label--observed")).toHaveCount(1);
+  await expect(chart.locator(".chart__label--counterfactual")).toHaveCount(1);
 });
 
 test("every claim shows an instrument rather than a creature", async ({ page }) => {

@@ -12,8 +12,10 @@ import { type Flavor, namedFlavor } from "@protomaps/basemaps";
 export const EARTH_FLAVOR = {
   ...namedFlavor("light"),
 
-  // Off-globe void and the sphere itself.
-  background: "#e8eef0",
+  // Off-globe void and the sphere itself. The void is the page's own paper as composited, because
+  // with the detail basemap on this layer paints the whole canvas: anything else puts a slab of a
+  // different colour behind a globe that is lying on a notebook.
+  background: "#efe9d8",
   earth: "#f3ece0",
 
   // Water is the second-largest area on the globe, so it sets the mood more than anything
@@ -62,44 +64,54 @@ export const EARTH_FLAVOR = {
  * to near-black. Inverting -- pale water, dark land -- was tried on the ramps and read as a
  * negative rather than as night.
  *
+ * Every value here was warm before this commit, and the warmth was chosen when night was a warm
+ * near-black page. It is a night *sky* now -- `--paper` is #0d131e -- and a brown sphere on a blue
+ * page reads as two unrelated pictures rather than as one object on a surface. So the whole set
+ * moved into the page's own slate-blue family, which is a hue change and not a lightness one: the
+ * land-over-ocean order and the label weights are exactly as they were.
+ *
  * ADR 0007 scoped this at "roughly fifteen keys and a week", and the fifteen keys were right.
  */
 export const NIGHT_FLAVOR = {
   ...namedFlavor("dark"),
 
-  background: "#0b0a08",
-  earth: "#2a251d",
+  background: "#0d131e",
+  earth: "#223046",
 
-  water: "#10161c",
-  ocean_label: "#5c6a76",
+  water: "#141d2e",
+  ocean_label: "#7f93ab",
 
-  park_a: "#232a20",
-  park_b: "#2b3427",
-  wood_a: "#212a1f",
-  wood_b: "#293325",
-  scrub_a: "#272a1f",
-  scrub_b: "#2f3325",
-  zoo: "#272c22",
-  sand: "#31291d",
-  beach: "#342b1d",
-  glacier: "#3a3a38",
+  // Vegetation as a blue-green rather than an olive, and only just lighter than the land: at globe
+  // zoom a continent should read as one mass, and at street zoom a park should read as a park.
+  park_a: "#24393f",
+  park_b: "#2b4348",
+  wood_a: "#223a3c",
+  wood_b: "#2a4547",
+  scrub_a: "#253842",
+  scrub_b: "#2d434c",
+  zoo: "#26383e",
+  sand: "#2c3852",
+  beach: "#2f3d58",
+  glacier: "#3c4a5e",
 
-  city_label: "#d8cdb8",
-  city_label_halo: "#100e0b",
-  state_label: "#8e836f",
-  state_label_halo: "#100e0b",
-  country_label: "#a3947c",
-  subplace_label: "#8a7f6c",
-  subplace_label_halo: "#100e0b",
+  // Moonlight, from the same tokens the page sets its own ink in, so a label on the globe and a
+  // word on the paper are the same colour of writing.
+  city_label: "#cfd9ea",
+  city_label_halo: "#0d131e",
+  state_label: "#8496ad",
+  state_label_halo: "#0d131e",
+  country_label: "#9fb0c6",
+  subplace_label: "#8496ad",
+  subplace_label_halo: "#0d131e",
 
   landcover: {
-    grassland: "rgba(37, 43, 31, 1)",
-    barren: "rgba(45, 39, 28, 1)",
-    urban_area: "rgba(41, 38, 33, 1)",
-    farmland: "rgba(41, 45, 30, 1)",
-    glacier: "rgba(58, 58, 56, 1)",
-    scrub: "rgba(41, 41, 30, 1)",
-    forest: "rgba(31, 41, 30, 1)",
+    grassland: "rgba(37, 56, 62, 1)",
+    barren: "rgba(43, 54, 76, 1)",
+    urban_area: "rgba(43, 50, 63, 1)",
+    farmland: "rgba(38, 58, 60, 1)",
+    glacier: "rgba(60, 74, 94, 1)",
+    scrub: "rgba(40, 55, 66, 1)",
+    forest: "rgba(32, 54, 56, 1)",
   },
 };
 
@@ -138,21 +150,41 @@ export interface Palette {
   flavor: Flavor;
 }
 
+/**
+ * The bundled outline basemap by day.
+ *
+ * The coast was #c0ab93, which is 1.54:1 against this ocean. A coastline is the mark that says
+ * where the boundary is -- with no coast there is no globe, only two fields of colour -- so it is a
+ * graphical object required to understand the picture and 3:1 is the floor for one. It was found by
+ * writing the night value to clear that floor and then checking whether the day value did.
+ */
 export const DAY: Palette = {
   ocean: "#c3dbe6",
   land: "#f3ece0",
-  coast: "#c0ab93",
+  coast: "#8a7358",
   border: "#cdbba6",
   warm: ["#dfe6e6", "#e8d9bb", "#d9ab7c", "#b9743f", "#8d4a2c"],
   cool: ["#e6e0d4", "#b9d2de", "#7fadc4", "#4c7f9c", "#2e5a73"],
   flavor: EARTH_FLAVOR,
 };
 
+/**
+ * The bundled outline basemap at night, which is what actually ships: the detail flavour above is
+ * behind an environment variable, so these five values are the night globe for every visitor.
+ *
+ * The two masses sit 1.27:1 apart, which is deliberately the same near-nothing as day's 1.23:1 --
+ * land and ocean are the two largest areas on the screen, and a step you can measure between them
+ * is a step that competes with the data drawn on top. The coastline is what carries the boundary
+ * and what therefore has to clear 3:1, at 3.60:1 over this ocean against day's 3.12:1 over its own.
+ *
+ * The border is not held to that and is not meant to be: it is dashed, it is fainter than the coast
+ * on purpose, and no reading of a claim about animal movement depends on seeing a national line.
+ */
 export const NIGHT: Palette = {
-  ocean: "#10161c",
-  land: "#2a251d",
-  coast: "#5a5040",
-  border: "#443c30",
+  ocean: "#141d2e",
+  land: "#223046",
+  coast: "#5c7695",
+  border: "#364a66",
   warm: ["#3a3428", "#6b4f30", "#a3703c", "#cf9450", "#f0c07a"],
   cool: ["#26313a", "#33566a", "#3f7f9c", "#5aa6c4", "#8fcbe4"],
   flavor: NIGHT_FLAVOR,
