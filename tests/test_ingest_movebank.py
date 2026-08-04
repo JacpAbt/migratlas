@@ -10,7 +10,7 @@ import pytest
 
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.ingest import movebank
-from migratlas.redact import IngestRefusedError
+from migratlas.redact import IngestRefusedError, admit_taxon_for_ingest
 
 HEADER = (
     "individual_local_identifier,timestamp,location_lat,location_long,"
@@ -425,3 +425,33 @@ def test_every_registered_study_species_has_its_own_ceiling() -> None:
 def test_an_empty_frame_survives_the_reachability_filter() -> None:
     """Reachable: a study whose every row is a flagged outlier parses to nothing."""
     assert movebank.unreachable(movebank.parse(_csv())).height == 0
+
+
+def test_a_row_with_no_taxon_never_reaches_the_lake() -> None:
+    """13,966 fixes were in the lake with no species recorded, because `screen_taxa` dropped nulls
+    before the floor saw them: the gate was asked about every taxon except the rows that had none.
+
+    Dropped rather than fatal, and the asymmetry is deliberate. A *human* row means the taxon field
+    is not what the ingest assumes and a person has to look; a blank one means somebody did not type
+    a species. Refusing the study over eight animals would lose 2.5 million good fixes.
+    """
+    frame = movebank.parse(
+        _csv(
+            _row("A", "2015-06-01 12:00:00.000", "51.7", "-115.6", "Cervus elaphus"),
+            _row("A", "2016-06-01 12:00:00.000", "51.7", "-115.6", "Cervus elaphus"),
+            'YL227,2022-06-01 12:00:00.000,51.7,-115.5,,"GPS",dep1,true',
+        )
+    )
+    assert frame.height == 3, "parsing keeps it; only the floor decides"
+
+    kept = movebank.named("movebank_yahatinda_elk", frame)
+    assert kept.height == 2
+    assert "YL227" not in kept["individual_local_identifier"].to_list()
+
+
+def test_the_floor_refuses_a_taxon_it_was_not_told() -> None:
+    """A gate that answers "fine" when it has not been told what it is looking at is not a gate."""
+    with pytest.raises(IngestRefusedError, match="neither a taxon key nor"):
+        admit_taxon_for_ingest("movebank_yahatinda_elk")
+    with pytest.raises(IngestRefusedError, match="neither a taxon key nor"):
+        admit_taxon_for_ingest("movebank_yahatinda_elk", scientific_name="   ")

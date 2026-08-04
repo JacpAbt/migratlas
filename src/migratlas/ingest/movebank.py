@@ -135,10 +135,10 @@ a position, so they cannot reach a row that survived the position filter.
 # 3,000 km dispersal is connected: its fastest step is 127.9 km/day against a ceiling of 160, so it
 # is never cut in the first place.
 #
-# On the seven cached studies this removes 1,382 rows of 6,047,093 -- 0.023%. The bison study loses
-# 1,362 of them: the 617 Berlin rows and 745 more from the drive west. The rest is bad positions,
-# one to five per animal, and three studies lose nothing at all. All 52 bison remain, and so do all
-# 1,502 of MMRV's fixes across its full longitude range.
+# On the seven cached studies this removes 1,377 rows of 6,047,093 -- 0.023%. The bison study loses
+# 1,362 of them: the 617 Berlin rows and 745 more from the drive west. The other 15 are bad
+# positions, one to three per animal in the two fox studies, and four studies lose nothing at all.
+# All 52 bison individuals remain, and so do all 1,502 of MMRV's fixes across its full range.
 
 MIN_JUMP_KM: Final = 50.0
 """How far apart two fixes must be before their implied speed is allowed to mean anything.
@@ -574,6 +574,35 @@ def screen_taxa(source_id: str, frame: pl.DataFrame) -> list[str]:
     return names
 
 
+def named(source_id: str, frame: pl.DataFrame) -> pl.DataFrame:
+    """Drop rows whose species the archive never recorded, and say how many there were.
+
+    This used to be a ``drop_nulls()`` inside `screen_taxa`, which meant the floor was asked about
+    every taxon *except* the rows that had none -- and those went into the lake: 10,438 fixes of one
+    Ya Ha Tinda elk and 3,528 of seven Missouri bison, 13,966 in all, never screened. The floor
+    refuses an unnamed row now, so hiding them from it is no longer possible; this is the adapter
+    declining to hand it something it cannot answer, out loud.
+
+    Dropped rather than fatal, and the difference is what is actually at risk. A *human* row means
+    the taxon field is not what the ingest assumes and the whole study needs a person; a row with no
+    taxon means one animal's species was never typed in. Refusing the study would lose 2.5 million
+    good fixes over eight animals, and keeping them would put positions in the lake that no
+    sensitivity rule can reach -- because a rule is per taxon, and there is no taxon.
+    """
+    unnamed = frame.filter(pl.col("individual_taxon_canonical_name").is_null())
+    if unnamed.is_empty():
+        return frame
+    animals = unnamed["individual_local_identifier"].unique().sort().to_list()
+    log.warning(
+        "  %s: %d rows carry no taxon and cannot be screened, dropping %d animal(s): %s",
+        source_id,
+        unnamed.height,
+        len(animals),
+        ", ".join(animals[:8]),
+    )
+    return frame.filter(pl.col("individual_taxon_canonical_name").is_not_null())
+
+
 def to_evidence(study: Study, frame: pl.DataFrame, keys: dict[str, int]) -> pa.Table:
     """Adapt to the canonical `track` schema."""
     source = catalog.get(study.source_id)
@@ -630,9 +659,13 @@ def ingest_study(source_id: str) -> WriteResult:
     body, digest = cached(study)
     parsed = parse(body)
 
-    # The floor screens what the study *contains*, before anything is dropped for being unreachable.
-    # A human row that the reachability filter happened to isolate must still stop the ingest: this
-    # gate is about what the taxon field says, and a filter is not allowed to answer it.
+    # Rows with no taxon go first, because the floor now refuses one and it is right to: a gate
+    # asked about nothing cannot answer. `named` says how many and which animals.
+    parsed = named(source_id, parsed)
+
+    # Then the floor screens what the study *contains*, before anything is dropped for being
+    # unreachable. A human row that the reachability filter happened to isolate must still stop the
+    # ingest: this gate is about what the taxon field says, and a filter may not answer it.
     names = screen_taxa(source_id, parsed)
 
     frame = unreachable(parsed)
