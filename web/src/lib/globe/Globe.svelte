@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 
-  import { createGlobe, styleReady } from "../../globe/map";
+  import { createGlobe, setHatch, styleReady } from "../../globe/map";
   import { addSeries } from "../../layers/series";
   import { addSurface } from "../../layers/surface";
   import { loadManifest, type LoadedLayer } from "../../layers/types";
@@ -45,6 +45,10 @@
 
     void (async () => {
       await styleReady(instance);
+      // Before the data layers, and it has to be after the style: `addImage` needs somewhere to put
+      // the image. Until this runs the land draws as a flat fill, which is why the layer keeps a
+      // `fill-color` under its pattern.
+      setHatch(instance);
       addNightShade(instance);
       const manifest = await loadManifest(base);
       const added: LoadedLayer[] = [];

@@ -595,3 +595,78 @@ test("the default build requests nothing off-origin", async ({ page }) => {
   await focusOn(page, report, "aerial-passage", "series-aerial-passage");
   expect(external, `off-origin requests: ${external.join(", ")}`).toHaveLength(0);
 });
+
+test("the land is hatched, and the hatch tile meets its own edge", async ({ page }) => {
+  await ready(page);
+
+  // The hatch is a repeating image rather than a fill colour, because MapLibre draws WebGL from
+  // vector data and there is no way to hand a coastline to rough.js. `fill-color` stays underneath
+  // it as the fallback for every frame before `addImage` lands.
+  const land = await page.evaluate(() => {
+    const { map } = (window as unknown as Hook).migratlas;
+    return {
+      pattern: map.getPaintProperty("land", "fill-pattern"),
+      colour: map.getPaintProperty("land", "fill-color"),
+      registered: map.hasImage("land-hatch"),
+    };
+  });
+  expect(land.pattern, "the land is not hatched").toBe("land-hatch");
+  expect(land.colour, "no fill colour under the pattern to fall back to").toBeTruthy();
+  expect(land.registered, "the hatch image never reached the style").toBe(true);
+
+  // And the part that is easy to get wrong and impossible to see: a tiled image has to meet its own
+  // opposite edge. The first version rotated the canvas 45 degrees and stepped by a round 8px, which
+  // put 8.49 lines in a tile-width and offset the whole family by half a spacing at every seam.
+  //
+  // Measured rather than argued: the step across the seam, against the largest step anywhere inside
+  // the tile. A seamless tile has a seam no worse than its own roughest interior column; a broken
+  // one has an outlier there, and that is the whole test.
+  const seam = await page.evaluate(() => {
+    const image = (window as unknown as Hook).migratlas.map.getImage("land-hatch");
+    const { width, height, data } = image!.data as ImageData;
+    const at = (x: number, y: number) => data[(y * width + x) * 4]!;
+    const between = (left: number, right: number) => {
+      let total = 0;
+      for (let y = 0; y < height; y += 1) total += Math.abs(at(left, y) - at(right, y));
+      return total / height;
+    };
+
+    let inside = 0;
+    for (let x = 0; x < width - 1; x += 1) inside = Math.max(inside, between(x, x + 1));
+    return { across: between(width - 1, 0), inside };
+  });
+
+  expect(
+    seam.across,
+    `the seam steps ${seam.across.toFixed(1)} where the roughest column inside steps ${seam.inside.toFixed(1)}`,
+  ).toBeLessThanOrEqual(seam.inside);
+
+  // And the tile's mean is the land colour, not something near it. Same requirement as the paper
+  // grain and the same reason: `flavor.ts` records land-against-ocean and the coastline as measured
+  // ratios, and a pattern that quietly darkens the land makes every one of those figures describe a
+  // colour that is no longer on the screen. The strokes darken, so the ground is lifted by exactly
+  // what they take back.
+  const tone = await page.evaluate(() => {
+    const { map } = (window as unknown as Hook).migratlas;
+    const { data } = map.getImage("land-hatch")!.data as ImageData;
+    const total = [0, 0, 0];
+    for (let index = 0; index < data.length; index += 4) {
+      total[0]! += data[index]!;
+      total[1]! += data[index + 1]!;
+      total[2]! += data[index + 2]!;
+    }
+    const count = data.length / 4;
+    const declared = String(map.getPaintProperty("land", "fill-color"));
+    return {
+      mean: total.map((sum) => Math.round(sum / count)),
+      land: [1, 3, 5].map((at) => Number.parseInt(declared.slice(at, at + 2), 16)),
+    };
+  });
+
+  for (const [index, channel] of tone.mean.entries()) {
+    expect(
+      Math.abs(channel! - tone.land[index]!),
+      `the hatch averages rgb(${tone.mean.join(" ")}) where the land is rgb(${tone.land.join(" ")})`,
+    ).toBeLessThanOrEqual(2);
+  }
+});
