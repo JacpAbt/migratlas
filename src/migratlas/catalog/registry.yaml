@@ -489,6 +489,86 @@ sources:
       those rows are dropped and counted, as they cannot be evidence about a taxon.
     added: 2026-07-30
 
+  # The first European time series in the lake, and the first source anywhere in it with a fifty-year
+  # run. Two datasets from one scheme, registered separately because they are two protocols with two
+  # DOIs and two spans -- the same rule that made seven Movebank studies seven sources.
+  - id: sbs_point_counts
+    title: Swedish Bird Survey — summer point count routes (Sommarpunktrutterna), 1975–2024
+    realm: terrestrial
+    evidence_type: survey_index
+    taxon_scope: exact
+    landing_page: https://www.fageltaxering.lu.se/
+    doi: 10.15468/2aajk9
+    download_uri: https://www.gbif.se/ipt/archive.do?r=lu_sft_spkt
+    licence: CC0 1.0
+    licence_url: https://creativecommons.org/publicdomain/zero/1.0/
+    citation: >-
+      Lindström Å, Green M, Jönsson A (2025). Swedish Bird Survey: Summer point count routes
+      (Sommarpunktrutterna). Version 1.8. Department of Biology, Lund University. Sampling event
+      dataset https://doi.org/10.15468/2aajk9. The scheme runs on volunteer surveyors who have
+      walked the same routes each spring since 1975.
+    redistribution:
+      allowed: true
+      attribution_required: false
+      commercial_use: true
+      notes: >-
+        CC0 1.0 on GBIF, so attribution is not legally required and is given anyway. The archive's
+        own records carry `accessRights: Limited`, which refers to the species the publisher has
+        withheld rather than to the rows released — see the caveats.
+    default_sensitivity: low
+    caveats: >-
+      **Eleven species are absent by policy, not by absence, and a detection model must be told.**
+      The publisher withholds every taxon at Swedish security class 4 or higher: black stork, lesser
+      white-fronted goose, golden eagle, spotted eagle, white-tailed eagle, pallid harrier,
+      Montagu's harrier, peregrine falcon, gyrfalcon, eagle owl and white-backed woodpecker. An
+      occupancy model derives absence from "surveyed and not recorded", so for these eleven it would
+      derive a false absence at every event in the scheme. They are excluded by name at the ingest
+      and the count is reported.
+      Coordinates are the centre of the 25 x 25 km grid square the route sits in, not the route:
+      `coordinateUncertaintyInMeters` is 17,700 throughout, so nothing finer than that square is
+      supported and a cell smaller than it would be inventing precision.
+      Counts are the route total summed over twenty points, so a count is per route-visit rather
+      than per point, and effort is the survey window from `eventTime` rather than a point count.
+      Observer identity travels into `protocol`, as it does for BBS and for the same reason:
+      observer skill is the best-documented bias in schemes of this kind and a trend fit needs it
+      available as a break term.
+    added: 2026-08-05
+
+  - id: sbs_fixed_routes
+    title: Swedish Bird Survey — fixed routes (Standardrutterna), 1996–2025
+    realm: terrestrial
+    evidence_type: survey_index
+    taxon_scope: exact
+    landing_page: https://www.fageltaxering.lu.se/
+    doi: 10.15468/hd6w0r
+    download_uri: https://www.gbif.se/ipt/archive.do?r=lu_sft_std
+    licence: CC0 1.0
+    licence_url: https://creativecommons.org/publicdomain/zero/1.0/
+    citation: >-
+      Lindström Å, Green M (2026). Swedish Bird Survey: Fixed routes (Standardrutterna). Version
+      1.16. Department of Biology, Lund University. Sampling event dataset
+      https://doi.org/10.15468/hd6w0r.
+    redistribution:
+      allowed: true
+      attribution_required: false
+      commercial_use: true
+      notes: >-
+        CC0 1.0 on GBIF, attribution given regardless. `accessRights: Limited` in the archive refers
+        to the withheld species listed in the caveats.
+    default_sensitivity: low
+    caveats: >-
+      **Sixteen taxa are absent by policy, not by absence.** The eleven birds the point-count scheme
+      withholds, plus lynx, grey wolf, brown bear, wolverine and Arctic fox — this scheme records
+      mammals too. Excluded by name at the ingest and counted, for the same reason: a derived
+      absence would otherwise be manufactured for every one of them at every event.
+      Unlike BBS this is a *systematic* design — one route in each 25 x 25 km square on a national
+      grid, walked in the same direction at the same time of year — so it does not carry the
+      roadside bias that BBS's own caveat records, which is the single best reason to hold both.
+      Coordinates are the square's centre, uncertainty 17,700 m. Counts are the route total over
+      eight 1 km line segments, and effort is the survey window from `eventTime`.
+      Observer identity travels into `protocol`.
+    added: 2026-08-05
+
   # The late half of an atlas-against-atlas comparison, twenty years after sabap1. Landed with the
   # same effort unit as that source on purpose: two similar-but-different denominators would make
   # the comparison meaningless, which is the whole reason this source is here.

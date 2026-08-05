@@ -26,6 +26,8 @@ each source carries its own terms.
 | [ISIMIP3a GSWP3-W5E5 — factual and ATTRICI counterfactual near-surface air temperature](https://data.isimip.org/search/climate_scenario/counterclim/) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991](https://www.gbif.org/dataset/282d0ccb-4fa0-40f9-8593-105c77e88417) | `survey_index` | `terrestrial` | CC BY 4.0 | permitted |
 | [North American Breeding Bird Survey — route counts, 1966–2025](https://www.usgs.gov/centers/eesc/science/north-american-breeding-bird-survey) | `survey_index` | `terrestrial` | CC0 1.0 | permitted |
+| [Swedish Bird Survey — summer point count routes (Sommarpunktrutterna), 1975–2024](https://www.fageltaxering.lu.se/) | `survey_index` | `terrestrial` | CC0 1.0 | permitted |
+| [Swedish Bird Survey — fixed routes (Standardrutterna), 1996–2025](https://www.fageltaxering.lu.se/) | `survey_index` | `terrestrial` | CC0 1.0 | permitted |
 | [Southern African Bird Atlas Project 2 (SABAP2) — atlas cards, 2007–2026](https://www.gbif.org/dataset/906e6978-e292-4a8b-9c39-adf6bb0f3323) | `survey_index` | `terrestrial` | CC BY 4.0 | permitted |
 | [Ya Ha Tinda elk project, Banff National Park, 2001-2024 (females)](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study897981076) | `track` | `terrestrial` | CC0 1.0 | permitted |
 | [Mountain caribou in British Columbia (South Peace Northern Caribou)](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study216040785) | `track` | `terrestrial` | CC BY 4.0 | permitted |
@@ -253,6 +255,44 @@ Citizen science, so effort is not fixed by design the way a trawl survey's is: c
 **Caveats**
 
 Roadside by design, so the sample is not a random sample of the landscape and the bias is not random with respect to land use — which matters directly for any comparison against a land-cover or urbanisation driver. Observer skill is the best-documented bias in the dataset: counts differ between observers and a first-year observer differs from a practised one, so `ObsN`, `RunType` and `RPID` all travel into the protocol field for use as break terms. Only RPID 101 is the standard protocol; other values are experimental or incidental runs that the survey's own analyses exclude. **2020 is absent entirely** — field activities were cancelled for COVID-19 — so a trend fit must be told about the gap rather than interpolating across it. Routes are added and abandoned over time and the loss is not random, which is the same missing-not-at-random problem the consistent-footprint rule addresses in Phase 1b. The publisher holds migrant and non-breeder records in a separate file, excluded from the counts landed here; the ingest reports how many, because it is a judgement made on our behalf. Species totals include unidentified groupings and hybrids whose AOU codes carry no binomial; those rows are dropped and counted, as they cannot be evidence about a taxon.
+
+## Swedish Bird Survey — summer point count routes (Sommarpunktrutterna), 1975–2024
+
+- **id** `sbs_point_counts`
+- **evidence type** `survey_index` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.fageltaxering.lu.se/
+- **DOI** [10.15468/2aajk9](https://doi.org/10.15468/2aajk9)
+- **licence** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- **redistribution** permitted
+  - CC0 1.0 on GBIF, so attribution is not legally required and is given anyway. The archive's own records carry `accessRights: Limited`, which refers to the species the publisher has withheld rather than to the rows released — see the caveats.
+- **sensitivity** `low` by default
+
+**Cite as**
+
+> Lindström Å, Green M, Jönsson A (2025). Swedish Bird Survey: Summer point count routes (Sommarpunktrutterna). Version 1.8. Department of Biology, Lund University. Sampling event dataset https://doi.org/10.15468/2aajk9. The scheme runs on volunteer surveyors who have walked the same routes each spring since 1975.
+
+**Caveats**
+
+**Eleven species are absent by policy, not by absence, and a detection model must be told.** The publisher withholds every taxon at Swedish security class 4 or higher: black stork, lesser white-fronted goose, golden eagle, spotted eagle, white-tailed eagle, pallid harrier, Montagu's harrier, peregrine falcon, gyrfalcon, eagle owl and white-backed woodpecker. An occupancy model derives absence from "surveyed and not recorded", so for these eleven it would derive a false absence at every event in the scheme. They are excluded by name at the ingest and the count is reported. Coordinates are the centre of the 25 x 25 km grid square the route sits in, not the route: `coordinateUncertaintyInMeters` is 17,700 throughout, so nothing finer than that square is supported and a cell smaller than it would be inventing precision. Counts are the route total summed over twenty points, so a count is per route-visit rather than per point, and effort is the survey window from `eventTime` rather than a point count. Observer identity travels into `protocol`, as it does for BBS and for the same reason: observer skill is the best-documented bias in schemes of this kind and a trend fit needs it available as a break term.
+
+## Swedish Bird Survey — fixed routes (Standardrutterna), 1996–2025
+
+- **id** `sbs_fixed_routes`
+- **evidence type** `survey_index` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://www.fageltaxering.lu.se/
+- **DOI** [10.15468/hd6w0r](https://doi.org/10.15468/hd6w0r)
+- **licence** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- **redistribution** permitted
+  - CC0 1.0 on GBIF, attribution given regardless. `accessRights: Limited` in the archive refers to the withheld species listed in the caveats.
+- **sensitivity** `low` by default
+
+**Cite as**
+
+> Lindström Å, Green M (2026). Swedish Bird Survey: Fixed routes (Standardrutterna). Version 1.16. Department of Biology, Lund University. Sampling event dataset https://doi.org/10.15468/hd6w0r.
+
+**Caveats**
+
+**Sixteen taxa are absent by policy, not by absence.** The eleven birds the point-count scheme withholds, plus lynx, grey wolf, brown bear, wolverine and Arctic fox — this scheme records mammals too. Excluded by name at the ingest and counted, for the same reason: a derived absence would otherwise be manufactured for every one of them at every event. Unlike BBS this is a *systematic* design — one route in each 25 x 25 km square on a national grid, walked in the same direction at the same time of year — so it does not carry the roadside bias that BBS's own caveat records, which is the single best reason to hold both. Coordinates are the square's centre, uncertainty 17,700 m. Counts are the route total over eight 1 km line segments, and effort is the survey window from `eventTime`. Observer identity travels into `protocol`.
 
 ## Southern African Bird Atlas Project 2 (SABAP2) — atlas cards, 2007–2026
 

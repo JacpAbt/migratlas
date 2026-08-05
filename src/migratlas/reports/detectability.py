@@ -133,6 +133,39 @@ RULES: Final[tuple[SourceRule, ...]] = (
         ),
     ),
     SourceRule(
+        source_id="sbs_point_counts",
+        evidence_type=EvidenceType.SURVEY_INDEX,
+        realm="terrestrial",
+        latitude="site_latitude",
+        longitude="site_longitude",
+        unit="site",
+        ceiling="detectable",
+        reason="The same route, the same twenty points, every spring since 1975 -- fifty years.",
+        effort_note=(
+            "A coordinate is the centre of the 25 km square the route sits in, not the route, so "
+            "nothing finer than that square is supported. Eleven species are withheld nationally "
+            "by the publisher and are absent from every visit, so an absence derived for one of "
+            "them would be manufactured."
+        ),
+    ),
+    SourceRule(
+        source_id="sbs_fixed_routes",
+        evidence_type=EvidenceType.SURVEY_INDEX,
+        realm="terrestrial",
+        latitude="site_latitude",
+        longitude="site_longitude",
+        unit="site",
+        ceiling="detectable",
+        reason=(
+            "One route in every 25 km square of a national grid, walked the same way each spring "
+            "since 1996 -- a systematic design rather than a roadside one."
+        ),
+        effort_note=(
+            "Sixteen taxa are withheld nationally, five of them mammals, and are absent from every "
+            "visit. Coordinates are the survey square's centre."
+        ),
+    ),
+    SourceRule(
         source_id="sabap1",
         evidence_type=EvidenceType.SURVEY_INDEX,
         realm="terrestrial",
