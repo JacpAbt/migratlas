@@ -12,7 +12,7 @@ Numbers are permanent. A finished item keeps its number and moves to the bottom.
 
 | # | Item | Notes |
 | --- | --- | --- |
-| 11 | Factor panel and the interpretable model *(handoff #29)* | JRC surface-water change and GHSL built-up as explanatory-only factors, per `DATASETS.md` step 3, feeding an additive model with a drawable response curve per factor. |
+| 11 | Factor panel: surface-water change over the atlas footprint *(handoff #29)* | [`docs/methods/phase1g-water.md`](methods/phase1g-water.md) pre-registered 2026-08-05, before the download. `DATASETS.md` step 3, and the response variable is better than that plan assumed: #31 produced a per-cell change surface, so this is 496 cells against a place-level factor rather than 512 species against one. Step zero is the licence. The design turns on the null — two spatially autocorrelated maps correlate by default, so significance is judged against toroidal shifts and Moran spectral randomisation, with the naive p-value published beside them and labelled as the wrong test. Explanatory only: no future surface water exists, so this can never enter a forecast. |
 
 ## Queued, with a reason to wait
 
