@@ -840,6 +840,14 @@ def collect() -> list[Finding]:
                 "on a card did not change even though almost everything else about atlassing did.",
                 "The uncorrected reporting-rate comparison gives the same answer, so the "
                 "conclusion does not rest on the model being right.",
+                # The map under this claim is the uncorrected surface, and the caveat above says
+                # the two agree -- both true, at different scales, which the site has to say
+                # rather than leave a reader to reconcile.
+                "Per cell they agree less well, which is why the map beside this claim draws the "
+                "uncorrected count: a disagreement of a fraction of one species, summed over five "
+                "hundred of them, is a few whole species in a cell. That the map is the plainer "
+                "measurement was fixed in advance, in docs/methods/phase1f-atlas-surface.md, as "
+                "what to do if the two ever parted.",
             ],
         )
     )
