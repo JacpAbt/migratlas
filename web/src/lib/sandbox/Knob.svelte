@@ -60,6 +60,7 @@
     <p class="knob__note">{variant.note}</p>
   {/if}
 
+  <p class="knob__plain">{knob.plain_why}</p>
   <p class="knob__why">{knob.why}</p>
   <p class="knob__source">
     <a href={`${REPOSITORY}src/migratlas/reports/sandbox.py`} rel="noopener" target="_blank">
@@ -187,5 +188,11 @@
   code {
     font-family: var(--font-mono);
     font-size: 0.68rem;
+  }
+
+  /* The lesson first. A knob whose point is only made in the paragraph below it is a slider. */
+  .knob__plain {
+    margin: var(--gap-tight) 0 0;
+    color: var(--ink);
   }
 </style>

@@ -51,7 +51,13 @@
       <h4 id="ribbon-disagreement">
         {doc.ribbons.length > 1 ? "Why the two answers differ" : "Why there is only one answer"}
       </h4>
-      <p>{doc.disagreement}</p>
+      <!-- Two registers, as on a claim: the plain line is the answer, and the paragraph that
+           earns it is rendered under it in full rather than replaced by it. -->
+      <p class="pair__plain">{doc.plain_disagreement}</p>
+      <p class="pair__precise">
+        <span class="pair__register">Precisely</span>
+        {doc.disagreement}
+      </p>
     </section>
 
     <p class="pair__caveat">{doc.shared_caveat}</p>
@@ -131,5 +137,25 @@
     font-family: var(--font-mono);
     font-size: var(--size-margin);
     color: var(--pencil);
+  }
+
+  /* Same two registers as a claim, and the same reason for the label: without it the plain line
+     and the paragraph read as two different arguments rather than one said twice. */
+  .pair__plain {
+    color: var(--ink);
+    font-size: 1.02rem;
+  }
+
+  .pair__register {
+    font-family: var(--font-mono);
+    font-size: var(--size-label);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pencil);
+    margin-right: var(--gap-tight);
+  }
+
+  .pair__precise {
+    color: var(--ink-soft);
   }
 </style>

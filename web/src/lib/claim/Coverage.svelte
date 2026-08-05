@@ -69,6 +69,7 @@
                   {source.span[0]}–{source.span[1]} · {source.individuals} animals · {source.realm}
                 </span>
               </p>
+              <p class="held__plain">{source.plain_reason}</p>
               <p class="held__why">{source.reason}</p>
             </li>
           {/each}
@@ -241,5 +242,12 @@
     border-top: 1px dotted var(--rule);
     font-size: 0.76rem;
     color: var(--pencil);
+  }
+
+  /* This list is the project's ethics in one screen, so the reason leads in plain words and the
+     full rationale -- citation and all -- follows it rather than being cut. */
+  .held__plain {
+    margin: var(--gap-hair) 0 0;
+    color: var(--ink);
   }
 </style>

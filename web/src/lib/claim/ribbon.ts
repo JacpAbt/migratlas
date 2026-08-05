@@ -57,11 +57,12 @@ export interface Comparison {
   ribbons: RibbonDocument[];
   /** Why two honest counterfactuals give different numbers. The reason both are shown. */
   disagreement: string;
+  plain_disagreement: string;
   shared_caveat: string;
   supporting: string[];
 }
 
-export const RIBBON_SCHEMA = 2;
+export const RIBBON_SCHEMA = 3;
 
 export const BOX = { width: 640, height: 300 };
 /** Wide right margin: the end-labels carry the legend, so no separate key is needed. */

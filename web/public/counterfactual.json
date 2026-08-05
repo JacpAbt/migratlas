@@ -1,5 +1,5 @@
 {
- "schema_version": 2,
+ "schema_version": 3,
  "unit": "day of year",
  "ribbons": [
   {
@@ -203,7 +203,7 @@
     {
      "key": "observed",
      "label": "what happened",
-     "per_decade": -0.559083787589677,
+     "per_decade": -0.5590837875896769,
      "start": 267.3591861568139,
      "end": 265.6819347940448,
      "note": "The fitted trend at the claim-band stations, and the number the ledger publishes."
@@ -220,14 +220,14 @@
    "terms": {
     "sensitivity_days_per_degree": -0.6585167526711123,
     "warming_degrees_per_decade": 0.5178997960229068,
-    "thermal_days_per_decade": -0.3006354314431796,
+    "thermal_days_per_decade": -0.3006354314431795,
     "human_share_of_warming": 0.9831604230461917,
-    "removed_days_per_decade": -0.2955728579603508,
-    "observed_days_per_decade": -0.559083787589677,
+    "removed_days_per_decade": -0.2955728579603507,
+    "observed_days_per_decade": -0.5590837875896769,
     "stations": 78.0,
     "models": 15.0
    },
-   "divergence": 0.8867185738810525,
+   "divergence": 0.8867185738810521,
    "caveat": "The share is a ratio of forced warming as the ensemble mean has it. Averaging 15 models suppresses year-to-year variability by construction, so this is a statement about the forced signal and not about the trend any one thermometer measured. CMIP6's historical runs also stop in 2014 while the radar record runs to 2025.",
    "method": "docs/methods/phase2a-attribution.md"
   },
@@ -396,7 +396,7 @@
     {
      "key": "observed",
      "label": "what happened",
-     "per_decade": -0.559083787589677,
+     "per_decade": -0.5590837875896769,
      "start": 267.4068891658622,
      "end": 266.065088075647,
      "note": "The fitted trend at the claim-band stations, and the number the ledger publishes."
@@ -404,7 +404,7 @@
     {
      "key": "counterfactual",
      "label": "no warming",
-     "per_decade": -0.4382126782998207,
+     "per_decade": -0.4382126782998205,
      "start": 267.2618438347144,
      "end": 266.2101334067948,
      "note": "The observed trend with the warming-correlated share removed. Smaller than the forcing answer, and the gap between the two is the point: most of a 25-year trend at one place does not move with the global mean at all."
@@ -412,20 +412,21 @@
    ],
    "terms": {
     "sensitivity_days_per_degree": -0.6585167526711123,
-    "warming_removed_degrees_per_decade": 0.18355054567643453,
+    "warming_removed_degrees_per_decade": 0.18355054567643458,
     "warming_removed_ci95": 0.022966751114410617,
-    "share_of_factual_warming": 0.3752554458877062,
-    "removed_days_per_decade": -0.12087110928985634,
-    "removed_days_ci95": 0.03391826345176606,
-    "observed_days_per_decade": -0.559083787589677,
+    "share_of_factual_warming": 0.3752554458877064,
+    "removed_days_per_decade": -0.12087110928985638,
+    "removed_days_ci95": 0.033918263451766066,
+    "observed_days_per_decade": -0.5590837875896769,
     "stations": 78.0
    },
-   "divergence": 0.29009066229565517,
+   "divergence": 0.29009066229565533,
    "caveat": "This covers 1995-2019, because the counterfactual ends in 2019 while the radar record runs to 2025. It says nothing about the last six years. The detrending removes what correlates with global mean temperature, which at one half-degree cell is a smaller share of the trend than the forced signal is.",
    "method": "docs/methods/phase2a-attrici.md"
   }
  ],
  "disagreement": "The two ribbons disagree by a factor of about 2.4, and both are right \u2014 they are not two estimates of one number. The forcing ribbon asks how much of the forced part of the warming was human, and gets 98% \u2014 but it reaches that by averaging 15 models, which cancels the year-to-year weather until almost nothing but the forced signal is left. The warming ribbon works on one half-degree patch of real daily temperature, where a 25-year trend is largely weather that leaned one way, and only 38% of it moves with the globe. So the distance between the two ribbons is itself a measurement: roughly 59% of the warming at these stations does not follow the global mean at all. Across twenty-five years at one cell, most of that is weather leaning one way \u2014 but it also holds any forcing that does not scale with the global average, which makes it an upper bound on the chance part rather than a reading of it. Averaging the two ribbons would destroy all of this and answer neither question.",
+ "plain_disagreement": "Two honest ways of asking how much of this was us give answers about 2.4 times apart, and neither is wrong. They are answers to different questions.",
  "shared_caveat": "Both attribute the warming, not the animals. Each removes a share of the temperature signal and passes it through a response function fitted on observations, so anything that moved both temperature and passage date together survives either one. And the attribution is of the *trend*: no single year's date can be called human-caused.",
  "supporting": [
   "Shuffling the years destroys the observed trend entirely (-0.56 to -0.001 days per decade), so the line being drawn is order and not arithmetic.",

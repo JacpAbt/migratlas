@@ -1,10 +1,11 @@
 {
- "schema_version": 1,
+ "schema_version": 2,
  "knobs": [
   {
    "key": "speed-weighting",
    "question": "What if the metric were not weighted by flight speed?",
    "why": "A passage date is a cumulative sum of a speed-weighted quantity, so faster flight and earlier passage look alike. The control is to compute the same date from a quantity with no speed in it.",
+   "plain_why": "The measurement counts fast-flying animals more heavily, so \"earlier\" and \"faster\" can look the same. This takes the speed back out.",
    "claim": "autumn-advance",
    "source": "reports.phase1.load_conus_nights(quantity=\u2026)",
    "default": "speed-weighted",
@@ -33,6 +34,7 @@
    "key": "break-specification",
    "question": "What if the hardware upgrade were modelled differently?",
    "why": "The dual-polarisation upgrade is a step change in the instrument, and no single way of modelling it is correct. This is the knob where the answer moves most, and the direction of the movement is what matters: all four specifications agree on the sign, and *fitting* a break makes the advance larger rather than smaller. The published choice fits no break at all, so it sits at the conservative end of the four rather than the flattering one.",
+   "plain_why": "The radars were upgraded halfway through the record. There is no one right way to allow for that, so all four are shown -- and the published one is the least flattering of them.",
    "claim": "autumn-advance",
    "source": "reports.phase1_robustness.specification_estimates",
    "default": "no-break-term",
@@ -79,6 +81,7 @@
    "key": "shuffled-years",
    "question": "What if the years were shuffled?",
    "why": "Shuffling year labels within each station keeps every station's distribution of passage dates and destroys their order. Any trend that survives that is arithmetic, not biology.",
+   "plain_why": "Scramble which year each measurement came from. Any trend still showing is arithmetic, not animals.",
    "claim": "autumn-advance",
    "source": "reports.phase1_robustness.permutation_null",
    "default": "observed",
@@ -107,6 +110,7 @@
    "key": "survey-effort",
    "question": "What if we ignored where the ships actually went?",
    "why": "A distribution centroid is a weighted mean of the places you looked. Widen the footprint over time and the centroid moves without a single fish moving, which is the single most common way a range shift is invented.",
+   "plain_why": "Fish look like they moved if the ships did. This is the commonest way to invent a range shift.",
    "claim": "marine-null",
    "source": "metrics.range.consistent_footprint(consistency=\u2026)",
    "default": "footprint-0.8",
@@ -161,7 +165,7 @@
      "label": "10th percentile first-recorded year",
      "value": 1985.0,
      "unit": "year",
-     "n": 17193004,
+     "n": 17192885,
      "ci95": null,
      "note": ""
     },
@@ -170,7 +174,7 @@
      "label": "50th percentile first-recorded year",
      "value": 2012.0,
      "unit": "year",
-     "n": 17193004,
+     "n": 17192885,
      "ci95": null,
      "note": "Half of these cells were first recorded after this year: the record is mostly recent, so 'where a species was first seen' is largely a statement about when people started looking there."
     },
@@ -179,16 +183,16 @@
      "label": "90th percentile first-recorded year",
      "value": 2022.0,
      "unit": "year",
-     "n": 17193004,
+     "n": 17192885,
      "ci95": null,
      "note": ""
     },
     {
      "key": "mean-latitude-shift",
      "label": "mean cell latitude, recent minus early first records",
-     "value": 4.422908009129724,
+     "value": 4.422997716252084,
      "unit": "degrees latitude",
-     "n": 17193004,
+     "n": 17192885,
      "ci95": null,
      "note": "The apparent poleward signal. It is the same size and sign whether the animals moved or the surveying did, and nothing in this dataset separates the two."
     }

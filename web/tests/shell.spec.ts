@@ -480,8 +480,14 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   // by a factor of two with no explanation would be worse than publishing one of them.
   const gap = page.locator(".pair__gap");
   await expect(gap).toContainText(/differ/i);
-  await expect(gap.locator("p")).toContainText("not two estimates of one number");
-  const size = await gap.locator("p").evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
+  // Two registers here now, as on a claim. Retargeted rather than loosened: `.pair__gap p` would
+  // match either paragraph, so it would go on passing while the precise text was quietly dropped.
+  await expect(gap.locator(".pair__plain")).toContainText("neither is wrong");
+  await expect(gap.locator(".pair__precise")).toContainText("not two estimates of one number");
+
+  const size = await gap
+    .locator(".pair__precise")
+    .evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
   const footnote = await page
     .locator(".pair__caveat")
     .evaluate((n) => parseFloat(getComputedStyle(n).fontSize));

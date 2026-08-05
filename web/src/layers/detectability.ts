@@ -34,6 +34,8 @@ export interface Withheld {
   taxon: string;
   sensitivity: string;
   reason: string;
+  /** The refusal in one sentence. Heads the full reason rather than replacing it. */
+  plain_reason: string;
   span: [number, number];
   individuals: number;
 }
@@ -50,7 +52,7 @@ interface DetectabilityDocument {
   supporting: string[];
 }
 
-const SUPPORTED_SCHEMA = 2;
+const SUPPORTED_SCHEMA = 3;
 
 const LAYER_ID = "detectability";
 
