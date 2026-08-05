@@ -282,8 +282,14 @@ test("the index names every claim and says what each one found", async ({ page }
   await page.getByRole("button", { name: /just let me explore/i }).click();
 
   const tabs = page.locator(".tab");
-  // One per claim, plus the way back to the bare globe.
-  await expect(tabs).toHaveCount(6);
+  // One per claim, plus the way back to the bare globe. Counted from the ledger rather than written
+  // here: this was a literal 6, so landing a sixth finding failed a test about the *index* for a
+  // reason that had nothing to do with the index.
+  const published = await page.request
+    .get("findings.json")
+    .then((r) => r.json() as Promise<{ findings: unknown[] }>);
+  expect(published.findings.length).toBeGreaterThan(1);
+  await expect(tabs).toHaveCount(published.findings.length + 1);
 
   // Whether each found a change, a null or a limit, in words, before anyone clicks. An index of
   // only the positives would be lying by selection.

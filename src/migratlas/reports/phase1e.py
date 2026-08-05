@@ -261,3 +261,83 @@ def detection_area_bias(changes: list[SpeciesChange]) -> dict[str, float]:
         "median_p_1": float(np.median([c.first.p for c in usable])),
         "median_p_2": float(np.median([c.second.p for c in usable])),
     }
+
+
+@dataclass(frozen=True, slots=True)
+class Summary:
+    """Every number the ledger publishes, computed here so the claim cannot drift from the analysis.
+
+    Both windows are fitted, which costs about two and a half minutes. That is deliberate and it is
+    the same rule the rest of `reports/` follows: a figure typed once is a figure that goes stale
+    silently, and the sensitivity is not a footnote here -- it is what licenses the species-level
+    numbers at all.
+    """
+
+    cells: int
+    species: int
+    median_delta: float
+    decile_low: float
+    decile_high: float
+    agree_within_001: float
+    """Share of species whose corrected and naive change differ by less than 0.01."""
+
+    median_gap: float
+    """Median |corrected - naive|. The whole value of the detection model, measured."""
+
+    p_correlation: float
+    """Detection probability in epoch 1 against epoch 2, across the thirty-year gap."""
+
+    flip_share: float
+    """Share of species changing sign between the two epoch-2 windows, among those that moved."""
+
+    movers: int
+    """Species whose occupancy moved by more than 0.1 under the primary window."""
+
+
+NOISE: Final = 0.02
+"""Below this a sign change is not a disagreement, it is two ways of saying no change.
+
+Counting a species at -0.001 and +0.001 as a flip would inflate the sensitivity figure with rounding
+and make a stable result look unstable.
+"""
+
+MOVED: Final = 0.1
+"""What counts as a species that changed, for the purpose of saying how many did."""
+
+AGREEMENT: Final = 0.01
+"""How close corrected and naive have to be to count as agreeing.
+
+Note section 8 sets it: if the two agree to within this for nearly every species, the detection
+correction bought nothing and the note says so plainly rather than burying it."""
+
+
+def summarise() -> Summary:
+    """Run both windows and reduce them to the published numbers."""
+    primary = {c.taxon_key: c for c in compare(EPOCH_2) if c.reportable}
+    alternative = {c.taxon_key: c for c in compare(EPOCH_2_ALT) if c.reportable}
+    shared = sorted(set(primary) & set(alternative))
+
+    delta = np.array([primary[key].delta_psi for key in primary])
+    naive = np.array([primary[key].delta_naive for key in primary])
+    gap = np.abs(delta - naive)
+
+    first = np.array([primary[key].first.p for key in primary])
+    second = np.array([primary[key].second.p for key in primary])
+
+    one = np.array([primary[key].delta_psi for key in shared])
+    two = np.array([alternative[key].delta_psi for key in shared])
+    moved = (np.abs(one) > NOISE) | (np.abs(two) > NOISE)
+    flipped = np.sign(one) != np.sign(two)
+
+    return Summary(
+        cells=int(footprint().height),
+        species=len(primary),
+        median_delta=float(np.median(delta)),
+        decile_low=float(np.percentile(delta, 10)),
+        decile_high=float(np.percentile(delta, 90)),
+        agree_within_001=float(np.mean(gap < AGREEMENT)),
+        median_gap=float(np.median(gap)),
+        p_correlation=float(np.corrcoef(first, second)[0, 1]),
+        flip_share=float(np.mean(flipped[moved])),
+        movers=int(np.sum(np.abs(delta) > MOVED)),
+    )

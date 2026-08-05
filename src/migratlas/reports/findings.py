@@ -266,6 +266,50 @@ COMPOSITION_BIAS: Final = _domains(
     ),
 )
 
+ATLAS_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "South Africa, Lesotho and Eswatini, and inside them only the 496 quarter-degree cells "
+        "atlassed at least twenty times in *both* epochs. That footprint is where atlassers went "
+        "twice, thirty years apart, which is not a sample of southern African habitat. It narrows "
+        "the northern-hemisphere gap; it does not close it.",
+    ),
+    temporal=(
+        "bounded",
+        "Two epochs, so a difference and not a rate: nothing here may be phrased per decade. The "
+        "nineteen years between the atlas windows contain no data at all, so what happened in "
+        "between is unobserved rather than smooth.",
+    ),
+    taxonomic=(
+        "bounded",
+        "Birds, and specifically the species already widespread at baseline -- thirty or more "
+        "occupied cells in 1987-1991. Applying that floor to both epochs instead would have "
+        "selected on the outcome, dropping 37 species whose median naive change was -0.153 "
+        "against -0.014 overall, so it is applied at baseline only.",
+    ),
+    environmental=(
+        "open",
+        "An atlas card records where a volunteer went. The consistent-footprint rule controls for "
+        "how *often* a cell was visited and not for which cells people choose, and no covariate "
+        "for land use or protection enters the model. A change concentrated in transformed "
+        "landscapes would be indistinguishable here from one that was not.",
+    ),
+    detectability=(
+        "addressed",
+        "A per-species detection probability is fitted in each epoch rather than assumed, and it "
+        "turns out not to matter: at a median 82 and 68 cards per cell an occupied cell is missed "
+        "with probability 0.00002 and 0.0002, so the corrected and uncorrected answers agree. "
+        "Detection is also stable, correlating across the thirty-year gap, which is the evidence "
+        "that observer change is not driving the result.",
+    ),
+    phenological=(
+        "addressed",
+        "Cards are pooled over five whole years in each epoch, so within-year timing is integrated "
+        "out and a species that shifted its season rather than its range cannot appear as a range "
+        "change.",
+    ),
+)
+
 ATTRIBUTION_BIAS: Final = _domains(
     geographic=(
         "bounded",
@@ -721,6 +765,82 @@ def collect() -> list[Finding]:
             ),
             method="docs/methods/geographic-coverage.md",
             direction="limit",
+        )
+    )
+
+    # --- Phase 1e: the atlas comparison -----------------------------------
+    # Both epoch-2 windows are fitted here, which costs about two and a half minutes of the build.
+    # That is the point: the sensitivity is not a footnote for this claim, it is what licenses
+    # publishing any species-level number at all, and a figure typed once goes stale silently.
+    from migratlas.reports import phase1e  # noqa: PLC0415
+
+    atlas = phase1e.summarise()
+    findings.append(
+        Finding(
+            key="atlas-no-net-change",
+            realm=Realm.TERRESTRIAL.value,
+            taxon_scope=TaxonScope.EXACT.value,
+            evidence_type=EvidenceType.SURVEY_INDEX.value,
+            bias=ATLAS_BIAS,
+            plain=(
+                "Southern African birds have not, on the whole, moved. A few dozen species "
+                "clearly have — and the ones spreading fastest are birds people brought."
+            ),
+            matters=(
+                "This is the first thing this project has measured outside the northern "
+                "hemisphere, and it is the test of whether findings from one continent carry to "
+                "another. It also answers a question the site had only ever asked: whether "
+                "correcting for how hard people looked changes what you conclude."
+            ),
+            plain_caveat=(
+                "Two snapshots thirty years apart, in three countries, in the places volunteers "
+                "atlassed twice. It is a before and after, not a trend, and it is not Africa."
+            ),
+            claim=(
+                "Between the two southern African bird atlases there is no net change in "
+                f"occupancy across {atlas.species} species — the median is "
+                f"{atlas.median_delta:+.3f} — while {atlas.movers} species moved by more than "
+                "0.1 in one direction or the other."
+            ),
+            value=(
+                f"median {atlas.median_delta:+.3f} change in occupancy probability, "
+                f"deciles {atlas.decile_low:+.3f} to {atlas.decile_high:+.3f}, "
+                f"across {atlas.species} species on {atlas.cells} shared cells"
+            ),
+            scope=(
+                "SABAP1 1987-1991 against SABAP2 2008-2012, full-protocol cards only, on "
+                f"{atlas.cells} quarter-degree cells carrying at least 20 cards in both epochs."
+            ),
+            caveat=(
+                "The detection correction this was built for made no difference, and that is the "
+                "second finding rather than a technicality. Corrected and naive occupancy change "
+                f"agree to within 0.01 for {atlas.agree_within_001:.0%} of species, with a median "
+                f"difference of {atlas.median_gap:.4f}. The reason is the footprint rule: 20 cards "
+                "per cell was registered so detection could be *estimated* everywhere, and at that "
+                "effort an occupied cell is essentially never missed, so there was nothing left "
+                "for detection to *explain*. The elaborate machinery earns its place on sparse "
+                "data, and a footprint strict enough to fit it is strict enough to make it "
+                "unnecessary. Read the other way, that is why the number can be trusted: it does "
+                "not depend on the model. What it cannot do is separate a species that left from "
+                "one that stayed and was recorded differently in a landscape that changed around "
+                "it — no land-use covariate enters this, and attribution is a later note."
+            ),
+            method="docs/methods/phase1e-atlas.md",
+            direction="null",
+            supporting=[
+                "The occupancy model recovers known psi and p from simulated data across five "
+                "parameter combinations before it was allowed near the atlases.",
+                "The registered alternative window, 2019-2023, disagrees in sign for "
+                f"{atlas.flip_share:.1%} of the species that moved — under the one-third "
+                "threshold that would have made the result a property of the window.",
+                "Nine of the ten largest changes hold under that alternative window and five are "
+                "larger under it; the tenth flipped sign and is withdrawn rather than caveated.",
+                "Detection probability correlates "
+                f"{atlas.p_correlation:.3f} between epochs, so how likely a bird is to be written "
+                "on a card did not change even though almost everything else about atlassing did.",
+                "The uncorrected reporting-rate comparison gives the same answer, so the "
+                "conclusion does not rest on the model being right.",
+            ],
         )
     )
 

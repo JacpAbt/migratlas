@@ -67,6 +67,19 @@ export const VIEWS: Record<string, View> = {
     layers: ["aerial-passage"],
     because: "The claim band again, pulled back: the forcing behind it is global.",
   },
+  "atlas-no-net-change": {
+    // Southern Africa, framed on the atlas footprint itself: South Africa, Lesotho and Eswatini.
+    center: [25, -29],
+    zoom: 3.6,
+    // No layer, and that is the honest state rather than an omission. This claim rests on 496
+    // quarter-degree cells of occupancy change, and no such surface has been exported yet -- the
+    // manifest holds four layers and none of them is this one. Borrowing another claim's evidence
+    // to fill the frame would be worse than flying there and saying nothing is drawn.
+    layers: [],
+    because:
+      "The southern African atlas footprint: South Africa, Lesotho and Eswatini. Nothing is " +
+      "drawn on it yet — the occupancy surface behind this claim has not been exported.",
+  },
   "coverage-bias": {
     // Deliberately the southern hemisphere, and deliberately far out. This claim is about what the
     // project cannot see, so the camera points at the emptiness rather than at the data.

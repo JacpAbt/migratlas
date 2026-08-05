@@ -237,6 +237,60 @@
    ],
    "direction": "limit",
    "supporting": []
+  },
+  {
+   "key": "atlas-no-net-change",
+   "plain": "Southern African birds have not, on the whole, moved. A few dozen species clearly have \u2014 and the ones spreading fastest are birds people brought.",
+   "matters": "This is the first thing this project has measured outside the northern hemisphere, and it is the test of whether findings from one continent carry to another. It also answers a question the site had only ever asked: whether correcting for how hard people looked changes what you conclude.",
+   "claim": "Between the two southern African bird atlases there is no net change in occupancy across 512 species \u2014 the median is -0.007 \u2014 while 56 species moved by more than 0.1 in one direction or the other.",
+   "plain_caveat": "Two snapshots thirty years apart, in three countries, in the places volunteers atlassed twice. It is a before and after, not a trend, and it is not Africa.",
+   "value": "median -0.007 change in occupancy probability, deciles -0.075 to +0.048, across 512 species on 496 shared cells",
+   "scope": "SABAP1 1987-1991 against SABAP2 2008-2012, full-protocol cards only, on 496 quarter-degree cells carrying at least 20 cards in both epochs.",
+   "caveat": "The detection correction this was built for made no difference, and that is the second finding rather than a technicality. Corrected and naive occupancy change agree to within 0.01 for 77% of species, with a median difference of 0.0020. The reason is the footprint rule: 20 cards per cell was registered so detection could be *estimated* everywhere, and at that effort an occupied cell is essentially never missed, so there was nothing left for detection to *explain*. The elaborate machinery earns its place on sparse data, and a footprint strict enough to fit it is strict enough to make it unnecessary. Read the other way, that is why the number can be trusted: it does not depend on the model. What it cannot do is separate a species that left from one that stayed and was recorded differently in a landscape that changed around it \u2014 no land-use covariate enters this, and attribution is a later note.",
+   "method": "docs/methods/phase1e-atlas.md",
+   "realm": "terrestrial",
+   "taxon_scope": "exact",
+   "evidence_type": "survey_index",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "South Africa, Lesotho and Eswatini, and inside them only the 496 quarter-degree cells atlassed at least twenty times in *both* epochs. That footprint is where atlassers went twice, thirty years apart, which is not a sample of southern African habitat. It narrows the northern-hemisphere gap; it does not close it."
+    },
+    {
+     "domain": "temporal",
+     "status": "bounded",
+     "finding": "Two epochs, so a difference and not a rate: nothing here may be phrased per decade. The nineteen years between the atlas windows contain no data at all, so what happened in between is unobserved rather than smooth."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "bounded",
+     "finding": "Birds, and specifically the species already widespread at baseline -- thirty or more occupied cells in 1987-1991. Applying that floor to both epochs instead would have selected on the outcome, dropping 37 species whose median naive change was -0.153 against -0.014 overall, so it is applied at baseline only."
+    },
+    {
+     "domain": "environmental",
+     "status": "open",
+     "finding": "An atlas card records where a volunteer went. The consistent-footprint rule controls for how *often* a cell was visited and not for which cells people choose, and no covariate for land use or protection enters the model. A change concentrated in transformed landscapes would be indistinguishable here from one that was not."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "A per-species detection probability is fitted in each epoch rather than assumed, and it turns out not to matter: at a median 82 and 68 cards per cell an occupied cell is missed with probability 0.00002 and 0.0002, so the corrected and uncorrected answers agree. Detection is also stable, correlating across the thirty-year gap, which is the evidence that observer change is not driving the result."
+    },
+    {
+     "domain": "phenological",
+     "status": "addressed",
+     "finding": "Cards are pooled over five whole years in each epoch, so within-year timing is integrated out and a species that shifted its season rather than its range cannot appear as a range change."
+    }
+   ],
+   "direction": "null",
+   "supporting": [
+    "The occupancy model recovers known psi and p from simulated data across five parameter combinations before it was allowed near the atlases.",
+    "The registered alternative window, 2019-2023, disagrees in sign for 14.4% of the species that moved \u2014 under the one-third threshold that would have made the result a property of the window.",
+    "Nine of the ten largest changes hold under that alternative window and five are larger under it; the tenth flipped sign and is withdrawn rather than caveated.",
+    "Detection probability correlates 0.938 between epochs, so how likely a bird is to be written on a card did not change even though almost everything else about atlassing did.",
+    "The uncorrected reporting-rate comparison gives the same answer, so the conclusion does not rest on the model being right."
+   ]
   }
  ]
 }
