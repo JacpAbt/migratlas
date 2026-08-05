@@ -356,8 +356,10 @@ def _coverage_bias(evidence_types: int) -> list[BiasDomain]:
     return _domains(
         geographic=(
             "open",
-            "This claim *is* the geographic bias. Every source with a usable time axis is "
-            "northern temperate; the two with global reach cannot support a trend.",
+            "This claim *is* the geographic bias, and it has moved without closing. Two atlases "
+            "put a third of the time-series record south of the equator, in three countries; "
+            "every other source with a usable time axis is northern temperate, the two with "
+            "global reach cannot support a trend, and the driver record is northern entire.",
         ),
         temporal=(
             "bounded",
@@ -394,22 +396,86 @@ def _radar_coverage() -> tuple[int, int, int]:
     return frame["station"].n_unique(), int(years.min()), int(years.max())
 
 
-def _southern_share() -> dict[str, float]:
-    """Share of each time-series source's rows south of the equator.
+# Every evidence type that carries a time axis, and the column its positions live in.
+#
+# The previous version of this hardcoded a list of two *sources* while computing their shares from
+# the lake, and its docstring named the exact failure it then suffered: "the day a southern source
+# lands, a hardcoded 0% would be a lie on the site." SABAP1 and SABAP2 landed on 2026-07-30 and the
+# site went on publishing 0.0% southern over 19.7 million southern rows.
+#
+# So the sources are enumerated and only the *types* are named -- and a type holding data that
+# appears in neither map stops the build rather than being skipped.
+TIME_AXIS: Final = {
+    EvidenceType.FLUX: "station_latitude",
+    EvidenceType.SURVEY_INDEX: "site_latitude",
+    EvidenceType.TRACK: "latitude",
+}
 
-    Computed rather than quoted, because this is the finding most likely to become false
-    silently -- the day a southern source lands, a hardcoded 0% would be a lie on the site.
+# Pooled over their whole period, so they cannot measure change and are not part of this claim.
+POOLED: Final = frozenset({EvidenceType.ABUNDANCE_SURFACE})
+
+
+@dataclass(frozen=True, slots=True)
+class Coverage:
+    """How much of what this project can measure change with lies south of the equator."""
+
+    rows: int
+    southern: int
+    sources: int
+    southern_sources: int
+    driver_rows: int
+    southern_drivers: int
+
+    @property
+    def share(self) -> float:
+        return self.southern / self.rows if self.rows else float("nan")
+
+    @property
+    def driver_share(self) -> float:
+        return self.southern_drivers / self.driver_rows if self.driver_rows else float("nan")
+
+
+def _coverage() -> Coverage:
+    """Count the southern share of the lake's time-series record, and of its drivers.
+
+    Two numbers rather than one, and the gap between them is the finding now. Evidence and drivers
+    moved apart when the atlases landed: a third of the rows this project can measure change with
+    are southern, and none of the temperature it would explain them with is.
     """
-    shares: dict[str, float] = {}
-    for source, latitude in (
-        ("darkecology_daily", "station_latitude"),
-        ("fishglob", "site_latitude"),
-    ):
-        evidence = EvidenceType.FLUX if source == "darkecology_daily" else EvidenceType.SURVEY_INDEX
-        frame = scan(evidence, source_id=source).select(pl.col(latitude).alias("lat")).collect()
-        values = frame["lat"].to_numpy()
-        shares[source] = float((values < 0).mean()) if values.size else float("nan")
-    return shares
+    live = [kind for kind in EvidenceType if lake_sources(kind)]
+    unhandled = [kind for kind in live if kind not in TIME_AXIS and kind not in POOLED]
+    if unhandled:
+        msg = (
+            f"{[str(kind) for kind in unhandled]} hold data and this claim does not know whether "
+            f"they carry a time axis or where their positions live. Decide, and add them to "
+            f"TIME_AXIS or POOLED -- skipping one is how this went on reporting 0% southern."
+        )
+        raise ValueError(msg)
+
+    rows = southern = sources = southern_sources = 0
+    for kind, column in TIME_AXIS.items():
+        for source in sorted(lake_sources(kind)):
+            values = (
+                scan(kind, source_id=source).select(lat=pl.col(column)).collect()["lat"].to_numpy()
+            )
+            below = int((values < 0).sum())
+            rows += int(values.size)
+            southern += below
+            sources += 1
+            southern_sources += 1 if below else 0
+
+    drivers = (
+        scan_dataset("driver_samples", source_id=None).select(lat=pl.col("latitude")).collect()
+    )
+    latitudes = drivers["lat"].to_numpy()
+    return Coverage(
+        rows=rows,
+        southern=southern,
+        sources=sources,
+        southern_sources=southern_sources,
+        driver_rows=int(latitudes.size),
+        southern_drivers=int((latitudes < 0).sum()),
+    )
 
 
 def _wind_coverage() -> tuple[int, int, int]:
@@ -441,7 +507,7 @@ def collect() -> list[Finding]:
     from migratlas.reports.phase1 import AUTUMN, load_conus_nights, station_slopes  # noqa: PLC0415
 
     _, first_year, last_year = _radar_coverage()
-    southern = _southern_share()
+    coverage = _coverage()
 
     findings: list[Finding] = []
 
@@ -729,33 +795,42 @@ def collect() -> list[Finding]:
             evidence_type="all",
             bias=_coverage_bias(_evidence_types_in_use()),
             plain=(
-                "Everything on this site was measured north of the equator. The places with the "
-                "longest records and the places with the most animals are not the same places."
+                "A third of what this site measures is now southern, and none of the weather "
+                "that would explain it is. Describing a place and explaining it are different "
+                "problems."
             ),
             matters=(
                 "A map of what is known is not a map of what is happening. Most of the world has "
-                "never been counted the same way twice, so it cannot appear here at all — and a "
-                "result from the north is not evidence about anywhere else until someone goes and "
-                "checks."
+                "never been counted the same way twice — and where it has, the records that would "
+                "say *why* often still do not reach. A result from one hemisphere is not evidence "
+                "about the other until someone goes and checks."
             ),
             plain_caveat=(
                 "Two sources are held back deliberately. Wolves and mountain caribou are hunted "
                 "by people who would use a map of them, so none of their locations are drawn."
             ),
             claim=(
-                "Everything above is northern-hemisphere. The data that can measure change and "
-                "the data that covers the globe are, so far, different data."
+                f"{coverage.share:.1%} of the rows this project can measure change with lie south "
+                f"of the equator, from {coverage.southern_sources} of {coverage.sources} sources "
+                f"— and {coverage.driver_share:.1%} of its driver record does. The evidence has "
+                "crossed the equator and the explanatory data has not."
             ),
             value=(
-                f"{southern.get('darkecology_daily', float('nan')):.1%} of the radar record and "
-                f"{southern.get('fishglob', float('nan')):.1%} of the survey record lie south of "
-                "the equator"
+                f"{coverage.southern:,} of {coverage.rows:,} time-series rows are southern "
+                f"({coverage.share:.1%}), against {coverage.southern_drivers:,} of "
+                f"{coverage.driver_rows:,} driver samples ({coverage.driver_share:.1%})"
             ),
             scope="Every source in this project that has a usable time axis.",
             caveat=(
-                "Inherited rather than chosen — long digitised radar and trawl series exist where "
-                "they were funded — but it bounds every claim here to the northern temperate zone, "
-                "and no model trained on it should be trusted elsewhere without being tested "
+                "The southern share is two bird atlases in three countries, so it is a large "
+                "number from a small place and not coverage of a hemisphere. What has not moved "
+                "at all is the driver record: every temperature, wind and counterfactual sample "
+                "in this lake was taken over North America or the North Atlantic, which is why "
+                "the southern result is described and not explained, and why the sensitivity "
+                "this project would need to test whether a northern climate response transfers "
+                "cannot yet be fitted in the south. Inherited rather than chosen — long digitised "
+                "radar and trawl series exist where they were funded — but no model trained on "
+                "this should be trusted elsewhere without being tested "
                 "there first. Two kinds of gap are worth telling apart on the map. Grey cells are "
                 "places the lake reaches and cannot measure. And two sources are held and drawn "
                 "nowhere at all: mountain caribou and wolves are classified high-sensitivity, so "

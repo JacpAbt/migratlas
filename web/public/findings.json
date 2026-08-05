@@ -202,13 +202,13 @@
   },
   {
    "key": "coverage-bias",
-   "plain": "Everything on this site was measured north of the equator. The places with the longest records and the places with the most animals are not the same places.",
-   "matters": "A map of what is known is not a map of what is happening. Most of the world has never been counted the same way twice, so it cannot appear here at all \u2014 and a result from the north is not evidence about anywhere else until someone goes and checks.",
-   "claim": "Everything above is northern-hemisphere. The data that can measure change and the data that covers the globe are, so far, different data.",
+   "plain": "A third of what this site measures is now southern, and none of the weather that would explain it is. Describing a place and explaining it are different problems.",
+   "matters": "A map of what is known is not a map of what is happening. Most of the world has never been counted the same way twice \u2014 and where it has, the records that would say *why* often still do not reach. A result from one hemisphere is not evidence about the other until someone goes and checks.",
+   "claim": "35.9% of the rows this project can measure change with lie south of the equator, from 2 of 14 sources \u2014 and 0.0% of its driver record does. The evidence has crossed the equator and the explanatory data has not.",
    "plain_caveat": "Two sources are held back deliberately. Wolves and mountain caribou are hunted by people who would use a map of them, so none of their locations are drawn.",
-   "value": "0.0% of the radar record and 0.0% of the survey record lie south of the equator",
+   "value": "19,742,318 of 54,962,664 time-series rows are southern (35.9%), against 0 of 6,447,050 driver samples (0.0%)",
    "scope": "Every source in this project that has a usable time axis.",
-   "caveat": "Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but it bounds every claim here to the northern temperate zone, and no model trained on it should be trusted elsewhere without being tested there first. Two kinds of gap are worth telling apart on the map. Grey cells are places the lake reaches and cannot measure. And two sources are held and drawn nowhere at all: mountain caribou and wolves are classified high-sensitivity, so their locations are withheld entirely rather than coarsened. The map is not a map of everything this lake knows, and the coverage panel lists what is missing from it rather than letting an absence speak.",
+   "caveat": "The southern share is two bird atlases in three countries, so it is a large number from a small place and not coverage of a hemisphere. What has not moved at all is the driver record: every temperature, wind and counterfactual sample in this lake was taken over North America or the North Atlantic, which is why the southern result is described and not explained, and why the sensitivity this project would need to test whether a northern climate response transfers cannot yet be fitted in the south. Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but no model trained on this should be trusted elsewhere without being tested there first. Two kinds of gap are worth telling apart on the map. Grey cells are places the lake reaches and cannot measure. And two sources are held and drawn nowhere at all: mountain caribou and wolves are classified high-sensitivity, so their locations are withheld entirely rather than coarsened. The map is not a map of everything this lake knows, and the coverage panel lists what is missing from it rather than letting an absence speak.",
    "method": "docs/methods/geographic-coverage.md",
    "realm": "all",
    "taxon_scope": "all",
@@ -217,7 +217,7 @@
     {
      "domain": "geographic",
      "status": "open",
-     "finding": "This claim *is* the geographic bias. Every source with a usable time axis is northern temperate; the two with global reach cannot support a trend."
+     "finding": "This claim *is* the geographic bias, and it has moved without closing. Two atlases put a third of the time-series record south of the equator, in three countries; every other source with a usable time axis is northern temperate, the two with global reach cannot support a trend, and the driver record is northern entire."
     },
     {
      "domain": "temporal",

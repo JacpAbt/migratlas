@@ -396,3 +396,61 @@ spent two rounds assessing:
 Both are `SURVEY_INDEX`, which the lake already has an adapter shape for in BBS and FISHGLOB. Neither
 displaces SABAP: that is still the only *southern-hemisphere* source with detection identifiable, and
 it is still already downloaded.
+---
+
+## Correction, 2026-08-05: the claim had been false since 30 July
+
+`coverage-bias` published **"0.0% of the radar record and 0.0% of the survey record lie south of the
+equator"** for six days after that stopped being true.
+
+The share was computed from the lake on every build, exactly as this project requires. The *list of
+sources to compute it over* was two string literals — `darkecology_daily` and `fishglob` — and
+`_southern_share`'s own docstring named the failure in advance:
+
+> Computed rather than quoted, because this is the finding most likely to become false silently —
+> the day a southern source lands, a hardcoded 0% would be a lie on the site.
+
+SABAP1 and SABAP2 landed on 2026-07-30. Neither was in the list, so 19.7 million rows at 22–35°S
+were not counted, and the site went on saying nobody had looked south while a whole finding about
+southern Africa sat two claims below it.
+
+**The rule was right and it was applied one level too shallow.** "Every published number is computed
+from the lake" was satisfied; what was typed was the *scope of the query*. A recomputed number over a
+hand-written population is a hand-written answer with a fresh timestamp on it.
+
+### What it should have said
+
+| | rows | southern | |
+| --- | --- | --- | --- |
+| `darkecology_daily` (flux) | 17,848,788 | 0 | 0.0% |
+| `bbs` | 7,548,397 | 0 | 0.0% |
+| `fishglob` | 2,831,609 | 0 | 0.0% |
+| `sabap1` | 3,123,626 | 3,123,626 | **100.0%** |
+| `sabap2` | 16,618,692 | 16,618,692 | **100.0%** |
+| `sbs_fixed_routes` | 468,933 | 0 | 0.0% |
+| `sbs_point_counts` | 490,869 | 0 | 0.0% |
+| seven `movebank_*` track sources | 6,031,750 | 0 | 0.0% |
+| **all** | **54,962,664** | **19,742,318** | **35.9%** |
+
+Tracks are counted now and were not before. They carry a time axis, the scope line has always said
+"every source in this project that has a usable time axis", and leaving them out was the same
+omission in miniature.
+
+### The finding is stronger for being true
+
+The interesting number turned out to be the one nobody had computed. **0 of 6,447,050 driver samples
+lie south of the equator** — every temperature, wind and counterfactual in the lake was taken over
+North America or the North Atlantic, including FISHGLOB's own measured sea temperatures, which span
+24.5°N to 62.0°N.
+
+So the evidence has crossed the equator and the explanatory data has not, and the claim now says
+that instead of a flat falsehood. It also explains, concretely, why the transfer test cannot be built
+yet: it needs a terrestrial-south climate sensitivity, and there is no southern temperature in this
+lake to fit one against.
+
+### The guard
+
+Enumerating sources instead of naming them is not the fix on its own, because the next omission would
+be an evidence *type*. `TIME_AXIS` and `POOLED` between them must cover every type holding data, and
+`_coverage` raises if one falls through rather than skipping it. Two tests: one asserts the maps are
+exhaustive against the lake, the other empties them and requires the build to stop.

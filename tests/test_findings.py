@@ -9,9 +9,12 @@ import ast
 import json
 import re
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
+from migratlas.evidence import EvidenceType
+from migratlas.lake.reader import sources as lake_sources
 from migratlas.reports import findings
 from migratlas.reports.findings import Finding
 
@@ -73,6 +76,43 @@ def test_no_published_value_is_a_number_someone_typed() -> None:
             if literal or empty:
                 typed.append(f"line {given.lineno}")
     assert not typed, f"a published value is written out rather than computed: {typed}"
+
+
+def test_the_coverage_claim_enumerates_its_sources_rather_than_naming_them() -> None:
+    """The bug this file did not catch, and the exact one its target predicted.
+
+    `_southern_share` computed each share from the lake and hardcoded *which two sources* to
+    compute it over. Its docstring said why that mattered -- "the day a southern source lands, a
+    hardcoded 0% would be a lie on the site" -- and then SABAP1 and SABAP2 landed, 19.7 million
+    rows at 22 to 35 degrees south, and the site went on publishing 0.0% southern for months.
+
+    Recomputing the number was never the weak point. Deciding what to recompute it over was. So
+    this asserts the *set*: every evidence type holding data is either declared to carry a time
+    axis or declared pooled, with no third option that means "quietly skipped".
+    """
+    live = [kind for kind in EvidenceType if lake_sources(kind)]
+    assert live, "no evidence in the lake, so this test proves nothing"
+    for kind in live:
+        assert kind in findings.TIME_AXIS or kind in findings.POOLED, (
+            f"{kind} holds data and the coverage claim does not account for it"
+        )
+
+
+def test_a_new_evidence_type_stops_the_build_rather_than_being_skipped() -> None:
+    """And the enforcement, not only the declaration.
+
+    Asserting the maps are exhaustive is worth little if `_coverage` would shrug at a gap. Patched
+    rather than waited for: the point is that the omission is loud.
+    """
+    live = [kind for kind in EvidenceType if lake_sources(kind)]
+    orphan = next(iter(live))
+    with (
+        mock.patch.object(findings, "TIME_AXIS", {}),
+        mock.patch.object(findings, "POOLED", frozenset()),
+        pytest.raises(ValueError, match="0% southern"),
+    ):
+        findings._coverage()
+    assert orphan is not None
 
 
 def test_the_document_declares_its_schema_version() -> None:
