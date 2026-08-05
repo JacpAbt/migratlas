@@ -218,3 +218,147 @@ than a silence.
   is known about it" backed by a result rather than by a range map.
 - `coverage-bias` recomputes on every build, so its own numbers move on their own the moment this
   lands.
+
+
+---
+
+# Results — appended 2026-08-05
+
+Run with the design above unchanged. Every prediction is graded, including the two that failed, and
+the one place the note's own wording had to be corrected is recorded here rather than edited into §6.
+
+## What the footprint came to
+
+| | |
+| --- | --- |
+| SABAP1 cells, 1987-1991 | 1,546 |
+| SABAP2 cells, 2008-2012, full protocol | 2,160 |
+| cells in both | 1,441 |
+| **common footprint, ≥ 20 cards in both** | **496** |
+| cards per footprint cell, median | **82** in epoch 1, **68** in epoch 2 |
+| taxa with ≥ 30 epoch-1 detection cells | 560 of 742 |
+| species fitted and reportable | **512** |
+| pinned at a boundary or non-converged | 48 (8.6%) |
+
+## The predictions, graded
+
+**1. Footprint between 300 and 1,200 cells — PASS.** 496.
+
+**2. Between 250 and 700 species clear the cell floor — PASS.** 560.
+
+**3. Detection higher in epoch 2 for a majority of species — FAIL.** It rose for **48.2%**, which is
+a coin flip rather than the improvement predicted. Median *p* is 0.125 in epoch 1 and 0.119 in epoch
+2, a median change of −0.001.
+
+This is the prediction with a consequence attached: the note said that if it failed, the model was
+doing something other than intended and nothing was reportable until that was understood. It is
+understood, and §"Why the correction bought nothing" below is the understanding. Two things had to be
+separated, and neither happened:
+
+- The predicted *improvement* from digital recording and better optics does not appear at the
+  per-card level.
+- The *feared* bias from pooling pentad cards into quarter-degree cells does not appear either. A
+  SABAP2 full-protocol card covers a ninth of a SABAP1 card's area, which should depress *p*
+  mechanically; it did not measurably. The likeliest reason is that a full-protocol card is at least
+  two hours of dedicated atlassing in a small area, so intensity per unit area rises about as much as
+  area falls. That is an explanation, not a measurement, and it is the loose end this note leaves.
+
+What *did* emerge is worth more than the prediction was: **detection probability is a stable property
+of a species**, correlating **0.938** across the thirty-year gap. Whatever else changed about southern
+African atlassing, how likely a given bird is to be written on a card did not.
+
+**4. Naive change more positive than corrected for a majority — FAIL.** 36.3%. It follows from 3: the
+naive estimate's bias depends on *p*, and *p* did not change, so the bias did not change either.
+
+**5. Median Δψ within ±0.10, individual species reaching ±0.25 both ways — PART PASS.** Median
+**−0.0071**, comfortably inside. Deciles −0.075 to +0.048. But only **one** species passes ±0.25, and
+it is an increase: nothing reaches −0.25, the largest decline being −0.229. The Phase 1b shape — a
+small centre around a wide, sign-disagreeing spread — is present in direction and narrower in
+magnitude than predicted.
+
+## The stop conditions
+
+- Fewer than 300 footprint cells — **did not fire** (496).
+- Fewer than 100 species — **did not fire** (560).
+- Detection at a boundary for more than a third of species — **did not fire** (8.6%).
+- The two epoch-2 windows disagree in sign for more than a third of species — **not yet run.** The
+  2019-2023 sensitivity is the remaining work on this note and no species-level claim should be
+  published before it.
+- **Corrected and naive agree to within 0.01 for nearly every species — FIRED.** 77.3% agree within
+  0.01 and the median difference is **0.0020**. Per §8 this means the detection correction bought
+  nothing here, and the interesting half of this note was wrong.
+
+## Why the correction bought nothing
+
+Not because the model is broken — it recovers known parameters from simulated data, which is what
+`tests/test_occupancy.py` is for. Because of the footprint rule.
+
+An occupied cell is missed when every one of its *n* cards misses the species, with probability
+`(1 − p)^n`. The footprint cells carry a **median of 82 cards** in epoch 1 and 68 in epoch 2, and *p*
+is about 0.12. So:
+
+    (1 − 0.125)^82 ≈ 0.00002        (1 − 0.119)^68 ≈ 0.0002
+
+Detection is effectively perfect at this effort. The naive estimate is therefore already almost
+unbiased — median `ψ − naive` is **+0.0020** in epoch 1 and **+0.0036** in epoch 2 — and the residue
+that survives differencing is **+0.0003**.
+
+**`MIN_CARDS = 20` is the reason, and it is the same threshold that made the model fittable.** It was
+registered to guarantee detection could be *estimated* at every contributing cell; it simultaneously
+guaranteed there was nothing left for detection to *explain*. Those are the same condition read two
+ways, and the note did not notice it was assuming one and getting the other. A design that wanted the
+correction to matter would have had to admit thin cells — the very cells that make *p* unidentifiable.
+
+That tension is the most useful thing this note produced, and it generalises: **on atlas data with a
+well-atlassed footprint, a detection-corrected occupancy change and a naive reporting-rate change are
+the same number.** The elaborate machinery earns its place on *sparse* data, and a footprint rule
+strict enough to fit it is strict enough to make it unnecessary.
+
+## The correction to §6, and what it cost
+
+§6 says a species needs "thirty footprint cells in each epoch". Applied literally that selects on the
+outcome: a species that declined has few epoch-2 detections *by definition*, so the rule removes
+exactly the species with the largest real change.
+
+Measured rather than argued. The literal rule would have dropped **37 species**, and their median
+naive change is **−0.153** against **−0.014** across all species — an order of magnitude larger, and
+all in one direction. The floor is therefore applied at **baseline only**, which asks "of the species
+that were widespread in 1987-1991, what happened", and that is a question with an unbiased answer.
+
+## What the species say
+
+Median Δψ is −0.0071 over 512 species: no net change worth reporting as a headline. The tails are the
+result.
+
+| Largest declines | ψ₁ → ψ₂ | Δψ |
+| --- | --- | --- |
+| *Anthropoides paradiseus* — Blue Crane | 0.604 → 0.375 | −0.229 |
+| *Chlidonias leucopterus* — White-winged Tern | 0.604 → 0.384 | −0.219 |
+| *Ciconia nigra* — Black Stork | 0.726 → 0.526 | −0.200 |
+| *Corvus capensis* — Cape Crow | 0.745 → 0.557 | −0.188 |
+| *Calidris ferruginea* — Curlew Sandpiper | 0.518 → 0.340 | −0.178 |
+
+| Largest increases | ψ₁ → ψ₂ | Δψ |
+| --- | --- | --- |
+| *Acridotheres tristis* — Common Myna | 0.363 → 0.655 | **+0.292** |
+| *Falco peregrinus* — Peregrine Falcon | 0.236 → 0.482 | +0.247 |
+| *Anastomus lamelligerus* — African Openbill | 0.115 → 0.322 | +0.207 |
+| *Anas platyrhynchos* — Mallard | 0.082 → 0.288 | +0.206 |
+| *Cypsiurus parvus* — African Palm Swift | 0.517 → 0.694 | +0.176 |
+
+**Face validity, offered as a check on the pipeline and not as a claim.** The two largest increases
+are introduced species — the Common Myna and the Mallard are both established invaders in southern
+Africa — and the third is a peregrine, recovering as it has on every continent since organochlorine
+pesticides were withdrawn. The largest decline is the Blue Crane, South Africa's national bird and
+listed as threatened. A pipeline that put random species at these extremes would not produce that
+pattern. Nothing here attributes any of it to a cause; that is `DATASETS.md` step 3 and a later note.
+
+## What remains before this becomes a Finding
+
+1. **The 2019-2023 sensitivity.** Registered in §4 as a stop condition and not yet run. No
+   species-level number is published before it.
+2. **The claim to publish is the methodological one**, because that is where the evidence is: the
+   correction and the naive comparison agree, with a stated reason. The species table is the exhibit
+   underneath it, and it is honest as "of 512 species, no net change, and these are the tails".
+3. **`coverage-bias` moves on its own** when this lands, because it recomputes from the lake on every
+   build — which is the point of it being computed rather than typed.
