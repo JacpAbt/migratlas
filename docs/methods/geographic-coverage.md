@@ -318,3 +318,81 @@ comparison this project can make on open terms with detection identifiable, and 
 lake. Europe's finding-grade path, if one exists, runs through a national atlas pair rather than the
 continental one, and through a question about non-commercial licences that the gate has never been
 asked.
+
+## Europe and Asia, probed for effort — 2026-08-04
+
+The EBBA assessment above ended by saying a national atlas pair might be the real answer and that
+whether one carries per-visit effort was the check to run. Run, against the GBIF registry and against
+sampled records rather than anybody's description, and the answer is better than the question: for
+Europe the best source is **not an atlas pair at all**, and Asia has a usable one too.
+
+The test each candidate had to pass is the one `phase1e-atlas.md` makes precise. Detection
+probability is estimable only from **repeat visits to the same place in the same season**, which in
+Darwin Core means a `SAMPLING_EVENT` dataset, or populated `samplingEffort` / `sampleSizeValue`, or
+many distinct `eventDate`s per locality. One record per species per square carries none of it.
+
+### Europe
+
+| Dataset | Licence | Type | Records | Years | Effort terms populated |
+| --- | --- | --- | --- | --- | --- |
+| **Swedish Bird Survey: Summer point counts** (Sommarpunktrutterna) | **CC0** | `SAMPLING_EVENT` | 490,869 | **1975–2024, 50** | eventID, samplingProtocol, individualCount, recordedBy |
+| **Swedish Bird Survey: Fixed routes** (Standardrutterna) | **CC0** | `SAMPLING_EVENT` | 468,933 | 1996–2025, 30 | same, line transect |
+| Watervogels — wintering waterbirds, Flanders | **CC0** | `SAMPLING_EVENT` | 1,074,842 | 1991–2025, 35 | + **samplingEffort** |
+| Broedvogels — breeding birds, Flanders | **CC0** | `OCCURRENCE` | 330,046 | 2000–2002 only | + samplingEffort as JSON minutes, **sampleSizeValue**, and **true absences** |
+| Censuses of breeding birds (Finland) | CC BY 4.0 | `OCCURRENCE` | 2,035,131 | 1915–2026, 83 | eventID only in the sample |
+| Bird Atlas 2007–2011 (Ireland) | CC BY 4.0 | `OCCURRENCE` | 458,185 | — | **nothing**; `eventDate` is literally `2007/2011` |
+
+**The Swedish Bird Survey is the find, and it is not an atlas.** It is a standardised annual route
+survey — structurally the same object as BBS, which is already in the lake as `SURVEY_INDEX` — under
+**CC0**, with an *unbroken fifty-year run* on the summer point counts. Repeat visits confirmed in the
+sample: 54 of 74 sites on the summer routes, 79 of 91 on the fixed routes. That is a European time
+series with effort, which is the thing this lake has never had, and it needs no atlas pairing to
+produce change.
+
+The Irish atlas is the EBBA failure again in miniature and is worth keeping in the table as the
+control: an open licence on a product with no dates and no effort is not a usable source.
+
+Flanders' Broedvogels deserves a note despite its three years: it records **explicit absences** and
+`{"observationMinutes": 55}` per event. That is what fully effort-controlled data looks like, and it
+is the shape to compare others against.
+
+### Asia
+
+| Dataset | Licence | Type | Records | Years | Effort terms populated |
+| --- | --- | --- | --- | --- | --- |
+| **Taiwan Breeding Bird Survey** | CC BY-**NC** 4.0 | `SAMPLING_EVENT` | 822,365 | 2009–2022, 14 | eventID, **parentEventID, samplingProtocol, samplingEffort** (`6 observer-minutes`), **sampleSizeValue**, individualCount |
+| **Taiwan New Year Bird Count** | **CC BY 4.0** | `SAMPLING_EVENT` | 208,228 | 2014–2025, 12 | eventID, parentEventID, individualCount |
+| Monitoring Sites 1000 Satoyama Birds (Japan) | CC BY 4.0 | `OCCURRENCE` | 103,069 | 2005–2013, 9 | none |
+
+The Taiwan Breeding Bird Survey is the **best-structured dataset this probe found anywhere**, Europe
+included: a nested event hierarchy with the protocol and the observer-minutes on every record, and
+every sampled site visited more than once. Its licence is the only thing in the way.
+
+### The non-commercial question, which is a decision and not a lookup
+
+`clear_for_publication` takes `redistribution_allowed` from the source's registry entry; it is a
+judgement a person records, not something derived from a licence string. CC BY-NC does **not** forbid
+redistribution — it forbids commercial use — so unlike eBird Status and Trends, which forbids
+republication outright, an NC source is not automatically refused. Whether this site counts as
+non-commercial, now and for as long as the data sits on it, is the question, and it decides whether
+Asia gets the 822,365-record survey or the 208,228-record one.
+
+### One thing all of them share, and how it is handled
+
+None of the `SAMPLING_EVENT` sets record explicit absences except Broedvogels. That is normal and it
+is not a blocker: with an event table you *derive* absence — a species not recorded at an event that
+did happen is an absence, and the events give the denominator. That derivation is exactly what makes
+detection estimable, and it is the same construction SABAP's cards support.
+
+### Where this leaves the coverage bias
+
+Two continents are reachable on open terms with effort, and neither is the atlas comparison this note
+spent two rounds assessing:
+
+1. **Sweden, CC0, fifty years** — the single best addition available to this project, and the first
+   European time series it would hold.
+2. **Taiwan, twelve years CC BY or fourteen years CC BY-NC** — the first Asian source of any kind.
+
+Both are `SURVEY_INDEX`, which the lake already has an adapter shape for in BBS and FISHGLOB. Neither
+displaces SABAP: that is still the only *southern-hemisphere* source with detection identifiable, and
+it is still already downloaded.
