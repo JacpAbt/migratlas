@@ -902,3 +902,82 @@ test("the panel and the map never disagree about what is drawn", async ({ page }
     expect(layer.ticked, `${layer.name} did not toggle`).not.toBe(onArrival[index]!.ticked);
   }
 });
+
+/**
+ * The southern surface, and the sign that is the whole point of it.
+ *
+ * `atlas-no-net-change` was the one claim that flew the camera somewhere and drew nothing, which
+ * reads as "there is nothing here" rather than "nothing is exported yet". Now it draws 496 cells of
+ * change in recorded taxa -- and a change layer has a failure mode a count layer does not, which is
+ * losing the direction on the way to the screen. `paint()` puts a count on `log10`, and log10 of a
+ * negative number is NaN, so handing this layer to that path would silently blank every cell that
+ * fell. The manifest declares the scale and this asserts the declaration was honoured.
+ */
+test("the atlas surface draws its losses and its gains apart", async ({ page }) => {
+  await ready(page);
+  // `ready` returns on the first layer to land, and explore is what loads the rest. Then polled,
+  // because a fetch of 496 cells finishing is not the same event as the style having the layer.
+  await explore(page);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          Boolean((window as unknown as Hook).migratlas.map.getLayer("surface-atlas-taxa-change")),
+        ),
+      { timeout: 20_000 },
+    )
+    .toBe(true);
+
+  const drawn = await page.evaluate(async () => {
+    const { map } = (window as unknown as Hook).migratlas;
+    const manifest = (await fetch("layers/manifest.json").then((r) => r.json())) as {
+      name: string;
+      scale: string;
+    }[];
+    const entry = manifest.find((one) => one.name === "atlas-taxa-change");
+    // From the published grid rather than out of MapLibre's source object: `_data` is private and
+    // absent in v6, and what matters is what was *published* anyway.
+    const grid = (await fetch("layers/atlas-taxa-change.grid.json").then((r) => r.json())) as {
+      v: number[];
+    };
+    const values = grid.v;
+    const { loaded } = (window as unknown as Hook).migratlas;
+    return {
+      declared: entry?.scale,
+      layer: Boolean(map.getLayer("surface-atlas-taxa-change")),
+      colour: map.getPaintProperty("surface-atlas-taxa-change", "circle-color"),
+      stroke: map.getPaintProperty("surface-atlas-taxa-change", "circle-stroke-width"),
+      expanded: loaded.find((one) => one.meta.name === "atlas-taxa-change")?.cells ?? 0,
+      cells: values.length,
+      losses: values.filter((value) => value < 0).length,
+      gains: values.filter((value) => value > 0).length,
+      finite: values.every((value) => Number.isFinite(value)),
+    };
+  });
+
+  expect(drawn.declared, "the manifest no longer declares this layer diverging").toBe("diverging");
+  expect(drawn.layer, "the atlas surface never reached the style").toBe(true);
+  expect(drawn.cells, "no cells in the published atlas grid").toBeGreaterThan(400);
+  expect(drawn.finite, "a cell carries a non-finite value").toBe(true);
+  // Every published cell has to survive the grid decode. A mismatch here is the trap
+  // `gridToFeatures` throws on, seen from the other side.
+  expect(drawn.expanded, "the grid decoded to a different number of cells").toBe(drawn.cells);
+
+  // Both directions are present in the data, so both have to be distinguishable in the paint.
+  expect(drawn.losses, "no cells lost taxa, which the surface says is most of them").toBeGreaterThan(
+    50,
+  );
+  expect(drawn.gains, "no cells gained taxa").toBeGreaterThan(10);
+
+  // The colour ramp must read the raw value. `log10` here would mean the sequential painter got it.
+  const colour = JSON.stringify(drawn.colour);
+  expect(colour, "the change layer is painted on a count's log10 ramp").not.toContain("log10");
+  expect(colour, "the ramp does not reach below zero, so a loss cannot be coloured as one").toContain(
+    "-",
+  );
+
+  // Direction is carried by a second channel as well as by hue: losses are ringed, gains solid.
+  // A diverging ramp alone is exactly the comparison a red-green reader cannot make.
+  expect(JSON.stringify(drawn.stroke), "losses are not ringed, so direction rests on hue alone")
+    .toContain("case");
+});

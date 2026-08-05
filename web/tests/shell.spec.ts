@@ -530,9 +530,17 @@ test("explore carries the tools, with the terms every drawn layer was published 
   const explore = page.locator(".explore");
   await expect(explore).toBeVisible();
 
-  // One toggle per layer, including the assessment, which starts off.
+  // One toggle per layer, including the assessment, which starts off. Counted from the manifest
+  // rather than written here: the literal was 4 and publishing a fifth layer broke this test
+  // instead of the thing it is meant to protect, which is that every layer gets a control.
+  const published = await page.evaluate(async () => {
+    const manifest = (await fetch("layers/manifest.json").then((r) => r.json())) as unknown[];
+    return manifest.length;
+  });
   const toggles = explore.locator(".layers input");
-  await expect(toggles).toHaveCount(4);
+  await expect(toggles, "a published layer has no toggle, or one has two").toHaveCount(
+    published + 1,
+  );
 
   // Required, not decorative: published data must never be separable from the terms it was
   // published under. This is the assertion the old page had and the shell has to keep.

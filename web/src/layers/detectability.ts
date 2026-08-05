@@ -125,6 +125,7 @@ function meta(document_: DetectabilityDocument): LayerMeta {
     kind: "surface",
     format: "grid",
     value_kind: "detectability",
+    scale: "sequential",
     attribution: "Migratlas",
     licence: "CC-BY-4.0",
     landing_page: "https://github.com/JacpAbt/migratlas",

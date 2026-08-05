@@ -10,6 +10,14 @@ export interface LayerMeta {
   /** Wire shape. A grid carries index arrays; geojson carries one feature per cell. */
   format: "grid" | "geojson";
   value_kind: string;
+  /**
+   * How the values map onto a ramp. Declared by the builder, never guessed here.
+   *
+   * `sequential` is a count and is painted on log10 against one ramp. `diverging` is a signed
+   * change: the same treatment would map every negative cell onto the colour of the smallest
+   * positive one and lose the sign, which for a change layer is the entire result.
+   */
+  scale: "sequential" | "diverging";
   attribution: string;
   licence: string;
   landing_page: string;

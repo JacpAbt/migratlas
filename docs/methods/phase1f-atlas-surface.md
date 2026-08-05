@@ -135,3 +135,102 @@ Each of these stops the layer. None of them stops the note, which gets its resul
 - The `atlas-no-net-change` view gains the layer, and its `because` stops apologising for an empty
   map.
 - Results appended to this note with every prediction graded, whether or not anything is drawn.
+
+---
+
+# Results — appended 2026-08-05
+
+496 cells, 512 taxa, the same footprint Phase 1e fitted on. Expected analysed taxa per cell: median
+213.4 in 1987-1991 against 208.8 in 2008-2012. Recorded taxa per cell: 207.0 against 199.5.
+
+## The predictions, graded
+
+| | registered | observed | |
+| --- | --- | --- | --- |
+| 1 | median ΔR within ±1.5 taxa | **−3.417**, deciles −39.1 to +27.0 | **failed** |
+| 2 | median \|corrected − uncorrected\| under 1 taxon | **2.899** | **failed** |
+| 3 | Moran's I > 0, p < 0.05 | +0.2046, p = 0.0010 | passed |
+| 4 | \|ρ\| with the change in cards < 0.3 | −0.1930, p = 1.5e−05 | passed |
+| stop | fewer than 5 movers drops a cell | 0 of 496 dropped; median 65 movers, min 29 | did not fire |
+
+## The correction: two thresholds were mis-scaled by a factor of 512
+
+§4 registered prediction 1 as a consistency check whose failure would be "a bug report". It failed,
+the bug was looked for, and it is in the prediction rather than in the code.
+
+The mean of a taxon's modelled presence over the footprint cells *is* its ψ — that is what the
+estimator means — so summing over taxa and averaging over cells commute:
+
+```
+mean_c ΔR_c  =  Σ_s Δψ_s  =  512 × mean_s Δψ_s
+```
+
+Which is what came out, to three decimals: mean Δψ = −0.00851, times 512 taxa, is **−4.357**, and
+the observed mean ΔR is **−4.357**. The naive pair agrees the same way — 512 × −0.01330 = −6.808
+against an observed −6.808.
+
+So a bound of ±1.5 taxa on a 512-taxon sum asserts |mean Δψ| < 0.003. **The published median Δψ is
+−0.0071.** The prediction was arithmetically incompatible with the finding it was written to be
+consistent with, and it was set in absolute taxa without noticing that the sum multiplies the
+per-taxon quantity by the number of taxa. Prediction 2's one-taxon bound has the identical defect:
+Phase 1e's median corrected-against-naive gap per taxon is 0.002, and 512 × 0.002 is already about
+1.
+
+**The thresholds are not re-derived.** Choosing them now, with the answers in hand, is the one thing
+a pre-registration exists to prevent, and it would convert two failures into two passes by fiat. They
+stand as failed. What is recorded instead is the scale error, so the next note that sums a per-unit
+quantity over units states its threshold on the per-unit scale or on a relative one.
+
+For the record, in relative terms the two surfaces are close: the median disagreement of 2.899 taxa
+is **1.36%** of the 213 taxa in a cell, they correlate at **0.967**, and they agree in sign for
+**94.4%** of cells. That is context, not a reprieve.
+
+## §3's pointer to `paired()` was imprecise
+
+It says the taxon set is the one `paired()` identifies. Reportability is decided in `compare()`;
+`paired()` adds the second epoch-2 window, which the surface does not use. The implementation uses
+`compare()`, which is what §3 meant. Noted rather than edited.
+
+## The stop condition fires, and the uncorrected surface is what ships
+
+§5, on prediction 2: *the corrected surface is withheld and the naive one is drawn instead, with the
+disagreement published* — the reverse of this project's usual preference, registered that way
+because a disagreement here impeaches the model rather than the count.
+
+Applied as written. **The layer is the change in the number of analysed taxa recorded per cell.** The
+corrected surface is computed on every build, graded, and not drawn.
+
+The uncorrected surface was then put through the two scale-free conditions on its own account, since
+§5 sends it to the map without saying so:
+
+| | observed | |
+| --- | --- | --- |
+| Moran's I | +0.2271, p = 0.0010 | passed |
+| effort ρ | −0.1989, p = 8.1e−06 | passed |
+
+**Prediction 4 is the one that mattered and it passed with the sign the wrong way round for an
+artefact.** ρ is −0.199: cells that gained cards show *smaller* changes, not larger. An effort
+artefact points the other way, because more cards find more taxa. What this most likely is, stated as
+a guess and not a result: cells that were already well atlassed in 1987 had less room to gain, and
+they are also the ones that gained cards.
+
+## What the surface says, and what it does not
+
+The change is not uniform, which is what prediction 3 detected:
+
+| | cells | median corrected | median uncorrected |
+| --- | --- | --- | --- |
+| north of 26°S | 143 | −6.97 | −8.00 |
+| south of 30°S | 137 | −3.25 | −5.00 |
+| west of 22°E | 78 | **+1.70** | −2.00 |
+| east of 28°E | 278 | −6.84 | −8.50 |
+
+The arid west is the only quarter that gains under the corrected surface. **No covariate for land
+use, water, protection or climate enters any of this**, so the east-west contrast is described here
+and explained nowhere: it is equally consistent with agricultural intensification in the east, with
+a wetter run of years in the west, and with something about how the two atlases were run in each.
+§6 stands unchanged, and attribution is a later note if it is anything.
+
+The median is negative everywhere except the west, and the deciles run −39 to +27, so "no net change"
+at the species level and "most cells lost a few analysed taxa" are both true and are not in tension:
+a taxon that thins out over many cells moves its ψ very little and moves every one of those cells.

@@ -71,14 +71,16 @@ export const VIEWS: Record<string, View> = {
     // Southern Africa, framed on the atlas footprint itself: South Africa, Lesotho and Eswatini.
     center: [25, -29],
     zoom: 3.6,
-    // No layer, and that is the honest state rather than an omission. This claim rests on 496
-    // quarter-degree cells of occupancy change, and no such surface has been exported yet -- the
-    // manifest holds four layers and none of them is this one. Borrowing another claim's evidence
-    // to fill the frame would be worse than flying there and saying nothing is drawn.
-    layers: [],
+    // The 496 cells the comparison ran on, and only those: the gaps are places nobody atlassed
+    // twice rather than places with nothing in them, which is why the surface is not interpolated.
+    // What is drawn is the *uncorrected* count of taxa recorded, not the detection-corrected one --
+    // `docs/methods/phase1f-atlas-surface.md` §5 registered in advance that a disagreement between
+    // the two impeaches the model rather than the count, and the two disagreed.
+    layers: ["atlas-taxa-change"],
     because:
-      "The southern African atlas footprint: South Africa, Lesotho and Eswatini. Nothing is " +
-      "drawn on it yet — the occupancy surface behind this claim has not been exported.",
+      "The southern African atlas footprint: South Africa, Lesotho and Eswatini, and inside it " +
+      "only the cells atlassed twice. Each cell is the change in how many of the analysed taxa " +
+      "were recorded there — ringed where the count fell, solid where it rose.",
   },
   "coverage-bias": {
     // Deliberately the southern hemisphere, and deliberately far out. This claim is about what the

@@ -8,6 +8,7 @@
   "kind": "surface",
   "format": "grid",
   "value_kind": "tracked_individuals",
+  "scale": "sequential",
   "attribution": "Sequeira, A. M. M. et al. (2025) Global tracking of marine megafauna space use reveals how to achieve conservation targets. Science. Data: https://doi.org/10.5061/dryad.x95x69ptv",
   "licence": "CC0 1.0",
   "landing_page": "https://datadryad.org/dataset/doi:10.5061/dryad.x95x69ptv",
@@ -22,6 +23,7 @@
   "kind": "surface",
   "format": "grid",
   "value_kind": "taxa_recorded",
+  "scale": "sequential",
   "attribution": "OBIS (2026). speciesgrids: WoRMS-aligned gridded marine species distributions derived from OBIS and GBIF occurrence snapshots. Ocean Biodiversity Information System. https://github.com/iobis/speciesgrids",
   "licence": "CC BY 4.0",
   "landing_page": "https://github.com/iobis/speciesgrids",
@@ -36,9 +38,26 @@
   "kind": "series",
   "format": "geojson",
   "value_kind": "reflectivity_traffic",
+  "scale": "sequential",
   "attribution": "Dark Ecology project (2026). Dark Ecology Dataset: Measurements of Biological Activity in US Weather Radar \u2014 Time Series Data from 1995\u20132025, v1.1.0. Zenodo. https://doi.org/10.5281/zenodo.18433334",
   "licence": "CC BY 4.0",
   "landing_page": "https://darkecology.github.io/dataset/",
   "caveats": "Measures aerial biomass, not birds: MistNet separates precipitation from biology, not birds from bats from insects. `traffic` is vertically and temporally integrated, so it carries no height information \u2014 use the profiles product for flight altitude. Station histories are uneven across 1995\u20132025 and the NEXRAD dual-polarisation upgrade around 2011\u20132013 is a step change in the instrument that must be modelled as a break rather than read as a biological trend; the daily product does not label hardware generation, so upgrade dates have to come from elsewhere. Nights with a high `fraction_missing` must be excluded before computing passage quantiles."
+ },
+ {
+  "name": "atlas-taxa-change",
+  "title": "Change in recorded taxa between the two atlases",
+  "description": "Change in the number of analysed taxa recorded per quarter-degree cell between 1987-1991 and 2008-2012, over the 496 cells carrying at least twenty full-protocol atlas cards in both epochs. Not richness: the count runs over the 512 taxa the occupancy comparison could fit, so every scarce and every newly-arrived taxon is excluded by construction and the true figure is higher. The holes are places nobody atlassed twice, not places with nothing in them, and they are not interpolated. Two snapshots thirty years apart, so a before and after and not a trend. The detection-corrected version of this surface is computed on every build and withheld: it disagreed with this one by more than the pre-registered bound, which the method note registered as grounds to trust the count over the model.",
+  "realm": "terrestrial",
+  "evidence_type": "survey_index",
+  "kind": "surface",
+  "format": "grid",
+  "value_kind": "analysed_taxa_change",
+  "scale": "diverging",
+  "attribution": "South African National Biodiversity Institute. Southern African Bird Atlas Project. Version 1.0. Occurrence dataset https://doi.org/10.15468/ry4ux6 accessed via GBIF.org on 2026-07-30. Underlying atlas: Harrison, J. A., Allan, D. G., Underhill, L. G., Herremans, M., Tree, A. J., Parker, V., Brown, C. J. (eds) (1997). The Atlas of Southern African Birds. BirdLife South Africa, Johannesburg.\n\nBrooks, M., Ryan, P. (2026). Southern African Bird Atlas Project 2. Version 1.87. FitzPatrick Institute of African Ornithology. Occurrence dataset, accessed via GBIF.org, download https://doi.org/10.15468/dl.wb5t54. Protocol described in Brooks, M., Rose, S., Altwegg, R., Lee, A. T. K., Nel, H., Ottosson, U., Retief, E., Reynolds, C., Ryan, P. G., Shema, S., Tende, T., Underhill, L. G., Thomson, R. L. (2022). The African Bird Atlas Project: a description of the project and BirdMap data-collection protocol. Ostrich 93, 223\u2013232. The atlas exists because thousands of volunteers submitted cards.",
+  "licence": "CC BY 4.0",
+  "landing_page": "https://www.gbif.org/dataset/906e6978-e292-4a8b-9c39-adf6bb0f3323",
+  "caveats": "Citizen science, so effort is not fixed by design the way a trawl survey's is: cards per cell over the 1987\u20131991 core run from 4 at the tenth percentile to 119 at the ninetieth and 2,271 at the maximum, which is why reporting rate is stored as cards-with-species over cards and why the consistent-footprint rule from Phase 1b has to be applied before any comparison. Presence only \u2014 `occurrenceStatus` is empty for all 5,053,399 rows \u2014 so an absence is the absence of a row and the denominator has to come from the cards. Dates are month resolution: the `day` column holds 1, 28, 30 or 31, the ends of a month rather than an observation date. Years in the archive run from 1901 to 2975, both impossible, so the ingest keeps 1950\u20131999 and logs what it drops. 830 of 98,878 cards carry records in two cells and are counted once per cell, because a card that touches two cells contributed effort to both. The cell id is derived from the cell centre rather than reusing the atlas's quarter-degree letter codes, so it stays checkable against the coordinates in the same row.\n\nCitizen science, so effort is not fixed by design the way a trawl survey's is: cards per pentad under the full protocol run from 1 at the tenth percentile to 32 at the ninetieth and 3,963 at the maximum, so the consistent-footprint rule from Phase 1b has to be applied before any comparison. Two protocols are landed **separately, never pooled** \u2014 a full-protocol card averages 52 species and an ad-hoc list 9.5, so one denominator cannot serve both; the protocol travels in the `protocol` field and 4,408,227 of 25,687,526 rows are ad-hoc. Presence only, so an absence is the absence of a row and the denominator comes from the cards. 390,194 rows carry no accepted species key, being unidentified or coarser than species, and are dropped and counted. Years in the archive run from 1930, early for a project that began in 2007 but not impossible for a retrospective card, so the ingest keeps 1900\u20132027 and the analysis window (2007\u20132025) excludes both the stragglers and the partial 2026. For 117,960 full-protocol rows the pentad embedded in the card identifier disagrees with the record's own `verbatimLocality`; the locality is taken as the authority and the disagreement reported rather than reconciled. Coverage is overwhelmingly South Africa. Comparing against SABAP1 means rolling nine pentads into each quarter-degree cell, and the two atlases differ in card duration as well as in grid.",
+  "method": "docs/methods/phase1f-atlas-surface.md"
  }
 ]
