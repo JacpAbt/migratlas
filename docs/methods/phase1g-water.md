@@ -121,3 +121,60 @@ the same instinct that publishes the corrected number beside the uncorrected one
 - A registry entry for the JRC source, generated into `PROVENANCE.md` like every other.
 - A response curve per factor, drawable, if and only if §5 lets one be drawn.
 - Results appended here with every prediction graded, whichever way it goes.
+
+---
+
+# Step zero — run 2026-08-05, before the download
+
+## The licence permits it, so the stop condition does not fire
+
+JRC Global Surface Water is published under the Copernicus Programme, **"free of charge, without
+restriction of use"**, requiring attribution as *Source: EC JRC/Google* and citation of Pekel et al.,
+*Nature* **540**, 418–422 (2016), doi:10.1038/nature20584. No licence *name* is given — there is no
+"CC BY 4.0" on the page — and no restriction on redistribution or commercial use beyond attribution.
+
+So a derived layer may be drawn as well as analysed, and the registry entry will carry
+`redistribution.allowed: true` with `attribution_required: true`. §0's stop condition is resolved.
+
+## Correction to §2, found before a byte was fetched
+
+§2 said the `change` layer "says directly which water was lost between the two epochs". **It does
+not, and this is the reason step zero exists.** The layer compares *JRC's* two epochs, and they are
+not the atlas's:
+
+| | first period | second period |
+| --- | --- | --- |
+| JRC occurrence-change intensity | 1984–1999 | 2000–2015 |
+| SABAP, as Phase 1e registered it | 1987–1991 | 2008–2012 |
+
+Each JRC period *contains* the matching atlas window and is roughly three times longer. Taking the
+shelf product would mean regressing an atlas change measured over two five-year windows on a water
+change measured over two fifteen-year ones — overlapping, not aligned, and blurred at both ends. The
+mismatch would be invisible in the output and would attenuate any real effect toward zero, which is
+the worst direction for it to fail in, because attenuation looks like an honest null.
+
+**So ΔW is built from the Yearly History layer over the atlas windows themselves**, which is what §2
+should have said. Yearly History classifies each cell-year as no water, seasonal or permanent, back
+to Landsat 5 in March 1984, so 1987–1991 and 2008–2012 are both fully inside it. Registered now,
+before any tile is read.
+
+## A limitation this creates, registered rather than discovered later
+
+Yearly History as documented in the FAQ ends in **October 2015**. Phase 1e's registered alternative
+epoch-2 window is **2019–2023**. So the water factor can be fitted against the primary window only,
+and the sensitivity that licensed every species-level number in Phase 1e **cannot be repeated here**.
+Any result from this note is conditional on one choice of epoch 2 in a way the atlas comparison is
+not, and must say so.
+
+## An unresolved discrepancy, recorded rather than assumed away
+
+The two JRC pages disagree about the temporal span. The download page describes the primary dataset
+as 1984–2024 and says seasonality, monthly and yearly assets cover 2022–2024 only with earlier years
+requiring a merge against version 1.4; the FAQ describes yearly history as March 1984 to October
+2015. `DATASETS.md` recorded 1984–2021 on 30 July. Three sources, three answers, so the version is
+not established from documentation.
+
+**Stop condition.** The epoch definition is read off the downloaded asset's own metadata at ingest
+and recorded in the registry entry. If the years covered cannot be established from the data itself,
+nothing is fitted — a factor whose own time span is uncertain cannot be aligned with an atlas window,
+and guessing which version arrived would put the mismatch corrected above straight back in.
