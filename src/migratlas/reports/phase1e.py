@@ -112,10 +112,16 @@ def cards_per_cell(source_id: str, window: tuple[datetime, datetime]) -> pl.Data
     )
 
 
-def footprint() -> pl.DataFrame:
-    """Cells carrying at least `MIN_CARDS` full-protocol cards in both epochs."""
+def footprint(second_window: tuple[datetime, datetime] = EPOCH_2) -> pl.DataFrame:
+    """Cells carrying at least `MIN_CARDS` full-protocol cards in both epochs.
+
+    Takes the window because the footprint is a *function* of it: the sensitivity run in note
+    section 4 is "the same comparison" against a different epoch 2, and the same comparison includes
+    re-deriving which cells were well atlassed in both. Holding the 2008-2012 footprint fixed while
+    changing the data in it would test something else.
+    """
     first = cards_per_cell("sabap1", EPOCH_1)
-    second = cards_per_cell("sabap2", EPOCH_2)
+    second = cards_per_cell("sabap2", second_window)
     both = first.join(second, on=["cell_lat", "cell_lon"], how="inner", suffix="_2")
     kept = both.filter((pl.col("cards") >= MIN_CARDS) & (pl.col("cards_2") >= MIN_CARDS))
     log.info(
@@ -195,7 +201,7 @@ def _series(frame: pl.DataFrame, cells: pl.DataFrame, effort: str) -> tuple[np.n
 
 def compare(second_window: tuple[datetime, datetime] = EPOCH_2) -> list[SpeciesChange]:
     """Fit every eligible species in both epochs over the common footprint."""
-    cells = footprint()
+    cells = footprint(second_window)
     first = detections("sabap1", EPOCH_1, cells)
     second = detections("sabap2", second_window, cells)
 

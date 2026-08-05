@@ -281,9 +281,8 @@ magnitude than predicted.
 - Fewer than 300 footprint cells — **did not fire** (496).
 - Fewer than 100 species — **did not fire** (560).
 - Detection at a boundary for more than a third of species — **did not fire** (8.6%).
-- The two epoch-2 windows disagree in sign for more than a third of species — **not yet run.** The
-  2019-2023 sensitivity is the remaining work on this note and no species-level claim should be
-  published before it.
+- The two epoch-2 windows disagree in sign for more than a third of species — **did not fire.**
+  19.6% over all shared species, 14.4% among those that moved at all. See the sensitivity section.
 - **Corrected and naive agree to within 0.01 for nearly every species — FIRED.** 77.3% agree within
   0.01 and the median difference is **0.0020**. Per §8 this means the detection correction bought
   nothing here, and the interesting half of this note was wrong.
@@ -353,10 +352,66 @@ pesticides were withdrawn. The largest decline is the Blue Crane, South Africa's
 listed as threatened. A pipeline that put random species at these extremes would not produce that
 pattern. Nothing here attributes any of it to a cause; that is `DATASETS.md` step 3 and a later note.
 
+## The sensitivity window — run 2026-08-05
+
+§4 registered a second choice of epoch 2, **2019-2023**, with §8 attaching a stop condition: if the
+two windows disagree in sign for more than a third of species, the result is a property of the window
+rather than of the birds, and the disagreement is the finding.
+
+**Run as "the same comparison", which means the footprint too.** The footprint is a function of the
+epoch-2 window — cells need 20 cards *in both epochs* — so holding the 2008-2012 footprint fixed while
+changing the data inside it would test something other than the window. `footprint()` takes the window
+for that reason.
+
+| | primary 2008-2012 | sensitivity 2019-2023 |
+| --- | --- | --- |
+| reportable species | 512 | 521 |
+| species in both runs | | **510** |
+| median Δψ | −0.0071 | +0.0028 |
+
+**The stop condition does not fire.**
+
+- Sign disagreement over all 510 shared species: **19.6%** (100 species).
+- Among the 409 that moved by more than 0.02 under either window: **14.4%** (59). A species at −0.001
+  under one window and +0.001 under the other has not flipped, it has no change under either, and
+  counting it as a disagreement would inflate the figure with noise.
+- Correlation of Δψ between the two windows: **0.852**.
+- Median absolute difference between the two estimates: **0.0200**.
+
+Both figures are comfortably under the registered third. The comparison is not an artefact of which
+five years of SABAP2 are chosen.
+
+**The median flips sign and that is not a contradiction.** −0.0071 against +0.0028: both are within
+0.008 of zero, which is the same statement as "no net change" made twice. What would have mattered is
+a median that moved by something like the spread, and it does not.
+
+**Nine of the ten tails hold; one does not.**
+
+| | primary | sensitivity | |
+| --- | --- | --- | --- |
+| *Chlidonias leucopterus* — White-winged Tern | −0.219 | −0.219 | holds exactly |
+| *Ciconia nigra* — Black Stork | −0.200 | −0.291 | stronger |
+| *Calidris ferruginea* — Curlew Sandpiper | −0.178 | −0.225 | stronger |
+| *Corvus capensis* — Cape Crow | −0.188 | −0.202 | holds |
+| *Anthropoides paradiseus* — Blue Crane | −0.229 | −0.126 | same sign, weaker |
+| *Acridotheres tristis* — Common Myna | +0.292 | +0.341 | stronger |
+| *Falco peregrinus* — Peregrine Falcon | +0.247 | +0.320 | stronger |
+| *Cypsiurus parvus* — African Palm Swift | +0.176 | +0.280 | stronger |
+| *Anas platyrhynchos* — Mallard | +0.206 | +0.122 | same sign, weaker |
+| *Anastomus lamelligerus* — African Openbill | +0.207 | **−0.014** | **withdrawn** |
+
+The African Openbill is the only species in either tail whose sign does not survive, and §4's rule is
+explicit: a species that flips carries no result. It is withdrawn from any species-level claim rather
+than reported with a caveat. The other nine are reported, and five of them are *larger* under the
+window that was not used to choose them, which is the direction a real signal moves in and an artefact
+does not.
+
+Fourteen species flip sign while moving more than 0.05 under one of the windows; they are named in the
+run output and each carries no result, by the same rule.
+
 ## What remains before this becomes a Finding
 
-1. **The 2019-2023 sensitivity.** Registered in §4 as a stop condition and not yet run. No
-   species-level number is published before it.
+1. ~~The 2019-2023 sensitivity.~~ **Run, and passed.** See above.
 2. **The claim to publish is the methodological one**, because that is where the evidence is: the
    correction and the naive comparison agree, with a stated reason. The species table is the exhibit
    underneath it, and it is honest as "of 512 species, no net change, and these are the tails".
