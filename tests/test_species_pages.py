@@ -108,6 +108,15 @@ def test_no_species_page_can_locate_an_animal() -> None:
             if study["kind"] == "shift":
                 continue
             prose = " ".join([study["headline"], study["value"], study["detail"], study["caveat"]])
+            if study["kind"] == "occupancy":
+                # Exempt by kind, like `shift`, and then checked harder rather than waved through.
+                # Every number on an occupancy card is a probability or a difference of two, so it
+                # lives in [-1, 1]; the atlas footprint is 22 to 35 degrees south, so any leaked
+                # coordinate is far outside that. The bound is therefore *stronger* here than the
+                # bare pattern, not weaker -- and the builder never reads a coordinate column.
+                outside = [value for value in coordinate.findall(prose) if abs(float(value)) > 1]
+                assert not outside, f"{card['scientific']} (occupancy) carries {outside!r}"
+                continue
             found = coordinate.search(prose)
             assert not found, f"{card['scientific']} ({study['kind']}) carries {found.group(0)!r}"
 

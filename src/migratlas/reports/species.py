@@ -345,6 +345,140 @@ def withheld_studies() -> dict[int, Study]:
     return studies
 
 
+def occupancy_studies() -> dict[int, Study]:
+    """One card per southern African bird the atlas comparison could fit.
+
+    The first species pages backed by a fitted model rather than by a range or a track, and the
+    first that can put the corrected number beside the uncorrected one on the same card. That
+    pairing is the exhibit: `phase1e` found they agree to 0.002 at the median, and a reader should
+    be able to see that for their own bird rather than take it from a caveat.
+
+    Three kinds of page come out of this, and the difference between them is the honest part.
+
+    **A result.** The change survives the registered alternative window, so it is printed with both
+    numbers and its interval.
+
+    **No result, because the window decides it.** Note section 4 is explicit: a species whose change
+    flips sign between the two choices of epoch 2 carries no result. It gets a page saying so rather
+    than a number with a warning attached, because a number with a warning is still a number and
+    people quote numbers.
+
+    **No result, because the bird was everywhere.** Where a species is recorded in nearly every cell
+    in both epochs, detection sits at its boundary and occupancy is unidentifiable from below --
+    note section 3 registered that in advance as "occupied throughout, no change measurable".
+    """
+    from migratlas.reports import phase1e  # noqa: PLC0415 -- a heavy import for one caller
+
+    studies: dict[int, Study] = {}
+    for pair in phase1e.paired():
+        first, second = pair.primary.first, pair.primary.second
+        scope = (
+            f"{first.cells} quarter-degree cells atlassed at least "
+            f"{phase1e.MIN_CARDS} times in both epochs"
+        )
+        caveat = (
+            "Two atlases thirty years apart, so this is a before and after and not a trend: "
+            "nothing here is per decade. South Africa, Lesotho and Eswatini only, and only where "
+            "volunteers atlassed twice. Nothing here says why."
+        )
+
+        if not pair.primary.reportable:
+            studies[pair.taxon_key] = Study(
+                kind="occupancy",
+                headline=(
+                    f"{pair.taxon_label} was recorded almost everywhere in both atlases, so no "
+                    "change can be measured."
+                ),
+                value="",
+                detail=(
+                    "Where a species is found in nearly every cell, how often it is missed cannot "
+                    "be estimated, and occupancy cannot be told apart from one. Registered in "
+                    "advance as an outcome rather than discovered as a problem."
+                ),
+                caveat=caveat,
+                method="docs/methods/phase1e-atlas.md",
+                source_id="sabap1",
+                taxon=pair.taxon_label,
+            )
+            continue
+
+        if pair.flipped:
+            other = pair.alternative.delta_psi if pair.alternative else float("nan")
+            studies[pair.taxon_key] = Study(
+                kind="occupancy",
+                headline=(
+                    f"{pair.taxon_label} changes direction depending on which five years of the "
+                    "second atlas are used, so this project reports no change for it."
+                ),
+                value="",
+                detail=(
+                    f"Against 2008-2012 the change is {pair.primary.delta_psi:+.3f}; against "
+                    f"2019-2023 it is {other:+.3f}. The method note fixed in advance that a "
+                    "species which flips sign between the two windows carries no result."
+                ),
+                caveat=caveat,
+                method="docs/methods/phase1e-atlas.md",
+                source_id="sabap1",
+                taxon=pair.taxon_label,
+            )
+            continue
+
+        change = pair.primary.delta_psi
+        moved = abs(change) > phase1e.MOVED
+        direction = "more of the region" if change > 0 else "less of the region"
+        headline = (
+            f"{pair.taxon_label} occupies {direction} than it did thirty years ago."
+            if moved
+            else (
+                f"{pair.taxon_label} occupies about as much of the region as it did "
+                "thirty years ago."
+            )
+        )
+        studies[pair.taxon_key] = Study(
+            kind="occupancy",
+            headline=headline,
+            value=f"{change:+.3f} in the probability a cell is occupied",
+            detail=(
+                f"Occupancy {first.psi:.3f} in 1987-1991 against {second.psi:.3f} in 2008-2012, "
+                f"over {scope}. Detection was estimated separately in each epoch at "
+                f"{first.p:.3f} and {second.p:.3f}."
+            ),
+            caveat=caveat,
+            method="docs/methods/phase1e-atlas.md",
+            source_id="sabap1",
+            taxon=pair.taxon_label,
+            rows=[
+                Row(
+                    label="Occupancy, corrected for detection",
+                    value=f"{change:+.3f}",
+                    detail=(
+                        f"{first.psi:.3f} to {second.psi:.3f}; 1987-1991 interval "
+                        f"{first.psi_low:.3f}-{first.psi_high:.3f}, 2008-2012 "
+                        f"{second.psi_low:.3f}-{second.psi_high:.3f}"
+                    ),
+                ),
+                Row(
+                    label="Reporting rate, uncorrected",
+                    value=f"{pair.primary.delta_naive:+.3f}",
+                    detail=(
+                        f"{first.naive:.3f} to {second.naive:.3f} — the share of cells the bird "
+                        "was seen in at all, which is what the answer would have been without a "
+                        "detection model"
+                    ),
+                ),
+                Row(
+                    label="Against the other five-year window",
+                    value=(
+                        f"{pair.alternative.delta_psi:+.3f}" if pair.alternative else "not fitted"
+                    ),
+                    detail="2019-2023 in place of 2008-2012, and the sign agrees",
+                ),
+            ],
+        )
+    log.info("occupancy: %d bird cards from the atlas comparison", len(studies))
+    return studies
+
+
 def _published_taxa(root: Path) -> dict[int, tuple[str, str, str]]:
     """Every taxon with a surface on the globe: key -> (scientific, vernacular, layer)."""
     index = json.loads((root / "taxon-index.json").read_text(encoding="utf-8"))
@@ -360,15 +494,21 @@ def collect(root: Path) -> list[SpeciesCard]:
     shifts = marine_studies()
     tracked = tracked_studies()
     withheld = withheld_studies()
+    occupancy = occupancy_studies()
 
     names: dict[int, tuple[str, str]] = {
         key: (scientific, vernacular) for key, (scientific, vernacular, _layer) in drawn.items()
     }
-    realms = {"shift": "marine", "tracked": "terrestrial", "withheld": "terrestrial"}
+    realms = {
+        "shift": "marine",
+        "tracked": "terrestrial",
+        "withheld": "terrestrial",
+        "occupancy": "terrestrial",
+    }
 
     cards: dict[int, SpeciesCard] = {}
-    for key in sorted({*drawn, *shifts, *tracked, *withheld}):
-        found = (shifts.get(key), tracked.get(key), withheld.get(key))
+    for key in sorted({*drawn, *shifts, *tracked, *withheld, *occupancy}):
+        found = (shifts.get(key), tracked.get(key), withheld.get(key), occupancy.get(key))
         studies = [study for study in found if study]
         scientific, vernacular = names.get(key, ("", ""))
         if not scientific:

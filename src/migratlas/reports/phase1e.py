@@ -264,6 +264,59 @@ def detection_area_bias(changes: list[SpeciesChange]) -> dict[str, float]:
 
 
 @dataclass(frozen=True, slots=True)
+class Paired:
+    """One species under both registered epoch-2 windows.
+
+    The unit anything published per species has to be built from, because note section 4 makes the
+    alternative window a condition on the result rather than a robustness note: a species whose
+    change flips sign between the two carries no result at all, and that verdict is a property of
+    the pair rather than of either fit.
+    """
+
+    primary: SpeciesChange
+    alternative: SpeciesChange | None
+
+    @property
+    def taxon_key(self) -> int:
+        return self.primary.taxon_key
+
+    @property
+    def taxon_label(self) -> str:
+        return self.primary.taxon_label
+
+    @property
+    def flipped(self) -> bool:
+        """Whether the sign changed between windows, ignoring species that did not move.
+
+        A species at -0.001 one way and +0.001 the other has not flipped; it has no change under
+        either, and calling that a disagreement would withdraw a result nobody claimed.
+        """
+        if self.alternative is None:
+            return False
+        one, two = self.primary.delta_psi, self.alternative.delta_psi
+        if abs(one) <= NOISE and abs(two) <= NOISE:
+            return False
+        return (one > 0) != (two > 0)
+
+    @property
+    def survives(self) -> bool:
+        """Reportable under the primary window, and not contradicted by the alternative."""
+        return self.primary.reportable and self.alternative is not None and not self.flipped
+
+
+def paired() -> list[Paired]:
+    """Every species fitted under both windows, aligned.
+
+    Costs two full passes, about two and a half minutes. Everything published per species and every
+    aggregate in `summarise` comes through here, so the ledger and the species pages cannot disagree
+    about which species survived.
+    """
+    primary = compare(EPOCH_2)
+    alternative = {c.taxon_key: c for c in compare(EPOCH_2_ALT)}
+    return [Paired(primary=c, alternative=alternative.get(c.taxon_key)) for c in primary]
+
+
+@dataclass(frozen=True, slots=True)
 class Summary:
     """Every number the ledger publishes, computed here so the claim cannot drift from the analysis.
 
@@ -311,10 +364,18 @@ Note section 8 sets it: if the two agree to within this for nearly every species
 correction bought nothing and the note says so plainly rather than burying it."""
 
 
-def summarise() -> Summary:
-    """Run both windows and reduce them to the published numbers."""
-    primary = {c.taxon_key: c for c in compare(EPOCH_2) if c.reportable}
-    alternative = {c.taxon_key: c for c in compare(EPOCH_2_ALT) if c.reportable}
+def summarise(pairs: list[Paired] | None = None) -> Summary:
+    """Reduce both windows to the published numbers.
+
+    Takes the pairing so a caller that already has one does not pay for it twice.
+    """
+    pairs = pairs if pairs is not None else paired()
+    primary = {p.taxon_key: p.primary for p in pairs if p.primary.reportable}
+    alternative = {
+        p.taxon_key: p.alternative
+        for p in pairs
+        if p.alternative is not None and p.alternative.reportable
+    }
     shared = sorted(set(primary) & set(alternative))
 
     delta = np.array([primary[key].delta_psi for key in primary])
