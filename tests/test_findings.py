@@ -5,6 +5,7 @@ them would be the drifting copy this module exists to avoid. What is asserted is
 nothing can be published without its scope, its caveat and a method note that exists.
 """
 
+import ast
 import json
 import re
 from pathlib import Path
@@ -36,6 +37,42 @@ def _finding(**overrides: object) -> Finding:
     }
     fields.update(overrides)
     return Finding(**fields)  # type: ignore[arg-type]
+
+
+def test_no_published_value_is_a_number_someone_typed() -> None:
+    """The module's own rule, enforced against its syntax tree rather than trusted.
+
+    `findings.py` says every published number is recomputed from the lake on every build, and for
+    one finding it was not: `composition-stable`'s airspeed was a string with the figure written
+    into it, so `phase1c` could have moved and the site would have gone on publishing the old one.
+    That was fixed by hand and nothing stopped it coming back.
+
+    Checked on `value` alone, and deliberately not on `scope` or `claim`. Those carry numbers that
+    are properties of a source rather than results -- "29 harmonised surveys", "1995" -- and a rule
+    broad enough to catch those would be turned off within a month.
+
+    A name or a call passes: the requirement is that the figure came from somewhere, not that it
+    arrived through an f-string.
+    """
+    tree = ast.parse((REPO / "src" / "migratlas" / "reports" / "findings.py").read_text("utf-8"))
+    typed: list[str] = []
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)):
+            continue
+        if node.func.id != "Finding":
+            continue
+        for keyword in node.keywords:
+            if keyword.arg != "value":
+                continue
+            given = keyword.value
+            literal = isinstance(given, ast.Constant) and isinstance(given.value, str)
+            # An f-string with nothing interpolated into it is a literal wearing a prefix.
+            empty = isinstance(given, ast.JoinedStr) and not any(
+                isinstance(part, ast.FormattedValue) for part in given.values
+            )
+            if literal or empty:
+                typed.append(f"line {given.lineno}")
+    assert not typed, f"a published value is written out rather than computed: {typed}"
 
 
 def test_the_document_declares_its_schema_version() -> None:
