@@ -525,7 +525,18 @@ def warm_names() -> None:
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     export = tile_layers.build_all_species(Path("web/public/layers"))
-    added = tile_species.warm_names(sorted({e.taxon_key for e in export.entries}))
+    keys = {e.taxon_key for e in export.entries}
+
+    # Species pages outran the layers: a taxon can carry a result and no surface, and 1,121 do.
+    # Keying this off the drawn layers alone meant no run of this command could ever name them,
+    # however many times it was run. Read from the published index rather than recollecting the
+    # cards, which would refit the atlas comparison to answer a question about names.
+    studied = Path("web/public/species-index.json")
+    if studied.exists():
+        index = json.loads(studied.read_text(encoding="utf-8"))
+        keys |= {int(entry["key"]) for entry in index["taxa"]}
+
+    added = tile_species.warm_names(sorted(keys))
     print(
         f"{added:,} taxa resolved; "
         f"{len(tile_species.vernaculars()):,} common and "

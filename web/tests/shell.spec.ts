@@ -387,25 +387,38 @@ for (const [device, width, height] of [
     // matters and failed on CI over a few pixels of harmless overlap while the notice was perfectly
     // readable. Occlusion is the real test: ask the browser what is actually on top at the centre of
     // each control, and require it to be that control.
-    const buried = await page.evaluate(() => {
-      const hits: string[] = [];
-      for (const selector of [
-        ".maplibregl-ctrl-attrib",
-        ".maplibregl-ctrl-group",
-        ".maplibregl-ctrl-scale",
-      ]) {
-        for (const node of document.querySelectorAll(selector)) {
-          const box = node.getBoundingClientRect();
-          if (box.width === 0 || box.height === 0) continue;
-          const at = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-          if (!at || !(node.contains(at) || at.contains(node))) {
-            hits.push(`${selector} is under ${at?.className || at?.tagName || "nothing"}`);
-          }
-        }
-      }
-      return hits;
-    });
-    expect(buried, buried.join("; ")).toEqual([]);
+    // Polled, not sampled once. The attribution control registers each source's credit as that
+    // source loads and only then collapses to its compact "i", so a single reading can catch it
+    // spread across the whole width of a 390px phone with its centre under the sheet -- which is
+    // what it did, intermittently, and only under full-suite load. The requirement is about the
+    // settled page; a control that is really buried stays buried and this still fails.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const hits: string[] = [];
+            for (const selector of [
+              ".maplibregl-ctrl-attrib",
+              ".maplibregl-ctrl-group",
+              ".maplibregl-ctrl-scale",
+            ]) {
+              for (const node of document.querySelectorAll(selector)) {
+                const box = node.getBoundingClientRect();
+                if (box.width === 0 || box.height === 0) continue;
+                const at = document.elementFromPoint(
+                  box.left + box.width / 2,
+                  box.top + box.height / 2,
+                );
+                if (!at || !(node.contains(at) || at.contains(node))) {
+                  hits.push(`${selector} is under ${at?.className || at?.tagName || "nothing"}`);
+                }
+              }
+            }
+            return hits;
+          }),
+        { message: "something the map owns is printed over the claim" },
+      )
+      .toEqual([]);
   });
 }
 
@@ -569,6 +582,41 @@ test("searching an animal draws it and says which one is shown", async ({ page }
   await expect(page.locator(".chosen")).toContainText(/Showing/);
   await page.locator(".chosen__clear").click();
   await expect(page.locator(".chosen")).toHaveCount(0);
+});
+
+/**
+ * A bird with a result and no surface.
+ *
+ * The other half of the search: `taxon-index.json` holds what is drawn, `species-index.json` holds
+ * what is only studied, and every SABAP bird is in the second. The test above searches a whale that
+ * has a layer, so it never touched this path.
+ */
+
+test("a studied bird has a page, and it carries both numbers", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+
+  await page.locator("#taxon-search").fill("Acridotheres");
+  const hits = page.locator(".hits button");
+  await expect(hits.first()).toBeVisible();
+  await hits.first().click();
+
+  const card = page.locator(".study__one--occupancy");
+  await expect(card).toBeVisible();
+
+  // This read `undefined` for 560 birds when it shipped. The label is a Record keyed by a
+  // TypeScript union, the kinds are written in Python, and the shard JSON is cast rather than
+  // validated -- so nothing in `tsc` could see the missing entry. `test_species_pages.py` guards
+  // the coverage; this asserts a reader sees the words.
+  await expect(card.locator(".study__kind")).toHaveText("how much of the region it occupies");
+
+  // The exhibit this wave exists for. The atlas finding's second claim is that correcting for
+  // detection did not change the answer, and a reader can only check that against a number.
+  await expect(card.locator(".study__rows dt")).toHaveText([
+    "Occupancy, corrected for detection",
+    "Reporting rate, uncorrected",
+    "Against the other five-year window",
+  ]);
 });
 
 /**

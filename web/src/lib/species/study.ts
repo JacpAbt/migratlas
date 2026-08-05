@@ -6,7 +6,7 @@
  * because searching around a genus hits the same file repeatedly.
  */
 
-export type StudyKind = "shift" | "tracked" | "withheld" | "extent";
+export type StudyKind = "shift" | "tracked" | "withheld" | "extent" | "occupancy";
 
 export interface StudyRow {
   label: string;
@@ -50,6 +50,7 @@ export const KIND_LABEL: Record<StudyKind, string> = {
   tracked: "where it has been followed",
   withheld: "held back",
   extent: "no study here",
+  occupancy: "how much of the region it occupies",
 };
 
 export class SpeciesStudies {

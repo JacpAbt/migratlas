@@ -41,7 +41,7 @@ from migratlas.evidence import EvidenceType
 from migratlas.lake.reader import scan
 from migratlas.lake.reader import sources as lake_sources
 from migratlas.redact import PublicationRefusedError, clear_for_publication
-from migratlas.tiles.species import SHARDS
+from migratlas.tiles.species import SHARDS, vernaculars
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -499,6 +499,10 @@ def collect(root: Path) -> list[SpeciesCard]:
     names: dict[int, tuple[str, str]] = {
         key: (scientific, vernacular) for key, (scientific, vernacular, _layer) in drawn.items()
     }
+    # `taxon-index.json` knows only what is drawn, and a studied taxon need not be. Without this
+    # every page for a species with a result and no surface -- most of the birds, most of the
+    # fish -- is headed by a scientific name alone.
+    cached = vernaculars()
     realms = {
         "shift": "marine",
         "tracked": "terrestrial",
@@ -511,6 +515,7 @@ def collect(root: Path) -> list[SpeciesCard]:
         found = (shifts.get(key), tracked.get(key), withheld.get(key), occupancy.get(key))
         studies = [study for study in found if study]
         scientific, vernacular = names.get(key, ("", ""))
+        vernacular = vernacular or cached.get(key, "")
         if not scientific:
             # From whichever study knows a name, for a species that is measured and not drawn.
             # Never from a row label: those are survey names, and reading one as a species name

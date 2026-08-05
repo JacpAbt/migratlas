@@ -90,6 +90,27 @@ def test_a_shift_smaller_than_the_floor_is_not_given_a_direction(
 
 # --- The published pages ------------------------------------------------------
 @pytest.mark.skipif(not SHARD_FILES, reason="species pages not built")
+def test_every_kind_of_card_has_a_label_the_frontend_knows() -> None:
+    """A scar, from the commit that added the occupancy cards.
+
+    `Study.svelte` heads each card with `KIND_LABEL[study.kind]`, and the shard JSON is *cast* to
+    `Study[]` rather than validated -- so `tsc` cannot see a kind the map has no entry for, and 560
+    pages shipped whose kind read `undefined`. The browser suite missed it because no test opened an
+    occupancy page, and adding one would only cover the kinds someone remembered to click.
+
+    This is the drift check instead: whatever Python emits, TypeScript must have a word for. It runs
+    in `make check`, which is the gate that runs on every change to the writer.
+    """
+    source = (REPO / "web" / "src" / "lib" / "species" / "study.ts").read_text(encoding="utf-8")
+    body = re.search(r"KIND_LABEL: Record<StudyKind, string> = \{(.*?)\}", source, re.S)
+    assert body, "KIND_LABEL is no longer where this test looks for it"
+    labelled = set(re.findall(r"^\s*(\w+):", body.group(1), re.M))
+
+    emitted = {study["kind"] for card in _cards() for study in card["studies"]}
+    assert emitted <= labelled, f"no frontend label for {sorted(emitted - labelled)}"
+
+
+@pytest.mark.skipif(not SHARD_FILES, reason="species pages not built")
 def test_no_species_page_can_locate_an_animal() -> None:
     """The invariant this whole file exists for.
 
