@@ -10,14 +10,14 @@ Numbers are permanent. A finished item keeps its number and moves to the bottom.
 
 ## Now
 
-| # | Item | Notes |
-| --- | --- | --- |
+Empty, and that is the real state rather than a missing row. Everything below is queued behind
+a stated blocker; the next thing to start is a judgement call rather than a lookup.
 
 ## Queued, with a reason to wait
 
 | # | Item | Why it waits |
 | --- | --- | --- |
-| 12 | The transfer test | **Blocked, and now for a known reason rather than a guessed one.** It needs three commensurable climate sensitivities and there are not three. Aerial-north is fitted in days per degree. Marine-north could be: FISHGLOB carries measured sea temperature. Terrestrial-south cannot be, because 0 of 6,447,050 driver samples in this lake lie south of the equator — the atlas work moved the evidence south and not the drivers. Two things have to happen first: ERA5 over southern Africa for 1987–2012, and a decision about the estimand, since days-per-degree, degrees-latitude-per-degree and occupancy-per-degree are three different kinds of answer and fitting on two to predict the third needs one kind. |
+| 12 | The transfer test | **Blocked, and now for a known reason rather than a guessed one.** It needs three commensurable climate sensitivities and there are not three. Aerial-north is fitted in days per degree. Marine-north could be: FISHGLOB carries measured sea temperature. Terrestrial-south cannot be: #11 put the lake's first southern driver in it, but that is surface water, and every temperature, wind and counterfactual sample is still northern. Two things have to happen first: ERA5 over southern Africa for 1987–2012, and a decision about the estimand, since days-per-degree, degrees-latitude-per-degree and occupancy-per-degree are three different kinds of answer and fitting on two to predict the third needs one kind. |
 | 13 | Forecast A: passage date under ScenarioMIP | `DATASETS.md` step 1. One new experiment list in `drivers/cmip6.py`; the novelty mask is the headline. Waits because #9 widens the evidence base it would be built on. |
 | 14 | Tighten the multi-realm ledger test to multi-class | `tests/test_findings.py` has the TODO. Land a finding whose realm is terrestrial and whose taxa are not birds first — #9 is birds, so this needs the tracks to produce a finding. |
 | 15 | Inline glossary, and a guided path through the five findings | Both strong for a non-technical reader; both explicitly out of scope for the current arc. Pick up on request. |
