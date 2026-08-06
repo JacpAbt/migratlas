@@ -111,3 +111,72 @@ right trade, because when-it-moved is exactly what Phase 1d showed a collar reco
   shows the wrong answer next to the right one when it has both, and here it will have both from the
   same animals in the same years.
 - Results appended here with every prediction graded, whichever way it goes.
+
+---
+
+# Results — appended 2026-08-06
+
+## The predictions, graded
+
+| | registered | elk | Svalbard reindeer |
+| --- | --- | --- | --- |
+| 1 | path length tracks the fix interval, \|ρ\| > 0.5 | **−0.879** ✔ | −0.066 (see below) |
+| 2 | displacement does not, \|ρ\| < 0.2 | **−0.047** ✔ | **+0.092** ✔ |
+| 3 | trend, two-sided | −1.84 ± 3.89 km/decade | +1.16 ± 2.13 km/decade |
+| 4 | reindeer replicate prediction 2 | — | ✔ |
+
+341 elk animal-years over 130 animals and 17 years; 219 reindeer animal-years over 80 animals and
+13 years. No stop condition fired: 6 of 17 elk years fall under ten animals, which is not the
+"more than half" that would have ended it, and there is no trend for a collar change to align with.
+
+## Prediction 1 is the result
+
+**Path length correlates with the fix interval at ρ −0.879.** Not a caveat, not a suspicion — the
+measure this project would have reached for first is, on this record, largely a measurement of the
+collar. Across animal-years the elk fix interval runs 0.25 h to 26 h, a **104-fold** spread. (§1
+quoted 52-fold; that was the spread of *per-year medians*, and the per-animal-year spread is twice
+it. Both are true and the larger one is the relevant one.)
+
+**Displacement correlates with it at −0.047**, on the same animals in the same years. The escape
+works, and it works by construction rather than by luck.
+
+That is Phase 1d's finding generalised: the collar does not merely move a measured *date* by 46.8
+days, it dominates a measured *distance*. And it is the first result this project has that says what
+to do about it rather than what to avoid.
+
+**Prediction 1 not firing for the reindeer is not a failure.** §3 registered prediction 1 for the elk
+record and required only prediction 2 of the reindeer. Their fix interval varies 8-fold against the
+elk's 104-fold, so there is little sampling variation for a path length to track, and ρ −0.066 says
+the Svalbard record is simply well behaved. A confound that is absent cannot be demonstrated.
+
+## The trend is flat, and the null is weak enough that this must be said loudly
+
+Neither herd's seasonal displacement clears its own interval, across animals or within them — elk
+−1.84 ± 3.89, and −1.90 fitted inside animals; reindeer +1.16 ± 2.13, and +1.81 within.
+
+**But the interval is as wide as the quantity.** The elk median displacement is 3.91 km and the
+interval on its trend spans 199% of that per decade. **A change smaller than roughly a doubling or a
+halving per decade could not have been distinguished from none.** For the reindeer the figure is 56%.
+
+So "no change detected" here is a statement about this study's resolution at least as much as about
+the animals, and it must not be read as "these herds are stable". It is not a bounded null of the
+kind Phase 1b produced; it is a wide one.
+
+## What the distribution shows, and the question this note did not ask
+
+Elk displacement quartiles are 1.64 / 3.91 / 15.54 km. 46.3% of animal-years move more than 5 km,
+37.2% more than 10, 18.2% more than 20. That is not a spread around a typical distance — it is a
+mixture of animals that stayed and animals that left.
+
+**A trend in the median of a bimodal mixture mostly tracks the mixing proportion**, and the mixing
+proportion is the quantity a reader would actually want: what share of the herd migrates, and has it
+changed. §2 registered a distance and not a share, so that question is **not answered here and is
+not going to be answered here after the fact.** It is written down as the obvious next
+pre-registration, with its own note, before any of it is computed.
+
+## Where this goes
+
+The methodological result is what gets published: a movement statistic that survives a collar record
+whose sampling varied 104-fold, demonstrated against the statistic it replaces on the same animals.
+The flat trend is reported inside it, with the power stated, and is not the headline — a null this
+wide should not be a claim about elk.
