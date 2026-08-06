@@ -233,3 +233,50 @@ depend on an epoch this data cannot resolve.
 
 Five 10° tiles, the footprint being 17.9–32.9°E and 22.1–34.6°S: `10E_30S`, `20E_20S`, `20E_30S`,
 `30E_20S`, `30E_30S`. Two layers, `change` and `occurrence`, v1.4 2021. **185 MB in ten files.**
+
+## Step zero, part three: the epochs, finally read off the asset
+
+The version stop condition resolved, and the answer matched nothing that had been read from a page.
+`downloads_ancillary/change2021.xml`, the INSPIRE metadata shipped beside the v1.4 tiles, states:
+
+> The Global Surface Water Occurrence Change Intensity map provides information on where surface
+> water occurrence increased, decreased or remained the same **between 1984-1999 and 2000-2021**.
+
+The 2016 sidecar for the original release says 1984–1999 and 2000–2015, which is what the FAQ still
+describes. **The FAQ documents a release five versions old.** Four sources, four answers:
+
+| source | what it said |
+| --- | --- |
+| `DATASETS.md`, 30 July | 1984–2021 |
+| the download page | 1984–2024 |
+| the FAQ | change compares 1984–1999 with 2000–2015 |
+| **`change2021.xml`, shipped with the tiles** | **1984–1999 against 2000–2021** |
+
+The last one governs, because it is the one that travels with the bytes. The stop condition was
+written for exactly this and it was worth having: three of the four readings would have put a wrong
+epoch in a published caveat.
+
+### The instrument is weaker than part two assumed
+
+Epoch 2 is **twenty-two years** against SABAP2's five, not the sixteen assumed above. The atlas
+window is still nested correctly inside it and the ordering is still right, so nothing about the
+design is invalid — but the attenuation argued in part two is worse than argued, and the same
+asymmetry applies more strongly: a surviving effect is still meaningful, a null is still
+uninformative and must be reported in those words.
+
+It also means epoch 2 spans the whole of SABAP2, including the 2019–2023 sensitivity window that
+part two recorded as unavailable. The two atlas windows cannot be separated by this factor at all;
+there is one water contrast and it is shared.
+
+### What is now known about the pixels
+
+Read from `change_20E_30Sv1_4_2021.tif` rather than from documentation: EPSG:4326, 40,000 × 40,000 at
+0.00025° (~30 m), bounds 20–30°E and −40 to −30°, `uint8`, no nodata declared, no overviews, and a
+colour table. Values on a decimated read run 0–255, with 255 and 253 dominating, 100 the mode of the
+data range, and 190 distinct values present. **The 0–200 scale with 100 as "no change" is documented,
+not measured**, and the two reserved values must be excluded before anything is averaged — a mean
+that swallows 253 or 255 would be a mean over "unable to compute" and "never water" as if they were
+quantities.
+
+Establishing that mapping from the shipped `.qml` colour table, and not from memory, is the first
+thing the ingest does.
