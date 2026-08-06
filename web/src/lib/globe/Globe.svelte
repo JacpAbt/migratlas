@@ -43,12 +43,26 @@
     const instance = createGlobe(container, base);
     map = instance;
 
+    // Startup phases, marked so the perf budget can say *where* the time went. It was one number
+    // -- "ready in N ms" -- which doubled on CI and named nothing. `performance.measure` costs a
+    // timestamp and turns the next regression into a reading rather than a bisect.
+    const since = performance.now();
+    const phases: Record<string, number> = {};
+    let last = since;
+    const mark = (name: string) => {
+      const now = performance.now();
+      phases[name] = Math.round(now - last);
+      last = now;
+    };
+
     void (async () => {
       await styleReady(instance);
+      mark("style");
       // Before the data layers, and it has to be after the style: `addImage` needs somewhere to put
       // the image. Until this runs the land draws as a flat fill, which is why the layer keeps a
       // `fill-color` under its pattern.
       setHatch(instance);
+      mark("hatch");
       // Survivable, and deliberately so: `addDrawnCoast` only dims the surveyed coastline once the
       // drawn one is in the style, so losing this costs the hand rather than the shoreline.
       try {
@@ -56,20 +70,34 @@
       } catch (error) {
         failures = [...failures, `coastline: ${String(error)}`];
       }
+      mark("coastline");
       addNightShade(instance);
       const manifest = await loadManifest(base);
-      const added: LoadedLayer[] = [];
-      for (const meta of manifest) {
-        try {
-          added.push(
-            meta.kind === "series"
+      mark("manifest");
+      // At once, not one after another. This was a `for` loop awaiting each layer in turn, which
+      // made the globe's load time the *sum* of four round trips instead of the longest one --
+      // invisible on a fast connection and worth seven seconds on CI, where latency dominates.
+      //
+      // `Promise.all` keeps `added` in manifest order, so the panel still lists layers in the order
+      // the manifest declares. What it does not preserve is the order `addLayer` is called in, so
+      // the style's own z-order is now completion order. That is acceptable here and is not an
+      // accident: the four layers cover different oceans and continents, each has its own toggle,
+      // and the one thing that genuinely depends on being underneath -- the detectability wash --
+      // is added after this block and searches the style for what to sit beneath.
+      const settled = await Promise.all(
+        manifest.map(async (meta) => {
+          try {
+            return meta.kind === "series"
               ? await addSeries(instance, meta, base, week)
-              : await addSurface(instance, meta, base),
-          );
-        } catch (error) {
-          failures = [...failures, `${meta.name}: ${String(error)}`];
-        }
-      }
+              : await addSurface(instance, meta, base);
+          } catch (error) {
+            failures = [...failures, `${meta.name}: ${String(error)}`];
+            return null;
+          }
+        }),
+      );
+      const added: LoadedLayer[] = settled.filter((one) => one !== null);
+      mark("layers");
       // Added after the manifest layers so it can find them in the style and insert itself
       // beneath. A missing assessment costs the layer, not the globe.
       let assessment: DetectabilityDocument | null = null;
@@ -80,6 +108,7 @@
       } catch (error) {
         failures = [...failures, `detectability: ${String(error)}`];
       }
+      mark("detectability");
 
       loaded = added;
 
@@ -87,7 +116,12 @@
       // from MapLibre rather than inferring it from pixels -- and so nothing is exposed to a
       // visitor who did not ask for it.
       if (new URLSearchParams(location.search).has("debug")) {
-        (window as unknown as { migratlas: unknown }).migratlas = { map: instance, loaded: added };
+        (window as unknown as { migratlas: unknown }).migratlas = {
+          map: instance,
+          loaded: added,
+          phases,
+          totalMs: Math.round(performance.now() - since),
+        };
       }
 
       onready?.({
