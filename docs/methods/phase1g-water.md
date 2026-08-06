@@ -178,3 +178,58 @@ not established from documentation.
 and recorded in the registry entry. If the years covered cannot be established from the data itself,
 nothing is fitted — a factor whose own time span is uncertain cannot be aligned with an atlas window,
 and guessing which version arrived would put the mismatch corrected above straight back in.
+
+## Step zero, part two: the corrected plan was not executable either
+
+The correction above said ΔW would be built from Yearly History over the atlas windows. **It cannot
+be. The per-year classifications are not downloadable for any year the atlas epochs need.**
+
+Enumerated from the bucket rather than inferred from a page, across all seven download roots:
+
+| downloadable per-year classifications | 2015, 2016, 2017, 2018, 2019, 2020, 2021 |
+| --- | --- |
+| the atlas epochs need | 1987–1991 and 2008–2012 |
+| **overlap** | **none** |
+
+Per-year water before 2015 exists only as an Earth Engine image collection. That needs a Google
+account and a cloud project, which is an account this project does not have and credentials it will
+not handle for a factor. The tiled products — `occurrence`, `change`, `seasonality`, `recurrence`,
+`transitions`, `extent` — are all whole-period summaries.
+
+### What is used instead, and the honest cost
+
+`change`, the occurrence change intensity, comparing 1984–1999 with 2000–2015. The atlas windows sit
+*inside* those periods — 1987–1991 within the first, 2008–2012 within the second — so the ordering is
+right and the two are correctly assigned. The instrument is coarser than the question, not aimed
+somewhere else.
+
+**What that costs is stated now, before any number exists: this instrument attenuates.** Averaging
+water over fifteen years when the atlas sampled five blurs both ends, and blurring pulls a real
+coefficient toward zero. It cannot manufacture an effect; it can only hide one.
+
+### Stop condition 1 is amended, and this is a correction rather than an edit
+
+As registered, a null dropped the factor and was published as a null. That is no longer the right
+reading. **A null now means "not detectable with the only instrument available", not "no
+association"** — and the finding must use those words. An attenuating instrument judged by a
+null-drops-it rule can only fail in the uninformative direction, and reporting that failure as
+evidence of absence would be the exact error this project exists not to make.
+
+An effect that *survives* an attenuating instrument is, if anything, stronger evidence than the
+registered design would have produced. The asymmetry is real and it is why the amendment weakens only
+the negative branch.
+
+Amended before the download, with nothing computed, because it is forced by an availability fact and
+not by a result. The original text stands above it.
+
+### The placebo gets a better definition than it was given
+
+§3 prediction 4 wanted cells with "essentially no water at baseline". `occurrence` gives something
+stricter and cleaner: cells with no water detected in the *entire* 1984–2021 record. A cell that
+never held water certainly held none at baseline, so the placebo subset is unambiguous and does not
+depend on an epoch this data cannot resolve.
+
+### What is being fetched
+
+Five 10° tiles, the footprint being 17.9–32.9°E and 22.1–34.6°S: `10E_30S`, `20E_20S`, `20E_30S`,
+`30E_20S`, `30E_30S`. Two layers, `change` and `occurrence`, v1.4 2021. **185 MB in ten files.**
