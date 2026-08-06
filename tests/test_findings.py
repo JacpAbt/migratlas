@@ -22,6 +22,11 @@ REPO = Path(__file__).resolve().parents[1]
 
 PUBLISHED = REPO / "web" / "public" / "findings.json"
 
+# The two coverage guards below read the lake, and CI has none -- the same reason the ingest
+# suites gate on `--run-localdata`. Evaluated once at import so a missing lake skips them
+# rather than failing them, which is what a machine without the data should see.
+HAS_LAKE = any(lake_sources(kind) for kind in EvidenceType)
+
 
 def _finding(**overrides: object) -> Finding:
     fields: dict[str, object] = {
@@ -78,6 +83,7 @@ def test_no_published_value_is_a_number_someone_typed() -> None:
     assert not typed, f"a published value is written out rather than computed: {typed}"
 
 
+@pytest.mark.skipif(not HAS_LAKE, reason="needs a lake")
 def test_the_coverage_claim_enumerates_its_sources_rather_than_naming_them() -> None:
     """The bug this file did not catch, and the exact one its target predicted.
 
@@ -98,6 +104,7 @@ def test_the_coverage_claim_enumerates_its_sources_rather_than_naming_them() -> 
         )
 
 
+@pytest.mark.skipif(not HAS_LAKE, reason="needs a lake")
 def test_a_new_evidence_type_stops_the_build_rather_than_being_skipped() -> None:
     """And the enforcement, not only the declaration.
 
