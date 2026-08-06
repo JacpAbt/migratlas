@@ -27,13 +27,18 @@ import polars as pl
 
 from migratlas.evidence import EvidenceType, Realm, TaxonScope
 from migratlas.lake.reader import scan, scan_dataset
+from migratlas.lake.reader import sources as lake_sources
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION: Final = 2
+SCHEMA_VERSION: Final = 3
+
+# Enforced by a test rather than by trimming. A plain sentence that grows past this has become a
+# second dense paragraph, and the reader who needed it has been lost twice.
+PLAIN_MAX_CHARS: Final = 180
 
 # The domains ROBITT asks about (Boyd et al. 2022, Methods in Ecology and Evolution 13:1497), a
 # 17-question tool for risk of bias in studies of temporal trends, built on PRISMA's model. Adopted
@@ -79,8 +84,39 @@ class Finding:
     """One thing the work established, with everything needed to read it honestly."""
 
     key: str
+
+    plain: str
+    """The same finding for someone with no statistics, in one sentence.
+
+    A second register above the claim rather than a replacement for it. ADR 0007 refuses to let the
+    layout decide what the science says, and this does not: `claim` is still rendered in full,
+    unshortened, underneath. What changed is which one is the heading.
+
+    The rule that makes this safe is that a plain sentence may drop precision but may never add
+    reach. "Autumn night flights over the United States" is allowed where the claim says
+    "nocturnal autumn passage over the mid-latitude US"; "birds are migrating earlier" is not,
+    because the radar cannot see a bird and the whole of Phase 1c exists to bound that.
+    """
+
+    matters: str
+    """Why a reader should care. One or two sentences.
+
+    The site said what was measured and how confident to be about it, and never once said why any
+    of it was worth measuring. That is a strange omission for a page whose entire argument is that
+    the reader should look closer.
+    """
+
     claim: str
     """One sentence, in the strongest form the evidence supports and no stronger."""
+
+    plain_caveat: str
+    """The one limit a reader must carry away, in plain words. Always rendered.
+
+    `caveat` is the complete statement and stays complete -- the attribution one runs to fourteen
+    hundred characters, because that is how long it takes to say something true about two
+    disagreeing counterfactuals. A reader who bounces off that paragraph currently leaves with no
+    caveat at all, which is worse than leaving with the short one.
+    """
 
     value: str
     """The number, formatted for display, with its interval."""
@@ -230,6 +266,50 @@ COMPOSITION_BIAS: Final = _domains(
     ),
 )
 
+ATLAS_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "South Africa, Lesotho and Eswatini, and inside them only the 496 quarter-degree cells "
+        "atlassed at least twenty times in *both* epochs. That footprint is where atlassers went "
+        "twice, thirty years apart, which is not a sample of southern African habitat. It narrows "
+        "the northern-hemisphere gap; it does not close it.",
+    ),
+    temporal=(
+        "bounded",
+        "Two epochs, so a difference and not a rate: nothing here may be phrased per decade. The "
+        "nineteen years between the atlas windows contain no data at all, so what happened in "
+        "between is unobserved rather than smooth.",
+    ),
+    taxonomic=(
+        "bounded",
+        "Birds, and specifically the species already widespread at baseline -- thirty or more "
+        "occupied cells in 1987-1991. Applying that floor to both epochs instead would have "
+        "selected on the outcome, dropping 37 species whose median naive change was -0.153 "
+        "against -0.014 overall, so it is applied at baseline only.",
+    ),
+    environmental=(
+        "open",
+        "An atlas card records where a volunteer went. The consistent-footprint rule controls for "
+        "how *often* a cell was visited and not for which cells people choose, and no covariate "
+        "for land use or protection enters the model. A change concentrated in transformed "
+        "landscapes would be indistinguishable here from one that was not.",
+    ),
+    detectability=(
+        "addressed",
+        "A per-species detection probability is fitted in each epoch rather than assumed, and it "
+        "turns out not to matter: at a median 82 and 68 cards per cell an occupied cell is missed "
+        "with probability 0.00002 and 0.0002, so the corrected and uncorrected answers agree. "
+        "Detection is also stable, correlating across the thirty-year gap, which is the evidence "
+        "that observer change is not driving the result.",
+    ),
+    phenological=(
+        "addressed",
+        "Cards are pooled over five whole years in each epoch, so within-year timing is integrated "
+        "out and a species that shifted its season rather than its range cannot appear as a range "
+        "change.",
+    ),
+)
+
 ATTRIBUTION_BIAS: Final = _domains(
     geographic=(
         "bounded",
@@ -264,30 +344,43 @@ ATTRIBUTION_BIAS: Final = _domains(
     ),
 )
 
-COVERAGE_BIAS: Final = _domains(
-    geographic=(
-        "open",
-        "This claim *is* the geographic bias. Every source with a usable time axis is northern "
-        "temperate; the two with global reach cannot support a trend.",
-    ),
-    temporal=(
-        "bounded",
-        "Measured from the lake rather than asserted, and recomputed on every build, so the day a "
-        "southern source lands the number moves on its own.",
-    ),
-    taxonomic=(
-        "bounded",
-        "No longer birds-only on land: seven Movebank track sources add elk, caribou, reindeer, "
-        "bison, Arctic fox and wolf, so `track` is the fifth evidence type in use. None of them "
-        "supports a trend — collar effort is not a measured denominator — so they widen the "
-        "coverage without widening what can be measured. Insects and reptiles are still absent.",
-    ),
-    environmental=(
-        "open",
-        "Long digitised radar and trawl series exist where they were funded, so the environmental "
-        "space this project covers is a funding history rather than a sample.",
-    ),
-)
+
+def _coverage_bias(evidence_types: int) -> list[BiasDomain]:
+    """The coverage limit's ROBITT block, with the one number in it read from the lake.
+
+    A function rather than a constant because the taxonomic line counts evidence types, and a
+    count is exactly the kind of sentence that goes quietly false: it shipped as "the fifth
+    evidence type in use" while four were in use, having been written when a fifth looked
+    imminent. The rest of the block is prose re-expressing a method note and stays typed.
+    """
+    return _domains(
+        geographic=(
+            "open",
+            "This claim *is* the geographic bias, and it has moved without closing. Two atlases "
+            "put a third of the time-series record south of the equator, in three countries; "
+            "every other source with a usable time axis is northern temperate, the two with "
+            "global reach cannot support a trend, and the driver record is northern but for one "
+            "landscape factor over those same atlas cells.",
+        ),
+        temporal=(
+            "bounded",
+            "Measured from the lake rather than asserted, and recomputed on every build, so the "
+            "day a southern source lands the number moves on its own.",
+        ),
+        taxonomic=(
+            "bounded",
+            "No longer birds-only on land: seven Movebank track sources add elk, caribou, "
+            "reindeer, bison, Arctic fox and wolf, bringing the evidence types carrying data to "
+            f"{evidence_types} of {len(EvidenceType)}. None of them supports a trend — collar "
+            "effort is not a measured denominator — so they widen the coverage without widening "
+            "what can be measured. Insects and reptiles are still absent.",
+        ),
+        environmental=(
+            "open",
+            "Long digitised radar and trawl series exist where they were funded, so the "
+            "environmental space this project covers is a funding history rather than a sample.",
+        ),
+    )
 
 
 def _radar_coverage() -> tuple[int, int, int]:
@@ -304,22 +397,86 @@ def _radar_coverage() -> tuple[int, int, int]:
     return frame["station"].n_unique(), int(years.min()), int(years.max())
 
 
-def _southern_share() -> dict[str, float]:
-    """Share of each time-series source's rows south of the equator.
+# Every evidence type that carries a time axis, and the column its positions live in.
+#
+# The previous version of this hardcoded a list of two *sources* while computing their shares from
+# the lake, and its docstring named the exact failure it then suffered: "the day a southern source
+# lands, a hardcoded 0% would be a lie on the site." SABAP1 and SABAP2 landed on 2026-07-30 and the
+# site went on publishing 0.0% southern over 19.7 million southern rows.
+#
+# So the sources are enumerated and only the *types* are named -- and a type holding data that
+# appears in neither map stops the build rather than being skipped.
+TIME_AXIS: Final = {
+    EvidenceType.FLUX: "station_latitude",
+    EvidenceType.SURVEY_INDEX: "site_latitude",
+    EvidenceType.TRACK: "latitude",
+}
 
-    Computed rather than quoted, because this is the finding most likely to become false
-    silently -- the day a southern source lands, a hardcoded 0% would be a lie on the site.
+# Pooled over their whole period, so they cannot measure change and are not part of this claim.
+POOLED: Final = frozenset({EvidenceType.ABUNDANCE_SURFACE})
+
+
+@dataclass(frozen=True, slots=True)
+class Coverage:
+    """How much of what this project can measure change with lies south of the equator."""
+
+    rows: int
+    southern: int
+    sources: int
+    southern_sources: int
+    driver_rows: int
+    southern_drivers: int
+
+    @property
+    def share(self) -> float:
+        return self.southern / self.rows if self.rows else float("nan")
+
+    @property
+    def driver_share(self) -> float:
+        return self.southern_drivers / self.driver_rows if self.driver_rows else float("nan")
+
+
+def _coverage() -> Coverage:
+    """Count the southern share of the lake's time-series record, and of its drivers.
+
+    Two numbers rather than one, and the gap between them is the finding now. Evidence and drivers
+    moved apart when the atlases landed: a third of the rows this project can measure change with
+    are southern, and none of the temperature it would explain them with is.
     """
-    shares: dict[str, float] = {}
-    for source, latitude in (
-        ("darkecology_daily", "station_latitude"),
-        ("fishglob", "site_latitude"),
-    ):
-        evidence = EvidenceType.FLUX if source == "darkecology_daily" else EvidenceType.SURVEY_INDEX
-        frame = scan(evidence, source_id=source).select(pl.col(latitude).alias("lat")).collect()
-        values = frame["lat"].to_numpy()
-        shares[source] = float((values < 0).mean()) if values.size else float("nan")
-    return shares
+    live = [kind for kind in EvidenceType if lake_sources(kind)]
+    unhandled = [kind for kind in live if kind not in TIME_AXIS and kind not in POOLED]
+    if unhandled:
+        msg = (
+            f"{[str(kind) for kind in unhandled]} hold data and this claim does not know whether "
+            f"they carry a time axis or where their positions live. Decide, and add them to "
+            f"TIME_AXIS or POOLED -- skipping one is how this went on reporting 0% southern."
+        )
+        raise ValueError(msg)
+
+    rows = southern = sources = southern_sources = 0
+    for kind, column in TIME_AXIS.items():
+        for source in sorted(lake_sources(kind)):
+            values = (
+                scan(kind, source_id=source).select(lat=pl.col(column)).collect()["lat"].to_numpy()
+            )
+            below = int((values < 0).sum())
+            rows += int(values.size)
+            southern += below
+            sources += 1
+            southern_sources += 1 if below else 0
+
+    drivers = (
+        scan_dataset("driver_samples", source_id=None).select(lat=pl.col("latitude")).collect()
+    )
+    latitudes = drivers["lat"].to_numpy()
+    return Coverage(
+        rows=rows,
+        southern=southern,
+        sources=sources,
+        southern_sources=southern_sources,
+        driver_rows=int(latitudes.size),
+        southern_drivers=int((latitudes < 0).sum()),
+    )
 
 
 def _wind_coverage() -> tuple[int, int, int]:
@@ -333,16 +490,25 @@ def _wind_coverage() -> tuple[int, int, int]:
     return frame.height, int(years.min()), int(years.max())
 
 
+def _evidence_types_in_use() -> int:
+    """How many of the canonical evidence types actually hold data.
+
+    From the lake rather than from the registry: a source can be registered and never ingested
+    -- `darkecology_profiles` has been for months -- and "in use" means what it says.
+    """
+    return sum(1 for kind in EvidenceType if lake_sources(kind))
+
+
 def collect() -> list[Finding]:
     """Compute every finding. Re-runs the analyses, so this takes minutes rather than seconds."""
     # Imported here rather than at module scope: the reports import this module's siblings,
     # so a top-level import would close a cycle.
     from migratlas.metrics import range as range_metrics  # noqa: PLC0415
     from migratlas.reports import phase1b  # noqa: PLC0415
-    from migratlas.reports.phase1 import load_conus_nights, station_slopes  # noqa: PLC0415
+    from migratlas.reports.phase1 import AUTUMN, load_conus_nights, station_slopes  # noqa: PLC0415
 
     _, first_year, last_year = _radar_coverage()
-    southern = _southern_share()
+    coverage = _coverage()
 
     findings: list[Finding] = []
 
@@ -363,6 +529,21 @@ def collect() -> list[Finding]:
             taxon_scope=TaxonScope.UNATTRIBUTED.value,
             evidence_type=EvidenceType.FLUX.value,
             bias=AUTUMN_ADVANCE_BIAS,
+            # "Whatever flies", not "birds". The plain register may drop precision and may never
+            # add reach, and this is the sentence where the temptation is strongest.
+            plain=(
+                "Whatever flies over the middle of the United States on autumn nights is passing "
+                "earlier in the year than it did thirty years ago."
+            ),
+            matters=(
+                "Timing is most of how migration works: animals move when weather, daylight and "
+                "food line up. When the calendar shifts and the things it is tuned to do not, "
+                "animals arrive somewhere that has already moved on without them."
+            ),
+            plain_caveat=(
+                "Weather radar sees a mass of animals in the air, not species. Some of it is bats, "
+                "and some is insects."
+            ),
             claim="Nocturnal autumn passage over the mid-latitude US is happening earlier.",
             value=f"{mean:+.2f} ± {ci:.2f} days per decade",
             scope=(
@@ -399,6 +580,19 @@ def collect() -> list[Finding]:
             taxon_scope=TaxonScope.EXACT.value,
             evidence_type=EvidenceType.SURVEY_INDEX.value,
             bias=MARINE_NULL_BIAS,
+            plain=(
+                "Fish are not all moving towards the poles. Different seas are doing different "
+                "things, and some are doing the opposite of others."
+            ),
+            matters=(
+                '"Fish are moving polewards as the sea warms" is one of the best-known '
+                "sentences in climate ecology. Across two thousand species it is not one story, "
+                "and a single global number would erase every difference worth planning around."
+            ),
+            plain_caveat=(
+                "These are trawl surveys in the North Atlantic and North Pacific. Nowhere else has "
+                "been counted the same way for long enough to be included."
+            ),
             claim=(
                 "There is no single global poleward shift in fish distribution — surveys "
                 "disagree even in its direction."
@@ -422,37 +616,72 @@ def collect() -> list[Finding]:
     )
 
     # --- The measurement itself, audited ----------------------------------
-    nights, wind_first, wind_last = _wind_coverage()
-    findings.append(
-        Finding(
-            key="composition-stable",
-            realm=Realm.AERIAL.value,
-            taxon_scope=TaxonScope.UNATTRIBUTED.value,
-            evidence_type=EvidenceType.FLUX.value,
-            bias=COMPOSITION_BIAS,
-            claim=(
-                "The autumn signal is not drifting from birds towards insects — what the radar "
-                "measures in 2025 means what it meant in 1995."
-            ),
-            value="airspeed trend -0.06 ± 0.08 m/s per decade (flat)",
-            scope=(
-                f"{nights:,} station-night wind samples, {wind_first}-{wind_last}, from an "
-                "independent regional reanalysis rather than from the radar."
-            ),
-            caveat=(
-                "Spring behaves differently: its airspeed rose, which is either a real change or "
-                "migrants flying higher than the fixed wind level assumes. Separating those needs "
-                "the vertical radar profiles. Spring carries no trend claim here either way."
-            ),
-            method="docs/methods/phase1c-homogeneity.md",
-            direction="change",
-            supporting=[
-                "Mean autumn airspeed sits in the range for migrating songbirds, not insects.",
-                "A 2012 discontinuity in the dataset's own rain filtering was traced, and ruled "
-                "out as weather using independent precipitation data.",
-            ],
+    # Published only while the fit it asserts still holds. The claim is that the mixture did not
+    # drift; an airspeed trend distinguishable from zero makes the sentence false, and a ledger
+    # that kept printing it would be contradicting its own number. Same shape as `shortfall`
+    # below: the condition for publishing is the finding.
+    from migratlas.reports import phase1c  # noqa: PLC0415
+
+    drift = phase1c.airspeed_trend(AUTUMN, max_year=last_year)
+    if drift is None:
+        log.warning("composition-stable withheld: no airspeed series, so the claim is untested")
+    elif not drift.flat:
+        log.warning(
+            "composition-stable withheld: autumn airspeed moves at %+.2f +/- %.2f m/s per decade",
+            drift.mean,
+            drift.ci95,
         )
-    )
+    else:
+        nights, wind_first, wind_last = _wind_coverage()
+        findings.append(
+            Finding(
+                key="composition-stable",
+                realm=Realm.AERIAL.value,
+                taxon_scope=TaxonScope.UNATTRIBUTED.value,
+                evidence_type=EvidenceType.FLUX.value,
+                bias=COMPOSITION_BIAS,
+                plain=(
+                    "The radar is watching the same kind of traffic now as in 1995, so the "
+                    "earlier timing is a real change and not a change in what is being counted."
+                ),
+                matters=(
+                    "Every long record has this problem. If what an instrument measures quietly "
+                    "changes, a trend appears that nothing caused — and it looks exactly like a "
+                    "discovery. Ruling that out is the difference between a finding and an "
+                    "artefact."
+                ),
+                plain_caveat=(
+                    "Spring behaves differently and gets no claim here. Its speeds rose, and we "
+                    "cannot yet separate a real change from animals flying higher than the wind "
+                    "data assumes."
+                ),
+                claim=(
+                    "The autumn signal is not drifting from birds towards insects — what the "
+                    "radar measures in 2025 means what it meant in 1995."
+                ),
+                value=(
+                    f"airspeed trend {drift.mean:+.2f} ± {drift.ci95:.2f} m/s per decade (flat)"
+                ),
+                scope=(
+                    f"{nights:,} station-night wind samples, {wind_first}-{wind_last}, from an "
+                    "independent regional reanalysis rather than from the radar."
+                ),
+                caveat=(
+                    "Spring behaves differently: its airspeed rose, which is either a real change "
+                    "or migrants flying higher than the fixed wind level assumes. Separating those "
+                    "needs the vertical radar profiles. Spring carries no trend claim here either "
+                    "way."
+                ),
+                method="docs/methods/phase1c-homogeneity.md",
+                direction="change",
+                supporting=[
+                    f"Mean autumn airspeed of {drift.level:.2f} m/s sits in the range for "
+                    "migrating songbirds, not insects.",
+                    "A 2012 discontinuity in the dataset's own rain filtering was traced, and "
+                    "ruled out as weather using independent precipitation data.",
+                ],
+            )
+        )
 
     # --- The causal step ----------------------------------------------------
     # Published only if the model ensemble is whole. `shortfall` exists because a third of it can
@@ -505,6 +734,21 @@ def collect() -> list[Finding]:
                 taxon_scope=TaxonScope.UNATTRIBUTED.value,
                 evidence_type=EvidenceType.FLUX.value,
                 bias=ATTRIBUTION_BIAS,
+                plain=(
+                    "About half of that earlier timing traces back to warming people caused. The "
+                    "other half does not follow temperature at all, and is unexplained."
+                ),
+                matters=(
+                    "Showing that something changed is not showing why. This runs climate models "
+                    "twice — once with human emissions and once with the world we would have had "
+                    "without them — and asks how much of the warming behind the shift only "
+                    "happened in one of those worlds."
+                ),
+                plain_caveat=(
+                    "This attributes the warming, not the animals. Two independent ways of "
+                    "building the world-without-us disagree with each other by more than a factor "
+                    "of two, and both are shown."
+                ),
                 claim=(
                     # "the animals", not "the birds". This claim's taxon scope is
                     # `unattributed` and the margin next to it says so, while `autumn-advance`
@@ -550,21 +794,47 @@ def collect() -> list[Finding]:
             realm="all",
             taxon_scope="all",
             evidence_type="all",
-            bias=COVERAGE_BIAS,
+            bias=_coverage_bias(_evidence_types_in_use()),
+            plain=(
+                "A third of what this site measures is now southern, and none of the weather "
+                "that would explain it is. Describing a place and explaining it are different "
+                "problems."
+            ),
+            matters=(
+                "A map of what is known is not a map of what is happening. Most of the world has "
+                "never been counted the same way twice — and where it has, the records that would "
+                "say *why* often still do not reach. A result from one hemisphere is not evidence "
+                "about the other until someone goes and checks."
+            ),
+            plain_caveat=(
+                "Two sources are held back deliberately. Wolves and mountain caribou are hunted "
+                "by people who would use a map of them, so none of their locations are drawn."
+            ),
             claim=(
-                "Everything above is northern-hemisphere. The data that can measure change and "
-                "the data that covers the globe are, so far, different data."
+                f"{coverage.share:.1%} of the rows this project can measure change with lie south "
+                f"of the equator, from {coverage.southern_sources} of {coverage.sources} sources "
+                f"— and {coverage.driver_share:.2%} of its driver record does. The evidence has "
+                "crossed the equator and the data that would explain it has barely started."
             ),
             value=(
-                f"{southern.get('darkecology_daily', float('nan')):.1%} of the radar record and "
-                f"{southern.get('fishglob', float('nan')):.1%} of the survey record lie south of "
-                "the equator"
+                f"{coverage.southern:,} of {coverage.rows:,} time-series rows are southern "
+                f"({coverage.share:.1%}), against {coverage.southern_drivers:,} of "
+                f"{coverage.driver_rows:,} driver samples ({coverage.driver_share:.2%})"
             ),
             scope="Every source in this project that has a usable time axis.",
             caveat=(
-                "Inherited rather than chosen — long digitised radar and trawl series exist where "
-                "they were funded — but it bounds every claim here to the northern temperate zone, "
-                "and no model trained on it should be trusted elsewhere without being tested "
+                "The southern share is two bird atlases in three countries, so it is a large "
+                "number from a small place and not coverage of a hemisphere. What has not moved "
+                "barely moved is the driver record. Every temperature, wind and counterfactual "
+                "sample in this lake was taken over North America or the North Atlantic; the only "
+                "southern driver is surface water over the atlas footprint, which is a landscape "
+                "factor and not a climate one. So the southern result is described and not "
+                "explained, and the sensitivity this project would need to test whether a northern "
+                "climate response transfers still cannot be fitted in the south — there is no "
+                "southern temperature here to fit it against. Inherited rather than chosen — long "
+                "digitised "
+                "radar and trawl series exist where they were funded — but no model trained on "
+                "this should be trusted elsewhere without being tested "
                 "there first. Two kinds of gap are worth telling apart on the map. Grey cells are "
                 "places the lake reaches and cannot measure. And two sources are held and drawn "
                 "nowhere at all: mountain caribou and wolves are classified high-sensitivity, so "
@@ -574,6 +844,90 @@ def collect() -> list[Finding]:
             ),
             method="docs/methods/geographic-coverage.md",
             direction="limit",
+        )
+    )
+
+    # --- Phase 1e: the atlas comparison -----------------------------------
+    # Both epoch-2 windows are fitted here, which costs about two and a half minutes of the build.
+    # That is the point: the sensitivity is not a footnote for this claim, it is what licenses
+    # publishing any species-level number at all, and a figure typed once goes stale silently.
+    from migratlas.reports import phase1e  # noqa: PLC0415
+
+    atlas = phase1e.summarise()
+    findings.append(
+        Finding(
+            key="atlas-no-net-change",
+            realm=Realm.TERRESTRIAL.value,
+            taxon_scope=TaxonScope.EXACT.value,
+            evidence_type=EvidenceType.SURVEY_INDEX.value,
+            bias=ATLAS_BIAS,
+            plain=(
+                "Southern African birds have not, on the whole, moved. A few dozen species "
+                "clearly have — and the ones spreading fastest are birds people brought."
+            ),
+            matters=(
+                "This is the first thing this project has measured outside the northern "
+                "hemisphere, and it is the test of whether findings from one continent carry to "
+                "another. It also answers a question the site had only ever asked: whether "
+                "correcting for how hard people looked changes what you conclude."
+            ),
+            plain_caveat=(
+                "Two snapshots thirty years apart, in three countries, in the places volunteers "
+                "atlassed twice. It is a before and after, not a trend, and it is not Africa."
+            ),
+            claim=(
+                "Between the two southern African bird atlases there is no net change in "
+                f"occupancy across {atlas.species} species — the median is "
+                f"{atlas.median_delta:+.3f} — while {atlas.movers} species moved by more than "
+                "0.1 in one direction or the other."
+            ),
+            value=(
+                f"median {atlas.median_delta:+.3f} change in occupancy probability, "
+                f"deciles {atlas.decile_low:+.3f} to {atlas.decile_high:+.3f}, "
+                f"across {atlas.species} species on {atlas.cells} shared cells"
+            ),
+            scope=(
+                "SABAP1 1987-1991 against SABAP2 2008-2012, full-protocol cards only, on "
+                f"{atlas.cells} quarter-degree cells carrying at least 20 cards in both epochs."
+            ),
+            caveat=(
+                "The detection correction this was built for made no difference, and that is the "
+                "second finding rather than a technicality. Corrected and naive occupancy change "
+                f"agree to within 0.01 for {atlas.agree_within_001:.0%} of species, with a median "
+                f"difference of {atlas.median_gap:.4f}. The reason is the footprint rule: 20 cards "
+                "per cell was registered so detection could be *estimated* everywhere, and at that "
+                "effort an occupied cell is essentially never missed, so there was nothing left "
+                "for detection to *explain*. The elaborate machinery earns its place on sparse "
+                "data, and a footprint strict enough to fit it is strict enough to make it "
+                "unnecessary. Read the other way, that is why the number can be trusted: it does "
+                "not depend on the model. What it cannot do is separate a species that left from "
+                "one that stayed and was recorded differently in a landscape that changed around "
+                "it — no land-use covariate enters this, and attribution is a later note."
+            ),
+            method="docs/methods/phase1e-atlas.md",
+            direction="null",
+            supporting=[
+                "The occupancy model recovers known psi and p from simulated data across five "
+                "parameter combinations before it was allowed near the atlases.",
+                "The registered alternative window, 2019-2023, disagrees in sign for "
+                f"{atlas.flip_share:.1%} of the species that moved — under the one-third "
+                "threshold that would have made the result a property of the window.",
+                "Nine of the ten largest changes hold under that alternative window and five are "
+                "larger under it; the tenth flipped sign and is withdrawn rather than caveated.",
+                "Detection probability correlates "
+                f"{atlas.p_correlation:.3f} between epochs, so how likely a bird is to be written "
+                "on a card did not change even though almost everything else about atlassing did.",
+                "The uncorrected reporting-rate comparison gives the same answer, so the "
+                "conclusion does not rest on the model being right.",
+                # The map under this claim is the uncorrected surface, and the caveat above says
+                # the two agree -- both true, at different scales, which the site has to say
+                # rather than leave a reader to reconcile.
+                "Per cell they agree less well, which is why the map beside this claim draws the "
+                "uncorrected count: a disagreement of a fraction of one species, summed over five "
+                "hundred of them, is a few whole species in a cell. That the map is the plainer "
+                "measurement was fixed in advance, in docs/methods/phase1f-atlas-surface.md, as "
+                "what to do if the two ever parted.",
+            ],
         )
     )
 

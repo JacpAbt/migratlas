@@ -399,6 +399,52 @@ sources:
   # The first source that is neither northern nor marine, and the one that fills the terrestrial
   # realm. Realm is a judgement: an atlas card records which birds occupy a patch of land, where
   # the radar in Phase 1a records birds in flight, so the same species can appear under both.
+  # The first driver south of the equator, and the first that is not weather. Landed for
+  # docs/methods/phase1g-water.md, which registered before the download that this factor is
+  # explanatory only: no future surface water exists, so a coefficient fitted on it can never enter
+  # a forecast.
+  - id: jrc_gsw
+    title: JRC Global Surface Water — occurrence and occurrence change intensity, v1.4
+    realm: terrestrial
+    landing_page: https://global-surface-water.appspot.com/download
+    download_uri: https://storage.googleapis.com/global-surface-water/downloads2021
+    # No licence *name* is given anywhere on the product. The download page states the Copernicus
+    # terms verbatim -- "free of charge, without restriction of use" -- and requires the attribution
+    # string and the citation below. Recorded as what it says rather than mapped onto a CC name it
+    # does not claim.
+    licence: Copernicus — free of charge, without restriction of use
+    licence_url: https://www.copernicus.eu/en/access-data/copyright-and-licences
+    citation: >-
+      Pekel, J.-F., Cottam, A., Gorelick, N., Belward, A. S. (2016). High-resolution mapping of
+      global surface water and its long-term changes. Nature 540, 418–422.
+      https://doi.org/10.1038/nature20584. Data: EC JRC/Google, Global Surface Water Explorer v1.4,
+      tiles change_* and occurrence_* v1_4_2021, accessed 2026-08-05. Source: EC JRC/Google.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        The terms place no restriction on redistribution or commercial use beyond acknowledgement,
+        which must credit "Source: EC JRC/Google" and cite Pekel et al. 2016. A derived product may
+        therefore be drawn as well as analysed.
+    # Water, seen from orbit. There is no animal in it, and the aggregate published from it is a
+    # per-cell area with no taxon attached.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      The occurrence change intensity layer compares 1984–1999 with 2000–2021, read from the
+      INSPIRE metadata shipped beside the tiles — not from the FAQ, which still describes the 2016
+      release as 2000–2015, nor from the download page, which gives the collection span as
+      1984–2024. Those epochs are the product's, not any study's: SABAP1 (1987–1991) sits inside the
+      first and SABAP2 (2008–2012) inside a second that is twenty-two years long, so any comparison
+      against an atlas window is nested rather than aligned and is attenuated toward zero. Per-year
+      water classifications, which would allow an aligned comparison, are downloadable for 2015–2021
+      only; earlier years exist solely as an Earth Engine collection needing an account. Values
+      0–200 encode percentage-point change with 100 as no change; 253 is "not water", 254 "unable to
+      compute" and 255 "no data", and all three must be excluded before any average. Landsat cannot
+      see water under dense canopy or in cloud-persistent regions, and a small farm dam below the
+      30 m pixel is invisible.
+    added: 2026-08-05
+
   - id: sabap1
     title: Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991
     realm: terrestrial
@@ -488,6 +534,86 @@ sources:
       Species totals include unidentified groupings and hybrids whose AOU codes carry no binomial;
       those rows are dropped and counted, as they cannot be evidence about a taxon.
     added: 2026-07-30
+
+  # The first European time series in the lake, and the first source anywhere in it with a fifty-year
+  # run. Two datasets from one scheme, registered separately because they are two protocols with two
+  # DOIs and two spans -- the same rule that made seven Movebank studies seven sources.
+  - id: sbs_point_counts
+    title: Swedish Bird Survey — summer point count routes (Sommarpunktrutterna), 1975–2024
+    realm: terrestrial
+    evidence_type: survey_index
+    taxon_scope: exact
+    landing_page: https://www.fageltaxering.lu.se/
+    doi: 10.15468/2aajk9
+    download_uri: https://www.gbif.se/ipt/archive.do?r=lu_sft_spkt
+    licence: CC0 1.0
+    licence_url: https://creativecommons.org/publicdomain/zero/1.0/
+    citation: >-
+      Lindström Å, Green M, Jönsson A (2025). Swedish Bird Survey: Summer point count routes
+      (Sommarpunktrutterna). Version 1.8. Department of Biology, Lund University. Sampling event
+      dataset https://doi.org/10.15468/2aajk9. The scheme runs on volunteer surveyors who have
+      walked the same routes each spring since 1975.
+    redistribution:
+      allowed: true
+      attribution_required: false
+      commercial_use: true
+      notes: >-
+        CC0 1.0 on GBIF, so attribution is not legally required and is given anyway. The archive's
+        own records carry `accessRights: Limited`, which refers to the species the publisher has
+        withheld rather than to the rows released — see the caveats.
+    default_sensitivity: low
+    caveats: >-
+      **Eleven species are absent by policy, not by absence, and a detection model must be told.**
+      The publisher withholds every taxon at Swedish security class 4 or higher: black stork, lesser
+      white-fronted goose, golden eagle, spotted eagle, white-tailed eagle, pallid harrier,
+      Montagu's harrier, peregrine falcon, gyrfalcon, eagle owl and white-backed woodpecker. An
+      occupancy model derives absence from "surveyed and not recorded", so for these eleven it would
+      derive a false absence at every event in the scheme. They are excluded by name at the ingest
+      and the count is reported.
+      Coordinates are the centre of the 25 x 25 km grid square the route sits in, not the route:
+      `coordinateUncertaintyInMeters` is 17,700 throughout, so nothing finer than that square is
+      supported and a cell smaller than it would be inventing precision.
+      Counts are the route total summed over twenty points, so a count is per route-visit rather
+      than per point, and effort is the survey window from `eventTime` rather than a point count.
+      Observer identity travels into `protocol`, as it does for BBS and for the same reason:
+      observer skill is the best-documented bias in schemes of this kind and a trend fit needs it
+      available as a break term.
+    added: 2026-08-05
+
+  - id: sbs_fixed_routes
+    title: Swedish Bird Survey — fixed routes (Standardrutterna), 1996–2025
+    realm: terrestrial
+    evidence_type: survey_index
+    taxon_scope: exact
+    landing_page: https://www.fageltaxering.lu.se/
+    doi: 10.15468/hd6w0r
+    download_uri: https://www.gbif.se/ipt/archive.do?r=lu_sft_std
+    licence: CC0 1.0
+    licence_url: https://creativecommons.org/publicdomain/zero/1.0/
+    citation: >-
+      Lindström Å, Green M (2026). Swedish Bird Survey: Fixed routes (Standardrutterna). Version
+      1.16. Department of Biology, Lund University. Sampling event dataset
+      https://doi.org/10.15468/hd6w0r.
+    redistribution:
+      allowed: true
+      attribution_required: false
+      commercial_use: true
+      notes: >-
+        CC0 1.0 on GBIF, attribution given regardless. `accessRights: Limited` in the archive refers
+        to the withheld species listed in the caveats.
+    default_sensitivity: low
+    caveats: >-
+      **Sixteen taxa are absent by policy, not by absence.** The eleven birds the point-count scheme
+      withholds, plus lynx, grey wolf, brown bear, wolverine and Arctic fox — this scheme records
+      mammals too. Excluded by name at the ingest and counted, for the same reason: a derived
+      absence would otherwise be manufactured for every one of them at every event.
+      Unlike BBS this is a *systematic* design — one route in each 25 x 25 km square on a national
+      grid, walked in the same direction at the same time of year — so it does not carry the
+      roadside bias that BBS's own caveat records, which is the single best reason to hold both.
+      Coordinates are the square's centre, uncertainty 17,700 m. Counts are the route total over
+      eight 1 km line segments, and effort is the survey window from `eventTime`.
+      Observer identity travels into `protocol`.
+    added: 2026-08-05
 
   # The late half of an atlas-against-atlas comparison, twenty years after sabap1. Landed with the
   # same effort unit as that source on purpose: two similar-but-different denominators would make

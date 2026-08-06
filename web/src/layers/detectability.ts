@@ -34,6 +34,8 @@ export interface Withheld {
   taxon: string;
   sensitivity: string;
   reason: string;
+  /** The refusal in one sentence. Heads the full reason rather than replacing it. */
+  plain_reason: string;
   span: [number, number];
   individuals: number;
 }
@@ -50,7 +52,7 @@ interface DetectabilityDocument {
   supporting: string[];
 }
 
-const SUPPORTED_SCHEMA = 2;
+const SUPPORTED_SCHEMA = 3;
 
 const LAYER_ID = "detectability";
 
@@ -71,14 +73,14 @@ const TOKENS: Record<string, string> = {
   detectable: "--detect-yes",
 };
 
-const FALLBACK = "#b5afa3";
+/** A status the assessment does not publish. A token like the rest, so it follows the surface. */
+const FALLBACK_TOKEN = "--detect-unknown";
 
 /** Resolve a token against the live surface. MapLibre paint takes colours, not custom properties. */
 export function colourFor(status: string): string {
-  const token = TOKENS[status];
-  if (!token) return FALLBACK;
-  const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
-  return value || FALLBACK;
+  const resolved = (token: string): string =>
+    getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+  return resolved(TOKENS[status] ?? FALLBACK_TOKEN) || resolved(FALLBACK_TOKEN) || "#b5afa3";
 }
 
 /** Plain-language legend text. The status slug is precise and says nothing to a first-time reader. */
@@ -93,14 +95,14 @@ function paint(categories: string[]): ExpressionSpecification {
   // `v` is an index into the shipped categories, so the match is built from that array. A
   // hard-coded index list here would break the moment a status was inserted.
   const colours = categories.map((status) => colourFor(status));
-  const [first = FALLBACK, ...rest] = colours;
+  const [first = colourFor("unknown"), ...rest] = colours;
   return [
     "match",
     ["get", "value"],
     0,
     first,
     ...rest.flatMap((colour, index) => [index + 1, colour]),
-    FALLBACK,
+    colourFor("unknown"),
   ] as ExpressionSpecification;
 }
 
@@ -125,6 +127,7 @@ function meta(document_: DetectabilityDocument): LayerMeta {
     kind: "surface",
     format: "grid",
     value_kind: "detectability",
+    scale: "sequential",
     attribution: "Migratlas",
     licence: "CC-BY-4.0",
     landing_page: "https://github.com/JacpAbt/migratlas",
@@ -219,6 +222,15 @@ export async function addDetectability(
       setVisible: (visible) => {
         if (map.getLayer(LAYER_ID)) {
           map.setLayoutProperty(LAYER_ID, "visibility", visible ? "visible" : "none");
+        }
+      },
+      // `paint` resolves every colour from a CSS token at call time, so this layer needs nothing
+      // but to be asked again. The four greys were picked against parchment and re-picked against
+      // black -- they carry the whole coverage argument, and a ramp that reads as "mostly grey" on
+      // one surface reads as "mostly nothing" on the other.
+      repaint: () => {
+        if (map.getLayer(LAYER_ID)) {
+          map.setPaintProperty(LAYER_ID, "circle-color", paint(document_.grid.categories));
         }
       },
     },

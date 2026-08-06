@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION: Final = 1
+SCHEMA_VERSION: Final = 2
 
 # The band the aerial claim survives in, matching `reports/findings.py` and `phase2a_timing`.
 CLAIM_BAND: Final[tuple[int, int]] = (37, 50)
@@ -71,6 +71,13 @@ class Knob:
 
     why: str
     """Why the safeguard exists. Without this the knob is a slider with no lesson attached."""
+
+    plain_why: str
+    """The lesson in one sentence, above the paragraph rather than instead of it.
+
+    A knob nobody understands is a toy, and the whole argument for letting a reader switch a
+    safeguard off is that they learn what it was for.
+    """
 
     claim: str
     """Which ledger finding this bears on, by key, so the two can be shown together."""
@@ -181,6 +188,10 @@ def speed_weighting(max_year: int) -> Knob:
             "earlier passage look alike. The control is to compute the same date from a quantity "
             "with no speed in it."
         ),
+        plain_why=(
+            'The measurement counts fast-flying animals more heavily, so "earlier" and '
+            '"faster" can look the same. This takes the speed back out.'
+        ),
         claim="autumn-advance",
         source="reports.phase1.load_conus_nights(quantity=…)",
         default="speed-weighted",
@@ -244,6 +255,11 @@ def break_specification(max_year: int) -> Knob:
             "choice fits no break at all, so it sits at the conservative end of the four rather "
             "than the flattering one."
         ),
+        plain_why=(
+            "The radars were upgraded halfway through the record. There is no one right way "
+            "to allow for that, so all four are shown -- and the published one is the least "
+            "flattering of them."
+        ),
         claim="autumn-advance",
         source="reports.phase1_robustness.specification_estimates",
         default="no-break-term",
@@ -275,6 +291,10 @@ def shuffled_years(max_year: int) -> Knob:
             "Shuffling year labels within each station keeps every station's distribution of "
             "passage dates and destroys their order. Any trend that survives that is arithmetic, "
             "not biology."
+        ),
+        plain_why=(
+            "Scramble which year each measurement came from. Any trend still showing is "
+            "arithmetic, not animals."
         ),
         claim="autumn-advance",
         source="reports.phase1_robustness.permutation_null",
@@ -346,6 +366,10 @@ def survey_effort() -> Knob:
             "A distribution centroid is a weighted mean of the places you looked. Widen the "
             "footprint over time and the centroid moves without a single fish moving, which is the "
             "single most common way a range shift is invented."
+        ),
+        plain_why=(
+            "Fish look like they moved if the ships did. This is the commonest way to invent "
+            "a range shift."
         ),
         claim="marine-null",
         source="metrics.range.consistent_footprint(consistency=…)",

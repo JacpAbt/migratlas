@@ -17,6 +17,7 @@ from migratlas.evidence import EvidenceType, Realm, TaxonScope, spec_for
 from migratlas.lake.reader import scan
 from migratlas.metrics.phenology import NORTHERN_AUTUMN, passage_quantiles, passage_trends
 from migratlas.redact import clear_for_publication
+from migratlas.reports import phase1e, phase1f
 from migratlas.tiles.export import ExportResult, export_surface, snap_expr
 from migratlas.tiles.species import SpeciesExport
 from migratlas.tiles.species import build as build_species
@@ -69,6 +70,13 @@ class LayerSpec:
     """How to reduce a per-taxon source to one surface."""
     value_kind: str | None = None
     """What the numbers are, when pooling produces a quantity the source itself does not hold."""
+    scale: str = "sequential"
+    """``sequential`` for a count, ``diverging`` for a signed change.
+
+    Declared rather than inferred. The frontend paints a count on log10 against one ramp, which
+    maps every negative value onto the colour of the smallest positive one -- so a signed layer
+    handed to it silently loses the sign, which is the whole result.
+    """
 
 
 SERIES_LAYERS: Final[tuple[LayerSpec, ...]] = (
@@ -253,12 +261,117 @@ def _passage_shift(nights: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class DerivedSpec:
+    """A layer computed from more than one source rather than read from one.
+
+    Separate from `LayerSpec` because the differences are load-bearing: there is no single
+    `source_id` to mint a clearance from, the numbers are a result rather than rows in the lake, and
+    a reader has to be able to reach the note that says what the result may be read as.
+    """
+
+    name: str
+    sources: tuple[str, ...]
+    evidence_type: EvidenceType
+    realm: Realm
+    title: str
+    description: str
+    cell_size_deg: float
+    value_kind: str
+    method: str
+    scale: str = "sequential"
+
+
+ATLAS_CHANGE: Final = DerivedSpec(
+    name="atlas-taxa-change",
+    sources=("sabap1", "sabap2"),
+    evidence_type=EvidenceType.SURVEY_INDEX,
+    realm=Realm.TERRESTRIAL,
+    title="Change in recorded taxa between the two atlases",
+    description=(
+        "Change in the number of analysed taxa recorded per quarter-degree cell between "
+        "1987-1991 and 2008-2012, over the 496 cells carrying at least twenty full-protocol "
+        "atlas cards in both epochs. Not richness: the count runs over the 512 taxa the "
+        "occupancy comparison could fit, so every scarce and every newly-arrived taxon is "
+        "excluded by construction and the true figure is higher. The holes are places nobody "
+        "atlassed twice, not places with nothing in them, and they are not interpolated. Two "
+        "snapshots thirty years apart, so a before and after and not a trend. The "
+        "detection-corrected version of this surface is computed on every build and withheld: "
+        "it disagreed with this one by more than the pre-registered bound, which the method note "
+        "registered as grounds to trust the count over the model."
+    ),
+    cell_size_deg=phase1e.CELL_DEG,
+    value_kind="analysed_taxa_change",
+    scale="diverging",
+    method="docs/methods/phase1f-atlas-surface.md",
+)
+
+# Between two sources' citations in a derived layer's attribution: a blank line, because the
+# frontend renders the field verbatim and two citations run together read as one.
+SEPARATOR: Final = "\n\n"
+
+DERIVED_LAYERS: Final = (ATLAS_CHANGE,)
+
+
+def build_derived(spec: DerivedSpec, destination_root: Path | None = None) -> ExportResult:
+    """Export a computed layer, gated once per source it is derived from.
+
+    Every source contributes a clearance and they must agree. Picking the strictest would be
+    guessing where neither dominates -- one source delaying by ninety days and another coarsening to
+    a degree are not comparable -- so a divergence stops the build and asks for a human decision
+    rather than resolving it silently in the direction that happens to publish.
+    """
+    clearances = [
+        clear_for_publication(
+            source_id=source.id,
+            evidence_type=spec.evidence_type,
+            realm=spec.realm,
+            # Aggregated over ~500 taxa, so the source default governs and no one taxon's
+            # sensitivity is either relied on or overridden. The note's section 2 requires this
+            # surface never be split by taxon, which is what makes the aggregate scope honest.
+            sensitivity=source.default_sensitivity,
+            taxon_scope=TaxonScope.AGGREGATE,
+            taxon_key=None,
+            redistribution_allowed=source.redistribution.allowed,
+        )
+        for source in (catalog.get(source_id) for source_id in spec.sources)
+    ]
+    if any(one.generalization != clearances[0].generalization for one in clearances[1:]):
+        terms = {
+            clearance.source_id: clearance.generalization.statement() for clearance in clearances
+        }
+        msg = (
+            f"{spec.name}: the sources it is derived from no longer publish on the same terms, so "
+            f"there is no single generalisation for the derived surface. Decide explicitly rather "
+            f"than defaulting. {terms}"
+        )
+        raise ValueError(msg)
+
+    computed = phase1f.surface()
+    verdict = phase1f.grade(computed.cells, computed.taxa)
+    log.info(
+        "%s: %d cells, %d taxa, Moran's I %+.4f (p %.4f), effort rho %+.4f, %.1f%% dropped",
+        spec.name,
+        verdict.cells,
+        verdict.taxa,
+        verdict.morans_i,
+        verdict.morans_p,
+        verdict.effort_rho,
+        verdict.drop_share * 100,
+    )
+    frame = phase1f.drawable(computed.cells, verdict)
+
+    root = destination_root or (get_settings().tiles_dir / "layers")
+    return export_surface(frame, clearances[0], root, spec.name, cell_size_deg=spec.cell_size_deg)
+
+
 def build_all(destination_root: Path | None = None) -> list[ExportResult | SeriesExport]:
     """Export every registered layer."""
     results: list[ExportResult | SeriesExport] = [
         build(layer, destination_root) for layer in LAYERS
     ]
     results += [build_series(layer, destination_root) for layer in SERIES_LAYERS]
+    results.append(build_derived(ATLAS_CHANGE, destination_root))
     return results
 
 
@@ -283,10 +396,33 @@ def manifest() -> list[dict[str, object]]:
                 "format": "grid" if layer.cell_size_deg else "geojson",
                 "value_kind": layer.value_kind
                 or (_value_kind(layer.source_id) if layer in LAYERS else "reflectivity_traffic"),
+                "scale": layer.scale,
                 "attribution": source.citation.strip(),
                 "licence": source.licence,
                 "landing_page": str(source.landing_page),
                 "caveats": source.caveats.strip(),
+            }
+        )
+    for spec in DERIVED_LAYERS:
+        sources = [catalog.get(source_id) for source_id in spec.sources]
+        entries.append(
+            {
+                "name": spec.name,
+                "title": spec.title,
+                "description": spec.description,
+                "realm": str(spec.realm),
+                "evidence_type": str(spec.evidence_type),
+                "kind": "surface",
+                "format": "grid",
+                "value_kind": spec.value_kind,
+                # Both atlases, because the number is a difference between them and citing one
+                # would credit half the work and misstate what the cell shows.
+                "scale": spec.scale,
+                "attribution": SEPARATOR.join(source.citation.strip() for source in sources),
+                "licence": " and ".join(sorted({source.licence for source in sources})),
+                "landing_page": str(sources[-1].landing_page),
+                "caveats": SEPARATOR.join(source.caveats.strip() for source in sources),
+                "method": spec.method,
             }
         )
     return entries
@@ -305,11 +441,14 @@ def _value_kind(source_id: str) -> str:
 
 
 __all__ = [
+    "ATLAS_CHANGE",
+    "DERIVED_LAYERS",
     "LAYERS",
     "SERIES_LAYERS",
     "LayerSpec",
     "build",
     "build_all",
+    "build_derived",
     "build_series",
     "manifest",
 ]

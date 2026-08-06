@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION: Final = 2
+SCHEMA_VERSION: Final = 3
 """Bumped from 1: one ribbon with three lines became two ribbons with two lines each."""
 
 
@@ -110,6 +110,13 @@ class Comparison:
     ribbons: list[Ribbon]
     disagreement: str
     """Why two honest counterfactuals give different numbers. The payload of showing both."""
+
+    plain_disagreement: str
+    """The same thing in one sentence, for a reader who will not read the paragraph.
+
+    It may drop precision and may never add reach: the paragraph above stays rendered in full
+    underneath, and this heads it rather than replacing it.
+    """
 
     shared_caveat: str
     supporting: list[str] = field(default_factory=list)
@@ -391,6 +398,10 @@ def collect(max_year: int = 2025) -> Comparison:
         unit="day of year",
         ribbons=ribbons,
         disagreement=disagreement,
+        plain_disagreement=(
+            "Two honest ways of asking how much of this was us give answers about 2.4 times "
+            "apart, and neither is wrong. They are answers to different questions."
+        ),
         shared_caveat=(
             "Both attribute the warming, not the animals. Each removes a share of the temperature "
             "signal and passes it through a response function fitted on observations, so anything "

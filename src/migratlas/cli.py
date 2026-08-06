@@ -27,6 +27,7 @@ from migratlas.ingest import (
     sabap2,
 )
 from migratlas.lake import check as lake_check
+from migratlas.lake import purge as lake_purge
 from migratlas.reports import (
     counterfactual,
     detectability,
@@ -43,8 +44,8 @@ from migratlas.reports import (
     phase2a_thermal,
     phase2a_timing,
     sandbox,
+    species,
 )
-from migratlas.taxonomy import index as taxon_index
 from migratlas.tiles import layers as tile_layers
 from migratlas.tiles import species as tile_species
 
@@ -515,40 +516,32 @@ def write_provenance(
     print(f"{len(catalog.load())} sources -> {out} ({size / 1024:.1f} KiB)")
 
 
-@taxonomy_app.command("build-index")
-def build_taxon_index(
-    out: Annotated[Path, typer.Option(help="Destination JSON file.")] = Path(
-        "web/public/taxon-index.json"
-    ),
-    limit: Annotated[int | None, typer.Option(help="Resolve only the first N seed taxa.")] = None,
-) -> None:
-    """Build the static species index the frontend searches."""
-    report = taxon_index.build(limit=limit)
-    size = taxon_index.write(report, out)
-
-    by_realm = Counter(entry.realm for entry in report.entries)
-    print(f"{len(report.entries)} taxa -> {out} ({size / 1024:.1f} KiB)")
-    for realm, count in sorted(by_realm.items()):
-        print(f"  {realm:<12} {count}")
-
-    if report.unresolved:
-        print(f"\n{len(report.unresolved)} unresolved:")
-        for name, reason in report.unresolved:
-            print(f"  {name}: {reason}")
-        raise typer.Exit(1)
-
-
 @taxonomy_app.command("warm-names")
 def warm_names() -> None:
-    """Resolve common names for every published taxon into the cache. Resumable.
+    """Resolve display names for every published taxon into the cache. Resumable.
 
     Separate from build-layers on purpose: this is thousands of GBIF requests, and a build should
     be offline and deterministic. Run it once, then rebuilds pick the names up from the cache.
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     export = tile_layers.build_all_species(Path("web/public/layers"))
-    added = tile_species.warm_vernaculars(sorted({e.taxon_key for e in export.entries}))
-    print(f"{added:,} names resolved; {len(tile_species.vernaculars()):,} cached in total")
+    keys = {e.taxon_key for e in export.entries}
+
+    # Species pages outran the layers: a taxon can carry a result and no surface, and 1,121 do.
+    # Keying this off the drawn layers alone meant no run of this command could ever name them,
+    # however many times it was run. Read from the published index rather than recollecting the
+    # cards, which would refit the atlas comparison to answer a question about names.
+    studied = Path("web/public/species-index.json")
+    if studied.exists():
+        index = json.loads(studied.read_text(encoding="utf-8"))
+        keys |= {int(entry["key"]) for entry in index["taxa"]}
+
+    added = tile_species.warm_names(sorted(keys))
+    print(
+        f"{added:,} taxa resolved; "
+        f"{len(tile_species.vernaculars()):,} common and "
+        f"{len(tile_species.canonical_names()):,} scientific names cached"
+    )
 
 
 @app.command()
@@ -601,6 +594,66 @@ def lake_check_command() -> None:
         if len(items) > DRIFT_SAMPLE:
             print(f"  ... and {len(items) - DRIFT_SAMPLE} more")
     raise typer.Exit(1)
+
+
+@app.command("build-species")
+def build_species(
+    out: Annotated[Path, typer.Option(help="Directory holding the published documents.")] = Path(
+        "web/public"
+    ),
+) -> None:
+    """One page per animal: what is known about it, and where nothing is.
+
+    Reads `taxon-index.json` for what was actually drawn, so this runs after `build-layers`.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    cards = species.collect(out)
+    size = species.write(cards, out)
+    searchable = species.write_index(cards, out)
+    kinds = Counter(study.kind for card in cards for study in card.studies)
+    print(f"{len(cards):,} species -> {out}/species-study-NN.json ({size / 1024:.0f} KiB)")
+    print(f"search index -> {out}/species-index.json ({searchable / 1024:.0f} KiB)")
+    for kind, count in sorted(kinds.items()):
+        print(f"  {kind:<10} {count:,}")
+
+
+@app.command("lake-floor")
+def lake_floor(
+    # A CLI flag, which is what typer builds from a boolean parameter.
+    apply: Annotated[  # noqa: FBT002
+        bool, typer.Option(help="Actually delete the rows. Reports and exits 1 without it.")
+    ] = False,
+) -> None:
+    """Report, or delete, rows the ingest floor would refuse today.
+
+    Deleting data is not a thing to do by default, so the report is the default and `--apply` is
+    the deliberate act. Exits 1 when rows are found and not removed, so this can gate a build.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    found = lake_purge.floor_rows()
+    if not found:
+        print("no floor taxa in the lake")
+        return
+
+    for item in found:
+        print(
+            f"{item.evidence_type.value}/{item.source_id}: {item.rows:,} rows "
+            f"({', '.join(item.labels)}) across {len(item.partitions)} partitions"
+        )
+    if not apply:
+        print("\nnot removed. Re-run with --apply.")
+        raise typer.Exit(1)
+
+    for purged in lake_purge.purge_floor_taxa():
+        print(
+            f"{purged.evidence_type.value}/{purged.source_id}: "
+            f"{purged.removed:,} removed, {purged.kept:,} kept in the partitions touched"
+        )
+    remaining = lake_purge.floor_rows()
+    if remaining:
+        print(f"\n{sum(item.rows for item in remaining):,} rows still present")
+        raise typer.Exit(1)
+    print("\nnone remain. Rebuild any artifact that was exported before this.")
 
 
 if __name__ == "__main__":  # pragma: no cover

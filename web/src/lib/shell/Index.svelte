@@ -32,15 +32,21 @@
   <ul>
     {#each findings as finding (finding.key)}
       <li>
+        <!-- `data-claim` is the stable handle. The suite used to reach a tab by a fragment of its
+             sentence, so rewording one claim broke six navigation tests that were not about
+             wording at all. A key does not change when prose does. -->
         <button
           type="button"
           class="tab tab--{finding.direction}"
           class:tab--on={selected === finding.key}
+          data-claim={finding.key}
           aria-current={selected === finding.key ? "true" : undefined}
           onclick={() => onchoose(finding)}
         >
           <span class="tab__what">{DIRECTION_LABEL[finding.direction]}</span>
-          <span class="tab__claim">{short(finding.claim)}</span>
+          <!-- The plain register, because a tab is forty-six characters and the precise sentence
+               is truncated to nothing useful at that width. The exact claim is on the card. -->
+          <span class="tab__claim">{short(finding.plain)}</span>
         </button>
       </li>
     {/each}
@@ -64,8 +70,11 @@
        both clear, so the strip has to be exactly that tall or the reservation is a guess. */
     height: var(--strip);
     padding: var(--gap-tight) var(--gap);
+    /* All three together, or the grain paints over the paper instead of into it. */
     background-color: var(--paper);
     background-image: var(--grain);
+    background-size: var(--grain-size);
+    background-blend-mode: var(--grain-blend);
     border-top: 1px solid var(--rule);
   }
 
@@ -99,30 +108,50 @@
     flex: none;
   }
 
+  /*
+    A tab in a notebook is a corner of the page showing past the one on top of it, so these are cut
+    corners rather than rounded ones -- and the current tab is dog-eared: its corner is folded back
+    further, which is how you find the page you were on.
+
+    `clip-path` rather than a border, so the shape is the paper and not a decoration around it.
+  */
   .tab {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 1px;
-    padding: var(--gap-hair) var(--gap-tight);
+    padding: var(--gap-hair) var(--gap-tight) var(--gap-hair) 0.7rem;
     max-width: 15rem;
     text-align: left;
     background: transparent;
-    border: 1px solid transparent;
-    /* The state that matters is which claim is open, and it is carried by a drawn underline in the
-       accent rather than by a filled tab: a notebook marks a page, it does not highlight it. */
-    border-bottom: 2px solid transparent;
-    border-radius: var(--radius) var(--radius) 0 0;
+    border: 0;
+    clip-path: polygon(0.55rem 0, 100% 0, 100% 100%, 0 100%);
     cursor: pointer;
-    transition: background-color var(--fade), border-color var(--fade);
+    transition:
+      background-color var(--fade),
+      clip-path var(--fade);
   }
 
   .tab:hover {
     background: var(--paper-sunken);
   }
 
+  /* Folded back at both corners and lifted onto the paper. The rust rule underneath is the pencil
+     line a reader draws under the page they are on -- colour is never the only signal, and the
+     fold is the other one. */
   .tab--on {
-    border-bottom-color: var(--rust-ink);
     background: var(--paper-sunken);
+    clip-path: polygon(0.9rem 0, 100% 0, 100% calc(100% - 0.5rem), calc(100% - 0.5rem) 100%, 0 100%);
+  }
+
+  .tab--on::after {
+    content: "";
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0;
+    left: 0.9rem;
+    height: 2px;
+    background: var(--rust-ink);
   }
 
   .tab__what {

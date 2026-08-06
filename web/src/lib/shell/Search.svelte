@@ -1,6 +1,8 @@
 <script lang="ts">
   import { TaxonIndex, type SpeciesSurfaces, type TaxonHit } from "../../search/taxon";
   import type { SpeciesSelection } from "../../layers/selection";
+  import Study from "../species/Study.svelte";
+  import { SpeciesStudies, type SpeciesCard } from "../species/study";
 
   let {
     selection,
@@ -15,7 +17,12 @@
   let index = $state<TaxonIndex | null>(null);
   let query = $state("");
   let chosen = $state<TaxonHit | null>(null);
+  let card = $state<SpeciesCard | null>(null);
   let problem = $state<string | null>(null);
+
+  // Fetched on selection, never on search: a keystroke must not cost a shard, and 2.2 MB of study
+  // pages has no business loading for a reader who is looking at the globe.
+  const studies = $derived(new SpeciesStudies(import.meta.env.BASE_URL));
 
   $effect(() => {
     TaxonIndex.load(`${import.meta.env.BASE_URL}taxon-index.json`)
@@ -23,25 +30,40 @@
       .catch(() => (problem = "The species index could not be read."));
   });
 
-  // Every entry in the index has a published surface behind it, so a hit is never a dead end.
+  // Every entry has a surface, a study, or both, so a hit is never a dead end.
   const hits = $derived(index && query.trim().length > 1 ? index.search(query) : []);
 
   async function choose(hit: TaxonHit): Promise<void> {
     if (!selection) return;
-    const grid = await surfaces.get(hit);
-    if (!grid) {
-      problem = `No published surface for ${hit.scientific}.`;
-      return;
-    }
-    const { center } = selection.show(hit, grid);
     chosen = hit;
+    card = null;
     query = "";
-    onfocus(center);
+    problem = null;
+
+    // A hit may have a study, a surface, or both. An animal measured by a survey has no layer --
+    // FISHGLOB is not published as one -- and refusing it here is what left 689 of the 755 species
+    // with a distribution shift unreachable from the search box that is meant to find them.
+    if (hit.layer) {
+      const grid = await surfaces.get(hit);
+      if (grid) {
+        const { center } = selection.show(hit, grid);
+        onfocus(center);
+      } else {
+        problem = `No published surface for ${hit.scientific}.`;
+      }
+    } else {
+      selection.clear();
+    }
+    // Awaited after the camera moves, so the globe answers immediately and the page arrives when
+    // it arrives. A card that is null renders nothing rather than a spinner: the surface is
+    // already the answer to "where", and this is the answer to "and what is known".
+    card = await studies.get(hit.key);
   }
 
   function clear(): void {
     selection?.clear();
     chosen = null;
+    card = null;
     problem = null;
   }
 </script>
@@ -64,7 +86,7 @@
           <button type="button" onclick={() => void choose(hit)}>
             <span class="hits__name">{hit.scientific}</span>
             <span class="hits__common">{hit.vernacular}</span>
-            <em>{hit.cells.toLocaleString()} cells</em>
+            <em>{hit.layer ? `${hit.cells.toLocaleString()} cells` : "study"}</em>
           </button>
         </li>
       {/each}
@@ -73,9 +95,16 @@
 
   {#if chosen}
     <p class="chosen">
-      Showing <strong>{chosen.scientific}</strong> from {chosen.layer_title}
+      {#if chosen.layer}
+        Showing <strong>{chosen.scientific}</strong> from {chosen.layer_title}
+      {:else}
+        <strong>{chosen.scientific}</strong> — measured here, and drawn nowhere
+      {/if}
       <button type="button" class="chosen__clear" onclick={clear}>clear</button>
     </p>
+    {#if card}
+      <Study {card} />
+    {/if}
   {/if}
 
   {#if problem}

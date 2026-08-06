@@ -153,9 +153,11 @@ African, Australian, New Zealand and Chilean demersal surveys exist and are the 
 place to look; none verified for access yet, so this stays a research item rather than a plan.
 
 **Still absent entirely.** Asia, at every latitude and in every realm. South America, for anything
-with a time axis. Terrestrial mammals anywhere — no `TRACK` or `DETECTION` source has been
-ingested, so the terrestrial realm is currently empty of everything except what OBIS incidentally
-carries.
+with a time axis.
+
+*Superseded 2026-08-04.* This paragraph also said terrestrial mammals were absent everywhere. Seven
+Movebank studies have since landed — 938 individuals of five species, 6.0M fixes — so the realm is
+no longer empty. It is, however, entirely North American plus Svalbard, which is the section below.
 
 ## The rule for the models, which matters more than the source list
 
@@ -189,3 +191,266 @@ Nothing here is scheduled ahead of Phase 2a. When it is:
 ENRAM has left this list: one radar has fifteen usable autumns, so it cannot carry a trend at all,
 and what it can still do is descriptive. It stays in the section above as a documented reassessment
 rather than as queued work.
+
+
+## Movebank outside North America — surveyed 2026-08-04
+
+The audit above predates the tracks, so the archive was never asked the obvious question. It has now
+been asked directly, against its own study catalogue (`entity_type=study`, 8,692 studies), filtered
+to what this project could actually register: a redistributable licence, download access, more than
+5,000 deployed locations, and a span of at least the two years `MIN_STUDY_YEARS` requires.
+
+| Region | Studies | Deployed locations | Individuals |
+| --- | --- | --- | --- |
+| **Europe** | 95 | **255,414,453** | 4,438 |
+| North America / other | 120 | 45,103,762 | 8,078 |
+| **Africa** | 25 | 13,732,760 | 1,004 |
+| **Asia** | 17 | 11,658,798 | 393 |
+| South America | 10 | 4,835,501 | 218 |
+| Oceania | 6 | 431,257 | 431 |
+
+**Europe is not a gap in the archive. It is a gap in this registry.** There is five and a half times
+more openly-licensed European tracking than North American, and none of the seven studies registered
+here is one of them. A single study — *LifeTrack White Stork SW Germany*, CC BY, 216 animals,
+2020–2026 — holds 89.7 million locations, more than the whole current lake.
+
+Three things about that list are worth stating before anyone acts on it.
+
+**A track cannot fix the bias in the findings, only in the map.** `phase1d-tracks.md` is binding:
+effort is not a measured denominator and the places a collar reaches are not a sample of anywhere, so
+no track source in this project carries a trend. Registering European storks widens what the globe
+*shows* and which taxa have a page; it does not produce a European result. The bias that
+`coverage-bias` publishes is about time series, and only a `SURVEY_INDEX` or `FLUX` source moves it.
+
+**One species covers both continents the request named.** White storks winter in Iberia and
+sub-Saharan Africa, so a LifeTrack study is a Europe-and-Africa track rather than a European one —
+and there are eight of them here spanning 2013–2026. That is unverified from the catalogue, whose
+`main_location` is the breeding colony; confirming the African leg is the first thing an ingest
+should print rather than something to assume.
+
+**Africa's list is mostly persecuted taxa, and that is an ethics surface rather than a download.**
+Hooded Vulture Africa (2013–2026), South Africa vultures, African lions in the Kalahari, wildebeest.
+Vultures are poisoned and lions are hunted; `redact.py` and the per-taxon sensitivity rules exist for
+exactly this, and every one of these needs a registry entry written by a person before it is fetched.
+The low-risk European set — storks, gulls, oystercatchers, red kites — carries no such problem.
+
+**Asia is thinner but not empty**, and the three worth a look are a Himalayan Griffon study in Bhutan
+(7.0M locations, 2014–2023), Black-necked crane in Bhutan, and LifeTrack White Stork Uzbekistan.
+
+### What actually moves the published bias
+
+Ranked by result-per-unit-work, which is not the same ranking as the table above:
+
+1. **SABAP1 against SABAP2 — already in the lake.** 3.1M and 16.6M rows, southern Africa,
+   `SURVEY_INDEX`, nothing to download. Pre-registered in `phase1e-atlas.md`, and its feasibility
+   question already came back yes. This is the only candidate that produces a non-northern *finding*
+   without a single new byte.
+2. **EBBA1 against EBBA2 — assessed 2026-08-04, and the answer is no.** See below.
+3. **The GBIF account exists now.** The blocker this note recorded for SABAP2's raw records —
+   "requires a free account" — no longer applies; `MIGRATLAS_CRED_GBIF_*` are configured. A
+   *within*-SABAP2 trend is therefore reachable, which the note previously ruled out.
+4. **European tracks**, for the map and the taxon gap, not for a finding.
+
+### The model question, which this note already answered
+
+Training on the North American data first is not a compromise to be apologised for — it is the first
+half of the transfer test the project committed to, and the rule above binds it: skill is reported
+on **held-out regions**, never held-out years, and any prediction into a region with no training data
+ships behind a geographic novelty mask. What makes that testable is having a second region at all.
+SABAP is that region. So the order is unchanged and is the order already in `TASKS.md`: the atlas
+comparison before the model, because otherwise there is nothing to fail against.
+
+
+## EBBA — checked 2026-08-04, and Europe has no finding-grade atlas pair on open terms
+
+The section above listed the European Breeding Bird Atlas pair as the Europe-shaped equivalent of the
+SABAP comparison, with the licence as the open question. Checked, and the pair does not survive it.
+The two halves are not symmetric and only one of them is usable.
+
+**EBBA1 is fully open and ingestable today.** Published to GBIF by the EBCC as *EBCC Atlas of
+European Breeding Birds*, key `c779b049-28f3-4daf-bbf4-0a40830819b6`, DOI
+[10.15468/adtfvf](https://doi.org/10.15468/adtfvf), **CC BY 4.0**, **1,339,711 occurrence records**,
+temporal coverage 1972–1995 with the atlas core in 1985–1988. The Darwin Core archive is served from
+`orphans.gbif.org` — the same host, for the same reason, as SABAP1, whose publisher IPT is also gone.
+Nothing about this half is blocked.
+
+**EBBA2 is not on GBIF at all**, and its own terms do not give us the half we would need:
+
+- Only the **50-km occurrence** layer is open. Abundance, breeding evidence, modelled maps *and the
+  EBBA1→EBBA2 change maps* are © EBCC and released "by approval by the EBCC and its partner
+  organisations".
+- Access is a **request form**, not a bulk endpoint, and the site states data handling fees may be
+  charged. Map downloads are PNG; the data itself is CSV on request. Neither is an ingest.
+- The **exact Creative Commons variant is not published anywhere public** — the site says "a Creative
+  Commons licence" and the specifics live in a policy document behind the request. For a gate that
+  enforces redistribution rights independently of animal sensitivity, an unnamed licence is a refusal
+  by default rather than something to assume in our favour.
+- The community agreement raises **potential co-authorship** on papers using the data. That is a
+  collaboration to enter deliberately, not a download.
+
+**And the deeper problem, which would still bite if every one of those were solved.** The open EBBA2
+layer is presence/absence per 50-km square with no effort, no visit count and no cards. SABAP's whole
+scientific value is that its cards make detection probability *identifiable*, which is what separates
+"the birds changed" from "the observers changed" — the confound `phase1e-atlas.md` is built around and
+the one that sinks most atlas comparisons. EBBA cannot support that on the open layer. EBBA2's own
+change maps deal with it by restricting to squares well covered in both periods, and those maps are
+precisely the copyrighted product. So the best available EBBA comparison would be a naive occupancy
+change with an unmeasurable observer confound, published beside a SABAP result that has the confound
+handled. That is a worse claim standing next to a better one, which is not an improvement.
+
+**What Europe does still have.**
+
+- **EBBA1 alone**, as a historical distribution extent layer. CC BY 4.0, 1.3M records, ingestable
+  now, and honest as `extent` rather than as change — the same card kind 2,909 species already use.
+- **National two-epoch atlases on GBIF**, which are unexplored and may be the real answer at a
+  smaller geographic claim. Visible in one search: Flanders 2000–2002 (**CC0**, 330,046 records),
+  The First Atlas of Breeding Birds in Britain and Ireland 1968–1972 (CC BY 4.0, 63,985), and three
+  Scottish atlases (CC BY 4.0). Several others are CC BY-**NC** — Ontario 1981–85 and 2001–05,
+  Vermont 1976–81 and 2003–07, Bulgaria, Milan — and whether a non-commercial clause clears this
+  project's redistribution gate is a question nobody has put to it yet.
+
+  A national pair is a smaller claim than "Europe" and a much better one than a bad continental
+  claim. Whether any pair carries per-visit effort is the thing to check, and it is the same check
+  that made SABAP viable.
+
+**Recorded conclusion.** EBBA does not change the order of work. SABAP remains the only atlas
+comparison this project can make on open terms with detection identifiable, and it is already in the
+lake. Europe's finding-grade path, if one exists, runs through a national atlas pair rather than the
+continental one, and through a question about non-commercial licences that the gate has never been
+asked.
+
+## Europe and Asia, probed for effort — 2026-08-04
+
+The EBBA assessment above ended by saying a national atlas pair might be the real answer and that
+whether one carries per-visit effort was the check to run. Run, against the GBIF registry and against
+sampled records rather than anybody's description, and the answer is better than the question: for
+Europe the best source is **not an atlas pair at all**, and Asia has a usable one too.
+
+The test each candidate had to pass is the one `phase1e-atlas.md` makes precise. Detection
+probability is estimable only from **repeat visits to the same place in the same season**, which in
+Darwin Core means a `SAMPLING_EVENT` dataset, or populated `samplingEffort` / `sampleSizeValue`, or
+many distinct `eventDate`s per locality. One record per species per square carries none of it.
+
+### Europe
+
+| Dataset | Licence | Type | Records | Years | Effort terms populated |
+| --- | --- | --- | --- | --- | --- |
+| **Swedish Bird Survey: Summer point counts** (Sommarpunktrutterna) | **CC0** | `SAMPLING_EVENT` | 490,869 | **1975–2024, 50** | eventID, samplingProtocol, individualCount, recordedBy |
+| **Swedish Bird Survey: Fixed routes** (Standardrutterna) | **CC0** | `SAMPLING_EVENT` | 468,933 | 1996–2025, 30 | same, line transect |
+| Watervogels — wintering waterbirds, Flanders | **CC0** | `SAMPLING_EVENT` | 1,074,842 | 1991–2025, 35 | + **samplingEffort** |
+| Broedvogels — breeding birds, Flanders | **CC0** | `OCCURRENCE` | 330,046 | 2000–2002 only | + samplingEffort as JSON minutes, **sampleSizeValue**, and **true absences** |
+| Censuses of breeding birds (Finland) | CC BY 4.0 | `OCCURRENCE` | 2,035,131 | 1915–2026, 83 | eventID only in the sample |
+| Bird Atlas 2007–2011 (Ireland) | CC BY 4.0 | `OCCURRENCE` | 458,185 | — | **nothing**; `eventDate` is literally `2007/2011` |
+
+**The Swedish Bird Survey is the find, and it is not an atlas.** It is a standardised annual route
+survey — structurally the same object as BBS, which is already in the lake as `SURVEY_INDEX` — under
+**CC0**, with an *unbroken fifty-year run* on the summer point counts. Repeat visits confirmed in the
+sample: 54 of 74 sites on the summer routes, 79 of 91 on the fixed routes. That is a European time
+series with effort, which is the thing this lake has never had, and it needs no atlas pairing to
+produce change.
+
+The Irish atlas is the EBBA failure again in miniature and is worth keeping in the table as the
+control: an open licence on a product with no dates and no effort is not a usable source.
+
+Flanders' Broedvogels deserves a note despite its three years: it records **explicit absences** and
+`{"observationMinutes": 55}` per event. That is what fully effort-controlled data looks like, and it
+is the shape to compare others against.
+
+### Asia
+
+| Dataset | Licence | Type | Records | Years | Effort terms populated |
+| --- | --- | --- | --- | --- | --- |
+| **Taiwan Breeding Bird Survey** | CC BY-**NC** 4.0 | `SAMPLING_EVENT` | 822,365 | 2009–2022, 14 | eventID, **parentEventID, samplingProtocol, samplingEffort** (`6 observer-minutes`), **sampleSizeValue**, individualCount |
+| **Taiwan New Year Bird Count** | **CC BY 4.0** | `SAMPLING_EVENT` | 208,228 | 2014–2025, 12 | eventID, parentEventID, individualCount |
+| Monitoring Sites 1000 Satoyama Birds (Japan) | CC BY 4.0 | `OCCURRENCE` | 103,069 | 2005–2013, 9 | none |
+
+The Taiwan Breeding Bird Survey is the **best-structured dataset this probe found anywhere**, Europe
+included: a nested event hierarchy with the protocol and the observer-minutes on every record, and
+every sampled site visited more than once. Its licence is the only thing in the way.
+
+### The non-commercial question, which is a decision and not a lookup
+
+`clear_for_publication` takes `redistribution_allowed` from the source's registry entry; it is a
+judgement a person records, not something derived from a licence string. CC BY-NC does **not** forbid
+redistribution — it forbids commercial use — so unlike eBird Status and Trends, which forbids
+republication outright, an NC source is not automatically refused. Whether this site counts as
+non-commercial, now and for as long as the data sits on it, is the question, and it decides whether
+Asia gets the 822,365-record survey or the 208,228-record one.
+
+### One thing all of them share, and how it is handled
+
+None of the `SAMPLING_EVENT` sets record explicit absences except Broedvogels. That is normal and it
+is not a blocker: with an event table you *derive* absence — a species not recorded at an event that
+did happen is an absence, and the events give the denominator. That derivation is exactly what makes
+detection estimable, and it is the same construction SABAP's cards support.
+
+### Where this leaves the coverage bias
+
+Two continents are reachable on open terms with effort, and neither is the atlas comparison this note
+spent two rounds assessing:
+
+1. **Sweden, CC0, fifty years** — the single best addition available to this project, and the first
+   European time series it would hold.
+2. **Taiwan, twelve years CC BY or fourteen years CC BY-NC** — the first Asian source of any kind.
+
+Both are `SURVEY_INDEX`, which the lake already has an adapter shape for in BBS and FISHGLOB. Neither
+displaces SABAP: that is still the only *southern-hemisphere* source with detection identifiable, and
+it is still already downloaded.
+---
+
+## Correction, 2026-08-05: the claim had been false since 30 July
+
+`coverage-bias` published **"0.0% of the radar record and 0.0% of the survey record lie south of the
+equator"** for six days after that stopped being true.
+
+The share was computed from the lake on every build, exactly as this project requires. The *list of
+sources to compute it over* was two string literals — `darkecology_daily` and `fishglob` — and
+`_southern_share`'s own docstring named the failure in advance:
+
+> Computed rather than quoted, because this is the finding most likely to become false silently —
+> the day a southern source lands, a hardcoded 0% would be a lie on the site.
+
+SABAP1 and SABAP2 landed on 2026-07-30. Neither was in the list, so 19.7 million rows at 22–35°S
+were not counted, and the site went on saying nobody had looked south while a whole finding about
+southern Africa sat two claims below it.
+
+**The rule was right and it was applied one level too shallow.** "Every published number is computed
+from the lake" was satisfied; what was typed was the *scope of the query*. A recomputed number over a
+hand-written population is a hand-written answer with a fresh timestamp on it.
+
+### What it should have said
+
+| | rows | southern | |
+| --- | --- | --- | --- |
+| `darkecology_daily` (flux) | 17,848,788 | 0 | 0.0% |
+| `bbs` | 7,548,397 | 0 | 0.0% |
+| `fishglob` | 2,831,609 | 0 | 0.0% |
+| `sabap1` | 3,123,626 | 3,123,626 | **100.0%** |
+| `sabap2` | 16,618,692 | 16,618,692 | **100.0%** |
+| `sbs_fixed_routes` | 468,933 | 0 | 0.0% |
+| `sbs_point_counts` | 490,869 | 0 | 0.0% |
+| seven `movebank_*` track sources | 6,031,750 | 0 | 0.0% |
+| **all** | **54,962,664** | **19,742,318** | **35.9%** |
+
+Tracks are counted now and were not before. They carry a time axis, the scope line has always said
+"every source in this project that has a usable time axis", and leaving them out was the same
+omission in miniature.
+
+### The finding is stronger for being true
+
+The interesting number turned out to be the one nobody had computed. **0 of 6,447,050 driver samples
+lie south of the equator** — every temperature, wind and counterfactual in the lake was taken over
+North America or the North Atlantic, including FISHGLOB's own measured sea temperatures, which span
+24.5°N to 62.0°N.
+
+So the evidence has crossed the equator and the explanatory data has not, and the claim now says
+that instead of a flat falsehood. It also explains, concretely, why the transfer test cannot be built
+yet: it needs a terrestrial-south climate sensitivity, and there is no southern temperature in this
+lake to fit one against.
+
+### The guard
+
+Enumerating sources instead of naming them is not the fix on its own, because the next omission would
+be an evidence *type*. `TIME_AXIS` and `POOLED` between them must cover every type holding data, and
+`_coverage` raises if one falls through rather than skipping it. Two tests: one asserts the maps are
+exhaustive against the lake, the other empties them and requires the build to stop.

@@ -5,11 +5,16 @@ them would be the drifting copy this module exists to avoid. What is asserted is
 nothing can be published without its scope, its caveat and a method note that exists.
 """
 
+import ast
 import json
+import re
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
+from migratlas.evidence import EvidenceType
+from migratlas.lake.reader import sources as lake_sources
 from migratlas.reports import findings
 from migratlas.reports.findings import Finding
 
@@ -17,10 +22,18 @@ REPO = Path(__file__).resolve().parents[1]
 
 PUBLISHED = REPO / "web" / "public" / "findings.json"
 
+# The two coverage guards below read the lake, and CI has none -- the same reason the ingest
+# suites gate on `--run-localdata`. Evaluated once at import so a missing lake skips them
+# rather than failing them, which is what a machine without the data should see.
+HAS_LAKE = any(lake_sources(kind) for kind in EvidenceType)
+
 
 def _finding(**overrides: object) -> Finding:
     fields: dict[str, object] = {
         "key": "test",
+        "plain": "A thing is different now.",
+        "matters": "Because it is.",
+        "plain_caveat": "It might not be.",
         "claim": "Something changed.",
         "value": "+1.0 units",
         "scope": "Somewhere, sometime.",
@@ -32,6 +45,81 @@ def _finding(**overrides: object) -> Finding:
     }
     fields.update(overrides)
     return Finding(**fields)  # type: ignore[arg-type]
+
+
+def test_no_published_value_is_a_number_someone_typed() -> None:
+    """The module's own rule, enforced against its syntax tree rather than trusted.
+
+    `findings.py` says every published number is recomputed from the lake on every build, and for
+    one finding it was not: `composition-stable`'s airspeed was a string with the figure written
+    into it, so `phase1c` could have moved and the site would have gone on publishing the old one.
+    That was fixed by hand and nothing stopped it coming back.
+
+    Checked on `value` alone, and deliberately not on `scope` or `claim`. Those carry numbers that
+    are properties of a source rather than results -- "29 harmonised surveys", "1995" -- and a rule
+    broad enough to catch those would be turned off within a month.
+
+    A name or a call passes: the requirement is that the figure came from somewhere, not that it
+    arrived through an f-string.
+    """
+    tree = ast.parse((REPO / "src" / "migratlas" / "reports" / "findings.py").read_text("utf-8"))
+    typed: list[str] = []
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)):
+            continue
+        if node.func.id != "Finding":
+            continue
+        for keyword in node.keywords:
+            if keyword.arg != "value":
+                continue
+            given = keyword.value
+            literal = isinstance(given, ast.Constant) and isinstance(given.value, str)
+            # An f-string with nothing interpolated into it is a literal wearing a prefix.
+            empty = isinstance(given, ast.JoinedStr) and not any(
+                isinstance(part, ast.FormattedValue) for part in given.values
+            )
+            if literal or empty:
+                typed.append(f"line {given.lineno}")
+    assert not typed, f"a published value is written out rather than computed: {typed}"
+
+
+@pytest.mark.skipif(not HAS_LAKE, reason="needs a lake")
+def test_the_coverage_claim_enumerates_its_sources_rather_than_naming_them() -> None:
+    """The bug this file did not catch, and the exact one its target predicted.
+
+    `_southern_share` computed each share from the lake and hardcoded *which two sources* to
+    compute it over. Its docstring said why that mattered -- "the day a southern source lands, a
+    hardcoded 0% would be a lie on the site" -- and then SABAP1 and SABAP2 landed, 19.7 million
+    rows at 22 to 35 degrees south, and the site went on publishing 0.0% southern for months.
+
+    Recomputing the number was never the weak point. Deciding what to recompute it over was. So
+    this asserts the *set*: every evidence type holding data is either declared to carry a time
+    axis or declared pooled, with no third option that means "quietly skipped".
+    """
+    live = [kind for kind in EvidenceType if lake_sources(kind)]
+    assert live, "no evidence in the lake, so this test proves nothing"
+    for kind in live:
+        assert kind in findings.TIME_AXIS or kind in findings.POOLED, (
+            f"{kind} holds data and the coverage claim does not account for it"
+        )
+
+
+@pytest.mark.skipif(not HAS_LAKE, reason="needs a lake")
+def test_a_new_evidence_type_stops_the_build_rather_than_being_skipped() -> None:
+    """And the enforcement, not only the declaration.
+
+    Asserting the maps are exhaustive is worth little if `_coverage` would shrug at a gap. Patched
+    rather than waited for: the point is that the omission is loud.
+    """
+    live = [kind for kind in EvidenceType if lake_sources(kind)]
+    orphan = next(iter(live))
+    with (
+        mock.patch.object(findings, "TIME_AXIS", {}),
+        mock.patch.object(findings, "POOLED", frozenset()),
+        pytest.raises(ValueError, match="0% southern"),
+    ):
+        findings._coverage()
+    assert orphan is not None
 
 
 def test_the_document_declares_its_schema_version() -> None:
@@ -59,7 +147,10 @@ def test_a_finding_round_trips_every_field_the_frontend_reads() -> None:
     [item] = document["findings"]
     assert set(item) == {
         "key",
+        "plain",
+        "matters",
         "claim",
+        "plain_caveat",
         "value",
         "scope",
         "caveat",
@@ -96,6 +187,74 @@ def test_every_published_finding_states_its_scope_and_caveat() -> None:
         assert item["caveat"].strip(), f"{item['key']} has no caveat"
         assert item["claim"].strip(), f"{item['key']} has no claim"
         assert item["value"].strip(), f"{item['key']} has no value"
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_every_published_finding_says_it_plainly_and_says_why_it_matters() -> None:
+    """The second register is required, exactly as the caveat is.
+
+    A precise sentence nobody outside the field can read is not a published finding, it is a
+    published artefact of one. Both registers or neither.
+    """
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    for item in document["findings"]:
+        for required in ("plain", "matters", "plain_caveat"):
+            assert item[required].strip(), f"{item['key']} has no {required}"
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_a_plain_sentence_stays_plain() -> None:
+    """Two ways it stops being the thing it was added to be.
+
+    Length, because a plain register that grows into a second dense paragraph has lost the reader
+    it exists for -- twice. And interval notation, because a sentence carrying `±` is not the plain
+    one: the measurement has its own field, set in a face with tabular figures, and duplicating it
+    here would be a second copy of a number that can drift.
+    """
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    for item in document["findings"]:
+        plain = item["plain"]
+        assert len(plain) <= findings.PLAIN_MAX_CHARS, (
+            f"{item['key']}'s plain sentence is {len(plain)} characters, "
+            f"over {findings.PLAIN_MAX_CHARS}"
+        )
+        assert "±" not in plain, f"{item['key']} puts an interval in its plain sentence"
+        assert "+/-" not in plain, f"{item['key']} puts an interval in its plain sentence"
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_the_precise_claim_is_still_published_in_full() -> None:
+    """The plain register is a second one, not a replacement.
+
+    ADR 0007 refuses to let the layout decide what the science says. Adding a shorter sentence
+    above the claim is fine; the failure this guards is the next change, where someone notices the
+    claim is now redundant and deletes it.
+    """
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    for item in document["findings"]:
+        assert item["claim"].strip(), f"{item['key']} has no claim"
+        assert item["claim"] != item["plain"], f"{item['key']} publishes one sentence twice"
+        assert item["caveat"] != item["plain_caveat"], f"{item['key']} publishes one caveat twice"
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_no_plain_sentence_claims_a_taxon_its_claim_does_not() -> None:
+    """The one way a plain rewrite can be dishonest rather than merely loose.
+
+    A plain sentence may drop precision. It may not add reach. `autumn-advance` is the live
+    temptation: "birds are migrating earlier" is what everyone wants it to say, the radar cannot
+    see a bird, and the whole of Phase 1c exists to bound exactly that.
+    """
+    creatures = re.compile(r"\bbird|\bbat\b|\bbats\b|\binsect|\bswallow|\bwarbler", re.IGNORECASE)
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    for item in document["findings"]:
+        if item["taxon_scope"] != "unattributed":
+            continue
+        named = creatures.search(item["plain"])
+        assert not named, (
+            f"{item['key']} is taxon_scope=unattributed but its plain sentence says "
+            f"{named.group(0)!r}"
+        )
 
 
 @pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
@@ -178,6 +337,43 @@ def test_every_published_finding_names_its_realm_taxon_scope_and_evidence_type()
     for item in document["findings"]:
         for required in ("realm", "taxon_scope", "evidence_type"):
             assert item[required].strip(), f"{item['key']} has no {required}"
+
+
+def test_the_coverage_block_counts_evidence_types_rather_than_naming_a_number() -> None:
+    """The bug this pins shipped for a while and nothing could have caught it.
+
+    The taxonomic line read "`track` is the fifth evidence type in use" while four were in use --
+    written when a fifth looked imminent, and then true of nothing. It is a count of the lake, so
+    it is substituted rather than typed, and asserting it twice with different counts is what makes
+    "substituted" mean something.
+    """
+    for count in (4, 6):
+        taxonomic = next(
+            entry for entry in findings._coverage_bias(count) if entry.domain == "taxonomic"
+        )
+        assert f"{count} of 7" in taxonomic.finding
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_a_published_interval_agrees_with_the_word_beside_it() -> None:
+    """A value that calls itself flat must have an interval that covers zero.
+
+    The composition claim asserts the mixture did not drift, and `collect` withholds it when the
+    fit says otherwise. This is the same check from the other end: a value that says "(flat)" while
+    its own interval excludes zero is a sentence contradicting its own number, and that is exactly
+    what a typed value drifting away from a recomputed one looks like.
+    """
+    pattern = re.compile(r"([+-]?\d+\.\d+)\s*±\s*(\d+\.\d+)")
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    for item in document["findings"]:
+        if "(flat)" not in item["value"]:
+            continue
+        match = pattern.search(item["value"])
+        assert match, f"{item['key']} calls itself flat with no interval to check: {item['value']}"
+        estimate, interval = float(match.group(1)), float(match.group(2))
+        assert abs(estimate) < interval, (
+            f"{item['key']} is published as flat at {estimate:+} ± {interval}, which excludes zero"
+        )
 
 
 @pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")

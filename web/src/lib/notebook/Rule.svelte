@@ -10,12 +10,25 @@
   // Measured, not stretched. See the note at the top of `ink.ts`: a stretched viewBox and a dash
   // animation cannot coexist, because the path lives in user units and the dashes in screen units.
   let width = $state(0);
+  let host = $state<SVGSVGElement | null>(null);
   let started = $state(false);
+  let length = $state(0);
 
-  const path = $derived(underline(seed, width));
-  // Derived rather than `$state(!draw)`, which captures only the prop's first value and would leave
-  // a rule permanently undrawn if `draw` ever flipped after mount.
-  const drawn = $derived(!draw || started);
+  const stroke = $derived(
+    tone === "rust" ? "var(--rust-ink)" : tone === "pencil" ? "var(--pencil)" : "var(--rule)",
+  );
+
+  // Redrawn whenever the width or the ink changes. rough.js draws each stroke twice, so the two
+  // passes have to be regenerated together rather than restyled.
+  $effect(() => {
+    if (!host || width <= 0) return;
+    host.replaceChildren();
+    underline(host, seed, width, stroke);
+    // Measured off the real path rather than assumed from the width: rough.js draws a line as two
+    // overlapping strokes, so the drawn length is roughly twice the span and a dasharray sized to
+    // the width would leave the second pass permanently half-drawn.
+    length = [...host.querySelectorAll("path")].reduce((total, path) => total + path.getTotalLength(), 0);
+  });
 
   $effect(() => {
     // Guarded on width so the animation starts when there is a line to draw, not on first paint at
@@ -24,53 +37,38 @@
     const frame = requestAnimationFrame(() => (started = true));
     return () => cancelAnimationFrame(frame);
   });
+
+  const drawn = $derived(!draw || started);
 </script>
 
 <svg
+  bind:this={host}
   class="rule rule--{tone}"
   class:rule--drawn={drawn}
   bind:clientWidth={width}
   viewBox="0 0 {Math.max(width, 1)} {RULE_HEIGHT}"
   height={RULE_HEIGHT}
+  style="--length: {Math.ceil(length) || 1}"
   aria-hidden="true"
->
-  <!-- The wobble is under 2px across the whole width, so the drawn length is the width to well
-       within a pixel. Close enough to skip a `getTotalLength` layout read on every resize. -->
-  <path d={path} style="--length: {Math.ceil(width * 1.02)}" />
-</svg>
+></svg>
 
 <style>
   .rule {
     display: block;
     width: 100%;
-    height: 8px;
+    height: 10px;
     overflow: visible;
   }
 
-  .rule path {
+  .rule :global(path) {
     fill: none;
-    stroke-width: 2;
     stroke-linecap: round;
     stroke-dasharray: var(--length);
     stroke-dashoffset: var(--length);
     transition: stroke-dashoffset var(--draw) var(--ease-pen);
   }
 
-  .rule--drawn path {
+  .rule--drawn :global(path) {
     stroke-dashoffset: 0;
-  }
-
-  .rule--rust path {
-    stroke: var(--rust-ink);
-  }
-
-  .rule--pencil path {
-    stroke: var(--pencil);
-    stroke-width: 1.2;
-  }
-
-  .rule--rule path {
-    stroke: var(--rule);
-    stroke-width: 1;
   }
 </style>

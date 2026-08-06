@@ -98,17 +98,20 @@ sandbox:  ## Recompute the analysis with each safeguard off -> web/public/sandbo
 provenance:  ## Regenerate docs/data/PROVENANCE.md from the source registry
 	$(RUN) migratlas catalog provenance
 
-.PHONY: taxon-index
-taxon-index:  ## Rebuild the frontend species index from the GBIF Backbone
-	$(RUN) migratlas taxonomy build-index --out web/public/taxon-index.json
+# No taxon-index target: the search index is written by build-layers, from what was
+# actually published. A second command writing that file is how it got clobbered once.
 
 .PHONY: taxon-names
-taxon-names:  ## Resolve common names for published taxa into the cache (slow, resumable)
+taxon-names:  ## Resolve display names for published taxa into the cache (slow, resumable)
 	$(RUN) migratlas taxonomy warm-names
 
 .PHONY: lake-check
 lake-check:  ## Report schema drift between the lake and the canonical schemas
 	$(RUN) migratlas lake-check
+
+.PHONY: lake-floor
+lake-floor:  ## Report rows the ingest floor would refuse today (add --apply to delete them)
+	$(RUN) migratlas lake-floor
 
 .PHONY: ingest-darkecology
 ingest-darkecology:  ## Dark Ecology radar profiles -> lake (FLUX, aerial)
@@ -233,3 +236,7 @@ ingest-sabap1:  ## SABAP1 atlas cards -> SURVEY_INDEX (terrestrial, southern hem
 .PHONY: ingest-cmip6
 ingest-cmip6:  ## CMIP6 historical + DAMIP hist-nat pre-season temperature -> lake (simulated)
 	$(RUN) migratlas ingest-cmip6
+
+.PHONY: build-species
+build-species:  ## One study page per animal -> web/public/species-study-NN.json
+	$(RUN) migratlas build-species

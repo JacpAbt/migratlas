@@ -255,7 +255,6 @@ def test_humans_never_enter_the_lake(key: int | None, name: str | None) -> None:
     [
         (2440944, "Rangifer tarandus"),
         (5219243, "Canis lupus"),
-        (None, None),
         (None, "Homo sapiens tracking study"),
     ],
 )
@@ -264,8 +263,23 @@ def test_the_floor_refuses_only_what_it_names(key: int | None, name: str | None)
 
     A substring match here would refuse a caribou study called "Homo sapiens impacts on Rangifer",
     and a gate that refuses the wrong things gets switched off.
+
+    `(None, None)` used to be a case here, asserting the floor said nothing when told nothing. That
+    was the bug rather than the contract -- see the test below.
     """
     admit_taxon_for_ingest("movebank", taxon_key=key, scientific_name=name)
+
+
+def test_the_floor_refuses_a_row_it_was_told_nothing_about() -> None:
+    """A gate asked about nothing cannot answer, and one that returns "fine" is not a gate.
+
+    Silently reachable until now: the Movebank adapter dropped null taxa before calling this, so
+    13,966 fixes of eight animals whose species the archive never recorded entered the lake
+    unscreened -- and no per-taxon sensitivity rule can reach a taxon nobody named.
+    """
+    for key, name in ((None, None), (None, ""), (None, "   ")):
+        with pytest.raises(IngestRefusedError, match="neither a taxon key nor"):
+            admit_taxon_for_ingest("movebank", taxon_key=key, scientific_name=name)
 
 
 def test_the_floor_holds_where_the_source_level_gate_is_satisfied() -> None:

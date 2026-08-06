@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Boxed from "../notebook/Boxed.svelte";
   import { REPOSITORY } from "../ledger";
   import { compare, format, type Knob } from "./sandbox";
 
@@ -28,6 +29,12 @@
     {#each knob.variants as option (option.key)}
       <label class="option" class:option--on={chosen === option.key}>
         <input type="radio" name={knob.key} value={option.key} bind:group={chosen} />
+        <Boxed
+          seed="{knob.key}:{option.key}"
+          shape="lasso"
+          tone={option.key === knob.default ? "rust" : "ink"}
+          active={chosen === option.key}
+        />
         <span>{option.label}</span>
         {#if option.key === knob.default}
           <em>published</em>
@@ -53,6 +60,7 @@
     <p class="knob__note">{variant.note}</p>
   {/if}
 
+  <p class="knob__plain">{knob.plain_why}</p>
   <p class="knob__why">{knob.why}</p>
   <p class="knob__source">
     <a href={`${REPOSITORY}src/migratlas/reports/sandbox.py`} rel="noopener" target="_blank">
@@ -81,13 +89,16 @@
     margin-top: var(--gap-tight);
   }
 
+  /* Circled when chosen rather than boxed always. Four bordered pills in a row is a segmented
+     control -- an interface saying "pick one of my modes". Four words with one looped is a reader
+     having chosen, which is what this panel is for. */
   .option {
+    position: relative;
     display: flex;
     align-items: baseline;
     gap: 0.3rem;
-    padding: 2px var(--gap-tight);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius);
+    padding: 0.2rem 0.55rem;
+    border: 0;
     font-family: var(--font-mono);
     font-size: 0.7rem;
     color: var(--ink-soft);
@@ -95,25 +106,32 @@
   }
 
   .option:hover {
-    background: var(--paper-sunken);
+    color: var(--ink);
   }
 
-  /* Marked by a drawn edge in the accent rather than a fill, so the published setting stays
-     identifiable as *published* rather than as merely selected. */
+  /* The loop is in the accent only on the published setting, so "this is where the claim stands"
+     and "this is what you have switched to" stay two different marks rather than one. */
   .option--on {
-    border-color: var(--rust-ink);
-    background: var(--paper-sunken);
     color: var(--ink);
   }
 
   /* The radio itself is the accessible control and the label is the visible one, so it is hidden
      rather than removed -- keyboard and screen-reader users get the real radiogroup. */
+  /* Covering its label rather than clipped to a pixel in the corner: a clipped radio stays in the
+     accessibility tree and stops being the hit target, so the span intercepts every click. */
   .option input {
     position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
+    inset: 0;
+    margin: 0;
+    appearance: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .option:focus-within {
+    outline: 2px solid var(--rust);
+    outline-offset: 2px;
   }
 
   .option em {
@@ -170,5 +188,11 @@
   code {
     font-family: var(--font-mono);
     font-size: 0.68rem;
+  }
+
+  /* The lesson first. A knob whose point is only made in the paragraph below it is a slider. */
+  .knob__plain {
+    margin: var(--gap-tight) 0 0;
+    color: var(--ink);
   }
 </style>

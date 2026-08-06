@@ -1,93 +1,151 @@
 /**
- * Every colour, size and duration in the project, in one place.
+ * Every colour, size, face and duration in the project, in one place.
  *
- * ADR 0007 commits to a night surface that is a *different artifact* rather than an inversion, and
- * that is only cheap if nothing ever hard-codes a hex. Nothing may: not a component, not the SVG
- * charts, not the MapLibre paint expressions, not the detectability ramp. If a colour appears as a
- * literal anywhere outside this file, the second surface becomes a rewrite instead of a token swap.
+ * ADR 0008. Nothing outside this file may hard-code a hex: the second surface, the type setting
+ * and the colour-vision test all depend on there being one place to change. That was already the
+ * rule and it held; what changed is how much now rides on it.
  *
- * Day is the default rather than being behind `prefers-color-scheme: light`, so a browser that
- * reports nothing sensible still gets a complete surface.
+ * Three things here are measured rather than chosen, and the measurements are in the comments
+ * beside them: the contrast of every text colour on its own paper, the separability of the green
+ * from the rust under red-green colour blindness, and the optical size of each type preset.
  */
 
 :root {
   /* --- Day: a naturalist's notebook on a desk ------------------------------ */
-  --paper: #f5efe2;
-  --paper-sunken: #ebe3d2;
-  --ink: #2f3d4f;
-  --ink-soft: #4a5a6d;
-  /* Two rusts, and the split is accessibility rather than taste. `--rust` is used on text and
-     clears 4.5:1 on paper at the sizes this page actually sets; `--rust-ink` is the brighter one
-     that reads better as a drawn stroke, and is only ever a stroke. Measured, not judged: the
-     original single #b4522e came out at 4.38:1, which fails for every label on the card. */
-  --rust: #a3441f;
-  --rust-ink: #b4522e;
+  /*
+    The cream is #efe9d8 and this is not it, on purpose: the grain below multiplies over this
+    value, so what a reader sees is `--paper` times the texture's mean rather than `--paper`. At a
+    mean of 250.5 that is a factor of 0.982, and this is #efe9d8 divided back out by it. Every
+    contrast figure in this file is measured against the composite, which is what the eye gets.
+  */
+  --paper: #f3eddc;
+  --paper-sunken: #e5dec9;
+  --ink: #26302a;
+  --ink-soft: #46524a;
+
+  /*
+    Two greens, and the split is measurement rather than taste -- the same reason the rust is
+    already two. On this paper the darkest green that clears 4.5:1 for text is #4a6b4e at 4.94, and
+    everything brighter fails. A drawn mark only has to clear 3:1, so a stroke can be markedly
+    lighter and greener, and a stroke is most of what reads as "the green".
+  */
+  --moss: #4a6b4e; /* text     4.94:1 */
+  --moss-ink: #5d8562; /* strokes  3.47:1 */
+
+  --rust: #a3441f; /* text     4.51:1 */
+  --rust-ink: #b4522e; /* strokes  3.72:1 */
   --pencil: #6b6157;
   --rule: #cdc0aa;
   --rule-faint: #ded3bf;
 
-  /* Statuses. Named for what they mean, never for their colour: a rename to "amber" would be a
-     lie the first time the night surface shifts it. */
+  /* Statuses. Named for what they mean, never for their colour. */
   --status-open: #a3441f;
   --status-bounded: #6b6157;
-  --status-addressed: #4b6650;
+  --status-addressed: #4a6b4e;
 
-  /* Chart ink. The ribbon's three lines and the detectability statuses live here rather than in
-     their components, because those four greys were tuned against parchment and will not survive
-     slate without being re-picked. */
+  /* Chart ink. */
   --line-observed: #b4522e;
   --line-counterfactual: #3d6b85;
   --line-scatter: #8b7a68;
+  /*
+    The detectability choropleth, and the one set here that a reader has no words for. A legend
+    names each class, but a cell on the globe is a colour and nothing else, so these are the pairs
+    the colour-vision test holds to a floor -- see `notebook.spec.ts`.
+
+    The three "cannot be measured here" greys are alike on purpose and are exempt from it: they are
+    26, 34 and 57 apart in ordinary vision, because a reader does not need to tell no-data from
+    no-effort from unknown at a glance, only from measurable. `short` was #d8bd7e and sat 43 from
+    `unknown` under deuteranopia, which is a real class boundary collapsing.
+  */
   --detect-none: #a39c8d;
   --detect-no-effort: #8b9487;
-  --detect-short: #d8bd7e;
+  --detect-short: #f2cf7d;
   --detect-yes: #b4522e;
+  --detect-unknown: #b5afa3;
 
-  /* Paper grain: two offset gradients at very low alpha. Cheap, tiles forever, survives zoom, and
-     is not a photograph of paper -- a photographic texture reads as a skin over a website. */
-  --grain: repeating-linear-gradient(103deg, rgb(124 98 74 / 2.5%) 0 1px, transparent 1px 4px),
-    repeating-linear-gradient(11deg, rgb(124 98 74 / 2%) 0 1px, transparent 1px 6px);
+  /* On the globe rather than on the paper. */
+  --night-shade: #41566b;
+  --selection-halo: #fdf8f0;
+  --shadow-sheet: 0 2px 24px rgb(38 48 42 / 16%);
 
-  /* --- Type --------------------------------------------------------------- */
-  /* `--font-hand` is headings only. ADR 0007: never a label, never a number, never below 20px.
-     It has no tabular figures, so a measurement set in it stops reading as a measurement. */
-  --font-hand: "Architects Daughter", "Comic Sans MS", cursive;
-  --font-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  /*
+    Paper, and this time it is paper.
+
+    A seamless CC0 scan from ambientCG, its *displacement* map rather than its colour map -- in a
+    PBR material the colour map is nearly flat, so the first version of this had no grain at all
+    and the ruled lines were doing the work.
+
+    The displacement map has the grain and, straight out of the archive, none of the tone: it is
+    centred on mid-grey, mean 152 of 255, because a height field says nothing about colour. Blended
+    `multiply` that is not a texture on cream paper, it is a 40% neutral-density filter over it,
+    and the page came out the colour of concrete. Both maps are re-centred on the neutral value of
+    the blend that uses them -- 250.5 for `multiply`, where 255 is "leave it alone", and 127.8 for
+    `soft-light`, where 128 is -- so each one now adds its variation and changes no tone. The
+    deviation is what a texture is; the mean was never part of it.
+
+        fibre  mean 152.2 sd 16.25  ->  mean 250.5 sd 4.93  (day, multiply)
+        rough  mean 139.8 sd 11.70  ->  mean 127.8 sd 2.60  (night, soft-light)
+
+    Night is the smoother of the two on purpose, and by a factor of four. `rough` is a *crumple*
+    map: its variation is large-scale creases rather than fibre, and at full amplitude on a
+    near-black ground that reads as foil rather than as paper. The mock this palette was chosen
+    from measured 2.06, so this is the same scan at the amplitude that was actually agreed --
+    surface you notice when you are not reading, and nothing more.
+
+    Greyscale, because the blend modes only ever use luminance, and 384px because grain is
+    high-frequency noise that does not reward resolution: 35 KB for both surfaces.
+  */
+  --grain: url("../assets/paper/fibre.webp");
+  --grain-size: 384px;
+  --grain-blend: multiply;
+
+  /* The sky, at night. `none` here so the day page pays nothing for it. */
+  --sky: none;
+  --stars: none;
+
+  /* --- Type ---------------------------------------------------------------- */
+  /*
+    Three presets, set by `state/type.ts` on the root element, and two of the three are
+    accessibility provisions rather than preferences. Each carries its own scale and leading
+    because the faces do not share an x-height -- dropping one in at the same pixel size makes it
+    look a size larger or smaller than the last, which is the whole of what "optimised" means here.
+  */
+  --font-hand: "Virgil", "Comic Sans MS", cursive;
+  --font-body: "Shantell Sans", "Trebuchet MS", sans-serif;
+  --font-scale-hand: 1.22;
+  --font-scale-body: 1;
+  --leading-body: 1.8;
+  --tracking-body: 0.004em;
+  --tracking-label: 0.09em;
+
+  /*
+    Mono is the one face no preset replaces. A column of figures has to line up and no handwriting
+    face has tabular digits -- Virgil's widest digit is half again its narrowest, which turns the
+    per-survey table on a species page into a stack of ragged numbers.
+  */
   --font-mono: "Plex Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
 
-  --size-claim: clamp(1.55rem, 1.1rem + 1.9vw, 2.1rem);
+  /* Scaled by the preset, because the faces do not share an x-height. Folded into the token
+     rather than into each consumer: every use of this is a hand heading. */
+  --size-claim: calc(clamp(1.55rem, 1.1rem + 1.9vw, 2.1rem) * var(--font-scale-hand));
   --size-body: 0.95rem;
   --size-value: 1.35rem;
   --size-margin: 0.66rem;
-  --size-label: 0.6rem;
+  --size-label: 0.62rem;
 
-  --leading-body: 1.55;
-  --leading-hand: 1.16;
+  --leading-hand: 1.3;
 
   /* --- Space and shape ---------------------------------------------------- */
   --gap-hair: 0.2rem;
   --gap-tight: 0.45rem;
   --gap: 0.9rem;
   --gap-wide: 1.6rem;
-  /* Wide enough that six bias domains do not run to 2,500px. Narrower reads more like a real
-     margin, and measured worse: the claim scrolled off before its own audit finished. */
   --margin-column: 19rem;
-  /* Height of the claim index pinned to the bottom of the shell. Stated once because two other
-     things have to clear it: the reading sheet's bottom padding, and MapLibre's own controls,
-     which default to the same corner and sat on top of it at every width. */
   --strip: 3.5rem;
-  /* MapLibre's attribution, which wraps to two lines on a phone. Reserved rather than hidden:
-     it is a licence notice, and on a narrow screen the reading sheet is full width, so without
-     this the credit printed across the bottom of the claim's own text. */
   --attrib: 3.25rem;
-
-  /* Nothing is a rectangle with a radius if a drawn line will do, so this is for the few things
-     that genuinely are boxes -- inputs, the odd button. */
   --radius: 3px;
 
   /* --- Motion ------------------------------------------------------------- */
-  /* Read by components rather than hard-coded, so the reduced-motion block below can zero all of
-     them at once instead of every component remembering to check. */
   --draw-slow: 900ms;
   --draw: 600ms;
   --draw-quick: 400ms;
@@ -95,80 +153,167 @@
   --ease-pen: cubic-bezier(0.32, 0.72, 0.35, 1);
 }
 
+/* --- The type presets ------------------------------------------------------ */
+
+/* Hand throughout: nothing on the page is typed except the figures. */
+:root[data-type="hand"] {
+  --font-hand: "Virgil", "Comic Sans MS", cursive;
+  --font-body: "Shantell Sans", "Trebuchet MS", sans-serif;
+  --font-scale-hand: 1.22;
+  --font-scale-body: 1;
+  --leading-body: 1.8;
+  --tracking-body: 0.004em;
+}
+
+/* Hand for headings only. Atkinson Hyperlegible was drawn by the Braille Institute, with the
+   letterforms separated on the features that blur first at low vision. */
+:root[data-type="clear"] {
+  --font-hand: "Excalifont", "Comic Sans MS", cursive;
+  --font-body: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --font-scale-hand: 1.12;
+  --font-scale-body: 1.06;
+  --leading-body: 1.85;
+  --tracking-body: 0.006em;
+}
+
+/* Made for dyslexia. Its x-height runs large, so it scales down where the others scale up. */
+:root[data-type="dyslexic"] {
+  --font-hand: "OpenDyslexic", system-ui, sans-serif;
+  --font-body: "OpenDyslexic", system-ui, sans-serif;
+  --font-scale-hand: 0.86;
+  --font-scale-body: 0.9;
+  --leading-body: 2;
+  --tracking-body: 0.02em;
+}
+
 /**
- * Night field notes.
+ * Night field notes, under the sky.
  *
- * Not the day palette inverted -- a different object, the way a notebook read by torchlight is a
- * different thing from one on a desk. The ember is deliberately not the rust: #b4522e on slate
- * loses the saturation that makes it read as *change* and *detectable*, so it moves warmer and
- * lighter to keep doing that job.
+ * Not the day palette inverted and not a warm black either -- both were tried. A warm black reads
+ * as this page with the lights off; a dark *blue* reads as a notebook outdoors, which is what a
+ * project about nocturnal migration is about. The stars are a faint scatter kept under the ruled
+ * lines and well under the text.
  *
- * `[data-surface]` wins over the media query in both directions, so an explicit choice always
- * beats the system preference -- including choosing day on a machine set to dark.
+ * The ink is moonlight rather than white on purpose. Pure white on this ground measures about
+ * 19:1, and that is the number that makes a dark interface hurt after five minutes; this is 13.5.
+ *
+ * The green and the rust are retuned for colour blindness rather than for looks, and the figures
+ * that used to be written here -- "130 and 146" -- do not reproduce. `notebook.spec.ts` now runs
+ * the Viénot simulation these were supposed to have come from, and the pair measures 91 under
+ * protanopia and 88 under deuteranopia. Comfortably clear of the floor, and not what was claimed;
+ * the claim was written by hand and never re-derived, which is exactly the failure this project
+ * refuses for a published number and had left standing in its own stylesheet.
+ *
+ * The floor itself only binds where colour is the whole message, which here is the detectability
+ * choropleth. The statuses are the same red-against-green and they measure 52 apart under
+ * protanopia by day, which is *below* it -- and they are compliant anyway, because every one of
+ * them is rendered with the word it means beside it. That is asserted rather than assumed.
+ *
+ * Written twice because a media query cannot join a selector list, and `light-dark()` would break
+ * `layers/detectability.ts`, which reads these tokens with `getPropertyValue` and would receive
+ * unresolved function text rather than a colour MapLibre can parse. A test asserts the two blocks
+ * resolve identically.
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-surface="day"]) {
-    --paper: #232b33;
-    --paper-sunken: #1c232a;
-    --ink: #d9d3c4;
-    --ink-soft: #b3ac9c;
-    --rust: #e59a6b;
-    --rust-ink: #d9814a;
-    --pencil: #a8a294;
-    --rule: #3d4750;
-    --rule-faint: #313a42;
+    --paper: #0d131e;
+    --paper-sunken: #070c14;
+    --ink: #d3dceb;
+    --ink-soft: #9fb0c6;
+    --moss: #8fe0b6;
+    --moss-ink: #6ec9a4;
+    --rust: #ffa870;
+    --rust-ink: #f79055;
+    --pencil: #8496ad;
+    --rule: #2b3648;
+    --rule-faint: #1d2635;
 
-    --status-open: #e59a6b;
-    --status-bounded: #a8a294;
-    --status-addressed: #7fa189;
+    --status-open: #ffa870;
+    --status-bounded: #8496ad;
+    --status-addressed: #8fe0b6;
 
-    --line-observed: #d9814a;
+    --line-observed: #f79055;
     --line-counterfactual: #7fb0cc;
-    --line-scatter: #8a8578;
-    --detect-none: #4a5259;
-    --detect-no-effort: #47544c;
-    --detect-short: #8f7f4f;
-    --detect-yes: #d9814a;
+    --line-scatter: #9aa8bd;
+    --detect-none: #4a5768;
+    --detect-no-effort: #4c6560;
+    --detect-short: #d5c08b;
+    --detect-yes: #f79055;
+    --detect-unknown: #5b6675;
 
-    /* Lighter still than the day grain: the same alpha over a dark ground reads as dirt. */
-    --grain: repeating-linear-gradient(103deg, rgb(217 211 196 / 2%) 0 1px, transparent 1px 4px),
-      repeating-linear-gradient(11deg, rgb(217 211 196 / 1.5%) 0 1px, transparent 1px 6px);
+    --night-shade: #8fa6bd;
+    --selection-halo: #0d131e;
+    --shadow-sheet: 0 2px 28px rgb(0 0 0 / 60%);
+
+    --grain: url("../assets/paper/rough.webp");
+    --grain-blend: soft-light;
+
+    --sky: radial-gradient(130% 85% at 22% 0%, rgb(70 110 165 / 20%) 0%, transparent 62%);
+    --stars:
+      radial-gradient(1.4px 1.4px at 18% 14%, rgb(226 236 255 / 50%) 50%, transparent),
+      radial-gradient(1.1px 1.1px at 62% 8%, rgb(226 236 255 / 36%) 50%, transparent),
+      radial-gradient(1.6px 1.6px at 83% 26%, rgb(255 240 220 / 40%) 50%, transparent),
+      radial-gradient(1px 1px at 34% 41%, rgb(226 236 255 / 32%) 50%, transparent),
+      radial-gradient(1.3px 1.3px at 9% 58%, rgb(226 236 255 / 28%) 50%, transparent),
+      radial-gradient(1px 1px at 71% 63%, rgb(255 240 220 / 30%) 50%, transparent),
+      radial-gradient(1.5px 1.5px at 45% 77%, rgb(226 236 255 / 36%) 50%, transparent),
+      radial-gradient(1.1px 1.1px at 91% 86%, rgb(226 236 255 / 26%) 50%, transparent),
+      radial-gradient(1.2px 1.2px at 26% 92%, rgb(255 240 220 / 28%) 50%, transparent);
   }
 }
 
 :root[data-surface="night"] {
-  --paper: #232b33;
-  --paper-sunken: #1c232a;
-  --ink: #d9d3c4;
-  --ink-soft: #b3ac9c;
-  --rust: #e59a6b;
-  --rust-ink: #d9814a;
-  --pencil: #a8a294;
-  --rule: #3d4750;
-  --rule-faint: #313a42;
+  --paper: #0d131e;
+  --paper-sunken: #070c14;
+  --ink: #d3dceb;
+  --ink-soft: #9fb0c6;
+  --moss: #8fe0b6;
+  --moss-ink: #6ec9a4;
+  --rust: #ffa870;
+  --rust-ink: #f79055;
+  --pencil: #8496ad;
+  --rule: #2b3648;
+  --rule-faint: #1d2635;
 
-  --status-open: #e59a6b;
-  --status-bounded: #a8a294;
-  --status-addressed: #7fa189;
+  --status-open: #ffa870;
+  --status-bounded: #8496ad;
+  --status-addressed: #8fe0b6;
 
-  --line-observed: #d9814a;
+  --line-observed: #f79055;
   --line-counterfactual: #7fb0cc;
-  --line-scatter: #8a8578;
-  --detect-none: #4a5259;
-  --detect-no-effort: #47544c;
-  --detect-short: #8f7f4f;
-  --detect-yes: #d9814a;
+  --line-scatter: #9aa8bd;
+  --detect-none: #4a5768;
+  --detect-no-effort: #4c6560;
+  --detect-short: #d5c08b;
+  --detect-yes: #f79055;
+  --detect-unknown: #5b6675;
 
-  --grain: repeating-linear-gradient(103deg, rgb(217 211 196 / 2%) 0 1px, transparent 1px 4px),
-    repeating-linear-gradient(11deg, rgb(217 211 196 / 1.5%) 0 1px, transparent 1px 6px);
+  --night-shade: #8fa6bd;
+  --selection-halo: #0d131e;
+  --shadow-sheet: 0 2px 28px rgb(0 0 0 / 60%);
+
+  --grain: url("../assets/paper/rough.webp");
+  --grain-blend: soft-light;
+
+  --sky: radial-gradient(130% 85% at 22% 0%, rgb(70 110 165 / 20%) 0%, transparent 62%);
+  --stars:
+    radial-gradient(1.4px 1.4px at 18% 14%, rgb(226 236 255 / 50%) 50%, transparent),
+    radial-gradient(1.1px 1.1px at 62% 8%, rgb(226 236 255 / 36%) 50%, transparent),
+    radial-gradient(1.6px 1.6px at 83% 26%, rgb(255 240 220 / 40%) 50%, transparent),
+    radial-gradient(1px 1px at 34% 41%, rgb(226 236 255 / 32%) 50%, transparent),
+    radial-gradient(1.3px 1.3px at 9% 58%, rgb(226 236 255 / 28%) 50%, transparent),
+    radial-gradient(1px 1px at 71% 63%, rgb(255 240 220 / 30%) 50%, transparent),
+    radial-gradient(1.5px 1.5px at 45% 77%, rgb(226 236 255 / 36%) 50%, transparent),
+    radial-gradient(1.1px 1.1px at 91% 86%, rgb(226 236 255 / 26%) 50%, transparent),
+    radial-gradient(1.2px 1.2px at 26% 92%, rgb(255 240 220 / 28%) 50%, transparent);
 }
 
 /**
  * Reduced motion is a full path, not a faster one.
  *
- * Every duration goes to zero, so an animation *lands in its final state on frame one* -- the end
- * of the animation, not a rushed version of it. Components read these variables instead of writing
- * their own durations, which is what makes one block enough.
+ * Every duration goes to zero, so an animation lands in its final state on frame one. Components
+ * read these rather than writing their own, which is what makes one block enough -- and
+ * `state/turn.ts` reads `--draw` to decide whether to start a page turn at all.
  */
 @media (prefers-reduced-motion: reduce) {
   :root {

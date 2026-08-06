@@ -96,6 +96,50 @@ def match_name(http: httpx.Client, name: str) -> TaxonMatch:
 _CODE = re.compile(r"^[A-Z0-9]{2,6}$")
 
 
+@dataclass(frozen=True, slots=True)
+class TaxonNames:
+    """What the Backbone calls a taxon, looked up by key rather than by a source's own label.
+
+    Both names come from one usage record, which is the point. A source's `taxon_label` is
+    whatever that dataset happened to publish, and 95 keys in this lake carry two or more of
+    them -- *Grus canadensis* and *Antigone canadensis* are one bird and one key. Showing a
+    reader whichever spelling the build read first is a coin toss, so the display name is
+    resolved from the key instead.
+    """
+
+    scientific: str
+    vernacular: str
+    """Empty when GBIF publishes no usable English name, which is a real answer and is cached."""
+
+
+def names_for(http: httpx.Client, usage_key: int, *, language: str = "eng") -> TaxonNames:
+    """Both display names for one usage key, in two requests rather than three.
+
+    The species record carries the canonical name and the curated vernacular, and the
+    vernacularNames list is needed to corroborate the latter -- so they are fetched together
+    rather than by two callers each paying for the detail record.
+    """
+    candidates = _published_names(http, usage_key, language)
+
+    detail = http.get(f"/species/{usage_key}")
+    detail.raise_for_status()
+    record: dict[str, Any] = detail.json()
+    curated = clean_vernacular(str(record.get("vernacularName", "")))
+
+    # The curated field carries no language guarantee -- for the hoary bat it returns
+    # "Eisgraue Haarschwanzfledermaus" -- so it counts only when corroborated by the
+    # language-filtered list.
+    vernacular = (
+        titlecase(curated)
+        if curated and not _CODE.match(curated) and curated.casefold() in candidates
+        else _most_published_name(candidates)
+    )
+    return TaxonNames(
+        scientific=str(record.get("canonicalName") or record.get("scientificName") or ""),
+        vernacular=vernacular or "",
+    )
+
+
 def vernacular_name(http: httpx.Client, usage_key: int, *, language: str = "eng") -> str | None:
     """Best common name for a taxon, or ``None`` if GBIF has none.
 
@@ -104,19 +148,7 @@ def vernacular_name(http: httpx.Client, usage_key: int, *, language: str = "eng"
     published, so picking by frequency yields "Maneater" for the great white shark and
     "Kelt" — a post-spawning condition, not a species — for Atlantic salmon.
     """
-    candidates = _published_names(http, usage_key, language)
-
-    detail = http.get(f"/species/{usage_key}")
-    detail.raise_for_status()
-    curated = clean_vernacular(str(detail.json().get("vernacularName", "")))
-
-    # The curated field carries no language guarantee -- for the hoary bat it returns
-    # "Eisgraue Haarschwanzfledermaus" -- so it counts only when corroborated by the
-    # language-filtered list.
-    if curated and not _CODE.match(curated) and curated.casefold() in candidates:
-        return titlecase(curated)
-
-    return _most_published_name(candidates)
+    return names_for(http, usage_key, language=language).vernacular or None
 
 
 _QUALIFIER = re.compile(r"[\[(][^\])]*[\])]")

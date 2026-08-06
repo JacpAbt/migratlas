@@ -187,10 +187,24 @@ def admit_taxon_for_ingest(
     *ingest* rather than publication because the publication gate can only refuse what it was told
     to look at.
 
+    **A row with no taxon at all is refused too**, and that is not a technicality. The floor answers
+    "is this species allowed here"; asked about nothing, it cannot answer, and a gate that returns
+    "fine" when it has not been told what it is looking at is not a gate. It was silently reachable:
+    the Movebank adapter dropped nulls before calling this, so 13,966 fixes of eight animals whose
+    species the archive never recorded went into the lake unscreened -- and per-taxon sensitivity
+    cannot be applied to a taxon nobody named either.
+
     Raises:
-        IngestRefusedError: if the taxon is refused outright.
+        IngestRefusedError: if the taxon is refused outright, or if there is no taxon to check.
     """
     normalised = " ".join(scientific_name.lower().split()) if scientific_name else None
+    if taxon_key is None and not normalised:
+        msg = (
+            f"Source {source_id!r} asked the floor to admit a row carrying neither a taxon key nor "
+            f"a scientific name. The floor cannot clear a species it was not told, and neither can "
+            f"the per-taxon sensitivity rules. Identify the rows or drop them at the ingest."
+        )
+        raise IngestRefusedError(msg)
     if taxon_key in NEVER_INGESTED_KEYS or (normalised in NEVER_INGESTED_NAMES):
         subject = scientific_name or f"taxon key {taxon_key}"
         msg = (

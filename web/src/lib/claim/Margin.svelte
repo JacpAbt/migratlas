@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ticked from "../notebook/Ticked.svelte";
   import Rule from "../notebook/Rule.svelte";
   import { BRACKET_WIDTH, bracket } from "../notebook/ink";
   import type { Finding } from "../ledger";
@@ -8,7 +9,13 @@
   // Measured for the same reason the rule is: stretched, a 3px hook on a 400px column becomes an
   // 8px flag, and the spine's wobble smears into a curve.
   let height = $state(0);
-  const spine = $derived(bracket(finding.key, height));
+  let spine = $state<SVGSVGElement | null>(null);
+
+  $effect(() => {
+    if (!spine || height <= 0) return;
+    spine.replaceChildren();
+    bracket(spine, finding.key, height, "var(--pencil)");
+  });
 
   // A domain reading "not applicable" is a real answer and is shown as one. What must never happen
   // is a domain missing from the block entirely, which would read as "no risk here".
@@ -25,13 +32,13 @@
 -->
 <aside class="margin" aria-label="How this claim could be wrong">
   <svg
+    bind:this={spine}
     class="margin__spine"
     bind:clientHeight={height}
     viewBox="0 0 {BRACKET_WIDTH} {Math.max(height, 1)}"
     width={BRACKET_WIDTH}
     aria-hidden="true"
   >
-    <path d={spine} />
   </svg>
 
   <div class="margin__body">
@@ -54,7 +61,7 @@
         <Rule seed={`${finding.key}-survived`} tone="rule" />
         <ul class="survived">
           {#each finding.supporting as line (line)}
-            <li>{line}</li>
+            <li><Ticked seed={line} on box={false} /><span>{line}</span></li>
           {/each}
         </ul>
       </section>
@@ -161,19 +168,20 @@
     list-style: none;
   }
 
+  /* A hanging tick, not a bullet, and now a drawn one rather than the U+2713 glyph -- which came
+     from whichever font had it and was the last mark on the page still set in type. Flex with the
+     mark on its own line-height, so a wrapping item still aligns under its first word. */
   .survived li {
+    display: flex;
+    gap: 0.3rem;
     font-family: var(--font-body);
     font-size: 0.76rem;
     line-height: 1.5;
-    /* A hanging tick, not a bullet: the marker is drawn in the gutter so wrapped lines align. */
-    padding-left: 0.85rem;
-    text-indent: -0.85rem;
     margin-bottom: var(--gap-hair);
   }
 
-  .survived li::before {
-    content: "✓ ";
-    color: var(--status-addressed);
+  .survived :global(.ticked) {
+    margin-top: 0.15rem;
   }
 
   .specimen p {

@@ -28,6 +28,7 @@ export interface Knob {
   question: string;
   /** What the safeguard is for. Without this a knob is a toy. */
   why: string;
+  plain_why: string;
   /** The ledger claim this knob belongs to, so it can be shown with it. */
   claim: string;
   /** Where in the code the parameter lives, so the reader can check. */
@@ -51,7 +52,7 @@ export interface SandboxDocument {
   refusals: Refusal[];
 }
 
-export const SANDBOX_SCHEMA = 1;
+export const SANDBOX_SCHEMA = 2;
 
 export async function loadSandbox(base: string): Promise<SandboxDocument> {
   const response = await fetch(`${base}sandbox.json`);

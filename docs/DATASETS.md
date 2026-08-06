@@ -118,9 +118,17 @@ Ordered by what unlocks the most, and each step has a reason to stop.
 2. **Finish SABAP2** (download queued) and measure the atlas-against-atlas change. *Stop if* the
    consistent-footprint rule leaves too few comparable cells, which is the failure mode Phase 1b
    already demonstrated is real.
-3. **Surface-water change as the first factor, as attribution only.** Southern Africa, the two atlas
-   epochs, and an explicit statement that it cannot enter the forecast. *Stop if* the effect is null:
-   write it up as a null and drop it, exactly as ENRAM and Candidate C were dropped.
+3. ~~**Surface-water change as the first factor, as attribution only.**~~ **Run 2026-08-05, and
+   dropped.** [`methods/phase1g-water.md`](methods/phase1g-water.md). The effect is not detectable:
+   partial *r* −0.036 over 496 cells, spatial nulls at p 0.59 and 0.79, and a one-sd water change
+   moving the response by 3.2% of one sd. Dropped as this step pre-committed. Two things are worth
+   keeping from it. The per-year water that would have matched the atlas windows is not
+   downloadable — 2015 onward only, earlier years are Earth Engine — so the test ran on a product
+   comparing 1984–1999 with 2000–2021 and is attenuated by construction; the null therefore means
+   "not detectable with this instrument", not "no association". And the placebo returned a naive
+   p of 0.031 in a subset chosen to show nothing, which the spatial null then dismissed at 0.085 —
+   the clearest demonstration this project has that an ordinary p-value over two autocorrelated
+   maps over-rejects.
 4. **Only if step 3 finds something worth projecting**, verify a LUH2 route and add the projectable
    form of that factor. Not before — a projectable driver with no established effect is a solution
    without a problem.

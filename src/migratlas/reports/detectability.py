@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION: Final = 2
+SCHEMA_VERSION: Final = 3
 """Bumped from 1: the document gained `withheld`, sources the gate holds and never draws."""
 
 CELL_DEG: Final = 1.0
@@ -130,6 +130,39 @@ RULES: Final[tuple[SourceRule, ...]] = (
         effort_note=(
             "Roadside by design, so the sample is not random with respect to land use, and "
             "observer skill is the best-documented bias in the dataset."
+        ),
+    ),
+    SourceRule(
+        source_id="sbs_point_counts",
+        evidence_type=EvidenceType.SURVEY_INDEX,
+        realm="terrestrial",
+        latitude="site_latitude",
+        longitude="site_longitude",
+        unit="site",
+        ceiling="detectable",
+        reason="The same route, the same twenty points, every spring since 1975 -- fifty years.",
+        effort_note=(
+            "A coordinate is the centre of the 25 km square the route sits in, not the route, so "
+            "nothing finer than that square is supported. Eleven species are withheld nationally "
+            "by the publisher and are absent from every visit, so an absence derived for one of "
+            "them would be manufactured."
+        ),
+    ),
+    SourceRule(
+        source_id="sbs_fixed_routes",
+        evidence_type=EvidenceType.SURVEY_INDEX,
+        realm="terrestrial",
+        latitude="site_latitude",
+        longitude="site_longitude",
+        unit="site",
+        ceiling="detectable",
+        reason=(
+            "One route in every 25 km square of a national grid, walked the same way each spring "
+            "since 1996 -- a systematic design rather than a roadside one."
+        ),
+        effort_note=(
+            "Sixteen taxa are withheld nationally, five of them mammals, and are absent from every "
+            "visit. Coordinates are the survey square's centre."
         ),
     ),
     SourceRule(
@@ -320,6 +353,37 @@ class Grid:
     v: list[int]
 
 
+# The refusal in a sentence, per withheld source. Not on the gate's rule: the gate decides what may
+# be published and this decides what that decision is called, and a prose field on a capability is
+# an invitation to soften a reason until it suits the page.
+#
+# Required, not optional. `_plain_refusal` raises for a source that has none, because the failure
+# mode of a lookup with a fallback is a refusal page that explains nothing in the one place a reader
+# most needs it explained.
+PLAIN_REFUSALS: Final = {
+    "movebank_mountain_caribou_bc": (
+        "These caribou live in herds of a few dozen, and some of those herds died out during the "
+        "study. Where a small herd is, is where all of it is."
+    ),
+    "movebank_hebblewhite_wolves": (
+        "People have used tracking collars to find and shoot wolves. This is the case where that "
+        "is documented rather than feared."
+    ),
+}
+
+
+def _plain_refusal(source_id: str) -> str:
+    """The one-line reason this source is drawn nowhere."""
+    plain = PLAIN_REFUSALS.get(source_id)
+    if not plain:
+        msg = (
+            f"{source_id} is withheld and has no plain-language reason in PLAIN_REFUSALS. The "
+            f"refusal page is this project's ethics in one screen; it does not ship a blank."
+        )
+        raise ValueError(msg)
+    return plain
+
+
 @dataclass(frozen=True, slots=True)
 class Withheld:
     """A source held in the lake and never drawn, with the reason a reader can check."""
@@ -329,6 +393,14 @@ class Withheld:
     taxon: str
     sensitivity: str
     reason: str
+    plain_reason: str
+    """The refusal in one sentence, since this page is the project's ethics in one screen.
+
+    Held here rather than on the gate's rule. The gate is a capability that decides what may be
+    published; what a decision is *called* on a web page is this layer's job, and giving the gate a
+    prose field invites editing the reason to suit the page.
+    """
+
     span: tuple[int, int]
     individuals: int
 
@@ -481,6 +553,7 @@ def _withheld() -> list[Withheld]:
                 taxon=str(frame["taxon"][0]),
                 sensitivity=str(sensitivity),
                 reason=" ".join(rule.rationale.split()),
+                plain_reason=_plain_refusal(source_id),
                 span=(int(frame["first"][0]), int(frame["last"][0])),
                 individuals=int(frame["individuals"][0]),
             )

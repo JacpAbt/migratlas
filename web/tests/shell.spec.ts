@@ -83,8 +83,12 @@ test("a visitor lands on a claim, with its number and its caveat", async ({ page
   // The number in full, on the first screen, with its interval. An arrival that said "something is
   // changing" and made you click for the figure would invert what this project is for.
   await expect(page.locator(".arrival__value")).toHaveText(/[−-]?\d+\.\d+/);
-  await expect(page.locator(".arrival__scope")).not.toBeEmpty();
+  await expect(page.locator(".arrival__matters")).not.toBeEmpty();
   await expect(page.locator(".arrival__caveat")).not.toBeEmpty();
+
+  // The heading is the plain register, and it must not have gained a taxon the instrument cannot
+  // see. This is the one sentence most likely to be quoted, and the radar measures aerial biomass.
+  await expect(page.locator("#arrival-claim")).not.toHaveText(/\bbirds?\b/i);
 
   // Both ways out, offered together rather than one after the other.
   await expect(page.getByRole("button", { name: /show me how you know/i })).toBeVisible();
@@ -132,8 +136,11 @@ test("choosing another claim flies the camera and swaps the evidence", async ({ 
   await page.getByRole("button", { name: /show me how you know/i }).click();
   const before = await settled(page);
 
-  await page.locator(".tab", { hasText: /poleward/i }).click();
-  await expect(page.locator(".claim__title")).toHaveText(/poleward/i);
+  await page.locator('.tab[data-claim="marine-null"]').click();
+  // The heading is the plain sentence and the precise claim is rendered under it, so the swap is
+  // checked on both registers rather than on whichever one happens to be the heading today.
+  await expect(page.locator(".claim__title")).toHaveText(/fish/i);
+  await expect(page.locator(".claim__precise")).toHaveText(/poleward/i);
 
   const after = await settled(page);
   const moved = Math.abs(after.lon - before.lon) + Math.abs(after.lat - before.lat);
@@ -157,10 +164,95 @@ test("choosing another claim flies the camera and swaps the evidence", async ({ 
   );
 });
 
+test("a claim has its own address, and the back button honours it", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /show me how you know/i }).click();
+
+  await page.locator('.tab[data-claim="marine-null"]').click();
+  await expect(page).toHaveURL(/c=marine-null/);
+
+  await page.locator('.tab[data-claim="coverage-bias"]').click();
+  await expect(page).toHaveURL(/c=coverage-bias/);
+
+  // `pushState` per claim, so back means the last claim read. The clock deliberately uses
+  // `replaceState` in the same hash -- animating it would push hundreds of entries -- and the two
+  // have to coexist without either erasing the other.
+  await page.goBack();
+  await expect(page).toHaveURL(/c=marine-null/);
+  await expect(page.locator(".claim__precise")).toHaveText(/poleward/i);
+});
+
+test("a link to a claim opens the claim, not the arrival card", async ({ page }) => {
+  // Someone following a link to a specific finding has already been told what it is. The card
+  // would be an interstitial between them and the thing they clicked for.
+  await page.goto("?debug=1#c=anthropogenic-share");
+  await expect(page.locator(".claim__title")).toBeVisible();
+  await expect(page.locator(".arrival__card")).toHaveCount(0);
+  await expect(page.locator(".claim__precise")).toHaveText(/human forcing/i);
+});
+
+test("choosing an animal says what is known about it, not just where it is", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+  await expect(page.locator(".explore")).toBeVisible();
+
+  // Atlantic mackerel: measured in fourteen bottom-trawl surveys, which disagree.
+  await page.getByRole("searchbox").fill("Scomber scombrus");
+  await page.locator(".hits button").first().click();
+
+  const study = page.locator(".study");
+  await expect(study).toBeVisible();
+  await expect(study.locator("h3")).toHaveText(/Scomber scombrus/);
+
+  // The rows are the point. `marine-null` claims surveys disagree in direction, and until these
+  // were published the only number on the site was the median that averages them out.
+  const rows = study.locator(".study__rows div");
+  expect(await rows.count()).toBeGreaterThan(3);
+  await expect(study.locator(".study__caveat")).not.toBeEmpty();
+});
+
+test("an animal the gate refuses has a page saying so, with no location on it", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+  await page.getByRole("searchbox").fill("Canis lupus");
+  await page.locator(".hits button").first().click();
+
+  const withheld = page.locator(".study__one--withheld");
+  await expect(withheld).toBeVisible();
+  await expect(withheld).toContainText(/held back/i);
+  // The rationale, not just the refusal. An unexplained refusal cannot be reviewed.
+  await expect(withheld.locator(".study__caveat")).toContainText(/Cooke et al/);
+
+  // And nothing on it could put anyone within reach of an animal.
+  const prose = (await withheld.textContent()) ?? "";
+  expect(prose).not.toMatch(/-?\d{1,3}\.\d{3,}/);
+});
+
+test("a species page is fetched only when a species is chosen", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+  await expect(page.locator(".explore")).toBeVisible();
+
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    if (/species-study-\d+\.json/.test(request.url())) asked.push(request.url());
+  });
+
+  // Typing must not cost a shard. 2.2 MB of study pages has no business loading for a reader who
+  // is looking at the globe.
+  await page.getByRole("searchbox").fill("Scomber");
+  await expect(page.locator(".hits button").first()).toBeVisible();
+  expect(asked, "a keystroke fetched a study shard").toEqual([]);
+
+  await page.locator(".hits button").first().click();
+  await expect(page.locator(".study")).toBeVisible();
+  expect(asked.length, "choosing a species fetched more than its own shard").toBe(1);
+});
+
 test("just the map means the whole map, not the last claim's filter", async ({ page }) => {
   await arrive(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
-  await page.locator(".tab", { hasText: /poleward/i }).click();
+  await page.locator('.tab[data-claim="marine-null"]').click();
   await settled(page);
 
   await page.getByRole("button", { name: /just the map/i }).click();
@@ -190,8 +282,14 @@ test("the index names every claim and says what each one found", async ({ page }
   await page.getByRole("button", { name: /just let me explore/i }).click();
 
   const tabs = page.locator(".tab");
-  // One per claim, plus the way back to the bare globe.
-  await expect(tabs).toHaveCount(6);
+  // One per claim, plus the way back to the bare globe. Counted from the ledger rather than written
+  // here: this was a literal 6, so landing a sixth finding failed a test about the *index* for a
+  // reason that had nothing to do with the index.
+  const published = await page.request
+    .get("findings.json")
+    .then((r) => r.json() as Promise<{ findings: unknown[] }>);
+  expect(published.findings.length).toBeGreaterThan(1);
+  await expect(tabs).toHaveCount(published.findings.length + 1);
 
   // Whether each found a change, a null or a limit, in words, before anyone clicks. An index of
   // only the positives would be lying by selection.
@@ -289,25 +387,38 @@ for (const [device, width, height] of [
     // matters and failed on CI over a few pixels of harmless overlap while the notice was perfectly
     // readable. Occlusion is the real test: ask the browser what is actually on top at the centre of
     // each control, and require it to be that control.
-    const buried = await page.evaluate(() => {
-      const hits: string[] = [];
-      for (const selector of [
-        ".maplibregl-ctrl-attrib",
-        ".maplibregl-ctrl-group",
-        ".maplibregl-ctrl-scale",
-      ]) {
-        for (const node of document.querySelectorAll(selector)) {
-          const box = node.getBoundingClientRect();
-          if (box.width === 0 || box.height === 0) continue;
-          const at = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-          if (!at || !(node.contains(at) || at.contains(node))) {
-            hits.push(`${selector} is under ${at?.className || at?.tagName || "nothing"}`);
-          }
-        }
-      }
-      return hits;
-    });
-    expect(buried, buried.join("; ")).toEqual([]);
+    // Polled, not sampled once. The attribution control registers each source's credit as that
+    // source loads and only then collapses to its compact "i", so a single reading can catch it
+    // spread across the whole width of a 390px phone with its centre under the sheet -- which is
+    // what it did, intermittently, and only under full-suite load. The requirement is about the
+    // settled page; a control that is really buried stays buried and this still fails.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const hits: string[] = [];
+            for (const selector of [
+              ".maplibregl-ctrl-attrib",
+              ".maplibregl-ctrl-group",
+              ".maplibregl-ctrl-scale",
+            ]) {
+              for (const node of document.querySelectorAll(selector)) {
+                const box = node.getBoundingClientRect();
+                if (box.width === 0 || box.height === 0) continue;
+                const at = document.elementFromPoint(
+                  box.left + box.width / 2,
+                  box.top + box.height / 2,
+                );
+                if (!at || !(node.contains(at) || at.contains(node))) {
+                  hits.push(`${selector} is under ${at?.className || at?.tagName || "nothing"}`);
+                }
+              }
+            }
+            return hits;
+          }),
+        { message: "something the map owns is printed over the claim" },
+      )
+      .toEqual([]);
   });
 }
 
@@ -326,7 +437,7 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   // Not on the first claim: a chart on every claim would be decoration.
   await expect(page.locator(".chart__svg")).toHaveCount(0);
 
-  await page.locator(".tab", { hasText: /Human forcing/i }).click();
+  await page.locator('.tab[data-claim="anthropogenic-share"]').click();
   const charts = page.locator(".chart__svg");
   await expect(charts.first()).toBeVisible();
 
@@ -369,8 +480,14 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   // by a factor of two with no explanation would be worse than publishing one of them.
   const gap = page.locator(".pair__gap");
   await expect(gap).toContainText(/differ/i);
-  await expect(gap.locator("p")).toContainText("not two estimates of one number");
-  const size = await gap.locator("p").evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
+  // Two registers here now, as on a claim. Retargeted rather than loosened: `.pair__gap p` would
+  // match either paragraph, so it would go on passing while the precise text was quietly dropped.
+  await expect(gap.locator(".pair__plain")).toContainText("neither is wrong");
+  await expect(gap.locator(".pair__precise")).toContainText("not two estimates of one number");
+
+  const size = await gap
+    .locator(".pair__precise")
+    .evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
   const footnote = await page
     .locator(".pair__caveat")
     .evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
@@ -380,7 +497,7 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
 test("the detectability assessment is the coverage claim's own number", async ({ page }) => {
   await arrive(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
-  await page.locator(".tab", { hasText: /northern-hemis/i }).click();
+  await page.locator('.tab[data-claim="coverage-bias"]').click();
 
   const coverage = page.locator(".coverage");
   await expect(coverage).toBeVisible();
@@ -419,9 +536,17 @@ test("explore carries the tools, with the terms every drawn layer was published 
   const explore = page.locator(".explore");
   await expect(explore).toBeVisible();
 
-  // One toggle per layer, including the assessment, which starts off.
+  // One toggle per layer, including the assessment, which starts off. Counted from the manifest
+  // rather than written here: the literal was 4 and publishing a fifth layer broke this test
+  // instead of the thing it is meant to protect, which is that every layer gets a control.
+  const published = await page.evaluate(async () => {
+    const manifest = (await fetch("layers/manifest.json").then((r) => r.json())) as unknown[];
+    return manifest.length;
+  });
   const toggles = explore.locator(".layers input");
-  await expect(toggles).toHaveCount(4);
+  await expect(toggles, "a published layer has no toggle, or one has two").toHaveCount(
+    published + 1,
+  );
 
   // Required, not decorative: published data must never be separable from the terms it was
   // published under. This is the assertion the old page had and the shell has to keep.
@@ -471,6 +596,41 @@ test("searching an animal draws it and says which one is shown", async ({ page }
   await expect(page.locator(".chosen")).toContainText(/Showing/);
   await page.locator(".chosen__clear").click();
   await expect(page.locator(".chosen")).toHaveCount(0);
+});
+
+/**
+ * A bird with a result and no surface.
+ *
+ * The other half of the search: `taxon-index.json` holds what is drawn, `species-index.json` holds
+ * what is only studied, and every SABAP bird is in the second. The test above searches a whale that
+ * has a layer, so it never touched this path.
+ */
+
+test("a studied bird has a page, and it carries both numbers", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+
+  await page.locator("#taxon-search").fill("Acridotheres");
+  const hits = page.locator(".hits button");
+  await expect(hits.first()).toBeVisible();
+  await hits.first().click();
+
+  const card = page.locator(".study__one--occupancy");
+  await expect(card).toBeVisible();
+
+  // This read `undefined` for 560 birds when it shipped. The label is a Record keyed by a
+  // TypeScript union, the kinds are written in Python, and the shard JSON is cast rather than
+  // validated -- so nothing in `tsc` could see the missing entry. `test_species_pages.py` guards
+  // the coverage; this asserts a reader sees the words.
+  await expect(card.locator(".study__kind")).toHaveText("how much of the region it occupies");
+
+  // The exhibit this wave exists for. The atlas finding's second claim is that correcting for
+  // detection did not change the answer, and a reader can only check that against a number.
+  await expect(card.locator(".study__rows dt")).toHaveText([
+    "Occupancy, corrected for detection",
+    "Reporting rate, uncorrected",
+    "Against the other five-year window",
+  ]);
 });
 
 /**
@@ -545,7 +705,7 @@ test("the refusal is on the claim it refutes, and its wrong answer takes a click
 
   // Not on the autumn advance: it is the marine null's counter-analysis.
   await expect(page.locator(".refusal")).toHaveCount(0);
-  await page.locator(".tab", { hasText: /poleward/i }).click();
+  await page.locator('.tab[data-claim="marine-null"]').click();
 
   const refusal = page.locator(".refusal");
   await expect(refusal).toBeVisible();

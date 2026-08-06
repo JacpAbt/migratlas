@@ -20,7 +20,7 @@ from migratlas.drivers import era5, narr
 from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan_dataset
-from migratlas.metrics.phenology import passage_quantiles
+from migratlas.metrics.phenology import Season, passage_quantiles
 from migratlas.reports.phase1 import (
     AUTUMN,
     LATITUDE_BANDS,
@@ -491,6 +491,72 @@ def _airspeed_nights(max_year: int) -> pl.DataFrame:
     )
 
 
+class SpeedTrend(NamedTuple):
+    """Per-decade drift in one speed measure, across the stations long enough to fit it."""
+
+    mean: float
+    ci95: float
+    level: float
+    """Reflectivity-weighted mean over every station-year, in m/s. The level, not the drift."""
+
+    stations: int
+
+    @property
+    def flat(self) -> bool:
+        """Indistinguishable from zero. The composition claim is only true while this holds."""
+        return abs(self.mean) < abs(self.ci95)
+
+
+def _per_station_year(nights: pl.DataFrame, season: Season) -> pl.DataFrame:
+    """One row per station-year, each speed weighted by the traffic that produced it."""
+    seasonal = nights.filter(pl.col("doy").is_between(season.start_doy, season.end_doy))
+    if seasonal.is_empty():
+        return seasonal
+    return seasonal.group_by("station_id", "year").agg(
+        _weighted_mean(seasonal, "airspeed", "magnitude").alias("airspeed"),
+        _weighted_mean(seasonal, "wind_speed", "magnitude").alias("wind_speed"),
+        _weighted_mean(seasonal, "ground_speed", "magnitude").alias("ground_speed"),
+        pl.len().alias("nights"),
+    )
+
+
+def _speed_trend(per_station_year: pl.DataFrame, column: str) -> SpeedTrend | None:
+    """Mean per-decade slope across stations, each fitted with a break at the fleet midpoint."""
+    slopes = []
+    for (_station,), group in per_station_year.group_by(["station_id"]):
+        if group.height < MIN_YEARS:
+            continue
+        fit = _fit_break(
+            group["year"].to_numpy(),
+            group[column].to_numpy().astype(float),
+            FLEET_MIDPOINT_YEAR,
+        )
+        if fit is not None:
+            slopes.append(fit.trend * 10.0)
+    if not slopes:
+        return None
+    mean, ci = _mean_ci(np.asarray(slopes, dtype=float))
+    level = float(per_station_year[column].to_numpy().astype(float).mean())
+    return SpeedTrend(mean=mean, ci95=ci, level=level, stations=len(slopes))
+
+
+def airspeed_trend(season: Season, *, max_year: int = 2025) -> SpeedTrend | None:
+    """The airspeed drift for one season, as a number rather than as a line of a report.
+
+    `reports/findings.py` publishes this, and publishes it only while it is flat -- the
+    composition claim asserts the mixture did not change, so the claim and the fit have to be
+    the same fit. Returning `None` when the wind is not in the lake is deliberate: a ledger
+    entry is better absent than computed from a season that never joined.
+    """
+    nights = _airspeed_nights(max_year)
+    if nights.is_empty():
+        return None
+    per_station_year = _per_station_year(nights, season)
+    if per_station_year.is_empty():
+        return None
+    return _speed_trend(per_station_year, "airspeed")
+
+
 def composition(*, max_year: int = 2025) -> list[str]:
     """Test C -- did the mixture drift, once the wind is taken out of the ground speed?
 
@@ -522,12 +588,7 @@ def composition(*, max_year: int = 2025) -> list[str]:
         seasonal = nights.filter(pl.col("doy").is_between(season.start_doy, season.end_doy))
         if seasonal.is_empty():
             continue
-        per_station_year = seasonal.group_by("station_id", "year").agg(
-            _weighted_mean(seasonal, "airspeed", "magnitude").alias("airspeed"),
-            _weighted_mean(seasonal, "wind_speed", "magnitude").alias("wind_speed"),
-            _weighted_mean(seasonal, "ground_speed", "magnitude").alias("ground_speed"),
-            pl.len().alias("nights"),
-        )
+        per_station_year = _per_station_year(nights, season)
         lines.append(f"\n  {season.name}, {per_station_year.height} station-years")
 
         for column, label in (
@@ -535,26 +596,13 @@ def composition(*, max_year: int = 2025) -> list[str]:
             ("wind_speed", "NARR wind speed"),
             ("airspeed", "AIRSPEED"),
         ):
-            slopes = []
-            for (_station,), group in per_station_year.group_by(["station_id"]):
-                if group.height < MIN_YEARS:
-                    continue
-                fit = _fit_break(
-                    group["year"].to_numpy(),
-                    group[column].to_numpy().astype(float),
-                    FLEET_MIDPOINT_YEAR,
-                )
-                if fit is not None:
-                    slopes.append(fit.trend * 10.0)
-            if not slopes:
+            trend = _speed_trend(per_station_year, column)
+            if trend is None:
                 continue
-            mean, ci = _mean_ci(np.asarray(slopes, dtype=float))
-            level = float(per_station_year[column].to_numpy().astype(float).mean())
-            verdict = "flat" if abs(mean) < abs(ci) else "MOVES"
             lines.append(
-                f"    {label:<18} mean {level:5.2f} m/s   "
-                f"trend {mean:+.3f} +/- {ci:.3f} m/s per decade  "
-                f"({len(slopes)} stations) {verdict}"
+                f"    {label:<18} mean {trend.level:5.2f} m/s   "
+                f"trend {trend.mean:+.3f} +/- {trend.ci95:.3f} m/s per decade  "
+                f"({trend.stations} stations) {'flat' if trend.flat else 'MOVES'}"
             )
 
         # The level question, separate from the drift one: how much of the traffic is moving

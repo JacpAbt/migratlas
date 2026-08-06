@@ -1,9 +1,12 @@
 {
- "schema_version": 2,
+ "schema_version": 3,
  "findings": [
   {
    "key": "autumn-advance",
+   "plain": "Whatever flies over the middle of the United States on autumn nights is passing earlier in the year than it did thirty years ago.",
+   "matters": "Timing is most of how migration works: animals move when weather, daylight and food line up. When the calendar shifts and the things it is tuned to do not, animals arrive somewhere that has already moved on without them.",
    "claim": "Nocturnal autumn passage over the mid-latitude US is happening earlier.",
+   "plain_caveat": "Weather radar sees a mass of animals in the air, not species. Some of it is bats, and some is insects.",
    "value": "-0.56 \u00b1 0.25 days per decade",
    "scope": "78 US weather-radar stations between 37\u00b0N and 50\u00b0N, 1995-2025. Not the whole continent: the southern bands carry a step change at 2012 that four candidate explanations have failed to account for.",
    "caveat": "The radar measures aerial biomass, not birds \u2014 it cannot separate birds from bats from insects. Bats in particular are not excluded.",
@@ -53,7 +56,10 @@
   },
   {
    "key": "marine-null",
+   "plain": "Fish are not all moving towards the poles. Different seas are doing different things, and some are doing the opposite of others.",
+   "matters": "\"Fish are moving polewards as the sea warms\" is one of the best-known sentences in climate ecology. Across two thousand species it is not one story, and a single global number would erase every difference worth planning around.",
    "claim": "There is no single global poleward shift in fish distribution \u2014 surveys disagree even in its direction.",
+   "plain_caveat": "These are trawl surveys in the North Atlantic and North Pacific. Nowhere else has been counted the same way for long enough to be included.",
    "value": "median -0.011 \u00b0latitude per decade across 2,240 species-survey pairs",
    "scope": "29 harmonised scientific bottom-trawl surveys, North America and Europe, on consistently sampled cells only.",
    "caveat": "A pooled median hides the variation worth predicting: individual surveys reach -0.22 and +0.26 \u00b0latitude per decade in opposite directions. The unit of analysis has to be the species in its region, not the ocean.",
@@ -98,7 +104,10 @@
   },
   {
    "key": "composition-stable",
+   "plain": "The radar is watching the same kind of traffic now as in 1995, so the earlier timing is a real change and not a change in what is being counted.",
+   "matters": "Every long record has this problem. If what an instrument measures quietly changes, a trend appears that nothing caused \u2014 and it looks exactly like a discovery. Ruling that out is the difference between a finding and an artefact.",
    "claim": "The autumn signal is not drifting from birds towards insects \u2014 what the radar measures in 2025 means what it meant in 1995.",
+   "plain_caveat": "Spring behaves differently and gets no claim here. Its speeds rose, and we cannot yet separate a real change from animals flying higher than the wind data assumes.",
    "value": "airspeed trend -0.06 \u00b1 0.08 m/s per decade (flat)",
    "scope": "2,193,560 station-night wind samples, 1995-2025, from an independent regional reanalysis rather than from the radar.",
    "caveat": "Spring behaves differently: its airspeed rose, which is either a real change or migrants flying higher than the fixed wind level assumes. Separating those needs the vertical radar profiles. Spring carries no trend claim here either way.",
@@ -135,13 +144,16 @@
    ],
    "direction": "change",
    "supporting": [
-    "Mean autumn airspeed sits in the range for migrating songbirds, not insects.",
+    "Mean autumn airspeed of 8.65 m/s sits in the range for migrating songbirds, not insects.",
     "A 2012 discontinuity in the dataset's own rain filtering was traced, and ruled out as weather using independent precipitation data."
    ]
   },
   {
    "key": "anthropogenic-share",
+   "plain": "About half of that earlier timing traces back to warming people caused. The other half does not follow temperature at all, and is unexplained.",
+   "matters": "Showing that something changed is not showing why. This runs climate models twice \u2014 once with human emissions and once with the world we would have had without them \u2014 and asks how much of the warming behind the shift only happened in one of those worlds.",
    "claim": "Human forcing accounts for almost all of the pre-season warming the animals are responding to, and so for about half of the observed advance.",
+   "plain_caveat": "This attributes the warming, not the animals. Two independent ways of building the world-without-us disagree with each other by more than a factor of two, and both are shown.",
    "value": "-0.30 days per decade of the -0.56 observed",
    "scope": "15 CMIP6 models with both a historical and a hist-nat run, sampled at the 78 radar stations between 37\u00b0N and 50\u00b0N over 1995-2014.",
    "caveat": "This attributes the warming, not the migration. It says what caused the temperature change the record tracked \u2014 the other half of the advance does not track temperature at all and is unexplained here. The models' human share spans 0.88 to 0.98 depending on the window fitted, and CMIP6's historical runs stop in 2014 while the radar record runs to 2025. Read \"almost all\" as a share of the forced warming as the ensemble mean has it, though: averaging 15 models cancels the year-to-year weather, so what the ratio divides into is close to a pure forced signal rather than the trend a thermometer at one station recorded. An independent counterfactual built from the observations themselves, with no model in it (ATTRICI), removes only 38% of each station's own warming and so attributes -0.12 days per decade against this finding's -0.30. Neither is wrong and they are not averaged: the distance between them says that roughly 59% of the warming at these stations over 1995-2019 does not move with the global mean at all. Over twenty-five years at one half-degree cell that is mostly weather leaning one way \u2014 but it also holds any forcing that does not scale with the global average, so it is an upper bound on the chance part rather than a measurement of it. Either way: human forcing caused nearly all of the warming signal, and that is not the same thing as nearly all of the warming these stations measured.",
@@ -190,10 +202,13 @@
   },
   {
    "key": "coverage-bias",
-   "claim": "Everything above is northern-hemisphere. The data that can measure change and the data that covers the globe are, so far, different data.",
-   "value": "0.0% of the radar record and 0.0% of the survey record lie south of the equator",
+   "plain": "A third of what this site measures is now southern, and none of the weather that would explain it is. Describing a place and explaining it are different problems.",
+   "matters": "A map of what is known is not a map of what is happening. Most of the world has never been counted the same way twice \u2014 and where it has, the records that would say *why* often still do not reach. A result from one hemisphere is not evidence about the other until someone goes and checks.",
+   "claim": "35.9% of the rows this project can measure change with lie south of the equator, from 2 of 14 sources \u2014 and 0.02% of its driver record does. The evidence has crossed the equator and the data that would explain it has barely started.",
+   "plain_caveat": "Two sources are held back deliberately. Wolves and mountain caribou are hunted by people who would use a map of them, so none of their locations are drawn.",
+   "value": "19,742,318 of 54,962,664 time-series rows are southern (35.9%), against 992 of 6,448,042 driver samples (0.02%)",
    "scope": "Every source in this project that has a usable time axis.",
-   "caveat": "Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but it bounds every claim here to the northern temperate zone, and no model trained on it should be trusted elsewhere without being tested there first. Two kinds of gap are worth telling apart on the map. Grey cells are places the lake reaches and cannot measure. And two sources are held and drawn nowhere at all: mountain caribou and wolves are classified high-sensitivity, so their locations are withheld entirely rather than coarsened. The map is not a map of everything this lake knows, and the coverage panel lists what is missing from it rather than letting an absence speak.",
+   "caveat": "The southern share is two bird atlases in three countries, so it is a large number from a small place and not coverage of a hemisphere. What has not moved barely moved is the driver record. Every temperature, wind and counterfactual sample in this lake was taken over North America or the North Atlantic; the only southern driver is surface water over the atlas footprint, which is a landscape factor and not a climate one. So the southern result is described and not explained, and the sensitivity this project would need to test whether a northern climate response transfers still cannot be fitted in the south \u2014 there is no southern temperature here to fit it against. Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but no model trained on this should be trusted elsewhere without being tested there first. Two kinds of gap are worth telling apart on the map. Grey cells are places the lake reaches and cannot measure. And two sources are held and drawn nowhere at all: mountain caribou and wolves are classified high-sensitivity, so their locations are withheld entirely rather than coarsened. The map is not a map of everything this lake knows, and the coverage panel lists what is missing from it rather than letting an absence speak.",
    "method": "docs/methods/geographic-coverage.md",
    "realm": "all",
    "taxon_scope": "all",
@@ -202,7 +217,7 @@
     {
      "domain": "geographic",
      "status": "open",
-     "finding": "This claim *is* the geographic bias. Every source with a usable time axis is northern temperate; the two with global reach cannot support a trend."
+     "finding": "This claim *is* the geographic bias, and it has moved without closing. Two atlases put a third of the time-series record south of the equator, in three countries; every other source with a usable time axis is northern temperate, the two with global reach cannot support a trend, and the driver record is northern but for one landscape factor over those same atlas cells."
     },
     {
      "domain": "temporal",
@@ -212,7 +227,7 @@
     {
      "domain": "taxonomic",
      "status": "bounded",
-     "finding": "No longer birds-only on land: seven Movebank track sources add elk, caribou, reindeer, bison, Arctic fox and wolf, so `track` is the fifth evidence type in use. None of them supports a trend \u2014 collar effort is not a measured denominator \u2014 so they widen the coverage without widening what can be measured. Insects and reptiles are still absent."
+     "finding": "No longer birds-only on land: seven Movebank track sources add elk, caribou, reindeer, bison, Arctic fox and wolf, bringing the evidence types carrying data to 4 of 7. None of them supports a trend \u2014 collar effort is not a measured denominator \u2014 so they widen the coverage without widening what can be measured. Insects and reptiles are still absent."
     },
     {
      "domain": "environmental",
@@ -222,6 +237,61 @@
    ],
    "direction": "limit",
    "supporting": []
+  },
+  {
+   "key": "atlas-no-net-change",
+   "plain": "Southern African birds have not, on the whole, moved. A few dozen species clearly have \u2014 and the ones spreading fastest are birds people brought.",
+   "matters": "This is the first thing this project has measured outside the northern hemisphere, and it is the test of whether findings from one continent carry to another. It also answers a question the site had only ever asked: whether correcting for how hard people looked changes what you conclude.",
+   "claim": "Between the two southern African bird atlases there is no net change in occupancy across 512 species \u2014 the median is -0.007 \u2014 while 56 species moved by more than 0.1 in one direction or the other.",
+   "plain_caveat": "Two snapshots thirty years apart, in three countries, in the places volunteers atlassed twice. It is a before and after, not a trend, and it is not Africa.",
+   "value": "median -0.007 change in occupancy probability, deciles -0.075 to +0.048, across 512 species on 496 shared cells",
+   "scope": "SABAP1 1987-1991 against SABAP2 2008-2012, full-protocol cards only, on 496 quarter-degree cells carrying at least 20 cards in both epochs.",
+   "caveat": "The detection correction this was built for made no difference, and that is the second finding rather than a technicality. Corrected and naive occupancy change agree to within 0.01 for 77% of species, with a median difference of 0.0020. The reason is the footprint rule: 20 cards per cell was registered so detection could be *estimated* everywhere, and at that effort an occupied cell is essentially never missed, so there was nothing left for detection to *explain*. The elaborate machinery earns its place on sparse data, and a footprint strict enough to fit it is strict enough to make it unnecessary. Read the other way, that is why the number can be trusted: it does not depend on the model. What it cannot do is separate a species that left from one that stayed and was recorded differently in a landscape that changed around it \u2014 no land-use covariate enters this, and attribution is a later note.",
+   "method": "docs/methods/phase1e-atlas.md",
+   "realm": "terrestrial",
+   "taxon_scope": "exact",
+   "evidence_type": "survey_index",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "South Africa, Lesotho and Eswatini, and inside them only the 496 quarter-degree cells atlassed at least twenty times in *both* epochs. That footprint is where atlassers went twice, thirty years apart, which is not a sample of southern African habitat. It narrows the northern-hemisphere gap; it does not close it."
+    },
+    {
+     "domain": "temporal",
+     "status": "bounded",
+     "finding": "Two epochs, so a difference and not a rate: nothing here may be phrased per decade. The nineteen years between the atlas windows contain no data at all, so what happened in between is unobserved rather than smooth."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "bounded",
+     "finding": "Birds, and specifically the species already widespread at baseline -- thirty or more occupied cells in 1987-1991. Applying that floor to both epochs instead would have selected on the outcome, dropping 37 species whose median naive change was -0.153 against -0.014 overall, so it is applied at baseline only."
+    },
+    {
+     "domain": "environmental",
+     "status": "open",
+     "finding": "An atlas card records where a volunteer went. The consistent-footprint rule controls for how *often* a cell was visited and not for which cells people choose, and no covariate for land use or protection enters the model. A change concentrated in transformed landscapes would be indistinguishable here from one that was not."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "A per-species detection probability is fitted in each epoch rather than assumed, and it turns out not to matter: at a median 82 and 68 cards per cell an occupied cell is missed with probability 0.00002 and 0.0002, so the corrected and uncorrected answers agree. Detection is also stable, correlating across the thirty-year gap, which is the evidence that observer change is not driving the result."
+    },
+    {
+     "domain": "phenological",
+     "status": "addressed",
+     "finding": "Cards are pooled over five whole years in each epoch, so within-year timing is integrated out and a species that shifted its season rather than its range cannot appear as a range change."
+    }
+   ],
+   "direction": "null",
+   "supporting": [
+    "The occupancy model recovers known psi and p from simulated data across five parameter combinations before it was allowed near the atlases.",
+    "The registered alternative window, 2019-2023, disagrees in sign for 14.4% of the species that moved \u2014 under the one-third threshold that would have made the result a property of the window.",
+    "Nine of the ten largest changes hold under that alternative window and five are larger under it; the tenth flipped sign and is withdrawn rather than caveated.",
+    "Detection probability correlates 0.938 between epochs, so how likely a bird is to be written on a card did not change even though almost everything else about atlassing did.",
+    "The uncorrected reporting-rate comparison gives the same answer, so the conclusion does not rest on the model being right.",
+    "Per cell they agree less well, which is why the map beside this claim draws the uncorrected count: a disagreement of a fraction of one species, summed over five hundred of them, is a few whole species in a cell. That the map is the plainer measurement was fixed in advance, in docs/methods/phase1f-atlas-surface.md, as what to do if the two ever parted."
+   ]
   }
  ]
 }

@@ -1,6 +1,6 @@
 import { Popup, type ExpressionSpecification, type Map as MapLibreMap } from "maplibre-gl";
 
-import { WARM_RAMP } from "../globe/flavor";
+import { palette } from "../globe/flavor";
 
 import {
   attributionFor,
@@ -48,6 +48,8 @@ function paint(
   color: ExpressionSpecification;
   radius: ExpressionSpecification;
 } {
+  // Read here rather than at module load, so a surface change is a repaint rather than a reload.
+  const ramp = palette().warm;
   // Peak passage is orders of magnitude above a quiet night, so a linear ramp would leave
   // most of the year as one flat colour.
   const logMax = Math.max(Math.log10(maxValue), 1);
@@ -58,8 +60,8 @@ function paint(
       "interpolate",
       ["linear"],
       week(atWeek),
-      ...WARM_RAMP.flatMap((colour, index) => [
-        (logMax * index) / (WARM_RAMP.length - 1),
+      ...ramp.flatMap((colour, index) => [
+        (logMax * index) / (ramp.length - 1),
         colour,
       ]),
     ] as ExpressionSpecification,
@@ -88,6 +90,7 @@ export async function addSeries(
   baseUrl: string,
   initialWeek: number,
 ): Promise<LoadedLayer> {
+  const ramp = palette().warm;
   const [data, terms] = await fetchLayer<GeoJSON.FeatureCollection>(baseUrl, meta.name);
 
   const maxValue = data.features.reduce(
@@ -102,7 +105,7 @@ export async function addSeries(
     type: "circle",
     source: id,
     paint: {
-      "circle-color": WARM_RAMP[2],
+      "circle-color": ramp[2],
       "circle-radius": 3,
       "circle-opacity": 0.8,
       // Blurred, because a radar's measurement is an airspace tens of kilometres across, not
@@ -130,6 +133,14 @@ export async function addSeries(
     cells: data.features.length,
     center: meanPosition(data),
     showWeek,
+    // Re-run the week it is already on. `showWeek` short-circuits when the week has not moved,
+    // so the repaint has to forget which week that was -- otherwise a surface change is a no-op
+    // on every layer that happens to be showing the right week already.
+    repaint: () => {
+      const week = current;
+      current = -1;
+      showWeek(week);
+    },
     setVisible: (visible) => {
       if (map.getLayer(id)) {
         map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");

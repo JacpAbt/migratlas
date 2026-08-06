@@ -1,6 +1,14 @@
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 
-import { WARM_RAMP } from "../globe/flavor";
+import { palette } from "../globe/flavor";
+
+/** The paper the dot sits on, so the stroke reads as a gap rather than as a second colour. */
+function halo(): string {
+  return (
+    getComputedStyle(document.documentElement).getPropertyValue("--selection-halo").trim() ||
+    "#fdf8f0"
+  );
+}
 import type { SpeciesGrid, TaxonEntry } from "../search/taxon";
 
 const SOURCE = "selected-species";
@@ -51,11 +59,11 @@ export class SpeciesSelection {
         paint: {
           // Deliberately louder than the pooled layers underneath: this is the answer to a
           // question the viewer just asked, and it has to be findable at a glance.
-          "circle-color": WARM_RAMP[4],
+          "circle-color": palette().warm[4],
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 2.5, 6, 9],
           "circle-opacity": 0.9,
           "circle-stroke-width": 0.6,
-          "circle-stroke-color": "#fdf8f0",
+          "circle-stroke-color": halo(),
         },
       });
       this.#added = true;

@@ -1,5 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { readFile } from "node:fs/promises";
+
+import { JITTER, MIN_EXTENT, drawnCoast } from "../src/globe/coastline";
+import { graticuleSource } from "../src/globe/graticule";
+
 /**
  * What this suite is for.
  *
@@ -183,12 +188,24 @@ test("the globe reaches a usable style with coastlines", async ({ page }) => {
  *
  * Split into a test per layer once, for a better failure message, and reverted: each one reloads the
  * page and re-decodes 125,000 features across four layers, so the split cost four times the work to
- * buy a name that `expectDrawn` already reports. The budget is measured rather than guessed -- one
- * load plus four camera settles plus four draw polls -- and generous enough that a slow machine is
- * not a failure while a wedged map still is.
+ * buy a name that `expectDrawn` already reports.
+ *
+ * **This deadline is a hang detector and nothing else, and it took three tries to say so.**
+ *
+ * It began at 150s, from timing this alone -- 66s -- and doubling. It had been passing at 98% of
+ * that for the life of the project and finally went over. Raising it to 240s bought one green run.
+ * Dropping the suite from three workers to two (`playwright.config.ts`, and that change is right
+ * on its own terms) did not bring it back under 150s either, because the other two spec files now
+ * boot a full globe per test and decode 125,000 features each time.
+ *
+ * So the wall clock here is a fact about the machine and the rest of the suite, not about the map.
+ * Trying to make it a performance assertion was the mistake; the performance assertion is
+ * `DRAW_TIMEOUT_MS`, eight seconds per layer, which fails with a state dump and is what actually
+ * catches a wedged map. This number exists so a hung run ends, and it is set where it will not
+ * fire on a scheduler.
  */
 test("every layer draws features once it is switched on", async ({ page }) => {
-  test.setTimeout(150_000);
+  test.setTimeout(240_000);
   const report = await ready(page);
   expect(report.layers.length).toBeGreaterThan(0);
   await explore(page);
@@ -295,7 +312,7 @@ test("each counterfactual is drawn to the scatter, and both to one frame", async
   // two counterfactuals agreeing where the whole finding is that they do not.
   await ready(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
-  await page.locator(".tab", { hasText: /Human forcing/i }).click();
+  await page.locator('.tab[data-claim="anthropogenic-share"]').click();
   await expect(page.locator(".chart__svg").first()).toBeVisible();
 
   const charts = await page.locator(".chart__svg").evaluateAll((nodes) =>
@@ -349,7 +366,7 @@ test("no ribbon is drawn past its own frame, and each shades where its evidence 
   // 2014. Eyes do not run in CI.
   await ready(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
-  await page.locator(".tab", { hasText: /Human forcing/i }).click();
+  await page.locator('.tab[data-claim="anthropogenic-share"]').click();
   await expect(page.locator(".chart__svg").first()).toBeVisible();
 
   const measured = await page.locator(".chart__svg").evaluateAll((nodes) =>
@@ -550,6 +567,12 @@ test("searching a species draws its own surface", async ({ page }) => {
   await expect(results.first()).toBeVisible();
   await results.first().click();
 
+  // Choosing a hit flies the camera, and this asserted the draw without waiting for it to land --
+  // the same mistake `explore` has a comment about, in a second place. It passes alone and failed
+  // in the full suite with the signature that comment describes: visible, source loaded, pointed at,
+  // and zero rendered features, because under two WebGL contexts the flight had not finished inside
+  // the eight seconds `expectDrawn` polls for.
+  await settle(page);
   await expectDrawn(page, "selected-species");
   // Named back to the reader, with the layer it came from: a map that changed for no stated
   // reason is worse than one that did not change.
@@ -579,7 +602,382 @@ test("the default build requests nothing off-origin", async ({ page }) => {
     if (!request.url().startsWith("http://localhost")) external.push(request.url());
   });
 
-  const report = await ready(page);
-  await focusOn(page, report, "aerial-passage", "series-aerial-passage");
+  await ready(page);
+  // Rendered, but without a camera flight to get there. The arrival view already frames the radar
+  // stations, so this layer has drawn by the time the layers report in -- and `focusOn`'s `jumpTo`
+  // plus its settle was most of what pushed this test through its 30s deadline once the suite grew
+  // past seventy tests. Nothing is given up: in the default build the style carries no `glyphs` and
+  // no `sprite`, so there is no off-origin request the *renderer* can make. Every request that could
+  // leave this origin -- fonts, the layer JSONs, the bundled basemap -- has already happened, which
+  // is exactly what `ready` waits for.
+  await expectDrawn(page, "series-aerial-passage");
   expect(external, `off-origin requests: ${external.join(", ")}`).toHaveLength(0);
+});
+
+test("the land is hatched, and the hatch tile meets its own edge", async ({ page }) => {
+  await ready(page);
+
+  // The hatch is a repeating image rather than a fill colour, because MapLibre draws WebGL from
+  // vector data and there is no way to hand a coastline to rough.js. `fill-color` stays underneath
+  // it as the fallback for every frame before `addImage` lands.
+  const land = await page.evaluate(() => {
+    const { map } = (window as unknown as Hook).migratlas;
+    return {
+      pattern: map.getPaintProperty("land", "fill-pattern"),
+      colour: map.getPaintProperty("land", "fill-color"),
+      registered: map.hasImage("land-hatch"),
+    };
+  });
+  expect(land.pattern, "the land is not hatched").toBe("land-hatch");
+  expect(land.colour, "no fill colour under the pattern to fall back to").toBeTruthy();
+  expect(land.registered, "the hatch image never reached the style").toBe(true);
+
+  // And the part that is easy to get wrong and impossible to see: a tiled image has to meet its own
+  // opposite edge. The first version rotated the canvas 45 degrees and stepped by a round 8px, which
+  // put 8.49 lines in a tile-width and offset the whole family by half a spacing at every seam.
+  //
+  // Measured rather than argued: the step across the seam, against the largest step anywhere inside
+  // the tile. A seamless tile has a seam no worse than its own roughest interior column; a broken
+  // one has an outlier there, and that is the whole test.
+  const seam = await page.evaluate(() => {
+    const image = (window as unknown as Hook).migratlas.map.getImage("land-hatch");
+    const { width, height, data } = image!.data as ImageData;
+    const at = (x: number, y: number) => data[(y * width + x) * 4]!;
+    const between = (left: number, right: number) => {
+      let total = 0;
+      for (let y = 0; y < height; y += 1) total += Math.abs(at(left, y) - at(right, y));
+      return total / height;
+    };
+
+    let inside = 0;
+    for (let x = 0; x < width - 1; x += 1) inside = Math.max(inside, between(x, x + 1));
+    return { across: between(width - 1, 0), inside };
+  });
+
+  expect(
+    seam.across,
+    `the seam steps ${seam.across.toFixed(1)} where the roughest column inside steps ${seam.inside.toFixed(1)}`,
+  ).toBeLessThanOrEqual(seam.inside);
+
+  // And the tile's mean is the land colour, not something near it. Same requirement as the paper
+  // grain and the same reason: `flavor.ts` records land-against-ocean and the coastline as measured
+  // ratios, and a pattern that quietly darkens the land makes every one of those figures describe a
+  // colour that is no longer on the screen. The strokes darken, so the ground is lifted by exactly
+  // what they take back.
+  const tone = await page.evaluate(() => {
+    const { map } = (window as unknown as Hook).migratlas;
+    const { data } = map.getImage("land-hatch")!.data as ImageData;
+    const total = [0, 0, 0];
+    for (let index = 0; index < data.length; index += 4) {
+      total[0]! += data[index]!;
+      total[1]! += data[index + 1]!;
+      total[2]! += data[index + 2]!;
+    }
+    const count = data.length / 4;
+    const declared = String(map.getPaintProperty("land", "fill-color"));
+    return {
+      mean: total.map((sum) => Math.round(sum / count)),
+      land: [1, 3, 5].map((at) => Number.parseInt(declared.slice(at, at + 2), 16)),
+    };
+  });
+
+  for (const [index, channel] of tone.mean.entries()) {
+    expect(
+      Math.abs(channel! - tone.land[index]!),
+      `the hatch averages rgb(${tone.mean.join(" ")}) where the land is rgb(${tone.land.join(" ")})`,
+    ).toBeLessThanOrEqual(2);
+  }
+});
+
+test("the graticule is ruled by hand, bounded, and gone before it could mislead", async ({
+  page,
+}) => {
+  await ready(page);
+
+  const grid = await page.evaluate(() => {
+    const { map } = (window as unknown as Hook).migratlas;
+    return {
+      order: map.getStyle().layers.map((layer) => layer.id),
+      opacity: map.getPaintProperty("graticule", "line-opacity"),
+    };
+  });
+
+  // Over the fill and under the ink, which is where a ruled grid sits on paper.
+  expect(grid.order.indexOf("graticule")).toBeGreaterThan(grid.order.indexOf("land"));
+  expect(grid.order.indexOf("graticule")).toBeLessThan(grid.order.indexOf("coast"));
+
+  // The honesty constraint, and the reason a wobble is allowed here at all: a graticule is a
+  // coordinate claim -- a line that says "this is thirty degrees west" -- so a drawn one is only
+  // defensible while nobody can read a position off it. The opacity ramp has to reach zero, and
+  // reach it before half a degree is a visible distance.
+  const stops = grid.opacity as unknown[];
+  const lastStop = Number(stops[stops.length - 2]);
+  expect(stops.at(-1), `the graticule never fades out: ${JSON.stringify(stops)}`).toBe(0);
+  expect(
+    lastStop,
+    `still drawn at zoom ${lastStop}, where half a degree is a visible distance`,
+  ).toBeLessThanOrEqual(4);
+
+  // And the wobble is bounded rather than merely small-looking. Asserted against the generator
+  // rather than through the map, because the geometry is what has to be in bounds and MapLibre keeps
+  // a source's data private -- reading it back through `querySourceFeatures` would answer for the
+  // facing hemisphere only, which is a different question.
+  const source = graticuleSource() as { data: GeoJSON.FeatureCollection };
+  const worst: Record<string, number> = { meridian: 0, parallel: 0 };
+  for (const feature of source.data.features) {
+    const points = (feature.geometry as GeoJSON.LineString).coordinates as [number, number][];
+    const lons = points.map(([lon]) => lon);
+    const lats = points.map(([, lat]) => lat);
+    // A meridian varies in latitude by design and a parallel in longitude, so which axis carries
+    // the claim is decided by which one spans the globe.
+    const meridian = Math.max(...lats) - Math.min(...lats) > 90;
+    const values = meridian ? lons : lats;
+    const nominal = Math.round(values.reduce((sum, v) => sum + v, 0) / values.length / 30) * 30;
+    const off = Math.max(...values.map((v) => Math.abs(v - nominal)));
+    const kind = meridian ? "meridian" : "parallel";
+    worst[kind] = Math.max(worst[kind]!, off);
+  }
+
+  for (const [kind, off] of Object.entries(worst)) {
+    expect(off, `a ${kind} wanders ${off.toFixed(2)} degrees off true`).toBeLessThanOrEqual(0.6);
+    expect(off, `a ${kind} does not wander at all, so it is not drawn`).toBeGreaterThan(0.05);
+  }
+});
+
+test("the drawn coastline is bounded, and hands over to the surveyed one", async ({ page }) => {
+  await ready(page);
+
+  const coast = await page.evaluate(() => {
+    const { map } = (window as unknown as Hook).migratlas;
+    const ids = map.getStyle().layers.map((layer) => layer.id);
+    const opacityAt = (layer: string, zoom: number) => {
+      const stops = map.getPaintProperty(layer, "line-opacity") as unknown[];
+      // The ramp is `interpolate linear zoom z0 v0 z1 v1 ...`; read the pairs off the tail.
+      const pairs: [number, number][] = [];
+      for (let index = 3; index < stops.length; index += 2) {
+        pairs.push([Number(stops[index]), Number(stops[index + 1])]);
+      }
+      const above = pairs.find(([z]) => z >= zoom) ?? pairs[pairs.length - 1]!;
+      const below = [...pairs].reverse().find(([z]) => z <= zoom) ?? pairs[0]!;
+      if (above[0] === below[0]) return above[1];
+      const share = (zoom - below[0]) / (above[0] - below[0]);
+      return below[1] + share * (above[1] - below[1]);
+    };
+    return {
+      ids,
+      drawnAt: [0, 1.8, 2.2, 2.6, 4].map((zoom) => opacityAt("coast-drawn", zoom)),
+      trueAt: [0, 1.8, 2.2, 2.6, 4].map((zoom) => opacityAt("coast", zoom)),
+    };
+  });
+
+  // Under the surveyed line, so the accurate one paints over the sketch rather than beneath it.
+  expect(coast.ids.indexOf("coast-drawn")).toBeLessThan(coast.ids.indexOf("coast"));
+
+  // The crossfade has to be complementary at every zoom sampled: there is no zoom at which the
+  // globe has no coastline, and none at which the drawn one is still up after the surveyed one has
+  // arrived. This is the assertion that makes the wobble defensible rather than merely small.
+  for (const [index, drawn] of coast.drawnAt.entries()) {
+    const surveyed = coast.trueAt[index]!;
+    expect(drawn + surveyed, `both coastlines faint together at sample ${index}`).toBeGreaterThan(
+      0.85,
+    );
+  }
+  expect(coast.drawnAt.at(-1), "the sketch is still drawn where a reader could measure").toBe(0);
+  expect(coast.trueAt.at(-1), "the surveyed coastline never reaches full strength").toBe(1);
+
+  // And the deviation itself, against the real Natural Earth geometry rather than a fixture: every
+  // drawn vertex within JITTER of the shore it is a sketch of, and every small island at exactly
+  // zero, because a ring half a degree across displaced by half a degree is a different island.
+  const land = JSON.parse(
+    await readFile("public/basemap/land.geojson", "utf8"),
+  ) as GeoJSON.FeatureCollection;
+  const drawn = drawnCoast(land);
+
+  const rings: number[][][] = [];
+  for (const feature of land.features) {
+    const geometry = feature.geometry;
+    if (geometry.type === "Polygon") rings.push(...geometry.coordinates);
+    else if (geometry.type === "MultiPolygon") rings.push(...geometry.coordinates.flat());
+  }
+
+  let worst = 0;
+  let untouched = 0;
+  let cursor = 0;
+  for (const ring of rings.filter((points) => points.length >= 4)) {
+    const lons = ring.map(([lon]) => lon!);
+    const lats = ring.map(([, lat]) => lat!);
+    const small =
+      Math.max(...lons) - Math.min(...lons) < MIN_EXTENT &&
+      Math.max(...lats) - Math.min(...lats) < MIN_EXTENT;
+    for (let pass = 0; pass < (small ? 1 : 2); pass += 1) {
+      const stroke = (drawn.features[cursor]!.geometry as GeoJSON.LineString).coordinates;
+      expect(stroke.length, "a pass changed the vertex count of its ring").toBe(ring.length);
+      let off = 0;
+      for (const [index, [lon, lat]] of stroke.entries()) {
+        const [trueLon, trueLat] = ring[index] as [number, number];
+        off = Math.max(off, Math.abs(lon! - trueLon), Math.abs(lat! - trueLat));
+      }
+      if (small) {
+        expect(off, "a small island was jittered").toBe(0);
+        untouched += 1;
+      }
+      worst = Math.max(worst, off);
+      cursor += 1;
+    }
+  }
+
+  expect(cursor, "the sketch and the survey disagree about how many rings there are").toBe(
+    drawn.features.length,
+  );
+  expect(worst, `a drawn shore is ${worst.toFixed(3)} degrees off true`).toBeLessThanOrEqual(JITTER);
+  expect(worst, "nothing wobbled, so nothing was drawn").toBeGreaterThan(0.1);
+  expect(untouched, "no island was small enough to be left alone").toBeGreaterThan(0);
+});
+
+test("the panel and the map never disagree about what is drawn", async ({ page }) => {
+  // A small viewport, and it costs this test nothing: what is asserted is layout properties and
+  // checkbox state, neither of which depends on how many pixels MapLibre fills. What it saves is
+  // real -- the toggle sweep below switches on the fifty-thousand-cell detectability wash, and at
+  // the default 1280x720 that render competes with the other worker's WebGL context hard enough to
+  // push `the default build requests nothing off-origin` from 13s through its 30s deadline. The
+  // suite runs two workers for exactly this reason; this is the same lesson one test further on.
+  await page.setViewportSize({ width: 520, height: 720 });
+
+  await ready(page);
+  await explore(page);
+
+  /**
+   * Every checkbox against the layer it claims to control.
+   *
+   * The rows are read in DOM order and matched to the manifest in the same order, which is what
+   * `Explore.svelte` renders from -- so a row's index is its layer. Matching by name would need the
+   * panel to publish one, and the panel deliberately shows a title.
+   */
+  const compare = () =>
+    page.evaluate(() => {
+      const { map, loaded } = (window as unknown as Hook).migratlas;
+      const boxes = [...document.querySelectorAll<HTMLInputElement>(".layers input")];
+      return loaded.map((layer, index) => {
+        const id =
+          map
+            .getStyle()
+            .layers.map((entry) => entry.id)
+            .find((entry) => entry === layer.meta.name || entry.endsWith(`-${layer.meta.name}`)) ??
+          "";
+        return {
+          name: layer.meta.name,
+          drawn: id ? (map.getLayoutProperty(id, "visibility") ?? "visible") !== "none" : false,
+          ticked: boxes[index]?.checked ?? null,
+        };
+      });
+    });
+
+  const onArrival = await compare();
+  expect(onArrival.length, "no layers to compare").toBeGreaterThan(0);
+
+  // First load, before anything is touched. This is the state that was wrong: `exploreView` was
+  // handed every layer that loaded and switched them all on, including the detectability wash --
+  // which declares itself off, covers the whole sphere, and had its box showing unticked while it
+  // was drawn over everything else.
+  const disagreed = onArrival.filter((layer) => layer.drawn !== layer.ticked);
+  expect(
+    disagreed.map((l) => `${l.name}: drawn=${l.drawn} ticked=${String(l.ticked)}`),
+    "the panel and the map disagree on arrival",
+  ).toEqual([]);
+
+  // And the direction the old tests never covered. `every layer draws features once it is switched
+  // on` only ever turned things on, so switching one *off* and leaving the map drawing it would have
+  // passed -- which is the same class of fault as the one above, in the other direction.
+  const rows = page.locator(".layers li");
+  for (let index = 0; index < (await rows.count()); index += 1) {
+    await rows.nth(index).locator("input").click();
+  }
+  await expect
+    .poll(async () => (await compare()).filter((layer) => layer.drawn !== layer.ticked).length)
+    .toBe(0);
+
+  // Every one of them actually moved, or the loop above proved nothing.
+  const afterward = await compare();
+  for (const [index, layer] of afterward.entries()) {
+    expect(layer.ticked, `${layer.name} did not toggle`).not.toBe(onArrival[index]!.ticked);
+  }
+});
+
+/**
+ * The southern surface, and the sign that is the whole point of it.
+ *
+ * `atlas-no-net-change` was the one claim that flew the camera somewhere and drew nothing, which
+ * reads as "there is nothing here" rather than "nothing is exported yet". Now it draws 496 cells of
+ * change in recorded taxa -- and a change layer has a failure mode a count layer does not, which is
+ * losing the direction on the way to the screen. `paint()` puts a count on `log10`, and log10 of a
+ * negative number is NaN, so handing this layer to that path would silently blank every cell that
+ * fell. The manifest declares the scale and this asserts the declaration was honoured.
+ */
+test("the atlas surface draws its losses and its gains apart", async ({ page }) => {
+  await ready(page);
+  // `ready` returns on the first layer to land, and explore is what loads the rest. Then polled,
+  // because a fetch of 496 cells finishing is not the same event as the style having the layer.
+  await explore(page);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          Boolean((window as unknown as Hook).migratlas.map.getLayer("surface-atlas-taxa-change")),
+        ),
+      { timeout: 20_000 },
+    )
+    .toBe(true);
+
+  const drawn = await page.evaluate(async () => {
+    const { map } = (window as unknown as Hook).migratlas;
+    const manifest = (await fetch("layers/manifest.json").then((r) => r.json())) as {
+      name: string;
+      scale: string;
+    }[];
+    const entry = manifest.find((one) => one.name === "atlas-taxa-change");
+    // From the published grid rather than out of MapLibre's source object: `_data` is private and
+    // absent in v6, and what matters is what was *published* anyway.
+    const grid = (await fetch("layers/atlas-taxa-change.grid.json").then((r) => r.json())) as {
+      v: number[];
+    };
+    const values = grid.v;
+    const { loaded } = (window as unknown as Hook).migratlas;
+    return {
+      declared: entry?.scale,
+      layer: Boolean(map.getLayer("surface-atlas-taxa-change")),
+      colour: map.getPaintProperty("surface-atlas-taxa-change", "circle-color"),
+      stroke: map.getPaintProperty("surface-atlas-taxa-change", "circle-stroke-width"),
+      expanded: loaded.find((one) => one.meta.name === "atlas-taxa-change")?.cells ?? 0,
+      cells: values.length,
+      losses: values.filter((value) => value < 0).length,
+      gains: values.filter((value) => value > 0).length,
+      finite: values.every((value) => Number.isFinite(value)),
+    };
+  });
+
+  expect(drawn.declared, "the manifest no longer declares this layer diverging").toBe("diverging");
+  expect(drawn.layer, "the atlas surface never reached the style").toBe(true);
+  expect(drawn.cells, "no cells in the published atlas grid").toBeGreaterThan(400);
+  expect(drawn.finite, "a cell carries a non-finite value").toBe(true);
+  // Every published cell has to survive the grid decode. A mismatch here is the trap
+  // `gridToFeatures` throws on, seen from the other side.
+  expect(drawn.expanded, "the grid decoded to a different number of cells").toBe(drawn.cells);
+
+  // Both directions are present in the data, so both have to be distinguishable in the paint.
+  expect(drawn.losses, "no cells lost taxa, which the surface says is most of them").toBeGreaterThan(
+    50,
+  );
+  expect(drawn.gains, "no cells gained taxa").toBeGreaterThan(10);
+
+  // The colour ramp must read the raw value. `log10` here would mean the sequential painter got it.
+  const colour = JSON.stringify(drawn.colour);
+  expect(colour, "the change layer is painted on a count's log10 ramp").not.toContain("log10");
+  expect(colour, "the ramp does not reach below zero, so a loss cannot be coloured as one").toContain(
+    "-",
+  );
+
+  // Direction is carried by a second channel as well as by hue: losses are ringed, gains solid.
+  // A diverging ramp alone is exactly the comparison a red-green reader cannot make.
+  expect(JSON.stringify(drawn.stroke), "losses are not ringed, so direction rests on hue alone")
+    .toContain("case");
 });

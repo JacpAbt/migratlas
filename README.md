@@ -3,7 +3,9 @@
 A globe of animal movement — where animals are, how their movements have changed over decades,
 what is driving the change, and where they are heading.
 
-> **Status: Phase 0.** Foundations and the ethics gate. Nothing is published yet.
+> **Status: Phase 2a.** Five findings published and recomputed from the lake on every build, across
+> three realms and twenty registered sources. Live at
+> [jacpabt.github.io/migratlas](https://jacpabt.github.io/migratlas).
 
 ---
 
@@ -102,10 +104,12 @@ Ordered so each phase is the foundation of the next, rather than the most exciti
 
 | Phase | Question | Answer |
 | --- | --- | --- |
-| **0** | Can the ethics gate and the evidence core hold two realms? | done — three realms, seven evidence types, 12 sources |
+| **0** | Can the ethics gate and the evidence core hold two realms? | done — three realms, five evidence types in use, 20 sources |
 | **1a** | What has *actually* changed, with proper uncertainty? | **autumn passage −0.56 ± 0.25 d/decade**, 37–50°N. Spring: no detectable trend |
 | **1b** | Does the marine realm show the poleward shift the literature reports? | **no** — median −0.011 °lat/decade, and surveys disagree in *sign* |
 | **1c** | Is the aerial signal an artefact of the instrument, or of what is flying? | neither — airspeed flat at −0.06 ± 0.08 m/s/decade, four confounds tested and rejected |
+| **1d** | Can 6M mammal track fixes carry a timing trend? | **no** — 2 of 51 cells reach fifteen years, and changing the collar moves the date by 46.8 days |
+| **1e** | Did southern-African bird distributions change between two atlases? | in flight |
 | **2a** | How much of the change is attributable to human influence? | **−0.30 of the −0.56**, `f` = 0.98 across 15 CMIP6 models |
 | **2b** | What drives an individual animal's decisions? | not started |
 | **3** | Where will they be? | not started |
@@ -141,6 +145,9 @@ Requires Python 3.14 and `uv`. Node for the frontend. Every Python dependency mu
 wheel-installable — no build-from-source steps, which is a real constraint on the geospatial stack
 and so far a satisfiable one.
 
+[`CLAUDE.md`](CLAUDE.md) has the working rules and the traps that each cost a run to find.
+Open work is in [`docs/TASKS.md`](docs/TASKS.md).
+
 ---
 
 ## Data sources and credit
@@ -154,5 +161,6 @@ tag deployments, checklists. None of it is ours. Attribution is a build step, no
 
 ## Licence
 
-Code is MIT. **Data is not** — each source carries its own terms, and several prohibit
-redistribution. Cloning this repo gives you the code, not the data.
+Code is MIT ([`LICENSE`](LICENSE)). **Data is not** — each source carries its own terms, several
+prohibit redistribution, and one restricts commercial use of anything derived from it. Cloning this
+repo gives you the code, not the data.

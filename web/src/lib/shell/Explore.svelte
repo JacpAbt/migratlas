@@ -1,5 +1,8 @@
 <script lang="ts">
+  import Boxed from "../notebook/Boxed.svelte";
   import Rule from "../notebook/Rule.svelte";
+  import Ticked from "../notebook/Ticked.svelte";
+  import Sheet from "../notebook/Sheet.svelte";
   import Search from "./Search.svelte";
   import { legendRows, type DetectabilityDocument } from "../../layers/detectability";
   import type { Clock } from "../../state/time";
@@ -80,6 +83,8 @@
   terms, at what time of year, and a way to find one animal.
 -->
 <aside class="explore" aria-label="Layers and time">
+ <Sheet seed="explore">
+  <div class="explore__slip">
   <section>
     <h2>Drawn now</h2>
     <Rule seed="explore-layers" tone="pencil" />
@@ -92,6 +97,7 @@
               checked={shown.has(layer.meta.name)}
               onchange={(event) => toggle(layer, event.currentTarget.checked)}
             />
+            <Ticked seed={layer.meta.name} on={shown.has(layer.meta.name)} />
             <span class="layers__title" title={layer.meta.description}>{layer.meta.title}</span>
             <em>{layer.meta.value_kind.replace(/_/g, " ")}</em>
           </label>
@@ -134,12 +140,16 @@
       />
       <button
         type="button"
+        class="run"
         aria-pressed={playing}
         onclick={() => {
           clock.toggle();
           playing = clock.playing;
         }}
       >
+        <!-- Running is the second pass of the pen, the way every other state on this page is: the
+             box is gone over again rather than filled in. -->
+        <Boxed seed="explore-run" active={playing} />
         {playing ? "Pause" : "Play"}
       </button>
     </div>
@@ -167,6 +177,8 @@
     <Rule seed="explore-search" tone="pencil" />
     <Search {selection} {surfaces} {onfocus} />
   </section>
+  </div>
+ </Sheet>
 </aside>
 
 <style>
@@ -176,19 +188,84 @@
     right: var(--gap);
     z-index: 2;
     display: flex;
-    flex-direction: column;
-    gap: var(--gap);
     width: min(20rem, calc(100vw - 2 * var(--gap)));
     /* Clears the index strip below it and scrolls if it cannot fit, rather than growing under it. */
     max-height: calc(100% - var(--strip) - var(--attrib) - 2 * var(--gap));
-    overflow-y: auto;
-    padding: var(--gap);
-    background-color: var(--paper);
-    background-image: var(--grain);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius);
-    box-shadow: 0 2px 18px rgb(47 61 79 / 12%);
     font-size: 0.8rem;
+  }
+
+  /* The paper is `Sheet`'s -- ground, grain, torn edge, shadow -- and the scroll is inside it, for
+     the reason the reading sheet already found: a drawn edge inside a scrolling box is positioned
+     against the padding box and slides away with the content. */
+  .explore :global(.sheet) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .explore__slip {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--gap) var(--gap) var(--gap) calc(var(--gap) + 0.35rem);
+  }
+
+  /*
+    A scale on paper, not a platform slider.
+
+    The track is a ruled line with graduations, which is what a scale printed on a page looks
+    like -- and on the day-of-year slider the twelve ticks are months, so the marks carry
+    information rather than decorating the line. The thumb is a pencil stub: a short body in
+    graphite with a rust point at its tip.
+
+    `appearance: none` and both vendor pseudo-elements, because a range input styles nothing in
+    common across engines and a half-styled one looks like a bug rather than a choice.
+  */
+  input[type="range"] {
+    appearance: none;
+    width: 100%;
+    height: 1.4rem;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  input[type="range"]:focus-visible {
+    outline: 2px solid var(--rust);
+    outline-offset: 2px;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track,
+  input[type="range"]::-moz-range-track {
+    height: 1.4rem;
+    background:
+      linear-gradient(var(--rule), var(--rule)) 0 50% / 100% 1.5px no-repeat,
+      repeating-linear-gradient(
+          to right,
+          var(--rule-faint) 0 1px,
+          transparent 1px calc(100% / 12)
+        )
+        0 calc(50% + 3px) / 100% 5px no-repeat;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 0.55rem;
+    height: 1.1rem;
+    margin-top: 0.15rem;
+    border-radius: 1px 1px 40% 40%;
+    background: linear-gradient(var(--pencil) 62%, var(--rust-ink) 62%);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 0.55rem;
+    height: 1.1rem;
+    border: 0;
+    border-radius: 1px 1px 40% 40%;
+    background: linear-gradient(var(--pencil) 62%, var(--rust-ink) 62%);
   }
 
   h2 {
@@ -221,8 +298,31 @@
     cursor: pointer;
   }
 
+  /* The native box is hidden and the drawn one stands in for it. Sized and stacked over the mark
+     rather than clipped to a pixel, so the checkbox is still what a pointer hits and still what a
+     keyboard reaches -- the tick beside it is ink, not a control. */
   .layers input {
-    accent-color: var(--rust-ink);
+    grid-area: 1 / 1;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    appearance: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  .layers :global(.ticked) {
+    grid-area: 1 / 1;
+    align-self: center;
+  }
+
+  /* Named, not positional. This read `.ticked__box` and had matched nothing since the marks moved
+     to rough.js, so a keyboard reaching a layer row left no visible trace on the box it was on. */
+  .layers label:focus-within :global(.ink-box path) {
+    stroke: var(--rust);
+    stroke-width: 2;
   }
 
   .layers__title {
@@ -303,19 +403,29 @@
     accent-color: var(--rust-ink);
   }
 
-  .time button {
+  .run {
+    position: relative;
     flex: none;
-    padding: 2px var(--gap-tight);
+    padding: 4px 0.6rem;
     background: transparent;
-    border: 1px solid var(--rule);
-    border-radius: var(--radius);
+    border: 0;
     font-family: var(--font-mono);
     font-size: 0.7rem;
     color: var(--ink);
     cursor: pointer;
   }
 
-  .time button:hover {
+  /* A wash under the drawn box rather than a fill inside it: the ink is on the paper, so a hover
+     has to happen to the paper. Same rule as the arrival buttons. */
+  .run::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: transparent;
+    transition: background-color var(--fade);
+  }
+
+  .run:hover::before {
     background: var(--paper-sunken);
   }
 

@@ -10,7 +10,7 @@ from migratlas.taxonomy.gbif import (
     match_name,
     titlecase,
 )
-from migratlas.taxonomy.index import load_seed
+from migratlas.taxonomy.seed import load_seed
 
 
 @pytest.mark.parametrize(

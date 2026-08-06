@@ -1,6 +1,8 @@
 <script lang="ts">
   import Instrument from "../notebook/Instrument.svelte";
   import Rule from "../notebook/Rule.svelte";
+  import Sheet from "../notebook/Sheet.svelte";
+  import Boxed from "../notebook/Boxed.svelte";
   import { instrumentFor, type Finding } from "../ledger";
 
   let {
@@ -21,29 +23,39 @@
   and made you click for the figure would be doing the opposite of what this project is for.
 -->
 <section class="arrival" aria-labelledby="arrival-claim">
-  <div class="arrival__card">
+  <Sheet seed="arrival">
+   <div class="arrival__card">
     <header class="arrival__head">
       <Instrument kind={instrumentFor(finding)} size={40} />
       <p class="arrival__kicker">Migratlas · what the radar saw</p>
     </header>
 
-    <h1 id="arrival-claim">{finding.claim}</h1>
+    <h1 id="arrival-claim">{finding.plain}</h1>
     <Rule seed="arrival" />
 
     <p class="arrival__value">{finding.value}</p>
-    <p class="arrival__scope">{finding.scope}</p>
+    <p class="arrival__matters">{finding.matters}</p>
 
     <div class="arrival__ways">
       <button type="button" class="way way--primary" onclick={onshow}>
+        <Boxed seed="way-show" tone="rust" active />
         Show me how you know
       </button>
-      <button type="button" class="way" onclick={onexplore}> Just let me explore </button>
+      <button type="button" class="way" onclick={onexplore}>
+        <Boxed seed="way-explore" />
+        Just let me explore
+      </button>
     </div>
 
     <!-- The caveat is on the arrival screen too, not one screen later. This is the first number a
-         visitor sees and it is the one most likely to be repeated without its qualification. -->
-    <p class="arrival__caveat">{finding.caveat}</p>
-  </div>
+         visitor sees and it is the one most likely to be repeated without its qualification.
+
+         The short register here, and the full one on the claim itself. That is not the caveat
+         being softened: the plain sentence is the whole of what a first-time reader can carry, and
+         a visitor who bounces off fourteen hundred characters leaves with no caveat at all. -->
+    <p class="arrival__caveat">{finding.plain_caveat}</p>
+   </div>
+  </Sheet>
 </section>
 
 <style>
@@ -59,17 +71,16 @@
     pointer-events: none;
   }
 
-  .arrival__card {
+  /* The paper is `Sheet`'s job now -- ground, grain, torn edge, shadow. What is left here is the
+     room the words need and the way the leaf lands. */
+  .arrival :global(.sheet) {
     pointer-events: auto;
     max-width: 34rem;
-    padding: var(--gap-wide);
-    background-color: var(--paper);
-    background-image: var(--grain);
-    border: 1px solid var(--rule);
-    /* A page laid on a globe, not a modal: one soft shadow, no radius beyond the token. */
-    border-radius: var(--radius);
-    box-shadow: 0 2px 24px rgb(47 61 79 / 14%);
     animation: settle var(--draw-slow) var(--ease-pen) both;
+  }
+
+  .arrival__card {
+    padding: var(--gap-wide) var(--gap-wide) var(--gap-wide) calc(var(--gap-wide) + 0.4rem);
   }
 
   /* Lands rather than fades: a page put down on a desk. Zeroed with the motion token, where it
@@ -104,7 +115,7 @@
     margin: var(--gap-tight) 0 0;
     font-family: var(--font-hand);
     font-weight: 400;
-    font-size: clamp(1.7rem, 1.2rem + 2.2vw, 2.45rem);
+    font-size: calc(clamp(1.7rem, 1.2rem + 2.2vw, 2.45rem) * var(--font-scale-hand));
     line-height: var(--leading-hand);
     text-wrap: balance;
   }
@@ -120,7 +131,7 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .arrival__scope {
+  .arrival__matters {
     margin: var(--gap-tight) 0 0;
     font-size: var(--size-body);
     line-height: var(--leading-body);
@@ -133,26 +144,40 @@
     margin-top: var(--gap-wide);
   }
 
+  /* No border and no radius: the box is drawn. The padding is a shade wider than it was, because a
+     drawn line overshoots its corners and needs the room to do it in. */
   .way {
-    padding: 0.5rem 0.9rem;
+    position: relative;
+    padding: 0.55rem 1.05rem;
     background: transparent;
-    border: 1px solid var(--rule);
-    border-radius: var(--radius);
+    border: 0;
     font-family: var(--font-mono);
     font-size: 0.78rem;
     color: var(--ink);
     cursor: pointer;
-    transition: background-color var(--fade), border-color var(--fade);
+    transition: color var(--fade);
   }
 
-  .way:hover {
+  /* A wash rather than a fill, and under the drawn box rather than inside it -- the ink is on the
+     paper, so a hover has to happen to the paper. */
+  .way::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: transparent;
+    transition: background-color var(--fade);
+  }
+
+  .way:hover::before {
     background: var(--paper-sunken);
-    border-color: var(--pencil);
   }
 
+  /* The one thing on the screen you are meant to do, stamped rather than coloured in: rust ink,
+     letterspaced, and set down a fraction off square the way a stamp lands. */
   .way--primary {
-    border-color: var(--rust);
     color: var(--rust);
+    letter-spacing: 0.04em;
+    transform: rotate(-0.5deg);
   }
 
   .arrival__caveat {
@@ -178,7 +203,7 @@
     }
 
     .arrival__card {
-      padding: var(--gap);
+      padding: var(--gap) var(--gap) var(--gap) calc(var(--gap) + 0.4rem);
     }
 
     /* Full width each, stacked: side by side at this width they were 44px tall and 3px apart, and

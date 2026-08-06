@@ -67,6 +67,21 @@ export const VIEWS: Record<string, View> = {
     layers: ["aerial-passage"],
     because: "The claim band again, pulled back: the forcing behind it is global.",
   },
+  "atlas-no-net-change": {
+    // Southern Africa, framed on the atlas footprint itself: South Africa, Lesotho and Eswatini.
+    center: [25, -29],
+    zoom: 3.6,
+    // The 496 cells the comparison ran on, and only those: the gaps are places nobody atlassed
+    // twice rather than places with nothing in them, which is why the surface is not interpolated.
+    // What is drawn is the *uncorrected* count of taxa recorded, not the detection-corrected one --
+    // `docs/methods/phase1f-atlas-surface.md` §5 registered in advance that a disagreement between
+    // the two impeaches the model rather than the count, and the two disagreed.
+    layers: ["atlas-taxa-change"],
+    because:
+      "The southern African atlas footprint: South Africa, Lesotho and Eswatini, and inside it " +
+      "only the cells atlassed twice. Each cell is the change in how many of the analysed taxa " +
+      "were recorded there — ringed where the count fell, solid where it rose.",
+  },
   "coverage-bias": {
     // Deliberately the southern hemisphere, and deliberately far out. This claim is about what the
     // project cannot see, so the camera points at the emptiness rather than at the data.

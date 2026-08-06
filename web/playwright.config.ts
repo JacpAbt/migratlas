@@ -22,6 +22,20 @@ export default defineConfig({
   // The globe is a WebGL app: a retry that passes is a real signal about flakiness, not noise
   // to be papered over, so failures stand on the first run.
   retries: 0,
+  /*
+    Two workers, not the default half-the-cores.
+
+    All three spec files now boot a globe, so the default three workers meant three WebGL contexts
+    competing for one GPU and one main thread. Everything measured slower than it is: the
+    layer-draw test takes 66s alone and was taking 130-240s, and the interaction budget read 204ms
+    against a real 52-90ms. Both were "fixed" once by raising their ceilings, which is treating a
+    scheduler as a subject.
+
+    Raising a ceiling to absorb contention costs the thing the number was for. Two contexts is what
+    this machine actually drives, and the wall clock barely moves -- the suite was already
+    saturated, so the third worker was mostly waiting.
+  */
+  workers: 2,
   reporter: process.env.CI ? "github" : "list",
   use: {
     ...devices["Desktop Chrome"],
