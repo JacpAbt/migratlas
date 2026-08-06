@@ -527,9 +527,21 @@ test("the published layers stay inside the performance budget", async ({ page })
         .map(([path, bytes]) => `  ${(bytes / 1024).toFixed(0)} KiB  ${path}`)
         .join("\n"),
   ).toBeLessThan(BUDGET.payloadBytesGzipped);
+  // The phase breakdown, not only the total. "ready in N ms" doubled on CI once and named nothing,
+  // which cost a bisect to find out that the hatch was 7 ms and the layers were loading one after
+  // another. A number you cannot decompose is a number you cannot act on.
+  const phases = await page.evaluate(
+    () => (window as unknown as { migratlas: { phases: Record<string, number> } }).migratlas.phases,
+  );
+  const slowest = Object.entries(phases)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, ms]) => `${name} ${ms}ms`)
+    .join(", ");
   console.log(
     `budget: heap ${heapMb.toFixed(1)} MB, ready ${readyMs} ms, ` +
-      `payloads ${(payloadBytes / 1024).toFixed(0)} KiB compressed`,
+      `payloads ${(payloadBytes / 1024).toFixed(0)} KiB compressed` +
+      `
+  phases: ${slowest}`,
   );
 });
 

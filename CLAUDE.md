@@ -35,6 +35,11 @@ Windows host, WSL Ubuntu for Python. Git and `gh` run on **Windows** — WSL git
 helper and `git push` blocks forever. `gh` is not on PowerShell's PATH: use
 `/c/Program Files/GitHub CLI/gh.exe`.
 
+**`gh pr merge --auto` does not wait here.** This repository has no *required* status checks
+configured, and auto-merge only waits for checks that are required — with none, it merges on the
+spot. It was used once to mean "merge when green" and merged onto a red build within the second.
+Watch the run and merge explicitly, or make the checks required first.
+
 | Thing | Path |
 | --- | --- |
 | venv | `~/.venvs/migratlas` (outside the tree, deliberately) |

@@ -1,8 +1,11 @@
 name: CI
 
+# `develop` is here because it was not, and that was a hole. With only `main` and `pull_request`,
+# a long stretch of work on `develop` between pull requests ran no CI at all -- 37 commits landed
+# unverified once, and the branch was only checked when a PR happened to be open against it.
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
   workflow_dispatch:
 

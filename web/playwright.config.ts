@@ -36,6 +36,21 @@ export default defineConfig({
     saturated, so the third worker was mostly waiting.
   */
   workers: 2,
+  /*
+    A per-test timeout is a hang detector, not a budget.
+
+    Playwright's 30s default was calibrated against this laptop, where the suite runs in 7 minutes.
+    A GitHub runner takes 13.8 for the same 80 tests: `ready` alone is 8.9s there against 3.4 here,
+    and two correct tests that walk every claim or toggle every layer ran out of clock and reported
+    a timeout with no assertion attached. That says nothing about the page.
+
+    Raised on CI only, so the local number keeps its edge as an early warning. This is not the
+    ceiling-raising the workers comment warns about: performance has its own instruments here -- the
+    heap, payload and ready budget, and the claim-change ratio measured against a repaint of the
+    same page. Slowness is meant to fail *those*, with a number attached, rather than leak out as
+    unrelated tests running out of time.
+  */
+  timeout: process.env.CI ? 90_000 : 30_000,
   reporter: process.env.CI ? "github" : "list",
   use: {
     ...devices["Desktop Chrome"],
