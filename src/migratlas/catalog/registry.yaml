@@ -399,6 +399,52 @@ sources:
   # The first source that is neither northern nor marine, and the one that fills the terrestrial
   # realm. Realm is a judgement: an atlas card records which birds occupy a patch of land, where
   # the radar in Phase 1a records birds in flight, so the same species can appear under both.
+  # The first driver south of the equator, and the first that is not weather. Landed for
+  # docs/methods/phase1g-water.md, which registered before the download that this factor is
+  # explanatory only: no future surface water exists, so a coefficient fitted on it can never enter
+  # a forecast.
+  - id: jrc_gsw
+    title: JRC Global Surface Water — occurrence and occurrence change intensity, v1.4
+    realm: terrestrial
+    landing_page: https://global-surface-water.appspot.com/download
+    download_uri: https://storage.googleapis.com/global-surface-water/downloads2021
+    # No licence *name* is given anywhere on the product. The download page states the Copernicus
+    # terms verbatim -- "free of charge, without restriction of use" -- and requires the attribution
+    # string and the citation below. Recorded as what it says rather than mapped onto a CC name it
+    # does not claim.
+    licence: Copernicus — free of charge, without restriction of use
+    licence_url: https://www.copernicus.eu/en/access-data/copyright-and-licences
+    citation: >-
+      Pekel, J.-F., Cottam, A., Gorelick, N., Belward, A. S. (2016). High-resolution mapping of
+      global surface water and its long-term changes. Nature 540, 418–422.
+      https://doi.org/10.1038/nature20584. Data: EC JRC/Google, Global Surface Water Explorer v1.4,
+      tiles change_* and occurrence_* v1_4_2021, accessed 2026-08-05. Source: EC JRC/Google.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        The terms place no restriction on redistribution or commercial use beyond acknowledgement,
+        which must credit "Source: EC JRC/Google" and cite Pekel et al. 2016. A derived product may
+        therefore be drawn as well as analysed.
+    # Water, seen from orbit. There is no animal in it, and the aggregate published from it is a
+    # per-cell area with no taxon attached.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      The occurrence change intensity layer compares 1984–1999 with 2000–2021, read from the
+      INSPIRE metadata shipped beside the tiles — not from the FAQ, which still describes the 2016
+      release as 2000–2015, nor from the download page, which gives the collection span as
+      1984–2024. Those epochs are the product's, not any study's: SABAP1 (1987–1991) sits inside the
+      first and SABAP2 (2008–2012) inside a second that is twenty-two years long, so any comparison
+      against an atlas window is nested rather than aligned and is attenuated toward zero. Per-year
+      water classifications, which would allow an aligned comparison, are downloadable for 2015–2021
+      only; earlier years exist solely as an Earth Engine collection needing an account. Values
+      0–200 encode percentage-point change with 100 as no change; 253 is "not water", 254 "unable to
+      compute" and 255 "no data", and all three must be excluded before any average. Landsat cannot
+      see water under dense canopy or in cloud-persistent regions, and a small farm dam below the
+      30 m pixel is invisible.
+    added: 2026-08-05
+
   - id: sabap1
     title: Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991
     realm: terrestrial

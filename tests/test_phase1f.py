@@ -43,7 +43,7 @@ def _grid(side: int) -> list[CellChange]:
 def test_a_smooth_gradient_is_positively_autocorrelated() -> None:
     """The behaviour prediction 3 is asking about: neighbours resembling each other."""
     cells = _grid(8)
-    weights = phase1f._weights(cells)
+    weights = phase1f.weights(cells)
     gradient = np.array([cell.cell_lat for cell in cells])
     assert phase1f.morans_i(gradient, weights) > 0.5
 
@@ -51,7 +51,7 @@ def test_a_smooth_gradient_is_positively_autocorrelated() -> None:
 def test_noise_is_not() -> None:
     """A surface of noise must not pass the structure test, or the map is decoration."""
     cells = _grid(8)
-    weights = phase1f._weights(cells)
+    weights = phase1f.weights(cells)
     rng = np.random.default_rng(0)
     values = rng.normal(size=len(cells))
     assert abs(phase1f.morans_i(values, weights)) < 0.25
@@ -71,7 +71,7 @@ def test_a_checkerboard_reads_as_no_structure_under_queen_contiguity() -> None:
     frequency, so a surface that passed it is not thereby proved smooth.
     """
     cells = _grid(8)
-    weights = phase1f._weights(cells)
+    weights = phase1f.weights(cells)
     board = np.array(
         [
             1.0
@@ -86,7 +86,7 @@ def test_a_checkerboard_reads_as_no_structure_under_queen_contiguity() -> None:
 
 def test_a_constant_surface_has_no_structure_rather_than_a_division_by_zero() -> None:
     cells = _grid(4)
-    weights = phase1f._weights(cells)
+    weights = phase1f.weights(cells)
     assert phase1f.morans_i(np.ones(len(cells)), weights) == 0.0
 
 
@@ -103,7 +103,7 @@ def test_neighbours_stop_at_the_holes() -> None:
         _cell(cell_lat=-25.0, cell_lon=28.0 + step),
         _cell(cell_lat=-25.0, cell_lon=28.0 + step * 3),
     ]
-    weights = phase1f._weights(cells)
+    weights = phase1f.weights(cells)
     assert weights[0][1] > 0
     assert weights[0][2] == 0
     # Two steps of empty grid is a hole, and the cell across it is nobody's neighbour rather than
@@ -114,7 +114,7 @@ def test_neighbours_stop_at_the_holes() -> None:
 
 def test_an_isolated_cell_contributes_nothing_rather_than_a_nan() -> None:
     """A footprint cell with no neighbour at all. Row standardisation divides by its zero total."""
-    weights = phase1f._weights([_cell()])
+    weights = phase1f.weights([_cell()])
     assert weights.shape == (1, 1)
     assert not np.isnan(weights).any()
 

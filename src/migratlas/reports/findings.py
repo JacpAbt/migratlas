@@ -359,7 +359,8 @@ def _coverage_bias(evidence_types: int) -> list[BiasDomain]:
             "This claim *is* the geographic bias, and it has moved without closing. Two atlases "
             "put a third of the time-series record south of the equator, in three countries; "
             "every other source with a usable time axis is northern temperate, the two with "
-            "global reach cannot support a trend, and the driver record is northern entire.",
+            "global reach cannot support a trend, and the driver record is northern but for one "
+            "landscape factor over those same atlas cells.",
         ),
         temporal=(
             "bounded",
@@ -812,23 +813,26 @@ def collect() -> list[Finding]:
             claim=(
                 f"{coverage.share:.1%} of the rows this project can measure change with lie south "
                 f"of the equator, from {coverage.southern_sources} of {coverage.sources} sources "
-                f"— and {coverage.driver_share:.1%} of its driver record does. The evidence has "
-                "crossed the equator and the explanatory data has not."
+                f"— and {coverage.driver_share:.2%} of its driver record does. The evidence has "
+                "crossed the equator and the data that would explain it has barely started."
             ),
             value=(
                 f"{coverage.southern:,} of {coverage.rows:,} time-series rows are southern "
                 f"({coverage.share:.1%}), against {coverage.southern_drivers:,} of "
-                f"{coverage.driver_rows:,} driver samples ({coverage.driver_share:.1%})"
+                f"{coverage.driver_rows:,} driver samples ({coverage.driver_share:.2%})"
             ),
             scope="Every source in this project that has a usable time axis.",
             caveat=(
                 "The southern share is two bird atlases in three countries, so it is a large "
                 "number from a small place and not coverage of a hemisphere. What has not moved "
-                "at all is the driver record: every temperature, wind and counterfactual sample "
-                "in this lake was taken over North America or the North Atlantic, which is why "
-                "the southern result is described and not explained, and why the sensitivity "
-                "this project would need to test whether a northern climate response transfers "
-                "cannot yet be fitted in the south. Inherited rather than chosen — long digitised "
+                "barely moved is the driver record. Every temperature, wind and counterfactual "
+                "sample in this lake was taken over North America or the North Atlantic; the only "
+                "southern driver is surface water over the atlas footprint, which is a landscape "
+                "factor and not a climate one. So the southern result is described and not "
+                "explained, and the sensitivity this project would need to test whether a northern "
+                "climate response transfers still cannot be fitted in the south — there is no "
+                "southern temperature here to fit it against. Inherited rather than chosen — long "
+                "digitised "
                 "radar and trawl series exist where they were funded — but no model trained on "
                 "this should be trusted elsewhere without being tested "
                 "there first. Two kinds of gap are worth telling apart on the map. Grey cells are "

@@ -183,7 +183,7 @@ def surface() -> Surface:
     return Surface(cells=cells_out, taxa=len(keys))
 
 
-def _weights(changes: list[CellChange]) -> np.ndarray:
+def weights(changes: list[CellChange]) -> np.ndarray:
     """Queen contiguity on the quarter-degree grid, row-standardised.
 
     Contiguity rather than a distance kernel: the cells are a regular grid with holes in it, and a
@@ -282,10 +282,10 @@ def grade(changes: list[CellChange], taxa: int) -> Verdict:
     gap = np.abs(delta - np.array([change.delta_detected for change in changes]))
     effort = np.array([change.cards_second - change.cards_first for change in changes])
 
-    weights = _weights(changes)
-    observed = morans_i(delta, weights)
+    neighbours = weights(changes)
+    observed = morans_i(delta, neighbours)
     rng = np.random.default_rng(SEED)
-    null = np.array([morans_i(rng.permutation(delta), weights) for _ in range(PERMUTATIONS)])
+    null = np.array([morans_i(rng.permutation(delta), neighbours) for _ in range(PERMUTATIONS)])
     # One-sided, and the +1s count the observed value as one of its own draws -- without them a
     # p-value of exactly zero is reportable, which no permutation test can license.
     morans_p = float((np.sum(null >= observed) + 1) / (PERMUTATIONS + 1))

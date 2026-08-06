@@ -24,6 +24,7 @@ each source carries its own terms.
 | [ERA5 monthly averaged reanalysis on single levels, 1940–present](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [CMIP6 DAMIP and historical — near-surface air temperature, detection and attribution](https://pcmdi.llnl.gov/CMIP6/) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [ISIMIP3a GSWP3-W5E5 — factual and ATTRICI counterfactual near-surface air temperature](https://data.isimip.org/search/climate_scenario/counterclim/) | driver only | `aerial` | CC BY 4.0 | permitted |
+| [JRC Global Surface Water — occurrence and occurrence change intensity, v1.4](https://global-surface-water.appspot.com/download) | driver only | `terrestrial` | Copernicus — free of charge, without restriction of use | permitted |
 | [Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991](https://www.gbif.org/dataset/282d0ccb-4fa0-40f9-8593-105c77e88417) | `survey_index` | `terrestrial` | CC BY 4.0 | permitted |
 | [North American Breeding Bird Survey — route counts, 1966–2025](https://www.usgs.gov/centers/eesc/science/north-american-breeding-bird-survey) | `survey_index` | `terrestrial` | CC0 1.0 | permitted |
 | [Swedish Bird Survey — summer point count routes (Sommarpunktrutterna), 1975–2024](https://www.fageltaxering.lu.se/) | `survey_index` | `terrestrial` | CC0 1.0 | permitted |
@@ -220,6 +221,24 @@ A reanalysis is a model constrained by observations, not a measurement, and ERA5
 **Caveats**
 
 Half a degree, so a station-point sample is a cell mean over roughly 50 km — coarser than NARR's 32 km, finer than CMIP6's 1–2°, and regional rather than local. The binding limit is that `counterclim` ends in 2019 while the radar record runs to 2025, so any claim built here covers 25 of its 31 years and must say which; the same shape of mismatch as DAMIP's `historical` stopping in 2014, and reported the same way. `obsclim` is filed as GRIDDED and `counterclim` as SIMULATED, under two variable names rather than one with a scenario flag, so that "which climate is this" is a join condition instead of a string match. A one-station scoping probe found ATTRICI removing about 15% of the local June–July warming where DAMIP's ratio is 0.98 — not a contradiction, because one is a ratio of ensemble-mean forced signals and the other operates on a single cell's actual daily series, but the two must be reported side by side rather than averaged.
+
+## JRC Global Surface Water — occurrence and occurrence change intensity, v1.4
+
+- **id** `jrc_gsw`
+- **drivers only**, no evidence rows · **realm** `terrestrial`
+- **landing page** https://global-surface-water.appspot.com/download
+- **licence** [Copernicus — free of charge, without restriction of use](https://www.copernicus.eu/en/access-data/copyright-and-licences)
+- **redistribution** permitted, attribution required
+  - The terms place no restriction on redistribution or commercial use beyond acknowledgement, which must credit "Source: EC JRC/Google" and cite Pekel et al. 2016. A derived product may therefore be drawn as well as analysed.
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> Pekel, J.-F., Cottam, A., Gorelick, N., Belward, A. S. (2016). High-resolution mapping of global surface water and its long-term changes. Nature 540, 418–422. https://doi.org/10.1038/nature20584. Data: EC JRC/Google, Global Surface Water Explorer v1.4, tiles change_* and occurrence_* v1_4_2021, accessed 2026-08-05. Source: EC JRC/Google.
+
+**Caveats**
+
+The occurrence change intensity layer compares 1984–1999 with 2000–2021, read from the INSPIRE metadata shipped beside the tiles — not from the FAQ, which still describes the 2016 release as 2000–2015, nor from the download page, which gives the collection span as 1984–2024. Those epochs are the product's, not any study's: SABAP1 (1987–1991) sits inside the first and SABAP2 (2008–2012) inside a second that is twenty-two years long, so any comparison against an atlas window is nested rather than aligned and is attenuated toward zero. Per-year water classifications, which would allow an aligned comparison, are downloadable for 2015–2021 only; earlier years exist solely as an Earth Engine collection needing an account. Values 0–200 encode percentage-point change with 100 as no change; 253 is "not water", 254 "unable to compute" and 255 "no data", and all three must be excluded before any average. Landsat cannot see water under dense canopy or in cloud-persistent regions, and a small farm dam below the 30 m pixel is invisible.
 
 ## Southern African Bird Atlas Project (SABAP1) — atlas cards, 1987–1991
 

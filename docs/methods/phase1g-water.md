@@ -280,3 +280,90 @@ quantities.
 
 Establishing that mapping from the shipped `.qml` colour table, and not from memory, is the first
 thing the ingest does.
+
+---
+
+# Results — appended 2026-08-05
+
+496 cells, every one fully resolved by the sensor. Water change over the product's epochs: median
+**+0.385 km²**, 104 cells losing, 386 gaining, 6 flat. Long-run extent: median 1.474 km², and only
+**6 cells** hold no water at all.
+
+## The predictions, graded
+
+| | registered | observed | |
+| --- | --- | --- | --- |
+| 1 | coefficient on water is positive | **−0.357 taxa/km²**, partial *r* −0.036 | **failed** |
+| 2 | survives a spatial null at p < 0.05 | toroidal **0.787**, spectral **0.594** | **failed** |
+| 3 | leave-one-quadrant-out keeps the sign | −0.593, −0.396, **+0.043**, −0.277 | **failed** |
+| 4 | the placebo is null | naive p 0.031, **spectral p 0.085** | passed |
+
+**The effect is not there.** A one-standard-deviation change in water (2.86 km²) moves the response
+by 1.02 analysed taxa, which is **3.2% of one standard deviation** of the response. Spearman's ρ is
+−0.043. Cells that lost water changed by a median of −0.50 taxa and cells that gained water by
+−7.00, in the opposite direction to the hypothesis and at p 0.264 by a test already established as
+too generous here. The detection-corrected response, kept as the registered robustness check, gives
+−0.348 against −0.357 — the same answer.
+
+Prediction 3's sign instability is not independent evidence of anything. A coefficient this close to
+zero has no sign to be stable about, and reporting the flip as a finding would be reading noise.
+
+## §3 prediction 4 needed a definition it had not been given
+
+It asked for cells with "essentially no water at baseline" and never said what that meant. Six cells
+hold literally none, which cannot test anything. The subset was fixed as the **driest quartile by
+long-run extent** — from the factor's own marginal distribution, before any relationship with the
+response had been computed, so no information about the outcome entered the choice. Recorded here
+rather than left to look like it was always the plan.
+
+## The placebo is the most useful thing in this note
+
+The driest quartile — 124 cells with almost no water to lose — returns a slope of **+13.3 taxa/km²**
+at a naive **p of 0.031**. Read off an ordinary regression table, that is a publishable landscape
+effect, in a subset chosen precisely because it should show nothing, in the opposite direction to
+the hypothesis, at forty times the magnitude.
+
+Put through the null the note registered, it is **p 0.085** and gone.
+
+That is the methodological claim of §4 demonstrated on this project's own data rather than argued
+from the literature: an ordinary p-value over two spatially autocorrelated maps over-rejects, and it
+over-rejects hardest exactly where the denominator is smallest. The claim is also checked directly
+in `tests/test_phase1g.py`, which builds pairs of independent autocorrelated surfaces and requires
+the naive test to call some of them significant while the spectral null does not.
+
+## The toroidal null did not work well here, and the note should have foreseen it
+
+It averaged **76 of 496 cells usable per draw**: the footprint is a sparse scatter inside its
+bounding box, so most rigid shifts drop most cells onto holes. On the 124-cell placebo it was worse
+— 5 usable per draw — and its p of 0.656 there carries almost no information.
+
+Moran spectral randomisation is the null that did the work, because it uses every cell in every
+draw. Registering two nulls "with different failure modes" was right; what §4 did not notice is that
+one of the two is weak on a footprint with holes in it, which is the shape of every footprint this
+project has. Recorded for the next note that reaches for a toroidal shift.
+
+## Verdict: not detectable, which is not the same as absent
+
+Stop condition 1 as amended in step zero part two: **a null here means "not detectable with the only
+instrument available"**, and the finding must use those words. It does.
+
+The instrument compares 1984–1999 with 2000–2021 against atlas windows of five years each. It is
+attenuating by construction, the attenuation was registered before the data was read, and the result
+is consistent with a real effect that this comparison is too blunt to see. It is equally consistent
+with no effect. **This note cannot tell those apart and does not claim to.**
+
+## The factor is dropped, and it does not become a seventh finding
+
+`DATASETS.md` step 3 pre-committed: *stop if the effect is null, write it up as a null and drop it,
+exactly as ENRAM and Candidate C were dropped.* Done.
+
+§7 of this note offered the other option — "a published null if it does not [survive]" — and that is
+declined, which is a narrowing of what was registered and so the safe direction. A site finding
+saying "surface water does not explain the atlas change" would be a claim about southern African
+birds. What was actually established is a claim about a JRC product's epochs. The first would be
+over-claiming the second, and `coverage-bias` already carries the honest version: the evidence
+crossed the equator and the explanatory data has not.
+
+The 992 driver rows stay in the lake. They are the first southern driver samples this project holds,
+they cost 185 MB to obtain, and the next factor note will want the footprint's water whether or not
+this one found anything in it.
