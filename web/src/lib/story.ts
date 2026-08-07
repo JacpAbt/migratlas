@@ -82,6 +82,23 @@ export const VIEWS: Record<string, View> = {
       "only the cells atlassed twice. Each cell is the change in how many of the analysed taxa " +
       "were recorded there — ringed where the count fell, solid where it rose.",
   },
+  "transfer-fails": {
+    // All three legs at once, which is only possible because they ring one ocean: the radar band
+    // over North America, the trawl surveys across the North Atlantic, and the atlas footprint in
+    // southern Africa. Pulled back far enough that the two that agreed are visibly the two
+    // furthest apart -- the frame is the argument here, so it is chosen rather than inherited.
+    //
+    // Centred on the point that minimises the worst-case distance to the three, which puts the
+    // radar band and the atlas footprint at 65.6° and 65.7° from the middle rather than 59.7° and
+    // 72.6°. Eyeballing it had southern Africa sitting near the limb, where the globe's curvature
+    // squashes it into a sliver and the claim's own southern half is the part that reads worst.
+    center: [-29, 11],
+    zoom: 1.35,
+    layers: ["aerial-passage", "marine-taxa-recorded", "atlas-taxa-change"],
+    because:
+      "All three records at once. The two that turned out to agree are the two on opposite " +
+      "sides of the equator; the one that did not is the one measuring dates instead of places.",
+  },
   "coverage-bias": {
     // Deliberately the southern hemisphere, and deliberately far out. This claim is about what the
     // project cannot see, so the camera points at the emptiness rather than at the data.

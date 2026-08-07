@@ -1,7 +1,8 @@
-"""SQL identifier quoting, and time-ordered run ids."""
+"""SQL identifier quoting, time-ordered run ids, and the name of a grid cell."""
 
 import re
 from string.templatelib import Interpolation, Template
+from typing import Final
 from uuid import uuid7
 
 _SAFE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -18,6 +19,23 @@ def new_run_id() -> str:
     and a directory listing comes out in the order things happened.
     """
     return str(uuid7())
+
+
+# Four places, because a quarter-degree grid needs three and a tenth-degree one needs four, and one
+# format for every grid is worth more than the shortest string per grid.
+CELL_PLACES: Final = 4
+
+
+def cell_site_id(latitude: float, longitude: float) -> str:
+    """The `site_id` of a gridded cell, formatted once so two sources cannot disagree about it.
+
+    `site_id` is how a driver joins back to the evidence without coordinate matching, which only
+    works if everyone spells the cell the same way. They did not: one adapter built the string in
+    Python with `.4f` and another with polars' `round(4).cast(String)`, which drops a trailing zero.
+    The same cell was `-25.6250_28.3750` in one table and `-25.625_28.375` in the other, and the
+    join between them returned nothing at all rather than failing.
+    """
+    return f"{latitude:.{CELL_PLACES}f}_{longitude:.{CELL_PLACES}f}"
 
 
 def quote_identifier(name: str) -> str:

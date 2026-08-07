@@ -191,6 +191,43 @@ def ingest_movebank(
         print(f"run {result.run_id}")
 
 
+@app.command("ingest-era5-south")
+def ingest_era5_south() -> None:
+    """Land monthly temperature at the southern African atlas cells (driver samples, gridded).
+
+    The transfer test's southern leg: the same ERA5 product as `ingest-era5`, sampled at the 496
+    cells of the SABAP common footprint for the two atlas epochs and nothing between them.
+
+    Its own source id, and its own command, for reasons worth stating. The lake replaces the
+    partitions a write touches, so landing this under `era5` deleted five years of the North
+    American record -- twice. And the cells are the *atlas*'s, not a grid of this command's
+    devising, so `cell_site_id` names them the way every other table does.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.features.annotate import Point  # noqa: PLC0415 -- one command needs it
+    from migratlas.lake.identifiers import cell_site_id  # noqa: PLC0415
+    from migratlas.reports import phase1e  # noqa: PLC0415 -- heavy, and only this command
+
+    cells = phase1e.footprint(phase1e.EPOCH_2)
+    points = [
+        Point(
+            site_id=cell_site_id(float(lat), float(lon)), latitude=float(lat), longitude=float(lon)
+        )
+        for lat, lon in cells.select("cell_lat", "cell_lon").iter_rows()
+    ]
+    years = [*range(1987, 1992), *range(2008, 2013)]
+    result = era5.ingest(
+        points,
+        years,
+        list(range(1, 13)),
+        fields=("temperature",),
+        area=era5.SABAP_AREA,
+        source_id="era5_south",
+    )
+    print(f"{result.rows:,} rows over {len(points)} cells -> {result.path}")
+    print(f"run {result.run_id}")
+
+
 @app.command("ingest-narr")
 def ingest_narr(
     start: Annotated[int, typer.Option(help="First year, inclusive.")] = 1995,

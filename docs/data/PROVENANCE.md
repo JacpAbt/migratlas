@@ -22,6 +22,7 @@ each source carries its own terms.
 | [FISHGLOB — 29 harmonised scientific bottom-trawl surveys](https://github.com/AquaAuma/FishGlob_data) | `survey_index` | `marine` | CC BY 4.0 | permitted |
 | [NCEP North American Regional Reanalysis — pressure-level winds, 1979–present](https://psl.noaa.gov/data/gridded/data.narr.html) | driver only | `aerial` | US Government work, public domain (17 U.S.C. §105) | permitted |
 | [ERA5 monthly averaged reanalysis on single levels, 1940–present](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means) | driver only | `aerial` | CC BY 4.0 | permitted |
+| [ERA5 monthly 2 m temperature over the southern African atlas footprint](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means) | driver only | `terrestrial` | CC BY 4.0 | permitted |
 | [CMIP6 DAMIP and historical — near-surface air temperature, detection and attribution](https://pcmdi.llnl.gov/CMIP6/) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [ISIMIP3a GSWP3-W5E5 — factual and ATTRICI counterfactual near-surface air temperature](https://data.isimip.org/search/climate_scenario/counterclim/) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [JRC Global Surface Water — occurrence and occurrence change intensity, v1.4](https://global-surface-water.appspot.com/download) | driver only | `terrestrial` | Copernicus — free of charge, without restriction of use | permitted |
@@ -185,6 +186,25 @@ North America only — the Lambert Conformal domain stops at the continent, so t
 **Caveats**
 
 A reanalysis is a model constrained by observations, not a measurement, and ERA5's assimilated observing system changed across 1940–present — so a trend in an ERA5 variable is not automatically a trend in the atmosphere. That matters less for the discontinuity it is first used to test, which is a step at one specific year unrelated to ERA5's own history, than it would for a claim about the whole record. Monthly means smooth away the daily extremes that drive rainfall screening, so this bounds whether the climate moved rather than measuring what any individual night looked like. 0.25° cells over a 32 km radar footprint means a station near a sharp precipitation gradient is represented worse than one inland. Access needs a personal access token AND a one-off acceptance of the `cc-by` licence.
+
+## ERA5 monthly 2 m temperature over the southern African atlas footprint
+
+- **id** `era5_south`
+- **drivers only**, no evidence rows · **realm** `terrestrial`
+- **landing page** https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+  - CC BY 4.0 permits redistribution of derived products with attribution. Copernicus asks that products be credited to the Copernicus Climate Change Service and that neither the European Commission nor ECMWF be represented as endorsing the result.
+- **sensitivity** `not_sensitive` by default
+- **credential** `MIGRATLAS_CRED_CDS_TOKEN` required
+
+**Cite as**
+
+> Hersbach, H., Bell, B., Berrisford, P., Biavati, G., Horányi, A., Muñoz Sabater, J., Nicolas, J., Peubey, C., Radu, R., Rozum, I., Schepers, D., Simmons, A., Soci, C., Dee, D., Thépaut, J-N. (2023). ERA5 monthly averaged data on single levels from 1940 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS). https://doi.org/10.24381/cds.f17050d7
+
+**Caveats**
+
+The same product as `era5`, retrieved for a different box and registered separately — which is a lake constraint rather than a scientific one, and worth stating plainly. The lake partitions on (source_id, year) and a write replaces the partitions it touches, so two retrievals of one product that share a source id and a year cannot coexist: landing this under `era5` deleted five years of the North American record twice before it was given an id of its own. Sampled at the 496 quarter-degree cells of the SABAP common footprint, monthly, for 1987–1991 and 2008–2012 — the two atlas epochs and nothing between them, so this record cannot describe the nineteen years it skips. A reanalysis is a model constrained by observations, and southern Africa is more sparsely observed than North America, so the constraint is weaker here than the same product is there.
 
 ## CMIP6 DAMIP and historical — near-surface air temperature, detection and attribution
 

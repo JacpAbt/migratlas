@@ -149,6 +149,10 @@ ingest-attrici:  ## ISIMIP3a factual + ATTRICI counterfactual daily temperature 
 ingest-era5:  ## ERA5 monthly precipitation at the radar stations -> lake (driver samples)
 	$(RUN) migratlas ingest-era5
 
+.PHONY: ingest-era5-south
+ingest-era5-south:  ## ERA5 monthly temperature at the atlas cells -> lake (driver samples)
+	$(RUN) migratlas ingest-era5-south
+
 .PHONY: build-findings
 build-findings:  ## Recompute what the research established, for the globe to render
 	$(RUN) migratlas build-findings

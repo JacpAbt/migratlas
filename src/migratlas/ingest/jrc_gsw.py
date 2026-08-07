@@ -18,6 +18,7 @@ import polars as pl
 
 from migratlas.catalog import loader as catalog
 from migratlas.drivers.schema import DRIVER_SAMPLES, DriverKind
+from migratlas.lake.identifiers import cell_site_id
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -154,6 +155,7 @@ def to_samples(cells: list[CellWater]) -> pa.Table:
     """Driver rows, marked GRIDDED because a satellite composite is not a site measurement."""
     rows = pl.DataFrame(
         {
+            "site_id": [cell_site_id(cell.cell_lat, cell.cell_lon) for cell in cells],
             "cell_lat": [cell.cell_lat for cell in cells],
             "cell_lon": [cell.cell_lon for cell in cells],
             "change": [cell.change_km2 for cell in cells],
@@ -162,7 +164,7 @@ def to_samples(cells: list[CellWater]) -> pa.Table:
     )
     long = rows.unpivot(
         on=["change", "extent"],
-        index=["cell_lat", "cell_lon"],
+        index=["site_id", "cell_lat", "cell_lon"],
         variable_name="which",
         value_name="value",
     )
@@ -170,11 +172,7 @@ def to_samples(cells: list[CellWater]) -> pa.Table:
         source_id=pl.lit(SOURCE_ID),
         # The atlas cell, in the same vocabulary Phase 1e uses, so the join back to the evidence
         # needs no coordinate matching and no tolerance.
-        site_id=pl.format(
-            "{}_{}",
-            pl.col("cell_lat").round(4).cast(pl.String),
-            pl.col("cell_lon").round(4).cast(pl.String),
-        ),
+        site_id=pl.col("site_id"),
         period_start=pl.lit(PERIOD_START).str.to_datetime().dt.replace_time_zone("UTC"),
         longitude=pl.col("cell_lon").cast(pl.Float64),
         latitude=pl.col("cell_lat").cast(pl.Float64),

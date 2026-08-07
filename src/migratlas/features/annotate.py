@@ -10,7 +10,7 @@ reanalysis grid invents structure it does not have, and the honest error to repo
 distance to the cell centre, which interpolation hides.
 """
 
-from typing import TYPE_CHECKING, NamedTuple, Protocol
+from typing import TYPE_CHECKING, Final, NamedTuple, Protocol
 
 import numpy as np
 
@@ -55,8 +55,24 @@ class GriddedSource(Protocol):
         ...
 
 
+# The coarsest grid this project samples is CMIP6 at a quarter of a degree or worse, so a legitimate
+# match is tens of kilometres and never hundreds. Above this the point is not in the grid at all --
+# and "not in the grid" has to be an error rather than a nearest cell, because a nearest cell is
+# always available and always looks like an answer.
+#
+# Written after sampling 496 southern African cells against a North American grid. Every point
+# matched, to the bottom edge of the box, roughly four thousand kilometres away. `error_km` recorded
+# that faithfully and nothing read it, so the wrong continent landed in the lake under the right
+# site ids and overwrote a variable that a published finding depends on.
+MAX_MATCH_KM: Final = 250.0
+
+
 def nearest_cells(
-    latitudes: np.ndarray, longitudes: np.ndarray, points: list[Point]
+    latitudes: np.ndarray,
+    longitudes: np.ndarray,
+    points: list[Point],
+    *,
+    max_error_km: float = MAX_MATCH_KM,
 ) -> list[Located]:
     """Match each point to the closest cell of a curvilinear grid.
 
@@ -92,6 +108,17 @@ def nearest_cells(
                 error_km=float(np.hypot(dlat[yi, xi], dlon[yi, xi]) * 111.0),
             )
         )
+
+    worst = max(located, key=lambda one: one.error_km, default=None)
+    if worst is not None and worst.error_km > max_error_km:
+        far = sum(1 for one in located if one.error_km > max_error_km)
+        msg = (
+            f"{far} of {len(located)} points are more than {max_error_km:g} km from any cell of "
+            f"this grid -- the worst, {worst.site_id!r}, by {worst.error_km:,.0f} km. The points "
+            f"and the grid are not describing the same place. A nearest cell exists for every "
+            f"point on earth, so this cannot be caught downstream."
+        )
+        raise ValueError(msg)
     return located
 
 

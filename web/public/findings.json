@@ -204,11 +204,11 @@
    "key": "coverage-bias",
    "plain": "A third of what this site measures is now southern, and none of the weather that would explain it is. Describing a place and explaining it are different problems.",
    "matters": "A map of what is known is not a map of what is happening. Most of the world has never been counted the same way twice \u2014 and where it has, the records that would say *why* often still do not reach. A result from one hemisphere is not evidence about the other until someone goes and checks.",
-   "claim": "35.9% of the rows this project can measure change with lie south of the equator, from 2 of 14 sources \u2014 and 0.02% of its driver record does. The evidence has crossed the equator and the data that would explain it has barely started.",
+   "claim": "35.9% of the rows this project can measure change with lie south of the equator, from 2 of 14 sources \u2014 and 0.93% of its driver record does. The evidence has crossed the equator and the data that would explain it has barely started.",
    "plain_caveat": "Two sources are held back deliberately. Wolves and mountain caribou are hunted by people who would use a map of them, so none of their locations are drawn.",
-   "value": "19,742,318 of 54,962,664 time-series rows are southern (35.9%), against 992 of 6,448,042 driver samples (0.02%)",
+   "value": "19,742,318 of 54,962,664 time-series rows are southern (35.9%), against 60,512 of 6,512,057 driver samples (0.93%)",
    "scope": "Every source in this project that has a usable time axis.",
-   "caveat": "The southern share is two bird atlases in three countries, so it is a large number from a small place and not coverage of a hemisphere. What has not moved barely moved is the driver record. Every temperature, wind and counterfactual sample in this lake was taken over North America or the North Atlantic; the only southern driver is surface water over the atlas footprint, which is a landscape factor and not a climate one. So the southern result is described and not explained, and the sensitivity this project would need to test whether a northern climate response transfers still cannot be fitted in the south \u2014 there is no southern temperature here to fit it against. Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but no model trained on this should be trusted elsewhere without being tested there first. Two kinds of gap are worth telling apart on the map. Grey cells are places the lake reaches and cannot measure. And two sources are held and drawn nowhere at all: mountain caribou and wolves are classified high-sensitivity, so their locations are withheld entirely rather than coarsened. The map is not a map of everything this lake knows, and the coverage panel lists what is missing from it rather than letting an absence speak.",
+   "caveat": "The southern share is two bird atlases in three countries, so it is a large number from a small place and not coverage of a hemisphere. What has not moved has barely moved is the driver record, and what little of it is southern arrived only to answer this. Every wind field and every counterfactual in this lake was taken over North America; the southern share is surface water and monthly temperature over one atlas footprint, fetched for two five-year windows thirty years apart. That is enough to ask whether those birds tracked the warming and nothing like enough to explain them: no wind, no counterfactual, and nineteen unobserved years in the middle. Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but no model trained on this should be trusted elsewhere without being tested there first. Two kinds of gap are worth telling apart on the map. Grey cells are places the lake reaches and cannot measure. And two sources are held and drawn nowhere at all: mountain caribou and wolves are classified high-sensitivity, so their locations are withheld entirely rather than coarsened. The map is not a map of everything this lake knows, and the coverage panel lists what is missing from it rather than letting an absence speak.",
    "method": "docs/methods/geographic-coverage.md",
    "realm": "all",
    "taxon_scope": "all",
@@ -217,7 +217,7 @@
     {
      "domain": "geographic",
      "status": "open",
-     "finding": "This claim *is* the geographic bias, and it has moved without closing. Two atlases put a third of the time-series record south of the equator, in three countries; every other source with a usable time axis is northern temperate, the two with global reach cannot support a trend, and the driver record is northern but for one landscape factor over those same atlas cells."
+     "finding": "This claim *is* the geographic bias, and it has moved without closing. Two atlases put a third of the time-series record south of the equator, in three countries; every other source with a usable time axis is northern temperate, the two with global reach cannot support a trend, and the driver record is northern but for water and temperature over those same atlas cells."
     },
     {
      "domain": "temporal",
@@ -291,6 +291,61 @@
     "Detection probability correlates 0.938 between epochs, so how likely a bird is to be written on a card did not change even though almost everything else about atlassing did.",
     "The uncorrected reporting-rate comparison gives the same answer, so the conclusion does not rest on the model being right.",
     "Per cell they agree less well, which is why the map beside this claim draws the uncorrected count: a disagreement of a fraction of one species, summed over five hundred of them, is a few whole species in a cell. That the map is the plainer measurement was fixed in advance, in docs/methods/phase1f-atlas-surface.md, as what to do if the two ever parted."
+   ]
+  },
+  {
+   "key": "transfer-fails",
+   "plain": "Two records on opposite sides of the world agreed about how animals follow a warming climate. The third, measured a different way, did not.",
+   "matters": "Almost every published forecast of where wildlife will go assumes a response measured in one place holds in another. It is an assumption because testing it needs several responses measured the same way, which is rare. Here the crossing that everyone worries about \u2014 hemisphere \u2014 turned out to be the one that held, and the one nobody names broke it.",
+   "claim": "Thermal tracking measured in the northern marine realm (-0.025) and the southern terrestrial realm (-0.014) cannot be told apart, while the aerial record (-0.706) differs from both. Responses transferred across the equator and failed to transfer across the kind of response being measured.",
+   "plain_caveat": "Three records is three points. The one that disagreed is also the only one measuring dates instead of places, and the only one from radar, and nothing here can separate those.",
+   "value": "hold-one-out error 0.68 for aerial-north against 0.06 and 0.02 for the other two",
+   "scope": "69 radar stations between 37\u00b0N and 50\u00b0N, 1,426 species-and-survey pairs over northern-hemisphere shelf seas, and 523 species over 496 quarter-degree cells in southern Africa. Each leg's own window.",
+   "caveat": "This tests whether three measured responses agree, not whether a model fitted in one would work in another \u2014 a weaker question, and the only one three cases can answer. The two realms that agree do so at a median tracking of -0.025 and -0.014: both are indistinguishable from no tracking at all, so what transferred is an absence of response, which is a much cheaper thing to reproduce than a response. The aerial leg is the only one with a clear signal in it and the only one that failed, and it is also the only phenological leg, the only radar leg and the only one needing a seasonal temperature slope to reach common units \u2014 the pre-registration listed realm, hemisphere, instrument and decade as inseparable here and did not list response type, which is the axis the result fell on. That omission is recorded as a correction in the method note rather than edited away. Every leg divides by a temperature and none carries wind, land use or fishing pressure, so a realm moved by something else reports it as a failure to follow the heat.",
+   "method": "docs/methods/phase1i-transfer.md",
+   "realm": "all",
+   "taxon_scope": "all",
+   "evidence_type": "all",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "open",
+     "finding": "Three places, so three points: a North American radar network, eighteen shelf-sea trawl surveys, and one southern African atlas footprint. Hemisphere, realm, instrument and decade all differ together and none of them can be held fixed. The two records that *agreed* are the ones on opposite sides of the equator, which is evidence against hemisphere being the axis that matters, and not evidence for any particular alternative."
+    },
+    {
+     "domain": "temporal",
+     "status": "bounded",
+     "finding": "Each leg carries its own window -- 1995-2025 for the radar, the trawl surveys' own spans, and two five-year epochs thirty years apart in the south. A tracking ratio is a rate over a rate, so unequal windows do not make the units incomparable, but a realm sampled only either side of a gap cannot show what happened inside it."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "open",
+     "finding": "Unattributed biomass, marine species, and terrestrial birds. The comparison is between *records*, and no step establishes that the animals in them respond alike."
+    },
+    {
+     "domain": "environmental",
+     "status": "open",
+     "finding": "Temperature only. Every leg divides by a thermal quantity and none carries land use, fishing pressure, wind or protection, so a realm whose animals were moved by something other than temperature reports that as a failure to track."
+    },
+    {
+     "domain": "detectability",
+     "status": "bounded",
+     "finding": "Inherited from each leg rather than assessed again here, and they are not equally strong: the atlas leg fits a per-species detection probability in each epoch, the trawl leg has none, and the radar leg cannot identify an animal at all. A ratio cannot be more reliable than the shift in its numerator."
+    },
+    {
+     "domain": "phenological",
+     "status": "open",
+     "finding": "This is the domain the result landed on. Two legs measure where an animal is and the third measures when it passes, and the conversion between them needs a seasonal temperature slope that a spatial leg never has to compute. The pre-registration's list of confounds did not name response type, and the correction is recorded in the method note rather than edited into it."
+    }
+   ],
+   "direction": "limit",
+   "supporting": [
+    "The pair that agrees differs in hemisphere, realm, instrument, taxon and decade, and its medians sit 0.011 apart (p=0.10, Holm-corrected) \u2014 while the aerial record sits 0.69 from both.",
+    "Agreement is not only in the centre: predicting the southern atlas from the other two puts 52.8% of it inside the predicted interquartile range, against the 50% a correct prediction would give, and the marine leg lands at 49.7%. The aerial leg gets 31.9%.",
+    "The conversion the aerial leg needs was registered as a stop condition, and it does not fire: its median moves 0.054 across three choices of autumn window, against the 0.2 that would have withdrawn the leg and reduced this to a two-realm comparison.",
+    "Both quantities in that conversion are measured from the same reanalysis the denominator comes from, so no literature constant enters the only leg that needs one.",
+    "Every summary here is a median. The aerial leg's mean moves between -1.09 and -6.67 across the same three windows whose medians agree to three decimal places, which is what a ratio of two noisy quantities does.",
+    "Two of the four registered predictions failed, including the one naming which realm would be predicted worst, and both are graded as registered in the method note rather than restated to match the outcome."
    ]
   }
  ]

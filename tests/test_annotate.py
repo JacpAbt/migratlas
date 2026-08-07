@@ -16,6 +16,7 @@ import pytest
 from migratlas.drivers import narr
 from migratlas.drivers.schema import DRIVER_SAMPLES, DriverKind
 from migratlas.features.annotate import (
+    MAX_MATCH_KM,
     Located,
     Point,
     bounding_box,
@@ -331,3 +332,47 @@ def test_airspeed_alignment_prefers_the_offset_that_tightens_the_distribution() 
     assert best["offset_days"] == -1
     assert best["median_airspeed"] == pytest.approx(10.0, abs=1e-6)
     assert best["sd"] == pytest.approx(0.0, abs=1e-6)
+
+
+# --- The guard added after a data-loss incident -------------------------------
+def test_points_outside_the_grid_are_refused_rather_than_matched_to_its_edge() -> None:
+    """The bug this cost a lake partition to learn.
+
+    496 southern African cells were sampled against a North American grid. Every one matched --
+    to the bottom edge of the box, about four thousand kilometres away -- because a nearest cell
+    exists for every point on earth. `error_km` recorded it faithfully and nothing read it, so the
+    wrong continent landed under the right site ids and overwrote a variable a published finding
+    depends on.
+    """
+    lat, lon = np.meshgrid(
+        np.linspace(24.0, 50.0, 20), np.linspace(-125.0, -66.0, 30), indexing="ij"
+    )
+    southern = [Point(site_id="cape", latitude=-33.9, longitude=18.4)]
+
+    with pytest.raises(ValueError, match="not describing the same place"):
+        nearest_cells(lat, lon, southern)
+
+
+def test_a_point_inside_the_grid_still_matches() -> None:
+    """The guard must not refuse the thing it exists to protect."""
+    lat, lon = np.meshgrid(
+        np.linspace(24.0, 50.0, 20), np.linspace(-125.0, -66.0, 30), indexing="ij"
+    )
+    found = nearest_cells(lat, lon, [Point(site_id="kansas", latitude=38.5, longitude=-98.0)])
+    assert len(found) == 1
+    assert found[0].error_km < MAX_MATCH_KM
+
+
+def test_the_message_names_how_many_points_and_the_worst_one() -> None:
+    """A refusal that does not say which point is a refusal someone will override blindly."""
+    lat, lon = np.meshgrid(
+        np.linspace(24.0, 50.0, 10), np.linspace(-125.0, -66.0, 10), indexing="ij"
+    )
+    points = [
+        Point(site_id="kansas", latitude=38.5, longitude=-98.0),
+        Point(site_id="cape", latitude=-33.9, longitude=18.4),
+    ]
+    with pytest.raises(ValueError, match="same place") as caught:
+        nearest_cells(lat, lon, points)
+    assert "1 of 2" in str(caught.value)
+    assert "'cape'" in str(caught.value)

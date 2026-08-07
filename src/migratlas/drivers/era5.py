@@ -18,6 +18,7 @@ Two things about access, both learned by hitting them:
   CC-BY-4.0 and accepting the older Copernicus licence does not satisfy it.
 """
 
+import hashlib
 import logging
 from typing import TYPE_CHECKING, Final, NamedTuple
 
@@ -73,8 +74,16 @@ FIELDS: Final[dict[str, Field]] = {
     ),
 }
 
-# North, west, south, east. The radar network's own extent, so the request is small.
-CONUS_AREA: Final[tuple[float, float, float, float]] = (50.0, -125.0, 24.0, -66.0)
+# North, west, south, east -- the order CDS wants, which is not the order anyone says them in.
+Area = tuple[float, float, float, float]
+
+# The radar network's own extent, so the request is small.
+CONUS_AREA: Final[Area] = (50.0, -125.0, 24.0, -66.0)
+
+# The SABAP atlas footprint with a degree of margin, for the transfer test's southern leg. North is
+# the *less negative* latitude here, which is the one thing about this tuple worth stating: a
+# southern box written north-first reads backwards to anyone used to the CONUS one above it.
+SABAP_AREA: Final[Area] = (-21.0, 17.0, -36.0, 34.0)
 
 POLL_SECONDS: Final = 15.0
 POLL_LIMIT: Final = 240
@@ -90,8 +99,19 @@ def _headers() -> dict[str, str]:
     return {"PRIVATE-TOKEN": get_settings().credential("cds_token")}
 
 
-def submit(field: Field, years: list[int], months: list[int]) -> str:
-    """Queue one request and return its job id."""
+def submit(
+    field: Field,
+    years: list[int],
+    months: list[int],
+    *,
+    area: Area = CONUS_AREA,
+) -> str:
+    """Queue one request and return its job id.
+
+    The area defaults to CONUS because that is what every caller wanted until the transfer
+    test needed a southern box. It is a parameter rather than a second function because the
+    request is otherwise identical, and two near-copies drift.
+    """
     import httpx  # noqa: PLC0415 -- only gridded drivers need it here
 
     payload = {
@@ -101,7 +121,7 @@ def submit(field: Field, years: list[int], months: list[int]) -> str:
             "year": [str(year) for year in years],
             "month": [f"{month:02d}" for month in months],
             "time": ["00:00"],
-            "area": list(CONUS_AREA),
+            "area": list(area),
             "data_format": "netcdf",
         }
     }
@@ -161,11 +181,23 @@ def wait(job_id: str) -> str:
     raise RetrievalError(msg)
 
 
-def download(field: Field, href: str) -> Path:
+def request_tag(field: Field, years: list[int], months: list[int], area: Area) -> str:
+    """A short, stable label for exactly this request.
+
+    The archive caches on the filename, and the filename used to carry only the variable. So a
+    request for a different *region* found the previous region's file already present, skipped the
+    download, and sampled the wrong continent -- silently, because a nearest cell exists for every
+    point. Everything that distinguishes one request from another belongs in the name.
+    """
+    key = repr((field.cds_name, sorted(years), sorted(months), area))
+    return hashlib.sha256(key.encode()).hexdigest()[:12]
+
+
+def download(field: Field, href: str, tag: str) -> Path:
     """Fetch the result into the raw archive, exactly as served."""
     from migratlas.ingest.http import RemoteFile, fetch  # noqa: PLC0415 -- avoids a cycle
 
-    name = f"{DATASET}-{field.cds_name}.nc"
+    name = f"{DATASET}-{field.cds_name}-{tag}.nc"
     return fetch(RemoteFile(url=href, name=name), SOURCE_ID)
 
 
@@ -205,10 +237,10 @@ def monthly(field: Field, path: Path, located: list[Located]) -> pl.DataFrame:
     return pl.concat(frames)
 
 
-def to_samples(field: Field, months: pl.DataFrame) -> pa.Table:
+def to_samples(field: Field, months: pl.DataFrame, source_id: str = SOURCE_ID) -> pa.Table:
     """Driver rows, marked GRIDDED and carrying a monthly rather than nightly period."""
     out = months.select(
-        source_id=pl.lit(SOURCE_ID),
+        source_id=pl.lit(source_id),
         site_id=pl.col("site_id"),
         period_start=pl.col("period_start"),
         longitude=pl.col("longitude").cast(pl.Float64),
@@ -237,12 +269,15 @@ def locate(points: list[Point], path: Path) -> list[Located]:
     return nearest_cells(grid_lat, grid_lon, points)
 
 
-def ingest(
+def ingest(  # noqa: PLR0913 -- every one names a dimension of the request, and folding them
+    # into a config object would hide which of them the caller actually chose.
     points: list[Point],
     years: list[int],
     months: list[int],
     *,
     fields: tuple[str, ...] = ("precipitation",),
+    area: Area = CONUS_AREA,
+    source_id: str = SOURCE_ID,
     root: Path | None = None,
 ) -> WriteResult:
     """Fetch, reshape and land monthly fields for a point set.
@@ -252,12 +287,13 @@ def ingest(
     they share. Same constraint that shaped `narr.ingest(resume=...)`, arriving from a different
     direction.
     """
-    catalog.admit(SOURCE_ID)
+    catalog.admit(source_id)
     frames = []
     located: list[Located] = []
     for name in fields:
         field = FIELDS[name]
-        path = download(field, wait(submit(field, years, months)))
+        tag = request_tag(field, years, months, area)
+        path = download(field, wait(submit(field, years, months, area=area)), tag)
         if not located:
             located = locate(points, path)
             log.info("ERA5 grid: %d stations matched", len(located))
@@ -267,7 +303,10 @@ def ingest(
     import pyarrow as pa  # noqa: PLC0415 -- only this concatenation needs it at runtime
 
     table = pa.concat_tables(
-        [to_samples(FIELDS[name], frame) for name, frame in zip(fields, frames, strict=True)]
+        [
+            to_samples(FIELDS[name], frame, source_id)
+            for name, frame in zip(fields, frames, strict=True)
+        ]
     )
     log.info("%d driver samples across %d field(s)", table.num_rows, len(fields))
-    return write_table(table, DRIVER_SAMPLES, source_id=SOURCE_ID, root=root)
+    return write_table(table, DRIVER_SAMPLES, source_id=source_id, root=root)
