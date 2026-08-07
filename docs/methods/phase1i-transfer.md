@@ -325,3 +325,14 @@ is detectable there and a smaller realm would be forgiven the same error. §3 wa
 three scores and §4 was wrong to make the n-dependent one the verdict. **Coverage and spread are the
 better instruments and are reported above with equal standing.** Prediction 2 is graded as registered
 anyway — moving the goalposts after seeing the numbers is the thing this convention exists to stop.
+
+## Correction — the coupling filter tested for zero, and zero is platform luck
+
+The aerial reduction drops a station whose autumn ignores its summer, and the filter said
+`coupling <= 0`. An uncoupled station's regressed slope is zero only up to floating-point noise:
+the same synthetic station fitted non-positive on the development machine and `+2.5e-16` on CI's
+BLAS, slipped the guard, and divided `per_degree` by noise into a ratio of `-3.9e15`. The filter
+is now `coupling <= 1e-9` (`COUPLING_NOISE` in `phase1i.py`), found by the unit test on 2026-08-07,
+after publication. Every physically coupled station sits orders of magnitude above the floor, so
+the published ratios are unchanged — verified by rebuilding `findings.json` and diffing, not
+asserted.

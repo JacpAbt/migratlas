@@ -66,6 +66,15 @@ AUTUMN_MONTHS: Final = (9, 10, 11)
 MIN_COOLING: Final = 0.01
 MIN_SHARED_YEARS: Final = 15
 
+COUPLING_NOISE: Final = 1e-9
+"""An uncoupled station regresses to zero only up to floating-point luck.
+
+The same synthetic uncoupled station fitted a slope that was non-positive on one machine and
++2.5e-16 on CI's BLAS, and the positive one slipped a ``<= 0`` guard into dividing `per_degree`
+by noise -- a ratio of -3.9e15. Every physically coupled station sits orders of magnitude above
+this floor, so it cannot move a published ratio; it only closes the sign-of-noise hole.
+"""
+
 BOOTSTRAP: Final = 2000
 SEED: Final = 20260807
 """Fixed, because a published interval that moves between builds is not an interval."""
@@ -306,7 +315,7 @@ def _aerial_ratios(
             continue
         days = np.array([MID_MONTH[m] for m in by_month["month"].to_list()], dtype=float)
         cooling = float(np.polyfit(days, by_month["value"].to_numpy(), 1)[0])
-        if cooling >= -MIN_COOLING or coupling <= 0:
+        if cooling >= -MIN_COOLING or coupling <= COUPLING_NOISE:
             continue
 
         # Days the thermal calendar moves per degree of summer warmth.
