@@ -359,8 +359,8 @@ def _coverage_bias(evidence_types: int) -> list[BiasDomain]:
             "This claim *is* the geographic bias, and it has moved without closing. Two atlases "
             "put a third of the time-series record south of the equator, in three countries; "
             "every other source with a usable time axis is northern temperate, the two with "
-            "global reach cannot support a trend, and the driver record is northern but for one "
-            "landscape factor over those same atlas cells.",
+            "global reach cannot support a trend, and the driver record is northern but for water "
+            "and temperature over those same atlas cells.",
         ),
         temporal=(
             "bounded",
@@ -825,14 +825,13 @@ def collect() -> list[Finding]:
             caveat=(
                 "The southern share is two bird atlases in three countries, so it is a large "
                 "number from a small place and not coverage of a hemisphere. What has not moved "
-                "barely moved is the driver record. Every temperature, wind and counterfactual "
-                "sample in this lake was taken over North America or the North Atlantic; the only "
-                "southern driver is surface water over the atlas footprint, which is a landscape "
-                "factor and not a climate one. So the southern result is described and not "
-                "explained, and the sensitivity this project would need to test whether a northern "
-                "climate response transfers still cannot be fitted in the south — there is no "
-                "southern temperature here to fit it against. Inherited rather than chosen — long "
-                "digitised "
+                "has barely moved is the driver record, and what little of it is southern arrived "
+                "only to answer this. Every wind field and every counterfactual in this lake was "
+                "taken over North America; the southern share is surface water and monthly "
+                "temperature over one atlas footprint, fetched for two five-year windows thirty "
+                "years apart. That is enough to ask whether those birds tracked the warming and "
+                "nothing like enough to explain them: no wind, no counterfactual, and nineteen "
+                "unobserved years in the middle. Inherited rather than chosen — long digitised "
                 "radar and trawl series exist where they were funded — but no model trained on "
                 "this should be trusted elsewhere without being tested "
                 "there first. Two kinds of gap are worth telling apart on the map. Grey cells are "

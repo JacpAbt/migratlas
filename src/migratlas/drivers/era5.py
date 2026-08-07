@@ -237,10 +237,10 @@ def monthly(field: Field, path: Path, located: list[Located]) -> pl.DataFrame:
     return pl.concat(frames)
 
 
-def to_samples(field: Field, months: pl.DataFrame) -> pa.Table:
+def to_samples(field: Field, months: pl.DataFrame, source_id: str = SOURCE_ID) -> pa.Table:
     """Driver rows, marked GRIDDED and carrying a monthly rather than nightly period."""
     out = months.select(
-        source_id=pl.lit(SOURCE_ID),
+        source_id=pl.lit(source_id),
         site_id=pl.col("site_id"),
         period_start=pl.col("period_start"),
         longitude=pl.col("longitude").cast(pl.Float64),
@@ -277,6 +277,7 @@ def ingest(  # noqa: PLR0913 -- every one names a dimension of the request, and 
     *,
     fields: tuple[str, ...] = ("precipitation",),
     area: Area = CONUS_AREA,
+    source_id: str = SOURCE_ID,
     root: Path | None = None,
 ) -> WriteResult:
     """Fetch, reshape and land monthly fields for a point set.
@@ -286,7 +287,7 @@ def ingest(  # noqa: PLR0913 -- every one names a dimension of the request, and 
     they share. Same constraint that shaped `narr.ingest(resume=...)`, arriving from a different
     direction.
     """
-    catalog.admit(SOURCE_ID)
+    catalog.admit(source_id)
     frames = []
     located: list[Located] = []
     for name in fields:
@@ -302,7 +303,10 @@ def ingest(  # noqa: PLR0913 -- every one names a dimension of the request, and 
     import pyarrow as pa  # noqa: PLC0415 -- only this concatenation needs it at runtime
 
     table = pa.concat_tables(
-        [to_samples(FIELDS[name], frame) for name, frame in zip(fields, frames, strict=True)]
+        [
+            to_samples(FIELDS[name], frame, source_id)
+            for name, frame in zip(fields, frames, strict=True)
+        ]
     )
     log.info("%d driver samples across %d field(s)", table.num_rows, len(fields))
-    return write_table(table, DRIVER_SAMPLES, source_id=SOURCE_ID, root=root)
+    return write_table(table, DRIVER_SAMPLES, source_id=source_id, root=root)

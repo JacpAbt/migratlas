@@ -9,8 +9,9 @@ needing the schema-drift refusal below.
 import json
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
+import polars as pl
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -71,6 +72,7 @@ def write_table(
     partitioned = _add_partition_columns(table, spec)
     dataset_root = (root or get_settings().lake_dir) / spec.name
     _refuse_mixed_schemas(spec, dataset_root, source_id)
+    _refuse_a_disjoint_replacement(partitioned, spec, dataset_root, source_id)
     dataset_root.mkdir(parents=True, exist_ok=True)
 
     file_format = ds.ParquetFileFormat()
@@ -100,6 +102,61 @@ def write_table(
     )
     _write_manifest(result, dataset_root.parent / "_manifests" / spec.name)
     return result
+
+
+# The column that says *which thing* a row is about, tried in order. A re-ingest of one source
+# revisits the same things; a write whose identities are entirely new is not a refresh, it is a
+# different dataset wearing the same source id.
+IDENTITY_COLUMNS: Final = ("site_id", "station_id", "individual_id")
+
+
+def _refuse_a_disjoint_replacement(
+    partitioned: pa.Table, spec: TableSpec, dataset_root: Path, source_id: str
+) -> None:
+    """Refuse a write that would replace a partition's contents wholesale.
+
+    `delete_matching` erases every file in a partition before writing it, which is right for an
+    idempotent re-ingest and catastrophic for anything else. Twice in one session a retrieval for a
+    different region was landed under an existing source id and silently deleted years of the first
+    one -- once taking a variable a published finding depends on with it.
+
+    Row counts would not have caught either: both replacements were *larger* than what they erased.
+    What distinguishes a refresh from a substitution is whether it is about the same things, so that
+    is what is compared. Overlap of one identity is enough to pass; the failure mode is a set that
+    shares nothing.
+    """
+    column = next((name for name in IDENTITY_COLUMNS if name in partitioned.schema.names), None)
+    if column is None or not dataset_root.exists():
+        return
+
+    keys = [name for name in spec.partition_by if name != "source_id"]
+    if not keys:
+        return
+
+    incoming = pl.DataFrame(partitioned.select([column, *keys]))
+    for row in incoming.select(keys).unique().iter_rows(named=True):
+        where = dataset_root / f"source_id={source_id}"
+        for name in keys:
+            where = where / f"{name}={row[name]}"
+        if not where.exists() or not any(where.glob("*.parquet")):
+            continue
+
+        existing = set(
+            pl.read_parquet(where / "*.parquet", columns=[column])[column].unique().to_list()
+        )
+        arriving = set(
+            incoming.filter(pl.all_horizontal([pl.col(name) == row[name] for name in keys]))[column]
+            .unique()
+            .to_list()
+        )
+        if existing and arriving and not (existing & arriving):
+            msg = (
+                f"writing {source_id} into {'/'.join(f'{k}={row[k]}' for k in keys)} would delete "
+                f"{len(existing)} {column} values and put {len(arriving)} entirely different ones "
+                f"there. A re-ingest revisits the same {column}s; this shares none, so it is a "
+                f"different dataset under the same source id. Register it as its own source."
+            )
+            raise ValueError(msg)
 
 
 def _refuse_mixed_schemas(spec: TableSpec, dataset_root: Path, source_id: str) -> None:
