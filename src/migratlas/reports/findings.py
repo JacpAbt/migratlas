@@ -344,6 +344,50 @@ ATTRIBUTION_BIAS: Final = _domains(
     ),
 )
 
+TRANSFER_BIAS: Final = _domains(
+    geographic=(
+        "open",
+        "Three places, so three points: a North American radar network, eighteen shelf-sea trawl "
+        "surveys, and one southern African atlas footprint. Hemisphere, realm, instrument and "
+        "decade all differ together and none of them can be held fixed. The two records that "
+        "*agreed* are the ones on opposite sides of the equator, which is evidence against "
+        "hemisphere being the axis that matters, and not evidence for any particular alternative.",
+    ),
+    temporal=(
+        "bounded",
+        "Each leg carries its own window -- 1995-2025 for the radar, the trawl surveys' own spans, "
+        "and two five-year epochs thirty years apart in the south. A tracking ratio is a rate over "
+        "a rate, so unequal windows do not make the units incomparable, but a realm sampled only "
+        "either side of a gap cannot show what happened inside it.",
+    ),
+    taxonomic=(
+        "open",
+        "Unattributed biomass, marine species, and terrestrial birds. The comparison is between "
+        "*records*, and no step establishes that the animals in them respond alike.",
+    ),
+    environmental=(
+        "open",
+        "Temperature only. Every leg divides by a thermal quantity and none carries land use, "
+        "fishing pressure, wind or protection, so a realm whose animals were moved by something "
+        "other than temperature reports that as a failure to track.",
+    ),
+    detectability=(
+        "bounded",
+        "Inherited from each leg rather than assessed again here, and they are not equally strong: "
+        "the atlas leg fits a per-species detection probability in each epoch, the trawl leg has "
+        "none, and the radar leg cannot identify an animal at all. A ratio cannot be more reliable "
+        "than the shift in its numerator.",
+    ),
+    phenological=(
+        "open",
+        "This is the domain the result landed on. Two legs measure where an animal is and the "
+        "third measures when it passes, and the conversion between them needs a seasonal "
+        "temperature slope that a spatial leg never has to compute. The pre-registration's list of "
+        "confounds did not name response type, and the correction is recorded in the method note "
+        "rather than edited into it.",
+    ),
+)
+
 
 def _coverage_bias(evidence_types: int) -> list[BiasDomain]:
     """The coverage limit's ROBITT block, with the one number in it read from the lake.
@@ -926,6 +970,117 @@ def collect() -> list[Finding]:
                 "hundred of them, is a few whole species in a cell. That the map is the plainer "
                 "measurement was fixed in advance, in docs/methods/phase1f-atlas-surface.md, as "
                 "what to do if the two ever parted.",
+            ],
+        )
+    )
+
+    # --- Phase 1i: does any of this transfer? -----------------------------
+    # The slowest entry in the build by a wide margin: it re-runs all three legs, and two of them
+    # are whole analyses that already ran above. Kept whole rather than cached because the claim is
+    # a comparison between them, and a comparison assembled from three separately-cached numbers is
+    # exactly the figure that goes stale without anyone noticing.
+    from migratlas.reports import phase1i  # noqa: PLC0415
+
+    transfer = phase1i.summarise()
+    by_realm = {leg.realm: leg for leg in transfer.legs}
+    agreed = transfer.indistinguishable
+    worst = transfer.worst
+
+    def coverage_of(realm: str) -> float:
+        return next(held.coverage for held in transfer.held_out if held.realm == realm)
+
+    findings.append(
+        Finding(
+            key="transfer-fails",
+            realm="all",
+            taxon_scope="all",
+            evidence_type="all",
+            bias=TRANSFER_BIAS,
+            plain=(
+                "Two records on opposite sides of the world agreed about how animals follow a "
+                "warming climate. The third, measured a different way, did not."
+            ),
+            matters=(
+                "Almost every published forecast of where wildlife will go assumes a response "
+                "measured in one place holds in another. It is an assumption because testing it "
+                "needs several responses measured the same way, which is rare. Here the crossing "
+                "that everyone worries about — hemisphere — turned out to be the one that held, "
+                "and the one nobody names broke it."
+            ),
+            plain_caveat=(
+                "Three records is three points. The one that disagreed is also the only one "
+                "measuring dates instead of places, and the only one from radar, and nothing here "
+                "can separate those."
+            ),
+            claim=(
+                "Thermal tracking measured in the northern marine realm "
+                f"({by_realm[phase1i.MARINE].median:+.3f}) and the southern terrestrial realm "
+                f"({by_realm[phase1i.TERRESTRIAL].median:+.3f}) cannot be told apart, while the "
+                f"aerial record ({by_realm[phase1i.AERIAL].median:+.3f}) differs from both. "
+                "Responses transferred across the equator and failed to transfer across the kind "
+                "of response being measured."
+            ),
+            value=(
+                f"hold-one-out error {worst.error:.2f} for {worst.realm} against "
+                + " and ".join(
+                    f"{held.error:.2f}" for held in transfer.held_out if held.realm != worst.realm
+                )
+                + " for the other two"
+            ),
+            scope=(
+                f"{by_realm[phase1i.AERIAL].n} radar stations between 37°N and 50°N, "
+                f"{by_realm[phase1i.MARINE].n} species-and-survey pairs over northern-hemisphere "
+                f"shelf seas, and {by_realm[phase1i.TERRESTRIAL].n} species over 496 "
+                "quarter-degree cells in southern Africa. Each leg's own window."
+            ),
+            caveat=(
+                "This tests whether three measured responses agree, not whether a model fitted in "
+                "one would work in another — a weaker question, and the only one three cases can "
+                "answer. The two realms that agree do so at a median tracking of "
+                f"{by_realm[phase1i.MARINE].median:+.3f} and "
+                f"{by_realm[phase1i.TERRESTRIAL].median:+.3f}: both are indistinguishable from no "
+                "tracking at all, so what transferred is an absence of response, which is a much "
+                "cheaper thing to reproduce than a response. The aerial leg is the only one with a "
+                "clear signal in it and the only one that failed, and it is also the only "
+                "phenological leg, the only radar leg and the only one needing a seasonal "
+                "temperature slope to reach common units — the pre-registration listed realm, "
+                "hemisphere, instrument and decade as inseparable here and did not list response "
+                "type, which is the axis the result fell on. That omission is recorded as a "
+                "correction in the method note rather than edited away. Every leg divides by a "
+                "temperature and none carries wind, land use or fishing pressure, so a realm moved "
+                "by something else reports it as a failure to follow the heat."
+            ),
+            method="docs/methods/phase1i-transfer.md",
+            # A limit rather than a change: nothing here moved over time. It bounds what may be
+            # extrapolated, which is the same shape as `coverage-bias` and is the promise this
+            # discharges. The one positive result in it -- that two realms agreed -- is an
+            # agreement about the *absence* of a response, and the caveat says so.
+            direction="limit",
+            supporting=[
+                "The pair that agrees differs in hemisphere, realm, instrument, taxon and decade, "
+                f"and its medians sit {agreed[0].gap:.3f} apart "
+                f"(p={agreed[0].p_adjusted:.2f}, Holm-corrected) — while the aerial record sits "
+                f"{max(pair.gap for pair in transfer.pairs):.2f} from both."
+                if agreed
+                else "Every pair of realms is distinguishable.",
+                "Agreement is not only in the centre: predicting the southern atlas from the "
+                f"other two puts {coverage_of(phase1i.TERRESTRIAL):.1%} of it inside the "
+                "predicted interquartile range, against the 50% a correct prediction would give, "
+                f"and the marine leg lands at {coverage_of(phase1i.MARINE):.1%}. The aerial leg "
+                f"gets {worst.coverage:.1%}.",
+                "The conversion the aerial leg needs was registered as a stop condition, and it "
+                f"does not fire: its median moves {phase1i.aerial_window_spread():.3f} across "
+                "three choices of autumn window, against the 0.2 that would have withdrawn the leg "
+                "and reduced this to a two-realm comparison.",
+                "Both quantities in that conversion are measured from the same reanalysis the "
+                "denominator comes from, so no literature constant enters the only leg that needs "
+                "one.",
+                "Every summary here is a median. The aerial leg's mean moves between -1.09 and "
+                "-6.67 across the same three windows whose medians agree to three decimal places, "
+                "which is what a ratio of two noisy quantities does.",
+                "Two of the four registered predictions failed, including the one naming which "
+                "realm would be predicted worst, and both are graded as registered in the method "
+                "note rather than restated to match the outcome.",
             ],
         )
     )

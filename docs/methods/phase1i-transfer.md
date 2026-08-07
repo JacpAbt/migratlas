@@ -201,3 +201,127 @@ The deciles are the honest caveat: a substantial minority of pairs sit outside �
 several times faster than their isotherm or hard against it. A ratio inherits the noise of both its
 parts, and a species whose own shift is poorly determined will produce a wild one. Every summary of
 this distribution is therefore a median, never a mean.
+
+## Southern result — 2026-08-07
+
+**523 species over the 496-cell common footprint**, each occupying at least 30 cells in both epochs.
+
+| | |
+| --- | --- |
+| warming across the footprint | +0.3109 °C |
+| CTI shift, median | **+0.0044 °C** (mean +0.0308) |
+| perfect tracking would be | −0.3109 °C |
+| **median tracking** | **−0.014** |
+| quartiles | −0.480 to +0.427 |
+| tracking at all (> 0) | 48.9% |
+
+§5's footprint stop condition **cannot fire**: the footprint is the same 496 cells in both epochs by
+construction, so no cell enters or leaves and the atlassing rule has no route to move a CTI. Checked
+rather than argued, because the condition was registered before it was known to be vacuous.
+
+The cell's thermal position is **fixed at its epoch-1 temperature**, so a species' CTI moves only
+when the birds move. Using each epoch's own temperature would have folded the warming into the
+answer and guaranteed apparent tracking.
+
+## Aerial result — 2026-08-07
+
+The conversion §5 worried about needs two measured quantities rather than one guessed constant,
+because the driver is June–July temperature and the response is autumn passage date:
+
+- **the coupling `c`**, °C of autumn per °C of summer, regressed per station over ≥15 shared years;
+- **the autumn cooling slope**, °C per day, from the ERA5 monthly means themselves.
+
+Then `thermal = c / |slope|` is the days the thermal calendar moves per °C of summer warmth, and
+`tracking = S / thermal`. Both come from ERA5, so no literature constant enters.
+
+| autumn window | stations | median tracking | mean | quartiles |
+| --- | --- | --- | --- | --- |
+| Sep–Oct–Nov | 69 | **−0.706** | −1.09 | −1.228 to −0.227 |
+| Sep–Oct | 68 | −0.760 | −2.21 | −1.591 to −0.172 |
+| Oct–Nov | 71 | −0.716 | −6.67 | −1.278 to −0.245 |
+
+**The stop condition does not fire: 0.054 against a threshold of 0.2.** The three-realm test stands
+and the two-realm fallback is not taken.
+
+The means are the caveat and they are worse here than in the marine leg — −1.09, −2.21, −6.67 —
+while the medians hold within 0.054. Same ratio pathology, same rule: **medians throughout**.
+
+## Transfer result — 2026-08-07
+
+| realm | n | median tracking | IQR | SE of the median |
+| --- | --- | --- | --- | --- |
+| aerial, north | 69 | **−0.706** | −1.228 to −0.227 | 0.121 |
+| marine, north | 1,426 | −0.025 | −0.368 to +0.587 | 0.011 |
+| terrestrial, south | 523 | −0.014 | −0.480 to +0.427 | 0.036 |
+
+SEs are bootstrapped over 2,000 resamples, because none of these distributions is normal and the
+usual `1.253 σ/√n` assumes it is.
+
+**Prediction 1 — the realms disagree. HOLDS.** Kruskal–Wallis H = 42.55, p = 5.8 × 10⁻¹⁰.
+
+But the pairwise breakdown is the actual result, and it is not what §4 imagined:
+
+| pair | gap | p (Holm) | |
+| --- | --- | --- | --- |
+| aerial-north vs marine-north | 0.681 | 1.1 × 10⁻⁹ | differ |
+| aerial-north vs terrestrial-south | 0.692 | 2.3 × 10⁻⁹ | differ |
+| marine-north vs terrestrial-south | **0.011** | 0.099 | **indistinguishable** |
+
+**Prediction 2 — prediction error exceeds within-realm spread. HOLDS for two of three.**
+
+| held out | predicted centre | actual | error vs SE | IQR ratio | coverage of the 50% interval |
+| --- | --- | --- | --- | --- | --- |
+| aerial-north | −0.024 | −0.706 | 0.682 vs 0.121 — **no transfer** | 0.93 | **31.9%** |
+| marine-north | −0.082 | −0.025 | 0.056 vs 0.011 — no transfer | 0.99 | 49.7% |
+| terrestrial-south | −0.035 | −0.014 | 0.021 vs 0.036 — **transfers** | 1.08 | 52.8% |
+
+**Prediction 3 — the southern community tracks less than the northern ones. FAILS**, twice over.
+Signed, the order is the reverse of the registered one: south −0.014 is *above* marine −0.025 and far
+above aerial −0.706. And the south–marine difference is not distinguishable at all (p = 0.099), so
+there is no ordering to have got right. The prediction presupposed tracking that is positive
+somewhere; no realm has any.
+
+**Prediction 4 — held-out marine predicts worst. FAILS.** Aerial is predicted worst by a factor of
+twelve (0.682 against marine's 0.056). The reasoning was that the noisiest realm should fit least
+well; the realm that fits least well is instead the one with the *clearest* signal in it.
+
+### What the three legs say together
+
+**Transfer fails, and not along the axis this note registered.** Marine-north and terrestrial-south
+differ in hemisphere, realm, instrument, taxon and decade, and their tracking distributions are
+statistically indistinguishable — 0.011 apart in centre, IQR ratio 0.99, and each covers 50% of the
+other to within 0.3 points. Aerial-north shares a hemisphere with the marine record and sits 0.68
+away from both.
+
+So the thing that broke transfer is the one difference §6 did not think to list: **marine and
+terrestrial measure where an animal is, and the aerial leg measures when it passes.** Two spatial
+records agreed across the equator; the phenological one agreed with neither.
+
+`coverage-bias` promised that no model trained on this record should be trusted elsewhere without
+being tested there first. That promise is **kept, and its stated reason is wrong**: the untested
+extrapolation that failed here is not northern-to-southern, which passed, but displacement-to-timing.
+
+## Correction — §6's list of things three cases cannot separate was incomplete
+
+§6 named realm, hemisphere, instrument and decade. It did not name **response type**, and the result
+fell precisely on that axis. Recorded rather than edited, per the convention.
+
+This is not a small omission dressed up. Had response type been listed, the design would have been
+visibly under-powered for its own headline before it ran: one phenological record against two spatial
+ones cannot separate "phenology differs" from "the aerial realm differs" from "the radar instrument
+differs", and no amount of within-realm n fixes that. The three-realm conclusion above is therefore
+stated as *displacement-to-timing* only because that is the axis the two agreeing realms rule out —
+it remains fully confounded with aerial-ness and with radar.
+
+## Correction — prediction 2's criterion punishes large samples
+
+"Error larger than the standard error of the held-out realm's own centre" graded marine as
+**failing** to transfer on an error of 0.056 tracking units, while the coverage check §3 registered
+alongside it put that same prediction at 49.7% against a target of 50% — as close to right as the
+instrument reads.
+
+The criterion is n-dependent: marine's SE is 0.011 because it has 1,426 pairs, so any offset at all
+is detectable there and a smaller realm would be forgiven the same error. §3 was right to register
+three scores and §4 was wrong to make the n-dependent one the verdict. **Coverage and spread are the
+better instruments and are reported above with equal standing.** Prediction 2 is graded as registered
+anyway — moving the goalposts after seeing the numbers is the thing this convention exists to stop.
