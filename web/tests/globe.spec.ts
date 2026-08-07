@@ -301,6 +301,40 @@ test("a station popup states the caveat with the number", async ({ page }) => {
   // The radar cannot tell a bird from a bat from an insect, so no reading of this layer may
   // omit that.
   await expect(popup).toContainText("aerial biomass, not birds");
+
+  // The popup is MapLibre's node, so nothing re-renders it when the surface changes -- the
+  // tokens have to reach it through CSS alone. It shipped broken once: night swapped the page's
+  // ink to chalk while the card kept MapLibre's white, and the label all but vanished. Measured
+  // against a probe painted with the tokens, because the tokens are hex and computed styles are
+  // rgb().
+  const rendered = () =>
+    popup.evaluate((node) => {
+      const probe = document.createElement("div");
+      probe.style.background = "var(--paper)";
+      probe.style.color = "var(--ink)";
+      document.body.append(probe);
+      const tokens = getComputedStyle(probe);
+      const got = getComputedStyle(node);
+      const seen = {
+        background: got.backgroundColor,
+        paper: tokens.backgroundColor,
+        color: got.color,
+        ink: tokens.color,
+      };
+      probe.remove();
+      return seen;
+    });
+
+  const day = await rendered();
+  expect(day.background).toBe(day.paper);
+  expect(day.color).toBe(day.ink);
+
+  await page.locator(".surface").getByRole("radio", { name: "Night", exact: true }).check();
+  await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
+  const night = await rendered();
+  expect(night.background).toBe(night.paper);
+  expect(night.color).toBe(night.ink);
+  expect(night.background).not.toBe(day.background);
 });
 
 test("each counterfactual is drawn to the scatter, and both to one frame", async ({ page }) => {

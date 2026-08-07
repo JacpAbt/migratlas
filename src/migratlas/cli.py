@@ -20,12 +20,15 @@ from migratlas.ingest import (
     darkecology,
     ebird_st,
     fishglob,
+    jrc_gsw,
     megamove,
     movebank,
     obis,
     sabap1,
     sabap2,
+    sbs,
 )
+from migratlas.ingest.http import RemoteFile, fetch
 from migratlas.lake import check as lake_check
 from migratlas.lake import purge as lake_purge
 from migratlas.reports import (
@@ -39,6 +42,8 @@ from migratlas.reports import (
     phase1b,
     phase1c,
     phase1d,
+    phase1g,
+    phase1h,
     phase2a_attribution,
     phase2a_attrici,
     phase2a_thermal,
@@ -189,6 +194,49 @@ def ingest_movebank(
         result = movebank.ingest_study(source_id)
         print(f"{result.rows:,} rows -> {result.path}")
         print(f"run {result.run_id}")
+
+
+@ingest_app.command("sbs")
+def ingest_sbs() -> None:
+    """Land the Swedish Bird Survey's two schemes (SURVEY_INDEX, terrestrial).
+
+    Two CC0 sampling-event archives from Lund. The summer point counts run 1975-2024, fifty
+    distinct years, the longest series in the lake; the fixed routes are the modern protocol.
+    Downloads are cached, and each scheme's write replaces its own partitions.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    for result in sbs.ingest():
+        print(f"{result.rows:,} rows -> {result.path}")
+        print(f"run {result.run_id}")
+
+
+@ingest_app.command("jrc-gsw")
+def ingest_jrc_gsw() -> None:
+    """Land JRC surface-water change and extent at the southern atlas cells (driver samples).
+
+    The lake's first southern driver. Ten tiles, 185 MB, are fetched into the raw archive --
+    cached and resumable, so a re-run reads them from disk -- then aggregated to the atlas
+    footprint by windowed reads. See docs/methods/phase1g-water.md for what the epochs mean.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase1e  # noqa: PLC0415 -- heavy, and only this command
+
+    source = catalog.get(jrc_gsw.SOURCE_ID)
+    cells = phase1e.footprint()
+    root: Path | None = None
+    for name in jrc_gsw.tiles_for(cells, phase1e.CELL_DEG):
+        layer = name.split("_", 1)[0]
+        fetched = fetch(
+            RemoteFile(url=f"{source.download_uri}/{layer}/{name}", name=name),
+            jrc_gsw.SOURCE_ID,
+        )
+        root = fetched.parent
+    if root is None:
+        msg = "the footprint named no tiles, which means it is empty"
+        raise RuntimeError(msg)
+    result = jrc_gsw.ingest(root, cells, phase1e.CELL_DEG)
+    print(f"{result.rows:,} rows over {cells.height} cells -> {result.path}")
+    print(f"run {result.run_id}")
 
 
 @app.command("ingest-era5-south")
@@ -457,6 +505,20 @@ def report_phase1d() -> None:
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     print(phase1d.render())
+
+
+@report_app.command("phase1g")
+def report_phase1g() -> None:
+    """Surface-water change against the per-cell atlas change, judged by spatial nulls."""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
+    print(phase1g.render())
+
+
+@report_app.command("phase1h")
+def report_phase1h() -> None:
+    """Seasonal displacement in the collar records, measured past the collar's own confound."""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)-7s %(message)s")
+    print(phase1h.render())
 
 
 @report_app.command("phase1")

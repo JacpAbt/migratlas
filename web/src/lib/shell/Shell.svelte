@@ -477,6 +477,94 @@
     background-color: var(--paper-sunken);
   }
 
+  /*
+    The station popup: a specimen label, not a dialog.
+
+    MapLibre ships it as a white rounded card with its own sans stack, and the fill does not
+    follow the surface -- so on night the page's tokens turned the text chalk while the card
+    stayed white, and the label all but vanished. Paper, ink and mono, like the attribution:
+    it reports measurements, it is not pressed, so it gets no drawn box.
+  */
+  .shell :global(.maplibregl-popup-content) {
+    padding: 0.6rem 0.9rem 0.7rem;
+    border-radius: 0;
+    background: var(--paper);
+    box-shadow: var(--shadow-sheet);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--size-margin);
+    letter-spacing: var(--tracking-body);
+    line-height: 1.5;
+  }
+
+  /* The pointer is a border-triangle MapLibre colours white, one border per anchor; every
+     anchor has to follow the paper or the tip gives the old card away. */
+  .shell :global(.maplibregl-popup-anchor-bottom .maplibregl-popup-tip),
+  .shell :global(.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip),
+  .shell :global(.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip) {
+    border-top-color: var(--paper);
+  }
+
+  .shell :global(.maplibregl-popup-anchor-top .maplibregl-popup-tip),
+  .shell :global(.maplibregl-popup-anchor-top-left .maplibregl-popup-tip),
+  .shell :global(.maplibregl-popup-anchor-top-right .maplibregl-popup-tip) {
+    border-bottom-color: var(--paper);
+  }
+
+  .shell :global(.maplibregl-popup-anchor-left .maplibregl-popup-tip) {
+    border-right-color: var(--paper);
+  }
+
+  .shell :global(.maplibregl-popup-anchor-right .maplibregl-popup-tip) {
+    border-left-color: var(--paper);
+  }
+
+  /* A station id is an identifier, so it is set as one. */
+  .shell :global(.maplibregl-popup-content strong) {
+    font-family: var(--font-mono);
+    font-size: var(--size-body);
+    font-weight: 500;
+    letter-spacing: var(--tracking-label);
+  }
+
+  .shell :global(.maplibregl-popup-content table) {
+    margin: 0.3rem 0;
+    border-collapse: collapse;
+  }
+
+  .shell :global(.maplibregl-popup-content th) {
+    padding: 0.1rem 0.6rem 0.1rem 0;
+    color: var(--ink-soft);
+    font-weight: 400;
+    text-align: left;
+  }
+
+  .shell :global(.maplibregl-popup-content td) {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .shell :global(.maplibregl-popup-content .caveat) {
+    margin: 0.2rem 0 0;
+    color: var(--pencil);
+    font-size: var(--size-label);
+    line-height: 1.55;
+  }
+
+  /* MapLibre's close button, kept bare: ink instead of its fixed near-black, a wash on hover
+     like every other control, and no white disc behind either state. */
+  .shell :global(.maplibregl-popup-close-button) {
+    padding: 0 0.4rem;
+    border-radius: 0;
+    color: var(--ink-soft);
+    font-size: 1rem;
+  }
+
+  .shell :global(.maplibregl-popup-close-button:hover) {
+    background-color: var(--paper-sunken);
+    color: var(--ink);
+  }
+
   .shell__reading {
     position: absolute;
     inset: 0;

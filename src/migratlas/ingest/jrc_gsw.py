@@ -19,6 +19,7 @@ import polars as pl
 from migratlas.catalog import loader as catalog
 from migratlas.drivers.schema import DRIVER_SAMPLES, DriverKind
 from migratlas.lake.identifiers import cell_site_id
+from migratlas.lake.writer import WriteResult, write_table
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -91,6 +92,26 @@ def _tile_name(layer: str, longitude: float, latitude: float) -> str:
     return (
         f"{layer}_{abs(left)}{'E' if left >= 0 else 'W'}_"
         f"{abs(top)}{'S' if top <= 0 else 'N'}v1_4_2021.tif"
+    )
+
+
+LAYERS: Final = ("change", "occurrence")
+
+
+def tiles_for(cells: pl.DataFrame, size_deg: float) -> list[str]:
+    """Every tile filename a footprint needs, both layers, deduplicated and ordered.
+
+    Uses the same corner arithmetic `read_cell` uses to open a tile, so the fetch list and the
+    read list cannot drift apart -- a mismatch would surface as a FileNotFoundError halfway
+    through a 185 MB download.
+    """
+    half = size_deg / 2
+    return sorted(
+        {
+            _tile_name(layer, float(lon) - half + PIXEL_DEG, float(lat) + half - PIXEL_DEG)
+            for lat, lon in cells.select("cell_lat", "cell_lon").iter_rows()
+            for layer in LAYERS
+        }
     )
 
 
@@ -189,8 +210,8 @@ def to_samples(cells: list[CellWater]) -> pa.Table:
     return out.select(schema.names).to_arrow().cast(schema)
 
 
-def ingest(root: Path, cells: pl.DataFrame, size_deg: float) -> pa.Table:
-    """Aggregate every footprint cell and return the driver table.
+def ingest(root: Path, cells: pl.DataFrame, size_deg: float) -> WriteResult:
+    """Aggregate every footprint cell and land the driver table.
 
     Goes through `catalog.admit` like every other adapter. The never-ingested floor is *not*
     called, matching the other drivers: it screens taxa, and there is no taxon in a water raster.
@@ -214,4 +235,4 @@ def ingest(root: Path, cells: pl.DataFrame, size_deg: float) -> pa.Table:
             MIN_USABLE_SHARE * 100,
         )
     log.info("jrc_gsw: %d cells aggregated", len(out))
-    return to_samples(out)
+    return write_table(to_samples(out), DRIVER_SAMPLES, source_id=SOURCE_ID)

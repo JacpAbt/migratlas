@@ -180,3 +180,12 @@ The methodological result is what gets published: a movement statistic that surv
 whose sampling varied 104-fold, demonstrated against the statistic it replaces on the same animals.
 The flat trend is reported inside it, with the power stated, and is not the headline — a null this
 wide should not be a claim about elk.
+
+## Correction — the two interval-width percentages were computed two different ways
+
+"The interval spans 199% of that per decade" divides the *full* width of the elk interval
+(±3.89, so 7.78) by the median displacement of 3.91 km, while the reindeer's "56%" divides the
+*half* width (±2.13) by 3.82 km. One convention for both gives 99% and 56% (half width) or 199%
+and 112% (full width). Found on 2026-08-07 when `make report-phase1h` made the run repeatable,
+which is what surfaced it. The doubling-or-halving sentence reads off the full width and stands;
+the report command prints the half width and says which it is printing.

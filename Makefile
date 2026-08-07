@@ -133,6 +133,22 @@ ingest-fishglob:  ## FISHGLOB bottom-trawl surveys -> lake (SURVEY_INDEX, marine
 ingest-ebird:  ## eBird Status & Trends weekly abundance -> lake (analysis only, never published)
 	$(RUN) migratlas ingest ebird-st
 
+.PHONY: ingest-sbs
+ingest-sbs:  ## Swedish Bird Survey, both schemes -> lake (SURVEY_INDEX, terrestrial)
+	$(RUN) migratlas ingest sbs
+
+.PHONY: ingest-jrc-gsw
+ingest-jrc-gsw:  ## JRC surface water at the southern atlas cells -> lake (driver samples)
+	$(RUN) migratlas ingest jrc-gsw
+
+.PHONY: report-phase1g
+report-phase1g:  ## Water change against atlas change, with the spatial nulls
+	$(RUN) migratlas report phase1g
+
+.PHONY: report-phase1h
+report-phase1h:  ## Collar displacement: the confound, the escape, and a wide null
+	$(RUN) migratlas report phase1h
+
 .PHONY: ingest-narr
 ingest-narr:  ## NARR night winds at the radar stations -> lake (driver samples, gridded)
 	$(RUN) migratlas ingest-narr
