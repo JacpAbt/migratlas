@@ -3,6 +3,11 @@
 A globe of animal movement — where animals are, how their movements have changed over decades,
 what is driving the change, and where they are heading.
 
+> **Status: Phase 2a.** 7 findings published and recomputed from the lake on every build, across
+> 3 realms and 24 registered sources. Live at
+> [jacpabt.github.io/migratlas](https://jacpabt.github.io/migratlas).
+> The counts are guarded by `tests/test_readme_status.py` — they drifted twice when typed freehand.
+
 ---
 
 ## What this is
@@ -128,6 +133,23 @@ of the driver samples** — computed rather than estimated, and published as a f
 right. Global extent, measurable change and explainable change are, so far, three different data.
 
 Method choices are frozen in [`docs/methods/`](docs/methods/) *before* held-out years are touched.
+
+---
+
+## Development
+
+```bash
+make sync     # create the environment from the lockfile
+make check    # lint, typecheck, test
+make help     # every target
+```
+
+Requires Python 3.14 and `uv`. Node for the frontend. Every Python dependency must be
+wheel-installable — no build-from-source steps, which is a real constraint on the geospatial stack
+and so far a satisfiable one.
+
+[`CLAUDE.md`](CLAUDE.md) has the working rules and the traps that each cost a run to find.
+Open work is in [`docs/TASKS.md`](docs/TASKS.md).
 
 ---
 
