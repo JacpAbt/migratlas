@@ -186,6 +186,20 @@ def toroidal_null(frame: pl.DataFrame, response_column: str = "delta") -> tuple[
     return (extreme + 1) / (DRAWS + 1), int(np.mean(used))
 
 
+def leave_one_quadrant_out(frame: pl.DataFrame) -> list[Fit]:
+    """Prediction 3's stability check: refit with each quadrant of the footprint removed.
+
+    Quadrants split at the footprint's median cell, which keeps the four removals comparable in
+    size on a footprint denser in some corners than others.
+    """
+    lat_mid = float(np.median(frame["cell_lat"].to_numpy()))
+    lon_mid = float(np.median(frame["cell_lon"].to_numpy()))
+    south = pl.col("cell_lat") <= lat_mid
+    west = pl.col("cell_lon") <= lon_mid
+    quadrants = (south & west, south & ~west, ~south & west, ~south & ~west)
+    return [fit(frame.filter(~quadrant)) for quadrant in quadrants]
+
+
 def spectral_null(frame: pl.DataFrame, response_column: str = "delta") -> float:
     """Moran spectral randomisation: surrogates with the factor's autocorrelation, not its map.
 
@@ -230,3 +244,65 @@ def spectral_null(frame: pl.DataFrame, response_column: str = "delta") -> float:
         if abs(slope) >= abs(observed):
             extreme += 1
     return (extreme + 1) / (DRAWS + 1)
+
+
+def render() -> str:
+    """Every registered prediction recomputed from the lake, graded the way the note grades them.
+
+    The published verdict lives in the results section of `docs/methods/phase1g-water.md`; this
+    recomputes it so the run is a command rather than a session someone had once.
+    """
+    frame = _design()
+    water = frame["water"].to_numpy()
+    response = frame["delta"].to_numpy()
+    out: list[str] = [
+        f"{frame.height} footprint cells; water change median {float(np.median(water)):+.3f} "
+        f"km2 ({int((water < 0).sum())} losing, {int((water > 0).sum())} gaining), long-run "
+        f"extent median {float(np.median(frame['extent'].to_numpy())):.3f} km2",
+        "",
+    ]
+
+    main = fit(frame)
+    moved = abs(main.water) * float(water.std())
+    out += [
+        f"prediction 1, coefficient on water positive: {main.water:+.3f} taxa/km2, "
+        f"partial r {main.partial_r:+.3f} -> {'HOLDS' if main.water > 0 else 'FAILS'}",
+        f"  one sd of water ({float(water.std()):.2f} km2) moves the response {moved:.2f} "
+        f"taxa, {moved / float(response.std()):.1%} of one sd of the response",
+        f"  detection-corrected robustness: {fit(frame, 'delta_corrected').water:+.3f}",
+        "",
+    ]
+
+    toroidal_p, usable = toroidal_null(frame)
+    spectral_p = spectral_null(frame)
+    out += [
+        f"prediction 2, survives a spatial null at p < {ALPHA}: toroidal {toroidal_p:.3f} "
+        f"(mean {usable} of {frame.height} cells usable per draw), spectral {spectral_p:.3f} "
+        f"-> {'HOLDS' if spectral_p < ALPHA else 'FAILS'}",
+        f"  naive p {main.naive_p:.3f}, kept and labelled as the wrong test",
+        "",
+    ]
+
+    quadrant = leave_one_quadrant_out(frame)
+    out += [
+        "prediction 3, leave-one-quadrant-out keeps the sign: "
+        + ", ".join(f"{each.water:+.3f}" for each in quadrant)
+        + f" -> {'HOLDS' if len({each.direction for each in quadrant}) == 1 else 'FAILS'}",
+        "",
+    ]
+
+    # np.quantile's linear interpolation, not polars' nearest-value: the cut lands between the
+    # 124th and 125th driest cells rather than on one of them, which is the boundary the note's
+    # recorded 124-cell placebo implies.
+    cut = float(np.quantile(frame["extent"].to_numpy(), PLACEBO_QUANTILE))
+    driest = frame.filter(pl.col("extent") <= cut)
+    placebo = fit(driest)
+    placebo_spectral = spectral_null(driest)
+    out += [
+        f"prediction 4, the placebo is null: driest quartile ({driest.height} cells) fits "
+        f"{placebo.water:+.1f} taxa/km2 at naive p {placebo.naive_p:.3f}; spectral "
+        f"{placebo_spectral:.3f} -> {'HOLDS' if placebo_spectral >= ALPHA else 'FAILS'}",
+        "  the naive test finds a landscape effect in a subset chosen to show nothing, and the "
+        "registered null dismisses it -- the note's most useful result",
+    ]
+    return "\n".join(out)

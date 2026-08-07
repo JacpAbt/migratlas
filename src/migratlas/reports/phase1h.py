@@ -13,6 +13,7 @@ which is what this project does when it has both.
 
 import logging
 from dataclasses import dataclass
+from statistics import median
 from typing import TYPE_CHECKING, Final
 
 import polars as pl
@@ -245,3 +246,36 @@ def _trend(year: np.ndarray, value: np.ndarray) -> tuple[float, float]:
     """Ordinary least squares in km per decade, with a 95% interval on the slope."""
     result = stats.linregress(year.astype(float), value)
     return float(result.slope * 10), float(result.stderr * 10 * 1.96)
+
+
+SOURCES: Final = ("movebank_yahatinda_elk", "movebank_svalbard_reindeer")
+"""Note §1's two records: the confounded herd, and the well-behaved one asked to replicate the
+escape. Prediction 1 is registered for the elk only -- the reindeer fix interval varies 8-fold
+against the elk's 104-fold, so there is little sampling variation for a path length to track."""
+
+
+def render() -> str:
+    """Both herds against the registered predictions, with the width the null must be read at."""
+    out: list[str] = []
+    for source_id in SOURCES:
+        found = seasons(source_id)
+        verdict = grade(found)
+        median_km = median(s.displacement_km for s in found)
+        out += [
+            f"{source_id}: {verdict.animal_years} animal-years over {verdict.animals} animals "
+            f"and {verdict.years} years",
+            f"  path length vs fix gap   rho {verdict.path_vs_gap:+.3f}  "
+            f"(confound shown at |rho| > {CONFOUND_RHO}: "
+            f"{'yes' if verdict.confound_shown else 'no'})",
+            f"  displacement vs fix gap  rho {verdict.displacement_vs_gap:+.3f}  "
+            f"(escape holds at |rho| < {ESCAPE_RHO}: {'yes' if verdict.escape_holds else 'no'})",
+            f"  displacement trend {verdict.slope_km_per_decade:+.2f} +/- "
+            f"{verdict.slope_ci95:.2f} km/decade, within animals "
+            f"{verdict.within_animal_slope:+.2f} -> "
+            f"{'moved' if verdict.moved else 'no change detected'}",
+            f"  median displacement {median_km:.2f} km; the +/- alone is "
+            f"{verdict.slope_ci95 / median_km:.0%} of it per decade, so this null is wide "
+            f"rather than bounded",
+            "",
+        ]
+    return "\n".join(out)

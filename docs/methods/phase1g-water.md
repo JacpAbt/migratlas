@@ -367,3 +367,16 @@ crossed the equator and the explanatory data has not.
 The 992 driver rows stay in the lake. They are the first southern driver samples this project holds,
 they cost 185 MB to obtain, and the next factor note will want the footprint's water whether or not
 this one found anything in it.
+
+## The run is a command now — appended 2026-08-07
+
+`make report-phase1g` recomputes every graded prediction. The analytical numbers reproduce
+exactly: the slope, partial r, the effect size, the corrected check, toroidal 0.787, the four
+leave-one-quadrant-out coefficients (the split was the footprint's median cell, recorded now), and
+the placebo's 124 cells, +13.3 taxa/km² and naive p 0.031 — whose boundary is `np.quantile`'s
+linear interpolation, also recorded now because the original run never said. Two draws-based
+numbers moved: spectral 0.594 → 0.572 on the full frame and 0.085 → 0.114 on the placebo. The
+sign-flip draws are seeded, so the movement sits in what they multiply — the design frame has been
+re-keyed since the note's run and the eigendecomposition sees row order — but the mechanism is
+recorded as unresolved rather than asserted. No verdict changes either way: prediction 2 still
+fails, the placebo still holds.
