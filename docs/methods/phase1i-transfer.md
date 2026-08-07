@@ -148,3 +148,56 @@ prediction's interval covers.
 - The three distributions drawn together, since the shape is the argument.
 - Results appended here with every prediction graded, and the two-realm fallback recorded as taken
   or not taken.
+
+---
+
+## Amendment, 2026-08-07: which surveys the marine leg may use
+
+Made during execution, after computing the temperature gradients and before dividing anything by
+them. §5 registered a stop condition on the tracking *distribution's* median and said nothing about
+whether an individual survey is admissible, which turned out to be the question that mattered.
+
+**Both rules use the temperature field and the survey's geometry only.** No fish enter either, which
+is what keeps this an amendment rather than a result chosen to suit itself — the same position the
+Phase 1g placebo took when its subset had to be defined.
+
+**First, the denominator is the full spatial gradient, not the latitudinal one.** Dividing by
+`dT/dlat` alone assumes isotherms travel due north, and on a continental shelf the thermal gradient
+is frequently cross-shelf. It is also numerically vicious: BITS-1 has a latitudinal gradient of
+0.037 °C per degree and returned an isotherm velocity of −44 °latitude per decade. Climate velocity
+is properly the warming rate over the magnitude of the spatial gradient, and that is what is used.
+
+**Rule one: the gradient must be predominantly latitudinal.** The numerator is a latitudinal
+displacement — Phase 1b measures no other kind — so the test only applies where poleward and cooler
+coincide. Surveys where latitude carries less than half the gradient are out: `SP-PORC`, whose
+gradient is 96% longitudinal, `BITS-4` and `NS-IBTS-1`. Across the 18 candidate surveys the
+latitudinal share has median 0.88, so this excludes the tail rather than the bulk.
+
+**Rule two: the isotherm must not cross the survey within a decade.** `BITS-1` again — 8.6 °latitude
+per decade against a survey 3 ° tall. A survey its own isotherms leave inside the study period cannot
+observe tracking inside it, whatever the fish do. Expressed against each survey's own extent rather
+than a constant, so there is no threshold to have chosen.
+
+14 of 18 surveys survive both, and 12 of those carry species that clear Phase 1b's own floors.
+
+## Marine result — 2026-08-07
+
+**1,426 species×survey pairs over 12 surveys.**
+
+| | |
+| --- | --- |
+| median tracking | **−0.025** |
+| quartiles | −0.368 to +0.587 |
+| deciles | −1.942 to +2.625 |
+| tracking at all (> 0) | **47.4%** |
+| between 0 and 1 | 29.0% |
+
+**This is `marine-null` restated in tracking units.** The median is indistinguishable from zero and
+the share moving with their isotherm at all is 47.4%, which is a coin flip. Prediction 4 said the
+marine realm should be predicted worst precisely because it disagrees with itself, and this is that
+disagreement measured on a common scale rather than asserted.
+
+The deciles are the honest caveat: a substantial minority of pairs sit outside −1 to 2, moving
+several times faster than their isotherm or hard against it. A ratio inherits the noise of both its
+parts, and a species whose own shift is poorly determined will produce a wild one. Every summary of
+this distribution is therefore a median, never a mean.
