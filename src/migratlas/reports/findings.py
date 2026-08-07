@@ -1029,7 +1029,7 @@ def collect() -> list[Finding]:
             ),
             scope=(
                 f"{by_realm[phase1i.AERIAL].n} radar stations between 37°N and 50°N, "
-                f"{by_realm[phase1i.MARINE].n} species-and-survey pairs over northern-hemisphere "
+                f"{by_realm[phase1i.MARINE].n:,} species-and-survey pairs over northern-hemisphere "
                 f"shelf seas, and {by_realm[phase1i.TERRESTRIAL].n} species over 496 "
                 "quarter-degree cells in southern Africa. Each leg's own window."
             ),
