@@ -50,6 +50,12 @@
       <a class="study__method" href={`${REPOSITORY}${study.method}`} rel="noopener" target="_blank">
         Method and pre-registration
       </a>
+      {#if study.claim}
+        <!-- The road back: this card is one line of a published claim's evidence, and until now a
+             reader here could not reach the claim it argues for. The hash is the claim's address
+             (ADR 0008 §8), so the shell's history handling does the navigation. -->
+        <a class="study__claim" href={`#c=${study.claim}`}>Read the claim this evidence feeds</a>
+      {/if}
     </article>
   {/each}
 </section>
@@ -161,6 +167,15 @@
   .study__rows em {
     font-style: normal;
     color: var(--pencil);
+  }
+
+  .study__claim {
+    display: block;
+    margin-top: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: var(--size-margin);
+    color: var(--rust);
+    text-underline-offset: 3px;
   }
 
   .study__method {

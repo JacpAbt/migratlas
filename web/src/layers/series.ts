@@ -107,20 +107,17 @@ export async function addSeries(
   const id = `${SOURCE_PREFIX}${meta.name}`;
   map.addSource(id, { type: "geojson", data, attribution: attributionFor(meta, terms) });
 
-  // A herd fits inside one tile quantum at globe zoom, where the GeoJSON tiler drops coincident
-  // points outright -- measured: 481 cells render from z3.5 and vanish below z3.4, whatever the
-  // filter says. So a compact layer hands over, the way the drawn coastline hands over to the
-  // surveyed one: below the threshold a single locator says the study is here, above it the
-  // cells say what it looks like.
-  const span = extent(data);
-  const compact = span < 2;
-  const HANDOVER = 3.4;
+  // A herd twenty kilometres across draws as one dot from globe distance, which is honest, and
+  // the pixels prove it does draw -- but `queryRenderedFeatures` reports nothing for compact or
+  // high-latitude geometry at globe zooms on this projection, measured against a screenshot of
+  // the same view. So a compact layer declares the zoom a camera needs for the *query* to agree
+  // with the canvas; nothing about its rendering is gated.
+  const compact = extent(data) < 2;
 
   map.addLayer({
     id,
     type: "circle",
     source: id,
-    ...(compact ? { minzoom: HANDOVER } : {}),
     paint: {
       "circle-color": ramp[2],
       "circle-radius": 3,
@@ -130,35 +127,6 @@ export async function addSeries(
       "circle-blur": 0.6,
     },
   });
-
-  const locatorId = `${id}-locator`;
-  if (compact) {
-    map.addSource(locatorId, {
-      type: "geojson",
-      data: {
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            geometry: { type: "Point", coordinates: meanPosition(data) },
-            properties: { title: meta.title },
-          },
-        ],
-      },
-    });
-    map.addLayer({
-      id: locatorId,
-      type: "circle",
-      source: locatorId,
-      maxzoom: HANDOVER,
-      paint: {
-        "circle-color": ramp[2],
-        "circle-radius": 4,
-        "circle-opacity": 0.85,
-        "circle-blur": 0.4,
-      },
-    });
-  }
 
   // The dart: where the mass moved that week. Registered before the layer that wears it, and
   // `updateImage` on a surface change because removing an image a layer is using makes MapLibre
@@ -205,8 +173,8 @@ export async function addSeries(
     terms,
     cells: data.features.length,
     center: meanPosition(data),
-    // A camera that can actually see it: a compact layer is invisible below the hand-over, so
-    // pointing at its centre from globe zoom would frame a locator and claim the layer is empty.
+    // Where a camera must stand for the query instrument to agree with the canvas -- and where
+    // a herd is genuinely more than one dot.
     ...(compact ? { zoom: 5.5 } : {}),
     showWeek,
     // Re-run the week it is already on. `showWeek` short-circuits when the week has not moved,
@@ -219,8 +187,8 @@ export async function addSeries(
       showWeek(week);
     },
     setVisible: (visible) => {
-      // The dart and the locator follow their stations: one checkbox, one measurement.
-      for (const layerId of [id, flowId, locatorId]) {
+      // The dart follows its station: one checkbox, one measurement, two marks.
+      for (const layerId of [id, flowId]) {
         if (map.getLayer(layerId)) {
           map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
         }

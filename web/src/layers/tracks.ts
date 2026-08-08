@@ -42,36 +42,6 @@ export async function addTracks(
     },
   });
 
-  // Measured, not styled: below z3 the tiler's per-tile simplification eats every journey
-  // whole, so a locator says the study is here and hands over -- the coastline's pattern.
-  const HANDOVER = 3;
-  const locatorId = `${id}-locator`;
-  map.addSource(locatorId, {
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          geometry: { type: "Point", coordinates: lineMean(data) },
-          properties: { title: meta.title },
-        },
-      ],
-    },
-  });
-  map.addLayer({
-    id: locatorId,
-    type: "circle",
-    source: locatorId,
-    maxzoom: HANDOVER,
-    paint: {
-      "circle-color": palette().warm[3],
-      "circle-radius": 4,
-      "circle-opacity": 0.85,
-      "circle-blur": 0.4,
-    },
-  });
-
   const popup = new Popup({ closeButton: true, maxWidth: "320px" });
   map.on("click", id, (event) => {
     const feature = event.features?.[0];
@@ -95,18 +65,17 @@ export async function addTracks(
     terms,
     cells: data.features.length,
     center: lineMean(data),
-    // Where the journeys become visible, for any camera that means to show them.
+    // The lines draw at every zoom -- pixels proved it -- but `queryRenderedFeatures` reports
+    // nothing for them below about z3 on the globe projection, so this is where a camera must
+    // stand for the query to agree with the canvas.
     zoom: 4.5,
     setVisible: (visible) => {
-      for (const layerId of [id, locatorId]) {
-        if (map.getLayer(layerId)) {
-          map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
-        }
+      if (map.getLayer(id)) {
+        map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
       }
     },
     repaint: () => {
       map.setPaintProperty(id, "line-color", palette().warm[3]);
-      map.setPaintProperty(locatorId, "circle-color", palette().warm[3]);
     },
   };
 }

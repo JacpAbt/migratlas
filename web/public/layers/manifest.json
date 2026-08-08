@@ -94,6 +94,22 @@
   "popup_caveat": "one animal's journeys, daily medians a kilometre coarse \u2014 where this collar went, not where the species lives, and no trend."
  },
  {
+  "name": "sea-ice-edge",
+  "title": "The sea ice's median edge",
+  "description": "Where the ice edge stood in the median year of 1981-2010, month by month, both poles. A climatology's ice, not this year's: the recent edge sits poleward of these lines in most months, and the difference is the warming rather than an error. The clock steps it monthly, the finest wheel the product turns on.",
+  "realm": "marine",
+  "evidence_type": "driver",
+  "kind": "contour",
+  "format": "geojson",
+  "value_kind": "median_ice_edge",
+  "scale": "sequential",
+  "attribution": "Fetterer, F., Knowles, K., Meier, W. N., Savoie, M., Windnagel, A. K. & Stafford, T. (2025). Sea Ice Index. (G02135, Version 4). Boulder, Colorado USA. National Snow and Ice Data Center. https://doi.org/10.7265/a98x-0f50",
+  "licence": "Open access; citation required as a condition of use",
+  "landing_page": "https://nsidc.org/data/g02135/versions/4",
+  "caveats": "The median monthly ice edge over 1981-2010, in the product's polar stereographic projections (EPSG:3411 north, EPSG:3412 south), from passive microwave concentration at roughly 25 km. A climatology's ice, not any year's: the recent edge sits poleward of these lines in most months, and the difference is the warming, not an error. Monthly is the finest wheel this product turns on, so a weekly clock steps it twelve times a year.",
+  "popup_caveat": "the median edge of 1981-2010 for this month \u2014 a climatology's ice, poleward of which today's edge usually sits."
+ },
+ {
   "name": "atlas-taxa-change",
   "title": "Change in recorded taxa between the two atlases",
   "description": "Change in the number of analysed taxa recorded per quarter-degree cell between 1987-1991 and 2008-2012, over the 496 cells carrying at least twenty full-protocol atlas cards in both epochs. Not richness: the count runs over the 512 taxa the occupancy comparison could fit, so every scarce and every newly-arrived taxon is excluded by construction and the true figure is higher. The holes are places nobody atlassed twice, not places with nothing in them, and they are not interpolated. Two snapshots thirty years apart, so a before and after and not a trend. The detection-corrected version of this surface is computed on every build and withheld: it disagreed with this one by more than the pre-registered bound, which the method note registered as grounds to trust the count over the model.",

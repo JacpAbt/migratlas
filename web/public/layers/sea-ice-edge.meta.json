@@ -1,0 +1,11 @@
+{
+ "source_id": "nsidc_sea_ice_index",
+ "evidence_type": "driver",
+ "realm": "marine",
+ "sensitivity": "not_sensitive",
+ "dwc:dataGeneralizations": "Published at source resolution.; unprojected from the product's polar stereographic and split at the antimeridian",
+ "cleared_at": "2026-08-08T14:04:15.328437+00:00",
+ "months": 12,
+ "segments": 282,
+ "reduction": "Monthly median ice edge over 1981-2010, as published; nothing here is a measurement of any particular year."
+}
