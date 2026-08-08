@@ -420,3 +420,23 @@ def test_the_licence_check_runs_before_anything_else() -> None:
             taxon_key=None,
             redistribution_allowed=False,
         )
+
+
+def test_a_driver_layer_is_still_gated_on_its_licence() -> None:
+    """An ice edge has no animal in it, and the gate still prices the licence in full.
+
+    ADR 0011's sibling seam, added when the first driver became a layer: `evidence_type=None`
+    routes through the aggregate table, and a licence that forbids redistribution refuses a
+    driver exactly as it refuses evidence.
+    """
+    clearance = _clear(evidence_type=None, taxon_scope=TaxonScope.UNATTRIBUTED, taxon_key=None)
+    assert clearance.generalization.grid_deg is None
+    assert clearance.generalization.withhold is False
+
+    with pytest.raises(PublicationRefusedError, match="does not permit redistribution"):
+        _clear(
+            evidence_type=None,
+            taxon_scope=TaxonScope.UNATTRIBUTED,
+            taxon_key=None,
+            redistribution_allowed=False,
+        )

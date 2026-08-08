@@ -85,7 +85,10 @@ class PublicationClearance:
     """Proof the gate approved a specific publication. Only the gate can mint one."""
 
     source_id: str
-    evidence_type: EvidenceType
+    evidence_type: EvidenceType | None
+    """``None`` for a driver layer: an ice edge or a wind field is not evidence about an animal,
+    and the gate still prices its licence."""
+
     realm: Realm
     sensitivity: Sensitivity
     generalization: Generalization
@@ -255,7 +258,7 @@ def admit_for_ingest(
 def clear_for_publication(  # noqa: PLR0913 -- each argument is a distinct policy input
     *,
     source_id: str,
-    evidence_type: EvidenceType,
+    evidence_type: EvidenceType | None,
     realm: Realm,
     sensitivity: Sensitivity | None,
     taxon_scope: TaxonScope,
@@ -314,7 +317,10 @@ def clear_for_publication(  # noqa: PLR0913 -- each argument is a distinct polic
         )
         raise PublicationRefusedError(msg)
 
-    generalization = policy_for(sensitivity, evidence_type.granularity)
+    # A driver layer has no animal in it and no granularity to speak of; the aggregate table is
+    # the one whose questions still apply, and the licence refusal above applies in full.
+    granularity = evidence_type.granularity if evidence_type else Granularity.AGGREGATE
+    generalization = policy_for(sensitivity, granularity)
     if permission is not None:
         generalization = _apply_permission(generalization, permission, sensitivity)
 

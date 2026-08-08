@@ -38,6 +38,7 @@ each source carries its own terms.
 | [Arctic fox Bylot - Argos tracking](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study942774711) | `track` | `terrestrial` | CC0 1.0 | permitted |
 | [Svalbard Reindeer Project - Nordenskiold Land](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study2608802883) | `track` | `terrestrial` | CC BY-NC 4.0 | permitted |
 | [Hebblewhite Alberta-BC Wolves](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study209824313) | `track` | `terrestrial` | CC BY 4.0 | permitted |
+| [Sea Ice Index, version 4 — monthly median ice edge, 1981–2010](https://nsidc.org/data/g02135/versions/4) | driver only | `marine` | Open access; citation required as a condition of use | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -493,3 +494,22 @@ Svalbard reindeer are a sedentary high-Arctic subspecies that does not undertake
 **Caveats**
 
 Twelve years and 68 individuals, below the fifteen-year floor this project applies to change detection, so this source is here to exercise the gate and to fill the terrestrial carnivore gap rather than to carry a trend. Note that the Canis lupus key also covers domestic dogs, and most Movebank studies carrying it are dogs rather than wolves - the key does not identify the risk, the population does.
+
+## Sea Ice Index, version 4 — monthly median ice edge, 1981–2010
+
+- **id** `nsidc_sea_ice_index`
+- **drivers only**, no evidence rows · **realm** `marine`
+- **landing page** https://nsidc.org/data/g02135/versions/4
+- **DOI** [10.7265/a98x-0f50](https://doi.org/10.7265/a98x-0f50)
+- **licence** [Open access; citation required as a condition of use](https://nsidc.org/about/data-use-and-copyright)
+- **redistribution** permitted, attribution required
+  - NOAA-produced data distributed by NSIDC with citation as the stated condition of use; derived products may be redistributed with the citation carried.
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> Fetterer, F., Knowles, K., Meier, W. N., Savoie, M., Windnagel, A. K. & Stafford, T. (2025). Sea Ice Index. (G02135, Version 4). Boulder, Colorado USA. National Snow and Ice Data Center. https://doi.org/10.7265/a98x-0f50
+
+**Caveats**
+
+The median monthly ice edge over 1981-2010, in the product's polar stereographic projections (EPSG:3411 north, EPSG:3412 south), from passive microwave concentration at roughly 25 km. A climatology's ice, not any year's: the recent edge sits poleward of these lines in most months, and the difference is the warming, not an error. Monthly is the finest wheel this product turns on, so a weekly clock steps it twelve times a year.
