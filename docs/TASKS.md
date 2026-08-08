@@ -10,14 +10,10 @@ Numbers are permanent. A finished item keeps its number and moves to the bottom.
 
 ## Now
 
-The realignment arc, decided with the owner on 2026-08-07 and argued in
-[ADR 0009](adr/0009-the-globe-learns-to-move.md): the project drifted from its founding sentence —
-an interactive globe of animal *movement* — into a ledger with a backdrop. The notebook stays; the
-globe gets first-class content again. Housekeeping went first and is in Done.
-
-| # | Item | State |
-| --- | --- | --- |
-| 38 | The weekly presence surface, the fox lines, and the herd surfaces | ADR 0010 settled the product rules — the k ≥ 3 floor, the visibility bar, cells chosen so as not to pinpoint dens — and ADR 0011's alignment with the GBIF table redrew what they apply to: the `low` sources (foxes, bison) may draw identified lines at 0.001° with 30 days' delay, and the elk and reindeer weekly surfaces flip to visible at `moderate`'s 0.01°. The builder is shared with #40's driver layers, so it is built once. |
+Empty again, and that is the real state: the realignment arc's built pieces — the housekeeping,
+the flow darts (#39), the herd surfaces and fox journeys (#38) — are in Done, and what remains of
+[ADR 0009](adr/0009-the-globe-learns-to-move.md)'s arc is queued below with its reasons. The next
+thing to start is a judgement call between #40 (drivers on the clock) and #41 (cross-links).
 
 ## Queued, with a reason to wait
 
@@ -55,6 +51,7 @@ Kept here so they are not rediscovered as good ideas.
 
 | # | Item | Outcome |
 | --- | --- | --- |
+| 38 | The herd surfaces and the fox journeys | Three layers from the tracks, under ADR 0010's floors as ADR 0011 redrew them. The Ya Ha Tinda and Svalbard herds as weekly presence surfaces — 481 and 791 cells at 0.01°, k ≥ 3 animals behind every cell-week, both clearing the visibility bar against the lake — and 217 Arctic fox journeys as identified lines: daily medians a decimal coarser than policy so no den resolves to a point, split across silences longer than a week, simplified at one cell of tolerance. The ETHICS ledger gained its first three rows. Building it surfaced two page-level faults the four-layer site had hidden, both measured before fixed: the GeoJSON tiler drops a herd-sized layer whole below z≈3.4 and the journeys below z3, so both hand over to a locator the way the drawn coastline hands over to the surveyed one; and the open-by-default attribution had grown into a 321-pixel wall across the sphere's middle — folded to its chip, width-capped when opened. The payload budget was raised from measurement with its two caveats recorded in place. |
 | 39 | The radar layer given its measured direction | The per-night movement vector — reflectivity-weighted direction and ground speed, in the lake since the first ingest — reduces to a weekly flow climatology per station: magnitude-weighted vector means, medianed across years by component, so 350° and 10° average to north and the heavy nights decide. Published as `dw`/`sw` beside the `w` values (145 → 318 KB) and drawn as a dart per station that turns with the clock and the globe, follows its layer's checkbox and the surface's ink, and is filtered rather than drawn at zero where a week has passage but no velocity fit. The popup gained a heading row. Sanity, read off the rebuilt layer: South Dakota points 325° at 12.8 m/s in mid-May and 159° at 16.3 m/s in early October. |
 | 51 | Align the gate with the standard it cites | [ADR 0011](adr/0011-the-gate-aligns-with-its-standard.md), from the owner's question of 2026-08-07. The GBIF best-practices document was read rather than remembered, and the individual table was two categories stricter than it across the board. Three cells moved to the standard's resolutions — not-sensitive as published, `low` to 0.001°, `moderate` to 0.01° — and the house additions that protect something stayed: `high` withheld outright, delays where sensitivity is real, identifiers dropped at `moderate`. Wolves, caribou and every published artifact are byte-identical; the test that pinned the founding rule was rewritten to pin its reversal rather than deleted. |
 | 37 | Wire the unreachable entry points | `migratlas ingest sbs`, `ingest jrc-gsw`, `report phase1g` and `report phase1h`, each with a make target, all verified against what the original runs recorded. The JRC command re-fetches its ten tiles — they had been deleted after the run — and its write moved inside the adapter, because the admission guard rightly refused a CLI that wrote to the lake directly. Making the runs repeatable surfaced three unrecorded conventions and one inconsistency: the quadrant split (the footprint's median cell) and the placebo boundary (`np.quantile` linear, 124 cells) are in code now; two seeded spectral p-values moved 0.02–0.03 with no verdict change, recorded in the note as unresolved; and phase1h had quoted a full-width percentage beside a half-width one, recorded as a correction. The ingests reproduce their counts to the row: 992 water samples, 959,802 Swedish ones. |

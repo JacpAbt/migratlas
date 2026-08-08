@@ -6,10 +6,15 @@ export interface LayerMeta {
   realm: string;
   evidence_type: string;
   /** Which builder produced it, and so which renderer consumes it. */
-  kind: "surface" | "series";
+  kind: "surface" | "series" | "tracks";
   /** Wire shape. A grid carries index arrays; geojson carries one feature per cell. */
   format: "grid" | "geojson";
   value_kind: string;
+  /**
+   * The sentence a feature popup prints beside its numbers. Authored in `reports`-side Python
+   * like all frontend prose; absent on layers that have no popup.
+   */
+  popup_caveat?: string;
   /**
    * How the values map onto a ramp. Declared by the builder, never guessed here.
    *
@@ -37,6 +42,11 @@ export interface LoadedLayer {
   cells: number;
   /** Mean position of the layer's features -- where to point a camera to see it. */
   center: [number, number];
+  /**
+   * The zoom that camera needs, when the default globe zoom cannot show the layer at all -- a
+   * compact layer's cells sit below the tiler's hand-over and are legitimately absent above it.
+   */
+  zoom?: number;
   /**
    * Whether it is drawn on arrival, defaulting to true.
    *

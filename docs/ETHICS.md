@@ -118,12 +118,16 @@ changes — not an override on top of it.
 
 ## Publication ledger
 
-Every taxon-and-source combination that has ever been published, with its classification and
-generalisation. Empty until Phase 1 publishes anything.
+Every individual-granularity taxon-and-source combination that has ever been published, with its
+classification and generalisation. Aggregate and multi-taxon layers record their terms in the
+`.meta.json` sidecar written beside each export; this table exists for the publications that pin
+one animal of one species to a place, which is the disclosure the gate is for.
 
 | Source | Taxon | Realm | Evidence | Sensitivity | Generalisation | Permission | Date |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| _(none yet)_ | | | | | | | |
+| `movebank_bylot_fox_argos` | *Vulpes lagopus* | terrestrial | track (journey lines) | `low` | daily medians snapped to 0.01° — a decimal coarser than the 0.001° policy floor, so no den resolves to a point — 30-day delay, identifiers kept | none needed | 2026-08-07 |
+| `movebank_yahatinda_elk` | *Cervus canadensis* | terrestrial | track (weekly presence surface) | `moderate` | 0.01° cells, ≥ 3 animals per cell-week, identifiers dropped, 90-day delay | none needed | 2026-08-07 |
+| `movebank_svalbard_reindeer` | *Rangifer tarandus* | terrestrial | track (weekly presence surface) | `moderate` | 0.01° cells, ≥ 3 animals per cell-week, identifiers dropped, 90-day delay. Same species as the withheld mountain caribou, classified per source: this population is not in that position | none needed | 2026-08-07 |
 
 ## If you are unsure
 

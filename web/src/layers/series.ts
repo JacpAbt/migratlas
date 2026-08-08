@@ -106,10 +106,21 @@ export async function addSeries(
 
   const id = `${SOURCE_PREFIX}${meta.name}`;
   map.addSource(id, { type: "geojson", data, attribution: attributionFor(meta, terms) });
+
+  // A herd fits inside one tile quantum at globe zoom, where the GeoJSON tiler drops coincident
+  // points outright -- measured: 481 cells render from z3.5 and vanish below z3.4, whatever the
+  // filter says. So a compact layer hands over, the way the drawn coastline hands over to the
+  // surveyed one: below the threshold a single locator says the study is here, above it the
+  // cells say what it looks like.
+  const span = extent(data);
+  const compact = span < 2;
+  const HANDOVER = 3.4;
+
   map.addLayer({
     id,
     type: "circle",
     source: id,
+    ...(compact ? { minzoom: HANDOVER } : {}),
     paint: {
       "circle-color": ramp[2],
       "circle-radius": 3,
@@ -119,6 +130,35 @@ export async function addSeries(
       "circle-blur": 0.6,
     },
   });
+
+  const locatorId = `${id}-locator`;
+  if (compact) {
+    map.addSource(locatorId, {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: meanPosition(data) },
+            properties: { title: meta.title },
+          },
+        ],
+      },
+    });
+    map.addLayer({
+      id: locatorId,
+      type: "circle",
+      source: locatorId,
+      maxzoom: HANDOVER,
+      paint: {
+        "circle-color": ramp[2],
+        "circle-radius": 4,
+        "circle-opacity": 0.85,
+        "circle-blur": 0.4,
+      },
+    });
+  }
 
   // The dart: where the mass moved that week. Registered before the layer that wears it, and
   // `updateImage` on a surface change because removing an image a layer is using makes MapLibre
@@ -165,6 +205,9 @@ export async function addSeries(
     terms,
     cells: data.features.length,
     center: meanPosition(data),
+    // A camera that can actually see it: a compact layer is invisible below the hand-over, so
+    // pointing at its centre from globe zoom would frame a locator and claim the layer is empty.
+    ...(compact ? { zoom: 5.5 } : {}),
     showWeek,
     // Re-run the week it is already on. `showWeek` short-circuits when the week has not moved,
     // so the repaint has to forget which week that was -- otherwise a surface change is a no-op
@@ -176,14 +219,33 @@ export async function addSeries(
       showWeek(week);
     },
     setVisible: (visible) => {
-      // The dart follows its station: one checkbox, one measurement, two marks.
-      for (const layerId of [id, flowId]) {
+      // The dart and the locator follow their stations: one checkbox, one measurement.
+      for (const layerId of [id, flowId, locatorId]) {
         if (map.getLayer(layerId)) {
           map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
         }
       }
     },
   };
+}
+
+/** Greatest axis span of a collection's points, in degrees. */
+function extent(collection: GeoJSON.FeatureCollection): number {
+  let minLon = Infinity;
+  let maxLon = -Infinity;
+  let minLat = Infinity;
+  let maxLat = -Infinity;
+  for (const feature of collection.features) {
+    if (feature.geometry.type !== "Point") continue;
+    const [x, y] = feature.geometry.coordinates;
+    if (x === undefined || y === undefined) continue;
+    minLon = Math.min(minLon, x);
+    maxLon = Math.max(maxLon, x);
+    minLat = Math.min(minLat, y);
+    maxLat = Math.max(maxLat, y);
+  }
+  if (minLon > maxLon) return 0;
+  return Math.max(maxLon - minLon, maxLat - minLat);
 }
 
 function attachPopup(
@@ -233,19 +295,22 @@ function summary(properties: SeriesProperties, week: number, meta: LayerMeta): s
   if (bearing !== undefined && speed !== undefined) {
     rows.push(["Heading this week", `${bearing}° at ${speed} m/s`]);
   }
-  // Absent when the station failed the trend thresholds; saying so beats an empty row.
-  rows.push([
-    "Autumn passage shift",
-    shift === null || shift === undefined
-      ? "too short a record"
-      : `${shift > 0 ? "+" : ""}${shift.toFixed(2)} days/decade over ${properties.trend_years} yr`,
-  ]);
+  // Null when the station failed the trend thresholds -- saying so beats an empty row -- and
+  // absent entirely on a layer that publishes no trend, where the row would be an insinuation.
+  if (shift !== undefined) {
+    rows.push([
+      "Autumn passage shift",
+      shift === null
+        ? "too short a record"
+        : `${shift > 0 ? "+" : ""}${shift.toFixed(2)} days/decade over ${properties.trend_years} yr`,
+    ]);
+  }
 
+  const caveat = meta.popup_caveat ? `<p class="caveat">${meta.popup_caveat}</p>` : "";
   return `
     <strong>${properties.station}</strong>
     <table>${rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join("")}</table>
-    <p class="caveat">${meta.value_kind.replace(/_/g, " ")} — aerial biomass, not birds.
-    A single station's shift is noisy; the pooled estimate is in the Phase 1 report.</p>
+    ${caveat}
   `;
 }
 

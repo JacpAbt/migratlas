@@ -19,9 +19,11 @@ from migratlas.metrics.phenology import NORTHERN_AUTUMN, passage_quantiles, pass
 from migratlas.redact import clear_for_publication
 from migratlas.reports import phase1e, phase1f
 from migratlas.tiles.export import ExportResult, export_surface, snap_expr
+from migratlas.tiles.presence import PRESENCE_LAYERS, PresenceSpec, build_presence
 from migratlas.tiles.species import SpeciesExport
 from migratlas.tiles.species import build as build_species
 from migratlas.tiles.station_series import SeriesExport, export_station_series
+from migratlas.tiles.tracks import TRACK_LAYERS, TrackExport, TrackSpec, build_tracks
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -377,13 +379,18 @@ def build_derived(spec: DerivedSpec, destination_root: Path | None = None) -> Ex
     return export_surface(frame, clearances[0], root, spec.name, cell_size_deg=spec.cell_size_deg)
 
 
-def build_all(destination_root: Path | None = None) -> list[ExportResult | SeriesExport]:
+def build_all(
+    destination_root: Path | None = None,
+) -> list[ExportResult | SeriesExport | TrackExport]:
     """Export every registered layer."""
-    results: list[ExportResult | SeriesExport] = [
+    root = destination_root or (get_settings().tiles_dir / "layers")
+    results: list[ExportResult | SeriesExport | TrackExport] = [
         build(layer, destination_root) for layer in LAYERS
     ]
     results += [build_series(layer, destination_root) for layer in SERIES_LAYERS]
     results.append(build_derived(ATLAS_CHANGE, destination_root))
+    results += [build_presence(spec, root) for spec in PRESENCE_LAYERS]
+    results += [build_tracks(spec, root) for spec in TRACK_LAYERS]
     return results
 
 
@@ -413,6 +420,36 @@ def manifest() -> list[dict[str, object]]:
                 "licence": source.licence,
                 "landing_page": str(source.landing_page),
                 "caveats": source.caveats.strip(),
+            }
+        )
+        if layer in SERIES_LAYERS:
+            # The sentence the station popup prints beside its numbers. Authored here like all
+            # frontend prose, and quoted by the browser suite -- change both or neither.
+            entries[-1]["popup_caveat"] = (
+                "reflectivity traffic — aerial biomass, not birds. A single station's shift is "
+                "noisy; the pooled estimate is in the Phase 1 report."
+            )
+    herd_and_journey: tuple[PresenceSpec | TrackSpec, ...] = (*PRESENCE_LAYERS, *TRACK_LAYERS)
+    for tracked in herd_and_journey:
+        source = catalog.get(tracked.source_id)
+        entries.append(
+            {
+                "name": tracked.name,
+                "title": tracked.title,
+                "description": tracked.description,
+                "realm": str(tracked.realm),
+                "evidence_type": str(EvidenceType.TRACK),
+                "kind": "series" if isinstance(tracked, PresenceSpec) else "tracks",
+                "format": "geojson",
+                "value_kind": (
+                    "animals_present" if isinstance(tracked, PresenceSpec) else "journeys"
+                ),
+                "scale": "sequential",
+                "attribution": source.citation.strip(),
+                "licence": source.licence,
+                "landing_page": str(source.landing_page),
+                "caveats": source.caveats.strip(),
+                "popup_caveat": tracked.popup_caveat,
             }
         )
     for spec in DERIVED_LAYERS:

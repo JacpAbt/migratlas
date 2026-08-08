@@ -802,6 +802,18 @@ test("switching a layer on draws a tick rather than filling a box", async ({ pag
   await page.getByRole("button", { name: /just let me explore/i }).click();
   await expect(page.locator(".explore")).toBeVisible();
 
+  // Layers land one by one and the panel re-renders as they do. Clicking a row while the list
+  // is still growing raced the re-render -- it held for a four-layer page and flaked on CI the
+  // day the movement arc made it seven -- so the test waits for the load to finish, like a
+  // visitor whose click means the row they saw.
+  await page.waitForFunction(
+    () =>
+      ((window as unknown as { migratlas?: { loaded?: unknown[] } }).migratlas?.loaded?.length ??
+        0) >= 7,
+    undefined,
+    { timeout: 30_000 },
+  );
+
   const row = page.locator(".layers li").first();
   const mark = row.locator(".ticked");
   await expect(mark).toBeVisible();
