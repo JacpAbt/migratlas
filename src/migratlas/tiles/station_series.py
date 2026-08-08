@@ -192,12 +192,15 @@ def export_station_series(  # noqa: PLR0913 -- the clearance and column roles ar
         weeks = np.full(WEEKS, np.nan)
         weeks[ordered["week"].to_numpy()] = ordered["median"].to_numpy()
         # A missing week omits its key rather than carrying a null, so "no data" and "no
-        # passage" cannot be confused by a reader or by a MapLibre expression.
-        values = {
-            f"w{index}": round(float(value), 1)
-            for index, value in enumerate(weeks)
-            if not np.isnan(value)
-        }
+        # passage" cannot be confused by a reader or by a MapLibre expression. Integral values
+        # are written as integers: ".0" on fifty-two keys of a thousand features is kilobytes
+        # of payload spent stating that a count is a count.
+        values: dict[str, float | int] = {}
+        for index, value in enumerate(weeks):
+            if np.isnan(value):
+                continue
+            rounded = round(float(value), 1)
+            values[f"w{index}"] = int(rounded) if rounded.is_integer() else rounded
         # The movement vector, same shape and same omission rule: `dw` is the bearing the
         # biomass moved toward, degrees clockwise from north, and `sw` its ground speed.
         vectors: dict[str, float | int] = {}

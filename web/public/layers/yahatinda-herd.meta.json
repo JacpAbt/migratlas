@@ -1,0 +1,12 @@
+{
+ "source_id": "movebank_yahatinda_elk",
+ "evidence_type": "track",
+ "realm": "terrestrial",
+ "sensitivity": "moderate",
+ "dwc:dataGeneralizations": "Generalised for animal safety: coordinates generalised to a 0.01-degree grid; records within 90 days of present withheld; individual identifiers removed. Fuller data may be available from the data owner on request.",
+ "cleared_at": "2026-08-08T10:18:41.430129+00:00",
+ "stations": 481,
+ "weeks": 52,
+ "reduction": "Weekly median of nightly values, pooled across years. Not a nightly series.",
+ "annotations": []
+}

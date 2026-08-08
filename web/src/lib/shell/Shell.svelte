@@ -113,6 +113,10 @@
     if (layers.length === 0) return;
     const attrib = shell.querySelector(".maplibregl-ctrl-attrib");
     if (!attrib) return;
+    // MapLibre ships the compact attribution open, and seven citations deep the open state is a
+    // wall across the sphere's middle. It starts folded to its chip -- the licence notice is one
+    // tap away, and the reservation below still measures whatever height it actually has.
+    attrib.removeAttribute("open");
     const observer = new ResizeObserver(([entry]) => {
       const height = entry?.borderBoxSize?.[0]?.blockSize ?? entry?.contentRect.height ?? 0;
       shell.style.setProperty("--attrib", `${Math.ceil(height) + 8}px`);
@@ -448,6 +452,9 @@
     font-family: var(--font-mono);
     font-size: var(--size-margin);
     line-height: 1.5;
+    /* Opened, it is a readable column, not a banner: seven citations at full map width once
+       covered the middle third of the sphere and every radar station with it. */
+    max-width: min(56ch, 70vw);
   }
 
   .shell :global(.maplibregl-ctrl-attrib a) {

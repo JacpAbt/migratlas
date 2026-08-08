@@ -3,6 +3,7 @@
 
   import { addDrawnCoast, createGlobe, setHatch, styleReady } from "../../globe/map";
   import { addSeries } from "../../layers/series";
+  import { addTracks } from "../../layers/tracks";
   import { addSurface } from "../../layers/surface";
   import { loadManifest, type LoadedLayer } from "../../layers/types";
   import { nightPolygon } from "../../layers/terminator";
@@ -87,9 +88,9 @@
       const settled = await Promise.all(
         manifest.map(async (meta) => {
           try {
-            return meta.kind === "series"
-              ? await addSeries(instance, meta, base, week)
-              : await addSurface(instance, meta, base);
+            if (meta.kind === "series") return await addSeries(instance, meta, base, week);
+            if (meta.kind === "tracks") return await addTracks(instance, meta, base);
+            return await addSurface(instance, meta, base);
           } catch (error) {
             failures = [...failures, `${meta.name}: ${String(error)}`];
             return null;

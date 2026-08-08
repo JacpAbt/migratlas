@@ -62,6 +62,7 @@ async function ready(page: Page): Promise<ReadyReport> {
       layers: loaded.map((l) => l.meta.name),
       cells: Object.fromEntries(loaded.map((l) => [l.meta.name, l.cells])),
       centers: Object.fromEntries(loaded.map((l) => [l.meta.name, l.center])),
+      zooms: Object.fromEntries(loaded.map((l) => [l.meta.name, l.zoom])),
     };
   });
 }
@@ -167,9 +168,12 @@ const mapLayerFor = (page: Page, name: string): Promise<string> =>
 async function focusOn(page: Page, report: ReadyReport, name: string, layerId: string): Promise<void> {
   const center = report.centers[name];
   expect(center, `no centre reported for ${name}`).toBeDefined();
+  // The layer's own camera hint, where it declares one: a compact layer's cells sit below the
+  // tiler's hand-over zoom and are legitimately absent from the globe view.
+  const zoom = report.zooms?.[name] ?? 2.2;
   await page.evaluate(
-    (at) => (window as unknown as Hook).migratlas.map.jumpTo({ center: at, zoom: 2.2 }),
-    center as [number, number],
+    (view) => (window as unknown as Hook).migratlas.map.jumpTo(view),
+    { center: center as [number, number], zoom },
   );
   await settle(page);
   await expectDrawn(page, layerId);
@@ -530,8 +534,14 @@ const BUDGET = {
    * of the largest payloads through: `taxon-index.json` and `detectability.json` sit at the root,
    * so 978 KiB on disk never reached the gate the budget existed to be. Counting everything is the
    * point -- a ceiling that only watches one directory measures the directory, not the page.
+   *
+   * Raised from 900 KB when the movement arc landed three track layers (ADRs 0010/0011): measured
+   * 1.8 MB with the fox journeys at 812 KiB after one-cell simplification. Two caveats on the
+   * number: the preview server does not compress `.geojson`, so those payloads count raw here and
+   * gzip to roughly a third in production -- and the ceiling still catches the mistake it exists
+   * for, which is a layer arriving an order of magnitude heavier than intended.
    */
-  payloadBytesGzipped: 900_000,
+  payloadBytesGzipped: 2_500_000,
 };
 
 /** Data the page fetches for itself. The basemap is excluded: it is not ours and it is not built. */
