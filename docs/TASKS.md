@@ -17,13 +17,15 @@ globe gets first-class content again. Housekeeping went first and is in Done.
 
 | # | Item | State |
 | --- | --- | --- |
-| 38 | Tracks on the globe: a `TRACK` tile builder and an animated, clearance-gated track layer | The arc's first piece. Starts with its own ADR: simplification tolerance, temporal encoding against the existing week index, and what redaction does to a drawn line — a generalized cell is honest about its coarseness, a smoothed path is a specific claim about where an animal went. |
+| 39 | The radar layer given its measured direction | Promoted to the arc's opener by [ADR 0010](adr/0010-what-a-drawn-track-may-be.md): the collar records cannot carry it — measured, not assumed. The daily product's reflectivity-weighted u and v are cached and ADR 0006 verified them end to end. |
+| 38 | The weekly presence surface, and the fox layer | ADR 0010 settled what a drawn track may be: no lines without a recorded `OwnerPermission`; the product is a weekly presence surface pooled across years, k ≥ 3 animals per cell-week, shipping only where seasonal throw exceeds two cells at the cleared resolution. One source clears the bar today — `bylot_fox_argos`, 76 km of sea-ice excursions against 0.25° cells. The builder is shared with #40's driver layers, so it is built once. |
 
 ## Queued, with a reason to wait
 
 | # | Item | Why it waits |
 | --- | --- | --- |
-| 39 | The radar layer given its measured direction | The daily product's reflectivity-weighted u and v are already cached and ADR 0006 verified them end to end; passage should visibly *flow*. Independent of #38 in principle, queued behind it only for hands. |
+| 49 | Register a genuinely migratory tracked source | ADR 0010 §6: the lake's tracks follow resident herds because they were chosen for the ledger, and the durable fix is admission, not engineering. A candidate — open licence, low sensitivity, a long-distance migrant, enough animals to clear the k-floor — enters through `DATASETS.md` in the map-layer role `megamove` already holds. Waits on a candidate survey. |
+| 50 | Ask the Bylot owners for track-drawing permission | The `OwnerPermission` path is built, tested and has never been supplied. The Bylot studies are CC0 with owners who published full precision themselves, which makes them the natural first ask — and asking is correspondence, not a build. Waits on the owner deciding to send it. |
 | 40 | Drivers on the shared clock: green-up first, sea-ice edge cheapest | [`docs/ideas/satellite-drivers-on-the-globe.md`](ideas/satellite-drivers-on-the-globe.md), no longer unassessed — ADR 0009 promotes it. Its stated precondition, Phase 2a existing, is met. The honest-label decision the idea note records still has to be taken: a weekly climatology is not the weather of any particular year, and the caption must say so. |
 | 41 | Claims ↔ species ↔ layers cross-links | The marine per-species view *is* `marine-null`'s argument — pick a fish, watch two surveys disagree in sign — and a reader cannot get there from the claim, or back. Waits only on #38's layer-kind churn settling. |
 | 42 | Arrival's third door: "watch a year of movement" | Waits on #38 and #39 — the door needs something moving behind it. |
