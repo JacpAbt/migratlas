@@ -83,6 +83,54 @@ def weekly_climatology(
     )
 
 
+def weekly_flow(  # noqa: PLR0913 -- the column roles are all required, like the exporter's
+    nights: pl.DataFrame,
+    *,
+    site: str = "station_id",
+    time_column: str = "timestamp",
+    value_column: str = "magnitude",
+    direction_column: str = "direction_deg",
+    speed_column: str = "speed_ms",
+) -> pl.DataFrame:
+    """Bearing and speed per station and week of year, from the nightly movement vectors.
+
+    Directions cannot be averaged as numbers -- 350° and 10° mean north, not 180° -- so each
+    night becomes a vector, weighted by that night's passage: where the biomass moved, not
+    where the average night pointed. Within a year the vectors are averaged per week; across
+    years each component takes the median, matching the value climatology's robustness to an
+    exceptional year. A night the VVP fit could not give a velocity contributes nothing rather
+    than a zero, which would drag the speed toward calm that never happened.
+    """
+    radians = pl.col(direction_column).radians()
+    weighted = (
+        nights.filter(
+            pl.col(direction_column).is_not_null()
+            & pl.col(speed_column).is_not_null()
+            & pl.col(value_column).is_not_null()
+        )
+        .with_columns(
+            week=((pl.col(time_column).dt.ordinal_day() - 1) // 7).clip(0, WEEKS - 1),
+            year=pl.col(time_column).dt.year(),
+            u=pl.col(speed_column) * radians.sin() * pl.col(value_column),
+            v=pl.col(speed_column) * radians.cos() * pl.col(value_column),
+        )
+        .group_by([site, "year", "week"])
+        .agg(
+            u=pl.col("u").sum() / pl.col(value_column).sum(),
+            v=pl.col("v").sum() / pl.col(value_column).sum(),
+        )
+        .group_by([site, "week"])
+        .agg(u=pl.col("u").median(), v=pl.col("v").median())
+    )
+    bearing = pl.arctan2(pl.col("u"), pl.col("v")).degrees()
+    return weighted.select(
+        site,
+        "week",
+        bearing=pl.when(bearing < 0).then(bearing + 360).otherwise(bearing),
+        speed=(pl.col("u") ** 2 + pl.col("v") ** 2).sqrt(),
+    ).sort([site, "week"])
+
+
 def export_station_series(  # noqa: PLR0913 -- the clearance and column roles are all required
     nights: pl.DataFrame,
     clearance: PublicationClearance,
@@ -93,6 +141,8 @@ def export_station_series(  # noqa: PLR0913 -- the clearance and column roles ar
     latitude: str = "station_latitude",
     time_column: str = "timestamp",
     value_column: str = "magnitude",
+    direction_column: str | None = None,
+    speed_column: str | None = None,
     annotations: pl.DataFrame | None = None,
     now: datetime | None = None,
 ) -> SeriesExport:
@@ -125,6 +175,17 @@ def export_station_series(  # noqa: PLR0913 -- the clearance and column roles ar
     if annotations is not None:
         climatology = climatology.join(annotations, on=site, how="left")
 
+    flow = None
+    if direction_column is not None and speed_column is not None:
+        flow = weekly_flow(
+            frame,
+            site=site,
+            time_column=time_column,
+            value_column=value_column,
+            direction_column=direction_column,
+            speed_column=speed_column,
+        )
+
     features = []
     for (station,), group in climatology.group_by([site], maintain_order=True):
         ordered = group.sort("week")
@@ -137,6 +198,13 @@ def export_station_series(  # noqa: PLR0913 -- the clearance and column roles ar
             for index, value in enumerate(weeks)
             if not np.isnan(value)
         }
+        # The movement vector, same shape and same omission rule: `dw` is the bearing the
+        # biomass moved toward, degrees clockwise from north, and `sw` its ground speed.
+        vectors: dict[str, float | int] = {}
+        if flow is not None:
+            for row in flow.filter(pl.col(site) == station).iter_rows(named=True):
+                vectors[f"dw{row['week']}"] = round(float(row["bearing"])) % 360
+                vectors[f"sw{row['week']}"] = round(float(row["speed"]), 1)
         observed = ordered["years"].to_numpy()
         features.append(
             {
@@ -151,6 +219,7 @@ def export_station_series(  # noqa: PLR0913 -- the clearance and column roles ar
                 "properties": {
                     "station": station,
                     **values,
+                    **vectors,
                     "weeks_present": len(values),
                     "peak": max(values.values(), default=None),
                     "years": int(observed.max()) if observed.size else 0,
@@ -179,6 +248,12 @@ def export_station_series(  # noqa: PLR0913 -- the clearance and column roles ar
                 "weeks": WEEKS,
                 "reduction": (
                     "Weekly median of nightly values, pooled across years. Not a nightly series."
+                    + (
+                        " Movement vectors are magnitude-weighted weekly means, "
+                        "medianed across years by component."
+                        if flow is not None
+                        else ""
+                    )
                 ),
                 "annotations": extra,
             },

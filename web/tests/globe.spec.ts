@@ -268,6 +268,40 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
   expect(fetches, "a week change must not refetch the layer").toBe(0);
 });
 
+test("the passage layer wears its measured direction, and the clock turns it", async ({ page }) => {
+  test.setTimeout(90_000);
+  const report = await ready(page);
+  await explore(page);
+  const id = "series-aerial-passage";
+  const flow = `${id}-flow`;
+  await focusOn(page, report, "aerial-passage", id);
+
+  // The darts are the same source wearing a second mark: a symbol whose rotation reads the
+  // week's measured bearing, geographic rather than screen-aligned. A station whose week has
+  // passage but no velocity fit shows a circle and no dart -- filtered, not drawn at zero.
+  const state = () =>
+    page.evaluate((layer) => {
+      const { map } = (window as unknown as Hook).migratlas;
+      return {
+        image: map.hasImage("flow-dart"),
+        rotate: JSON.stringify(map.getLayoutProperty(layer, "icon-rotate")),
+        alignment: map.getLayoutProperty(layer, "icon-rotation-alignment") as string,
+        drawn: map.queryRenderedFeatures({ layers: [layer] }).length,
+      };
+    }, flow);
+
+  const before = await state();
+  expect(before.image, "the dart image is registered").toBe(true);
+  expect(before.rotate).toContain("dw");
+  expect(before.alignment, "a bearing is geographic, not a screen decoration").toBe("map");
+  await expect
+    .poll(async () => (await state()).drawn, { message: "no darts rendered" })
+    .toBeGreaterThan(0);
+
+  await page.locator(".explore .time input").fill("250");
+  await expect.poll(async () => (await state()).rotate).toContain("dw35");
+});
+
 test("a station popup states the caveat with the number", async ({ page }) => {
   test.setTimeout(90_000);
   const report = await ready(page);

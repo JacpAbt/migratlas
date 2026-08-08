@@ -124,8 +124,6 @@ _PUBLISH_AS_IS = Generalization(grid_deg=None, delay_days=0, drop_individual_id=
 _WITHHOLD = Generalization(grid_deg=None, delay_days=0, drop_individual_id=True, withhold=True)
 
 # Explicit so a reviewer can read the whole policy and object to a specific cell.
-# Note that even NOT_SENSITIVE individual data is gridded and de-identified: the safe
-# path has to be the default path, not the one taken when someone remembers to ask.
 _AGGREGATE_POLICY: Final[dict[Sensitivity, Generalization]] = {
     Sensitivity.NOT_SENSITIVE: _PUBLISH_AS_IS,
     Sensitivity.LOW: _PUBLISH_AS_IS,
@@ -134,10 +132,17 @@ _AGGREGATE_POLICY: Final[dict[Sensitivity, Generalization]] = {
     Sensitivity.EMBARGOED: _WITHHOLD,
 }
 
+# The grids are GBIF's published category resolutions (adr/0011): not sensitive is released as
+# published, LOW is Category 4 (~100 m), MODERATE is Category 3 (~1 km). Two house additions
+# survive the alignment because each closes a hole the standard's occurrence-shaped scope never
+# considers: the delay defends a live tagged animal against real-time interception, and dropping
+# identifiers at MODERATE stops one hunted animal's habitual sites being read off its track.
+# HIGH stays withheld outright -- ETHICS.md defines it as active persecution pressure, and a
+# persecuted animal's whereabouts have no safe resolution.
 _INDIVIDUAL_POLICY: Final[dict[Sensitivity, Generalization]] = {
-    Sensitivity.NOT_SENSITIVE: Generalization(grid_deg=0.1, delay_days=7, drop_individual_id=True),
-    Sensitivity.LOW: Generalization(grid_deg=0.25, delay_days=30, drop_individual_id=True),
-    Sensitivity.MODERATE: Generalization(grid_deg=1.0, delay_days=90, drop_individual_id=True),
+    Sensitivity.NOT_SENSITIVE: _PUBLISH_AS_IS,
+    Sensitivity.LOW: Generalization(grid_deg=0.001, delay_days=30, drop_individual_id=False),
+    Sensitivity.MODERATE: Generalization(grid_deg=0.01, delay_days=90, drop_individual_id=True),
     Sensitivity.HIGH: _WITHHOLD,
     Sensitivity.EMBARGOED: _WITHHOLD,
 }

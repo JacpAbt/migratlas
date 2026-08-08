@@ -88,8 +88,10 @@ SERIES_LAYERS: Final[tuple[LayerSpec, ...]] = (
         title="Nightly aerial passage",
         description=(
             "Weekly median of nightly reflectivity traffic past US weather radars, pooled "
-            "across 1995-2025, with each station's shift in autumn passage date. Aerial "
-            "biomass, not birds: the radar does not separate birds from bats from insects. "
+            "across 1995-2025, with each station's shift in autumn passage date. The darts "
+            "point the way the mass moved that week, at its measured ground speed. Aerial "
+            "biomass, not birds: the radar does not separate birds from bats from insects, "
+            "and the heading no more says what was flying than the brightness does. "
             "The autumn window is a northern-hemisphere one, so the shift means little at "
             "the tropical stations."
         ),
@@ -207,7 +209,15 @@ def build_series(layer: LayerSpec, destination_root: Path | None = None) -> Seri
             pl.col("quantity") == "reflectivity_traffic",
             pl.col("coverage_fraction").is_null() | (pl.col("coverage_fraction") >= MIN_COVERAGE),
         )
-        .select("station_id", "timestamp", "magnitude", "station_longitude", "station_latitude")
+        .select(
+            "station_id",
+            "timestamp",
+            "magnitude",
+            "station_longitude",
+            "station_latitude",
+            "direction_deg",
+            "speed_ms",
+        )
         .collect()
     )
     if nights.is_empty():
@@ -229,6 +239,8 @@ def build_series(layer: LayerSpec, destination_root: Path | None = None) -> Seri
         nights,
         clearance,
         root / f"{layer.name}.geojson",
+        direction_column="direction_deg",
+        speed_column="speed_ms",
         annotations=_passage_shift(nights),
     )
 

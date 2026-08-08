@@ -2,6 +2,7 @@ import { Popup, type ExpressionSpecification, type Map as MapLibreMap } from "ma
 
 import { palette } from "../globe/flavor";
 
+import { DART, dartIcon } from "./dart";
 import {
   attributionFor,
   fetchLayer,
@@ -12,7 +13,8 @@ import {
 
 /**
  * A station feature. Weekly values arrive as scalar `w0`..`w51` properties, present only for
- * weeks that have data.
+ * weeks that have data; `dw`/`sw` carry the week's movement bearing and ground speed, present
+ * only where the VVP fit gave the night a velocity.
  */
 interface SeriesProperties {
   station: string;
@@ -22,10 +24,14 @@ interface SeriesProperties {
   autumn_shift_days_per_decade?: number | null;
   trend_years?: number | null;
   [week: `w${number}`]: number | undefined;
+  [bearing: `dw${number}`]: number | undefined;
+  [speed: `sw${number}`]: number | undefined;
 }
 
 const WEEKS = 52;
 const weekKey = (week: number): string => `w${week}`;
+const bearingKey = (week: number): string => `dw${week}`;
+const speedKey = (week: number): string => `sw${week}`;
 
 const SOURCE_PREFIX = "series-";
 
@@ -114,6 +120,29 @@ export async function addSeries(
     },
   });
 
+  // The dart: where the mass moved that week. Registered before the layer that wears it, and
+  // `updateImage` on a surface change because removing an image a layer is using makes MapLibre
+  // warn on every frame.
+  const flowId = `${id}-flow`;
+  if (!map.hasImage(DART)) {
+    const icon = dartIcon(ramp[4]);
+    map.addImage(DART, icon.data, { pixelRatio: icon.pixelRatio });
+  }
+  map.addLayer({
+    id: flowId,
+    type: "symbol",
+    source: id,
+    layout: {
+      "icon-image": DART,
+      // The bearing is geographic, so the dart turns with the globe rather than the screen.
+      "icon-rotation-alignment": "map",
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 1, 0.55, 6, 1.0],
+    },
+    paint: { "icon-opacity": 0.85 },
+  });
+
   let current = -1;
   const showWeek = (week: number): void => {
     if (week === current) return;
@@ -122,6 +151,10 @@ export async function addSeries(
     map.setFilter(id, hasValueAt(week));
     map.setPaintProperty(id, "circle-color", color);
     map.setPaintProperty(id, "circle-radius", radius);
+    // A week with passage but no velocity fit shows a station and no dart, which is the honest
+    // rendering of "it flew, and the fit could not say where to".
+    map.setFilter(flowId, ["all", hasValueAt(week), ["has", bearingKey(week)]]);
+    map.setLayoutProperty(flowId, "icon-rotate", ["to-number", ["get", bearingKey(week)]]);
   };
   showWeek(initialWeek);
 
@@ -137,13 +170,17 @@ export async function addSeries(
     // so the repaint has to forget which week that was -- otherwise a surface change is a no-op
     // on every layer that happens to be showing the right week already.
     repaint: () => {
+      map.updateImage(DART, dartIcon(palette().warm[4]).data);
       const week = current;
       current = -1;
       showWeek(week);
     },
     setVisible: (visible) => {
-      if (map.getLayer(id)) {
-        map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+      // The dart follows its station: one checkbox, one measurement, two marks.
+      for (const layerId of [id, flowId]) {
+        if (map.getLayer(layerId)) {
+          map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+        }
       }
     },
   };
@@ -191,6 +228,11 @@ function summary(properties: SeriesProperties, week: number, meta: LayerMeta): s
     [`Busiest week (${weekLabel(peakWeek)})`, fmt(properties.peak ?? 0)],
     ["Years observed", String(properties.years)],
   ];
+  const bearing = properties[bearingKey(week) as `dw${number}`];
+  const speed = properties[speedKey(week) as `sw${number}`];
+  if (bearing !== undefined && speed !== undefined) {
+    rows.push(["Heading this week", `${bearing}° at ${speed} m/s`]);
+  }
   // Absent when the station failed the trend thresholds; saying so beats an empty row.
   rows.push([
     "Autumn passage shift",

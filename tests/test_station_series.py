@@ -6,7 +6,12 @@ import polars as pl
 
 from migratlas.evidence import EvidenceType, Realm, TaxonScope
 from migratlas.redact import PublicationClearance, Sensitivity, clear_for_publication
-from migratlas.tiles.station_series import WEEKS, export_station_series, weekly_climatology
+from migratlas.tiles.station_series import (
+    WEEKS,
+    export_station_series,
+    weekly_climatology,
+    weekly_flow,
+)
 
 
 def nights(  # noqa: PLR0913 -- a fixture builder, and every knob is used by some test
@@ -174,3 +179,69 @@ def test_delay_window_withholds_recent_nights(tmp_path: Path) -> None:
     openly = json.loads((tmp_path / "open.geojson").read_text(encoding="utf-8"))
     assert delayed["features"][0]["properties"]["years"] == 16
     assert openly["features"][0]["properties"]["years"] == 17
+
+
+def flow_nights(rows: list[tuple[str, int, float, float, float]]) -> pl.DataFrame:
+    """Nights as (station, week, magnitude, direction_deg, speed_ms), one year."""
+    return pl.DataFrame(
+        {
+            "station_id": [r[0] for r in rows],
+            "timestamp": [
+                datetime(2020, 1, 1, tzinfo=UTC) + timedelta(days=r[1] * 7) for r in rows
+            ],
+            "magnitude": [r[2] for r in rows],
+            "station_longitude": [-75.98] * len(rows),
+            "station_latitude": [42.2] * len(rows),
+            "direction_deg": [r[3] for r in rows],
+            "speed_ms": [r[4] for r in rows],
+        }
+    )
+
+
+def test_flow_averages_directions_as_vectors_not_numbers() -> None:
+    """350 and 10 mean north; a numeric mean would say south."""
+    frame = weekly_flow(flow_nights([("K", 0, 100.0, 350.0, 10.0), ("K", 0, 100.0, 10.0, 10.0)]))
+    assert frame.height == 1
+    bearing = frame["bearing"][0]
+    assert bearing < 1.0 or bearing > 359.0
+
+
+def test_flow_weights_by_the_nights_passage() -> None:
+    """Where the biomass moved, not where the average night pointed."""
+    frame = weekly_flow(flow_nights([("K", 0, 1000.0, 180.0, 10.0), ("K", 0, 10.0, 90.0, 10.0)]))
+    assert abs(frame["bearing"][0] - 180.0) < 5.0
+
+
+def test_a_night_without_a_velocity_contributes_nothing(tmp_path: Path) -> None:
+    """A failed VVP fit is an absence, not a calm -- and a week of absences omits its keys."""
+    frame = flow_nights([("K", 0, 100.0, 180.0, 8.0), ("K", 1, 100.0, 0.0, 8.0)]).with_columns(
+        direction_deg=pl.when(pl.col("timestamp").dt.ordinal_day() > 7)
+        .then(None)
+        .otherwise(pl.col("direction_deg"))
+    )
+    export_station_series(
+        frame,
+        clearance(),
+        tmp_path / "flow.geojson",
+        direction_column="direction_deg",
+        speed_column="speed_ms",
+    )
+    feature = json.loads((tmp_path / "flow.geojson").read_text(encoding="utf-8"))["features"][0]
+    assert feature["properties"]["dw0"] == 180
+    assert "dw1" not in feature["properties"]
+    assert "sw1" not in feature["properties"]
+
+
+def test_export_carries_the_movement_vector(tmp_path: Path) -> None:
+    export_station_series(
+        flow_nights([("K", 0, 100.0, 212.0, 8.1)]),
+        clearance(),
+        tmp_path / "flow.geojson",
+        direction_column="direction_deg",
+        speed_column="speed_ms",
+    )
+    feature = json.loads((tmp_path / "flow.geojson").read_text(encoding="utf-8"))["features"][0]
+    assert feature["properties"]["dw0"] == 212
+    assert feature["properties"]["sw0"] == 8.1
+    meta = json.loads((tmp_path / "flow.meta.json").read_text(encoding="utf-8"))
+    assert "Movement vectors" in meta["reduction"]

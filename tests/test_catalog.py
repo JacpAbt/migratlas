@@ -343,31 +343,35 @@ def test_the_gate_refuses_the_two_high_sources_for_the_reason_it_should() -> Non
             )
 
 
-def test_the_other_five_publish_only_coarsened_and_delayed() -> None:
-    """No track is ever published as recorded, whatever its classification.
+def test_the_other_five_publish_at_the_standards_category_resolutions() -> None:
+    """Every publishable track is still generalized and delayed; none ships as recorded.
 
-    Even `low` gets a 0.25-degree grid, a 30-day delay and its individual identifiers removed. The
-    safe path has to be the default path rather than the one taken when someone remembers to ask.
+    Until ADR 0011 this test asserted the founding rule -- 0.25 degrees and de-identification
+    even at `low` -- which was two GBIF categories stricter than the standard the gate cites.
+    The alignment kept what protects: a grid and a delay on every registered track, and
+    identifiers dropped from `moderate` up. A source resolving to any other classification
+    fails the lookup below on purpose, so a reclassification cannot slip through unasserted.
     """
     withheld = {"movebank_mountain_caribou_bc", "movebank_hebblewhite_wolves"}
     publishable = set(TRACK_SOURCES) - withheld
     for source_id in publishable:
         source = get(source_id)
         taxon_key = TRACK_SOURCES[source_id][0]
+        sensitivity = source.sensitivity_for(taxon_key)
         clearance = clear_for_publication(
             source_id=source.id,
             evidence_type=EvidenceType.TRACK,
             realm=Realm.TERRESTRIAL,
-            sensitivity=source.sensitivity_for(taxon_key),
+            sensitivity=sensitivity,
             taxon_scope=TaxonScope.EXACT,
             taxon_key=taxon_key,
             redistribution_allowed=source.redistribution.allowed,
         )
         generalization = clearance.generalization
-        assert generalization.grid_deg is not None
-        assert generalization.grid_deg >= 0.25
+        expected_grid = {Sensitivity.LOW: 0.001, Sensitivity.MODERATE: 0.01}[sensitivity]
+        assert generalization.grid_deg == expected_grid
         assert generalization.delay_days >= 30
-        assert generalization.drop_individual_id
+        assert generalization.drop_individual_id is (sensitivity is Sensitivity.MODERATE)
 
 
 def test_the_terrestrial_realm_is_no_longer_only_birds() -> None:

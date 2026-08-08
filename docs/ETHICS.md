@@ -75,17 +75,30 @@ For each new source, and for each taxon within it, before ingest:
 
 ## What publication then looks like
 
-The gate applies these defaults. Individual-granularity data is gridded and de-identified **even when
-the taxon is not sensitive**, because the safe path has to be the default path rather than the one
-taken when someone remembers to ask.
+The gate applies these defaults. The individual-evidence grids are GBIF's own category
+resolutions — not sensitive as published, `low` as Category 4, `moderate` as Category 3. Two
+house additions sit on top of the standard, each kept because it closes a hole the standard's
+occurrence-shaped scope never considers: a **delay** where sensitivity is real, because a live
+tagged animal can be intercepted from a fresh position, and **identifier dropping at
+`moderate`**, because one hunted animal's habitual sites can be read off an identified track.
+`high` stays withheld outright — this document defines it as active persecution pressure, and a
+persecuted animal's whereabouts have no safe resolution.
 
 | Sensitivity | Aggregate evidence | Individual evidence |
 | --- | --- | --- |
-| `not_sensitive` | as published | 0.1° grid, 7-day delay, no identifiers |
-| `low` | as published | 0.25° grid, 30-day delay, no identifiers |
-| `moderate` | 0.5° grid | 1° grid, 90-day delay, no identifiers |
+| `not_sensitive` | as published | as published |
+| `low` | as published | 0.001° grid (~100 m), 30-day delay, identifiers kept |
+| `moderate` | 0.5° grid | 0.01° grid (~1 km), 90-day delay, no identifiers |
 | `high` | 1° grid, 30-day delay | **withheld** |
 | `embargoed` | **withheld** | **withheld** |
+
+*Amended 2026-08-07, per [ADR 0011](adr/0011-the-gate-aligns-with-its-standard.md).* The first
+version of this table was two categories stricter than the standard for individual evidence —
+0.1° even for a not-sensitive taxon, identifiers dropped at every level — a deliberate founding
+choice ("the safe path has to be the default path") reviewed and narrowed once its cost was
+measured: it forbade every drawn track and hid a 7 km seasonal migration inside a single cell,
+while protecting data the custodians themselves publish at full precision. The strictness that
+protects something stayed; the rest now follows the standard this document cites.
 
 Aggregate evidence means `ABUNDANCE_SURFACE`, `FLUX` and `SURVEY_INDEX` — already summarised over
 animals. Everything else, including `OCCURRENCE`, counts as individual: one observation pins one
