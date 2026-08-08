@@ -73,7 +73,9 @@ def test_snap_expr_matches_the_scalar_definition(grid: float) -> None:
 
 # --- Generalisation is applied, not just recorded ---------------------------
 def test_coordinates_are_coarsened_to_the_permitted_grid() -> None:
-    clearance = _clearance(evidence_type=EvidenceType.TRACK, sensitivity=Sensitivity.MODERATE)
+    # Aggregate HIGH is the one-degree cell since ADR 0011 moved individual MODERATE to the
+    # standard's 0.01; the mechanics under test are the snapping, not the policy row.
+    clearance = _clearance(sensitivity=Sensitivity.HIGH)
     assert clearance.generalization.grid_deg == 1.0
     out = apply_generalization(
         _surface(), clearance, longitude="cell_longitude", latitude="cell_latitude", now=NOW
@@ -84,7 +86,8 @@ def test_coordinates_are_coarsened_to_the_permitted_grid() -> None:
 
 
 def test_identifiers_are_removed_when_the_clearance_says_so() -> None:
-    clearance = _clearance(evidence_type=EvidenceType.TRACK)
+    # MODERATE is where ADR 0011 kept the de-identification rule; below it the ids stay.
+    clearance = _clearance(evidence_type=EvidenceType.TRACK, sensitivity=Sensitivity.MODERATE)
     assert clearance.generalization.drop_individual_id is True
     out = apply_generalization(
         _surface(),
@@ -191,7 +194,7 @@ def test_a_grid_file_is_never_named_geojson(tmp_path: Path) -> None:
 
 def test_a_coarsening_clearance_forces_the_grid_size_it_imposed(tmp_path: Path) -> None:
     """Publishing generalised cells at the source's finer size would overstate the resolution."""
-    clearance = _clearance(evidence_type=EvidenceType.TRACK, sensitivity=Sensitivity.MODERATE)
+    clearance = _clearance(sensitivity=Sensitivity.HIGH)
     assert clearance.generalization.grid_deg == 1.0
     result = export_surface(_surface(), clearance, tmp_path, "layer", cell_size_deg=0.1, now=NOW)
     payload = json.loads(Path(result.path).read_text(encoding="utf-8"))

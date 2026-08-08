@@ -112,23 +112,44 @@ def test_unattributed_scope_needs_no_key() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Aggregate-by-default for individual data
+# The individual table is the standard's, with the house additions where they protect
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
     "evidence_type",
     [t for t in EvidenceType if t.granularity is Granularity.INDIVIDUAL],
 )
-def test_individual_data_is_never_published_at_source_resolution_by_default(
+def test_not_sensitive_individual_data_is_released_as_published(
     evidence_type: EvidenceType,
 ) -> None:
-    """Even a species nobody would hunt is gridded and de-identified by default.
+    """The standard's own words, adopted by ADR 0011.
 
-    "Aggregate by default" has to mean the safe path is the *default* path, not
-    the path taken when someone remembers to ask for it.
+    This test's predecessor asserted the opposite -- gridded and de-identified even when not
+    sensitive -- which was the founding rule until 2026-08-07, when its cost was measured (no
+    source could draw a line, and a 7 km migration vanished inside one cell) against what it
+    protected (data the custodians publish at full precision themselves). Recorded here rather
+    than the old test quietly deleted.
     """
     clearance = _clear(evidence_type=evidence_type, sensitivity=Sensitivity.NOT_SENSITIVE)
-    assert clearance.generalization.grid_deg is not None
-    assert clearance.generalization.drop_individual_id is True
+    assert clearance.generalization.grid_deg is None
+    assert clearance.generalization.drop_individual_id is False
+    assert clearance.generalization.delay_days == 0
+
+
+def test_the_house_additions_survive_where_sensitivity_is_real() -> None:
+    """ADR 0011 kept two rules the standard never asks for, and they must not erode.
+
+    The delay defends a live tagged animal against real-time interception; dropping identifiers
+    at moderate stops one hunted animal's habitual sites being read off its track.
+    """
+    low = policy_for(Sensitivity.LOW, Granularity.INDIVIDUAL)
+    assert low.grid_deg == 0.001
+    assert low.delay_days == 30
+    assert low.drop_individual_id is False
+
+    moderate = policy_for(Sensitivity.MODERATE, Granularity.INDIVIDUAL)
+    assert moderate.grid_deg == 0.01
+    assert moderate.delay_days == 90
+    assert moderate.drop_individual_id is True
 
 
 def test_policy_table_is_total() -> None:

@@ -102,3 +102,17 @@ the visibility bar means no layer ships that a caption would have to apologise f
 
 Payload, measured: 547 cell-weeks for the fox surface — a few kilobytes in the series encoding,
 noise against the 150 MB heap ceiling and the current 221 KiB of layers.
+
+---
+
+*Amended 2026-08-07, after [ADR 0011](0011-the-gate-aligns-with-its-standard.md).* The policy this
+ADR measured against was revised the same day, and the verdicts that were policy-bound move while
+the biology-bound ones stand. **Lines exist now** for the `low` sources — the foxes' sea-ice
+excursions and the bison, identifiers kept at 0.001° and thirty days of delay. **The elk and
+reindeer weekly surfaces flip to visible**: 7.2 and 4.8 km of throw against the standard's 0.01°
+cells is six and four cells of movement, id-less as `moderate` still requires. The bison stays out
+on biology — 0.6 km of median displacement is not migration at any resolution — and the wolves and
+caribou stay withheld, untouched by the alignment. The k ≥ 3 floor, the visibility bar and the
+per-source cell choices all stand: they are product honesty rather than policy, and a fox product
+must still pick cells that do not pinpoint dens. #38's scope grows accordingly; #50 narrows to the
+one thing still behind a permission, an identified line from a `moderate` source.
