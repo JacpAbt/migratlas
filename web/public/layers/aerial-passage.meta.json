@@ -4,10 +4,10 @@
  "realm": "aerial",
  "sensitivity": "not_sensitive",
  "dwc:dataGeneralizations": "Published at source resolution.",
- "cleared_at": "2026-08-01T17:26:38.013765+00:00",
+ "cleared_at": "2026-08-08T09:06:42.207896+00:00",
  "stations": 161,
  "weeks": 52,
- "reduction": "Weekly median of nightly values, pooled across years. Not a nightly series.",
+ "reduction": "Weekly median of nightly values, pooled across years. Not a nightly series. Movement vectors are magnitude-weighted weekly means, medianed across years by component.",
  "annotations": [
   "autumn_shift_days_per_decade",
   "trend_years"

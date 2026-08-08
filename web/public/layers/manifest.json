@@ -32,7 +32,7 @@
  {
   "name": "aerial-passage",
   "title": "Nightly aerial passage",
-  "description": "Weekly median of nightly reflectivity traffic past US weather radars, pooled across 1995-2025, with each station's shift in autumn passage date. Aerial biomass, not birds: the radar does not separate birds from bats from insects. The autumn window is a northern-hemisphere one, so the shift means little at the tropical stations.",
+  "description": "Weekly median of nightly reflectivity traffic past US weather radars, pooled across 1995-2025, with each station's shift in autumn passage date. The darts point the way the mass moved that week, at its measured ground speed. Aerial biomass, not birds: the radar does not separate birds from bats from insects, and the heading no more says what was flying than the brightness does. The autumn window is a northern-hemisphere one, so the shift means little at the tropical stations.",
   "realm": "aerial",
   "evidence_type": "flux",
   "kind": "series",
