@@ -209,7 +209,11 @@ test("the globe reaches a usable style with coastlines", async ({ page }) => {
  * fire on a scheduler.
  */
 test("every layer draws features once it is switched on", async ({ page }) => {
-  test.setTimeout(240_000);
+  // 240s was the contended number for a five-layer walk; the movement arc made it eight, each
+  // with its own flight and settle, and CI ran past the ceiling mid-walk with every layer that
+  // had been reached drawing fine. Same scaling, same reasoning: the ceiling ends a hung run,
+  // DRAW_TIMEOUT_MS catches a wedged map.
+  test.setTimeout(420_000);
   const report = await ready(page);
   expect(report.layers.length).toBeGreaterThan(0);
   await explore(page);
