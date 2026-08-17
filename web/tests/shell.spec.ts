@@ -249,6 +249,22 @@ test("a species page is fetched only when a species is chosen", async ({ page })
   expect(asked.length, "choosing a species fetched more than its own shard").toBe(1);
 });
 
+test("a study card leads back to the claim its evidence feeds", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /just let me explore/i }).click();
+  await expect(page.locator(".explore")).toBeVisible();
+
+  await page.getByRole("searchbox").fill("Scomber");
+  await page.locator(".hits button").first().click();
+  await expect(page.locator(".study")).toBeVisible();
+
+  // The road back, absent since the pages were built: the marine per-species view is the marine
+  // claim's own argument, and a reader could reach one from the other in neither direction. The
+  // link is the claim's hash address, so the shell's history handling does the navigation.
+  await page.locator(".study__claim").first().click();
+  await expect(page.locator(".claim")).toContainText("Fish are not all moving");
+});
+
 test("just the map means the whole map, not the last claim's filter", async ({ page }) => {
   await arrive(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();

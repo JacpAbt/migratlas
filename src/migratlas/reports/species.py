@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION: Final = 1
+SCHEMA_VERSION: Final = 2
 
 # Below this a "trend" over a handful of surveys is a rounding artefact of which cells were
 # sampled. The same floor Phase 1b fits on, restated here so a card cannot quote a looser one.
@@ -88,6 +88,13 @@ class Study:
     """Path to the method note, relative to the repository root. Tested to resolve."""
 
     source_id: str
+
+    claim: str = ""
+    """The published finding this study is one line of evidence for, as a `findings.json` key.
+
+    Empty where no claim rests on the study -- a tracked mammal's card feeds no finding, and
+    saying so beats pointing a reader at a claim that never mentions the animal.
+    """
 
     taxon: str = ""
     """What this study's source calls the animal.
@@ -189,6 +196,7 @@ def marine_studies() -> dict[int, Study]:
             ),
             method="docs/methods/phase1b-marine.md",
             source_id=phase1b.SOURCE_ID,
+            claim="marine-null",
             taxon=label,
             rows=rows,
         )
@@ -398,6 +406,7 @@ def occupancy_studies() -> dict[int, Study]:
                 caveat=caveat,
                 method="docs/methods/phase1e-atlas.md",
                 source_id="sabap1",
+                claim="atlas-no-net-change",
                 taxon=pair.taxon_label,
             )
             continue
@@ -419,6 +428,7 @@ def occupancy_studies() -> dict[int, Study]:
                 caveat=caveat,
                 method="docs/methods/phase1e-atlas.md",
                 source_id="sabap1",
+                claim="atlas-no-net-change",
                 taxon=pair.taxon_label,
             )
             continue
@@ -446,6 +456,7 @@ def occupancy_studies() -> dict[int, Study]:
             caveat=caveat,
             method="docs/methods/phase1e-atlas.md",
             source_id="sabap1",
+            claim="atlas-no-net-change",
             taxon=pair.taxon_label,
             rows=[
                 Row(

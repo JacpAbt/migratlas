@@ -802,14 +802,12 @@ test("switching a layer on draws a tick rather than filling a box", async ({ pag
   await page.getByRole("button", { name: /just let me explore/i }).click();
   await expect(page.locator(".explore")).toBeVisible();
 
-  // Layers land one by one and the panel re-renders as they do. Clicking a row while the list
-  // is still growing raced the re-render -- it held for a four-layer page and flaked on CI the
-  // day the movement arc made it seven -- so the test waits for the load to finish, like a
-  // visitor whose click means the row they saw.
+  // Layers land one by one and the panel re-renders as they do; clicking a row while the list
+  // grows races the re-render. The debug hook is published once every layer has loaded, so its
+  // existence is the load-complete signal -- the first version of this wait counted to seven,
+  // and the ice layer made the count stale within a day, which is what counting by hand does.
   await page.waitForFunction(
-    () =>
-      ((window as unknown as { migratlas?: { loaded?: unknown[] } }).migratlas?.loaded?.length ??
-        0) >= 7,
+    () => !!(window as unknown as { migratlas?: { loaded?: unknown[] } }).migratlas?.loaded?.length,
     undefined,
     { timeout: 30_000 },
   );
@@ -826,7 +824,9 @@ test("switching a layer on draws a tick rather than filling a box", async ({ pag
 
   const before = await offset();
   await row.locator("input").click();
-  await expect.poll(offset).not.toBe(before);
+  // Fifteen seconds because the tick redraws on an animation frame, and CI runs two WebGL
+  // workers on a machine with no GPU -- the state lands correctly and late.
+  await expect.poll(offset, { timeout: 15_000 }).not.toBe(before);
 
   // And the checkbox is still the control: hidden natively, but the thing a pointer and a keyboard
   // both reach. The tick is ink.

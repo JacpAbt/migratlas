@@ -21,6 +21,8 @@ export interface Study {
   detail: string;
   caveat: string;
   method: string;
+  /** The findings.json key this study is one line of evidence for; absent where none rests on it. */
+  claim?: string;
   source_id: string;
   taxon: string;
   rows: StudyRow[];
@@ -41,7 +43,7 @@ interface StudyShard {
   species: SpeciesCard[];
 }
 
-const SUPPORTED_SCHEMA = 1;
+const SUPPORTED_SCHEMA = 2;
 const SHARDS = 64;
 
 /** What each kind is, said once, so no component invents its own wording for it. */

@@ -18,6 +18,7 @@ from migratlas.lake.reader import scan
 from migratlas.metrics.phenology import NORTHERN_AUTUMN, passage_quantiles, passage_trends
 from migratlas.redact import clear_for_publication
 from migratlas.reports import phase1e, phase1f
+from migratlas.tiles import ice
 from migratlas.tiles.export import ExportResult, export_surface, snap_expr
 from migratlas.tiles.presence import PRESENCE_LAYERS, PresenceSpec, build_presence
 from migratlas.tiles.species import SpeciesExport
@@ -381,16 +382,17 @@ def build_derived(spec: DerivedSpec, destination_root: Path | None = None) -> Ex
 
 def build_all(
     destination_root: Path | None = None,
-) -> list[ExportResult | SeriesExport | TrackExport]:
+) -> list[ExportResult | SeriesExport | TrackExport | ice.ContourExport]:
     """Export every registered layer."""
     root = destination_root or (get_settings().tiles_dir / "layers")
-    results: list[ExportResult | SeriesExport | TrackExport] = [
+    results: list[ExportResult | SeriesExport | TrackExport | ice.ContourExport] = [
         build(layer, destination_root) for layer in LAYERS
     ]
     results += [build_series(layer, destination_root) for layer in SERIES_LAYERS]
     results.append(build_derived(ATLAS_CHANGE, destination_root))
     results += [build_presence(spec, root) for spec in PRESENCE_LAYERS]
     results += [build_tracks(spec, root) for spec in TRACK_LAYERS]
+    results.append(ice.build_ice(root))
     return results
 
 
@@ -452,6 +454,25 @@ def manifest() -> list[dict[str, object]]:
                 "popup_caveat": tracked.popup_caveat,
             }
         )
+    frozen = catalog.get(ice.SOURCE_ID)
+    entries.append(
+        {
+            "name": ice.LAYER_NAME,
+            "title": ice.TITLE,
+            "description": ice.DESCRIPTION,
+            "realm": str(Realm.MARINE),
+            "evidence_type": "driver",
+            "kind": "contour",
+            "format": "geojson",
+            "value_kind": "median_ice_edge",
+            "scale": "sequential",
+            "attribution": frozen.citation.strip(),
+            "licence": frozen.licence,
+            "landing_page": str(frozen.landing_page),
+            "caveats": frozen.caveats.strip(),
+            "popup_caveat": ice.POPUP_CAVEAT,
+        }
+    )
     for spec in DERIVED_LAYERS:
         sources = [catalog.get(source_id) for source_id in spec.sources]
         entries.append(

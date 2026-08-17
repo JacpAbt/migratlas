@@ -274,6 +274,14 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
   expect(before).not.toBe("35");
   await expectDrawn(page, id);
   expect(fetches, "a week change must not refetch the layer").toBe(0);
+
+  // The same clock walks the ice: day 250 sits in September, and the contour's filter is
+  // month-keyed because monthly is the finest wheel its product turns on.
+  const iceMonth = await page.evaluate(() => {
+    const filter = (window as unknown as Hook).migratlas.map.getFilter("contour-sea-ice-edge");
+    return JSON.stringify(filter);
+  });
+  expect(iceMonth).toContain("9");
 });
 
 test("the passage layer wears its measured direction, and the clock turns it", async ({ page }) => {

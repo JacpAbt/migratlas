@@ -43,6 +43,9 @@ geo = [
     # needs no system netCDF or HDF5 library, unlike netCDF4's DAP support.
     "pydap>=3.5",
     "pyogrio>=0.10",
+    # Unprojecting the Sea Ice Index's polar stereographic shapefiles (EPSG:3411/3412).
+    # Hand-rolling a map projection is this project's signature silent-wrong-answer.
+    "pyproj>=3.6",
     "rioxarray>=0.17",
     "shapely>=2.0",
     "xarray>=2024.9",
@@ -163,6 +166,7 @@ module = [
     "rdata.*",
     "rasterio.*",
     "scipy.*",
+    "shapely.*",
     "statsmodels.*",
 ]
 ignore_missing_imports = true

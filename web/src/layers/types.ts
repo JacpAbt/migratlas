@@ -6,7 +6,7 @@ export interface LayerMeta {
   realm: string;
   evidence_type: string;
   /** Which builder produced it, and so which renderer consumes it. */
-  kind: "surface" | "series" | "tracks";
+  kind: "surface" | "series" | "tracks" | "contour";
   /** Wire shape. A grid carries index arrays; geojson carries one feature per cell. */
   format: "grid" | "geojson";
   value_kind: string;
