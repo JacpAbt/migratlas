@@ -18,6 +18,8 @@
     selection,
     surfaces,
     detectability,
+    preselect = null,
+    onpreselected = () => {},
     onfocus,
   }: {
     layers: LoadedLayer[];
@@ -26,13 +28,18 @@
     /** Mirrored into state by the shell, since a Clock is not reactive by itself. */
     day: number;
     minute: number;
+    /** A taxon to choose on arrival, from a claim's specimen button. */
+    preselect?: number | null;
+    onpreselected?: () => void;
     selection: SpeciesSelection | null;
     surfaces: SpeciesSurfaces;
     onfocus: (at: [number, number]) => void;
   } = $props();
 
   let shown = $state(new Set<string>());
-  let playing = $state(false);
+  // From the clock, not false: the arrival's "watch a year of movement" starts the clock before
+  // this panel exists, and a Play button that said Play while the year ran would be lying.
+  let playing = $state(clock.playing);
 
   $effect(() => {
     shown = new Set(layers.filter((layer) => layer.visible ?? true).map((l) => l.meta.name));
@@ -175,7 +182,7 @@
   <section>
     <h2>Find an animal</h2>
     <Rule seed="explore-search" tone="pencil" />
-    <Search {selection} {surfaces} {onfocus} />
+    <Search {selection} {surfaces} {preselect} {onpreselected} {onfocus} />
   </section>
   </div>
  </Sheet>

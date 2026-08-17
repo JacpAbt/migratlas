@@ -4,7 +4,15 @@
   import Margin from "./Margin.svelte";
   import { DIRECTION_LABEL, instrumentFor, REPOSITORY, type Finding } from "../ledger";
 
-  let { finding, draw = true }: { finding: Finding; draw?: boolean } = $props();
+  let {
+    finding,
+    draw = true,
+    onspecimen,
+  }: {
+    finding: Finding;
+    draw?: boolean;
+    onspecimen?: (key: number) => void;
+  } = $props();
 
   const instrument = $derived(instrumentFor(finding));
 </script>
@@ -62,6 +70,18 @@
     <a class="claim__method" href={`${REPOSITORY}${finding.method}`} rel="noopener" target="_blank">
       Method and pre-registration
     </a>
+    {#if finding.specimen_key !== null && finding.specimen && onspecimen}
+      <!-- The claim's argument on one animal, reachable at last: computed in the reports layer
+           with the same threshold the species cards use for "moved", so the invitation and the
+           card it opens cannot disagree about what counts as moving. -->
+      <button
+        type="button"
+        class="claim__specimen"
+        onclick={() => onspecimen?.(finding.specimen_key as number)}
+      >
+        {finding.specimen}
+      </button>
+    {/if}
   </div>
 
   <Margin {finding} />
@@ -192,6 +212,21 @@
 
   .claim__caveat {
     color: var(--ink-soft);
+  }
+
+  .claim__specimen {
+    display: block;
+    margin-top: 0.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-family: var(--font-mono);
+    font-size: var(--size-margin);
+    color: var(--rust);
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
   }
 
   .claim__method {

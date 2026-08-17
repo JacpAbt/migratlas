@@ -161,6 +161,8 @@ def test_a_finding_round_trips_every_field_the_frontend_reads() -> None:
         "bias",
         "direction",
         "supporting",
+        "specimen_key",
+        "specimen",
     }
     assert item["supporting"] == ["survived a thing"]
     assert item["bias"] == [{"domain": "temporal", "status": "open", "finding": "unexplained step"}]

@@ -143,6 +143,9 @@
   let detectability = $state<DetectabilityDocument | null>(null);
   let sandbox = $state<SandboxDocument | null>(null);
   let selection = $state<SpeciesSelection | null>(null);
+  /** A taxon the next explore view should choose, set by a claim's specimen button and consumed
+      once by the search -- the same code path a visitor's own click takes. */
+  let preselect = $state<number | null>(null);
   let map: MapLibreMap | undefined;
 
   /**
@@ -251,6 +254,11 @@
           mode = "exploring";
           writeClaim(null);
         }}
+        onwatch={() => {
+          mode = "exploring";
+          writeClaim(null);
+          clock.play();
+        }}
       />
     {:else if mode === "reading"}
       <article class="shell__reading" aria-live="polite">
@@ -261,7 +269,14 @@
                  would travel up the screen as a reader scrolls. -->
             <div class="shell__leaf">
               {#key current.key}
-                <Claim finding={current} />
+                <Claim
+                  finding={current}
+                  onspecimen={(key) => {
+                    preselect = key;
+                    mode = "exploring";
+                    writeClaim(null);
+                  }}
+                />
                 <!-- The figure belongs to the claim, not to a panel of its own: for the attribution
                      it IS the argument, and for the coverage limit it is the number. -->
                 <Evidence finding={current} {base} {detectability} {sandbox} />
@@ -282,6 +297,8 @@
         {selection}
         {surfaces}
         {detectability}
+        {preselect}
+        onpreselected={() => (preselect = null)}
         onfocus={(at) => map?.flyTo({ center: at, zoom: 3, essential: true })}
       />
     {/if}

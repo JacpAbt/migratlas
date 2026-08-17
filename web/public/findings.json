@@ -1,5 +1,5 @@
 {
- "schema_version": 3,
+ "schema_version": 4,
  "findings": [
   {
    "key": "autumn-advance",
@@ -46,6 +46,8 @@
      "finding": "The passage window and the quantile definition were matched to the published metric before any extension, so the replication is of the same quantity, not a similar one."
     }
    ],
+   "specimen_key": null,
+   "specimen": "",
    "direction": "change",
    "supporting": [
     "Reproduces a published result on its own window before extending it.",
@@ -99,6 +101,8 @@
      "finding": "Surveys run in fixed seasons, so a species that shifted its seasonal timing rather than its position would not show up here at all."
     }
    ],
+   "specimen_key": 5216014,
+   "specimen": "Raja montagui went north in one survey and south in another. Watch it happen.",
    "direction": "null",
    "supporting": []
   },
@@ -142,6 +146,8 @@
      "finding": "Airspeed is computed per station-night inside the same August-November window as the passage metric, so the two describe the same nights."
     }
    ],
+   "specimen_key": null,
+   "specimen": "",
    "direction": "change",
    "supporting": [
     "Mean autumn airspeed of 8.65 m/s sits in the range for migrating songbirds, not insects.",
@@ -193,6 +199,8 @@
      "finding": "The June-July pre-season window is the one the response function was fitted on, and it does not overlap the August-November response it predicts."
     }
    ],
+   "specimen_key": null,
+   "specimen": "",
    "direction": "change",
    "supporting": [
     "The counterfactual runs warm at +0.01 \u00b0C per decade against +0.59 with human forcing included.",
@@ -235,6 +243,8 @@
      "finding": "Long digitised radar and trawl series exist where they were funded, so the environmental space this project covers is a funding history rather than a sample."
     }
    ],
+   "specimen_key": null,
+   "specimen": "",
    "direction": "limit",
    "supporting": []
   },
@@ -283,6 +293,8 @@
      "finding": "Cards are pooled over five whole years in each epoch, so within-year timing is integrated out and a species that shifted its season rather than its range cannot appear as a range change."
     }
    ],
+   "specimen_key": null,
+   "specimen": "",
    "direction": "null",
    "supporting": [
     "The occupancy model recovers known psi and p from simulated data across five parameter combinations before it was allowed near the atlases.",
@@ -338,6 +350,8 @@
      "finding": "This is the domain the result landed on. Two legs measure where an animal is and the third measures when it passes, and the conversion between them needs a seasonal temperature slope that a spatial leg never has to compute. The pre-registration's list of confounds did not name response type, and the correction is recorded in the method note rather than edited into it."
     }
    ],
+   "specimen_key": null,
+   "specimen": "",
    "direction": "limit",
    "supporting": [
     "The pair that agrees differs in hemisphere, realm, instrument, taxon and decade, and its medians sit 0.011 apart (p=0.10, Holm-corrected) \u2014 while the aerial record sits 0.69 from both.",

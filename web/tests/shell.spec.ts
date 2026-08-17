@@ -265,6 +265,32 @@ test("a study card leads back to the claim its evidence feeds", async ({ page })
   await expect(page.locator(".claim")).toContainText("Fish are not all moving");
 });
 
+test("a claim's specimen button opens the fish that carries its argument", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /show me how you know/i }).click();
+  await page.locator('.tab[data-claim="marine-null"]').click();
+
+  // The other half of the road: computed in the reports layer, so the button names whichever
+  // species most decisively went both ways in the current lake rather than one someone typed.
+  const invitation = page.locator(".claim__specimen");
+  await expect(invitation).toBeVisible();
+  await invitation.click();
+
+  await expect(page.locator(".explore")).toBeVisible();
+  await expect(page.locator(".study")).toBeVisible();
+  await expect(page.locator(".study")).toContainText("north");
+});
+
+test("the arrival's third door starts the year moving", async ({ page }) => {
+  await arrive(page);
+  await page.getByRole("button", { name: /watch a year of movement/i }).click();
+
+  await expect(page.locator(".explore")).toBeVisible();
+  // The door started the clock, and the panel's own control knows it -- a Play button reading
+  // Play while the year ran would be the panel lying about the clock.
+  await expect(page.locator(".explore .run, .explore button", { hasText: "Pause" })).toBeVisible();
+});
+
 test("just the map means the whole map, not the last claim's filter", async ({ page }) => {
   await arrive(page);
   await page.getByRole("button", { name: /show me how you know/i }).click();
