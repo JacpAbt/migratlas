@@ -1054,3 +1054,36 @@ sources:
       zeros. The lake holds no rows from this source; like the sea-ice edge, it is a published
       layer built from the cached archive.
     added: 2026-08-18
+
+  - id: noaa_climate_indices
+    title: NOAA climate-mode indices — ONI, NAO, AO, PDO monthly series
+    realm: aerial
+    landing_page: https://www.cpc.ncep.noaa.gov/data/indices/
+    download_uri: https://www.cpc.ncep.noaa.gov
+    # Four plain-text files from two NOAA services (CPC and NCEI), U.S. Government works and
+    # therefore public domain; PSL's consolidated index hub documents their provenance. The AMO
+    # is deliberately absent: PSL's canonical series went stale at January 2023, and the honest
+    # route is computing it in-lake from ERSST when the marine work needs it.
+    licence: Public domain (U.S. Government work, 17 U.S.C. §105)
+    licence_url: https://www.weather.gov/disclaimer
+    citation: >-
+      NOAA Climate Prediction Center (ONI, NAO, AO) and NOAA National Centers for Environmental
+      Information (PDO, from ERSST v5), monthly climate index series, accessed via their
+      published plain-text endpoints.
+    redistribution:
+      allowed: true
+      attribution_required: false
+      commercial_use: true
+      notes: >-
+        U.S. Government works carry no copyright; NOAA requests acknowledgement as a courtesy
+        and the provenance travels in `derived_from` regardless.
+    # Numbers about oceans and pressure fields. Nothing here has a heartbeat.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      Each index is one research group's definition of a mode, not the mode itself — the CPC
+      NAO is a rotated-PC definition that differs from the station-based Hurrell NAO, and a
+      result that survives only one definition is a result about the definition. The modes are
+      conditioning variables in the skill work (phase3a-skill.md §2), where their role is to
+      absorb shared variance, not to be interpreted. Series lengths differ (ONI from 1950, PDO
+      documented from 1854); the fits use the overlap with each response, never the union.
+    added: 2026-08-18

@@ -40,6 +40,7 @@ each source carries its own terms.
 | [Hebblewhite Alberta-BC Wolves](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study209824313) | `track` | `terrestrial` | CC BY 4.0 | permitted |
 | [Sea Ice Index, version 4 — monthly median ice edge, 1981–2010](https://nsidc.org/data/g02135/versions/4) | driver only | `marine` | Open access; citation required as a condition of use | permitted |
 | [PKU GIMMS NDVI v1.2 — global half-monthly vegetation index, 1982–2022](https://zenodo.org/records/8253971) | driver only | `terrestrial` | CC BY 4.0 | permitted |
+| [NOAA climate-mode indices — ONI, NAO, AO, PDO monthly series](https://www.cpc.ncep.noaa.gov/data/indices/) | driver only | `aerial` | Public domain (U.S. Government work, 17 U.S.C. §105) | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -533,3 +534,21 @@ The median monthly ice edge over 1981-2010, in the product's polar stereographic
 **Caveats**
 
 Half-monthly NDVI at 1/12 degree, AVHRR consolidated against MODIS from 2003 -- the consolidation is modelled, and the product ships a per-pixel QC layer this ingest reads only to the extent of the fill value. Published here as a climatology over 1982-2022, which is not the greenness of any particular year: the green wave it draws is the average wave, against which any one spring may run early or late. Fill value 65535 covers both non-vegetated ground and NDVI below zero, so bare desert and open water are absences, not zeros. The lake holds no rows from this source; like the sea-ice edge, it is a published layer built from the cached archive.
+
+## NOAA climate-mode indices — ONI, NAO, AO, PDO monthly series
+
+- **id** `noaa_climate_indices`
+- **drivers only**, no evidence rows · **realm** `aerial`
+- **landing page** https://www.cpc.ncep.noaa.gov/data/indices/
+- **licence** [Public domain (U.S. Government work, 17 U.S.C. §105)](https://www.weather.gov/disclaimer)
+- **redistribution** permitted
+  - U.S. Government works carry no copyright; NOAA requests acknowledgement as a courtesy and the provenance travels in `derived_from` regardless.
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> NOAA Climate Prediction Center (ONI, NAO, AO) and NOAA National Centers for Environmental Information (PDO, from ERSST v5), monthly climate index series, accessed via their published plain-text endpoints.
+
+**Caveats**
+
+Each index is one research group's definition of a mode, not the mode itself — the CPC NAO is a rotated-PC definition that differs from the station-based Hurrell NAO, and a result that survives only one definition is a result about the definition. The modes are conditioning variables in the skill work (phase3a-skill.md §2), where their role is to absorb shared variance, not to be interpreted. Series lengths differ (ONI from 1950, PDO documented from 1854); the fits use the overlap with each response, never the union.
