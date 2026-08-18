@@ -239,6 +239,26 @@ def ingest_jrc_gsw() -> None:
     print(f"run {result.run_id}")
 
 
+@app.command("ingest-greenup")
+def ingest_greenup() -> None:
+    """Reduce the PKU GIMMS archives to yearly green-up days (driver samples, gridded).
+
+    The years the green-wave tile deliberately averages away, recovered for Phase 3a: one
+    sample per vegetated cell per year, the day NDVI first crossed the midpoint of that year's
+    own amplitude. Reads the same checksummed zips as the tile -- no new fetch, no new licence.
+
+    The era5_south lesson applies here in advance: the lake replaces the partitions a write
+    touches, so any *second* PKU-derived driver (per-step NDVI for the step-selection work,
+    say) must land under its own source id rather than share this one and silently delete
+    these years.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.drivers import greenup  # noqa: PLC0415 -- geo extra, only this command
+
+    result = greenup.build_greenup()
+    print(f"{result.rows} green-up samples -> {result.path}")
+
+
 @app.command("ingest-era5-south")
 def ingest_era5_south() -> None:
     """Land monthly temperature at the southern African atlas cells (driver samples, gridded).
