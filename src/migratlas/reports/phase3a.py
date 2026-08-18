@@ -201,8 +201,15 @@ def render() -> str:
     def grade(passed: bool) -> str:  # noqa: FBT001 -- a grade is a boolean by nature
         return "GRADED TRUE" if passed else "GRADED FALSE"
 
-    p1 = grade(spring.significant > spring.binomial_bar)
-    p2 = grade(spring.median_skill > autumn.median_skill)
+    # An empty season is a pipeline fact, not a scientific verdict: the first run of this
+    # module printed GRADED FALSE over zero spring units because the lake's ERA5 had never
+    # been fetched for January-February, and a grade earned that way would be a lie.
+    if spring.stations == 0 or autumn.stations == 0:
+        p1 = "UNGRADEABLE: a season fitted zero units, which is a data gap, not a verdict"
+        p2 = p1
+    else:
+        p1 = grade(spring.significant > spring.binomial_bar)
+        p2 = grade(spring.median_skill > autumn.median_skill)
     if conditioned:
         marginal = median(r.full.score - r.indices_only.score for r in conditioned)
         weather_alone = median(r.weather_only.score for r in conditioned)
