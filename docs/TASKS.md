@@ -10,16 +10,19 @@ Numbers are permanent. A finished item keeps its number and moves to the bottom.
 
 ## Now
 
-Empty again, and that is the real state: [ADR 0009](adr/0009-the-globe-learns-to-move.md)'s arc is
-built — the darts (#39), the herds and journeys (#38), the ice (#40's first half), the cross-links
-both ways (#41), the third door (#42). What remains is queued below with its reasons, and the next
-thing to start is a judgement call between the green wave (#40's second half), the modelling
-(#43/#44/#13), and the write-ups (#45/#46).
+The plan reordered by the owner on 2026-08-08, recorded in
+[ADR 0012](adr/0012-the-book-not-the-skeleton.md): the movement arc left a great skeleton, not a
+presentation, so the backend finishes first — the green wave (#40), the elk finding (#43),
+step-selection (#44), Forecast A (#13), a migratory source if one survives the survey (#49) — and
+then one presentation arc (#52) rebuilds the frontend around the story, for version 1.0. Frontend
+work before then is triage only (#53).
 
 ## Queued, with a reason to wait
 
 | # | Item | Why it waits |
 | --- | --- | --- |
+| 52 | The presentation arc: version 1.0 | [ADR 0012](adr/0012-the-book-not-the-skeleton.md): the book with side tabs, an introduction before any claim, chapters ordered as the argument, and the world as the map in the back pocket. Waits, deliberately, for the backend to finish — a rebuild that presented half the data would be rebuilt again. Opens with its own build-time ADR. |
+| 53 | Explore panel triage | Two live defects reported 2026-08-08: the panel's controls overlap at some widths, and the Play button does not visibly run the year. Both live in the panel #52 dissolves, but the site is live now. Small, and worth a session's first hour rather than waiting for v1.0. |
 | 49 | Register a genuinely migratory tracked source | ADR 0010 §6: the lake's tracks follow resident herds because they were chosen for the ledger, and the durable fix is admission, not engineering. A candidate — open licence, low sensitivity, a long-distance migrant, enough animals to clear the k-floor — enters through `DATASETS.md` in the map-layer role `megamove` already holds. Waits on a candidate survey. |
 | 50 | Ask a data owner for finer-than-policy permission | Narrowed by ADR 0011: the `low` sources no longer need it. The `OwnerPermission` path — built, tested, never supplied — now matters only for identified lines from a `moderate` source, in practice an elk path. Waits on #38 shipping what needs no asking first. |
 | 40 | Drivers on the shared clock: the green wave | Half done: the sea-ice edge shipped 2026-08-08 — the idea note's "cheapest first" — as 24 monthly median contours on the clock, with the gate extended to price a driver layer's licence. Green-up remains, its route now measured rather than assumed: PKU GIMMS NDVI4g on Zenodo, CC BY 4.0, plain HTTPS, 2.7 GB for 1982–2022 half-monthly at 1/12° — feasible, and a session of its own: a registry entry, a 1° weekly-ish climatology, the grid-with-52-values encoding the idea note sketched, and the honest climatology caption. |
