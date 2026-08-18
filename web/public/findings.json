@@ -212,9 +212,9 @@
    "key": "coverage-bias",
    "plain": "A third of what this site measures is now southern, and none of the weather that would explain it is. Describing a place and explaining it are different problems.",
    "matters": "A map of what is known is not a map of what is happening. Most of the world has never been counted the same way twice \u2014 and where it has, the records that would say *why* often still do not reach. A result from one hemisphere is not evidence about the other until someone goes and checks.",
-   "claim": "35.9% of the rows this project can measure change with lie south of the equator, from 2 of 14 sources \u2014 and 0.93% of its driver record does. The evidence has crossed the equator and the data that would explain it has barely started.",
+   "claim": "35.9% of the rows this project can measure change with lie south of the equator, from 2 of 14 sources \u2014 and 1.31% of its driver record does. The evidence has crossed the equator and the data that would explain it has barely started.",
    "plain_caveat": "Two sources are held back deliberately. Wolves and mountain caribou are hunted by people who would use a map of them, so none of their locations are drawn.",
-   "value": "19,742,318 of 54,962,664 time-series rows are southern (35.9%), against 60,512 of 6,512,057 driver samples (0.93%)",
+   "value": "19,742,318 of 54,962,664 time-series rows are southern (35.9%), against 89,122 of 6,800,549 driver samples (1.31%)",
    "scope": "Every source in this project that has a usable time axis.",
    "caveat": "The southern share is two bird atlases in three countries, so it is a large number from a small place and not coverage of a hemisphere. What has not moved has barely moved is the driver record, and what little of it is southern arrived only to answer this. Every wind field and every counterfactual in this lake was taken over North America; the southern share is surface water and monthly temperature over one atlas footprint, fetched for two five-year windows thirty years apart. That is enough to ask whether those birds tracked the warming and nothing like enough to explain them: no wind, no counterfactual, and nineteen unobserved years in the middle. Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but no model trained on this should be trusted elsewhere without being tested there first. Two kinds of gap are worth telling apart on the map. Grey cells are places the lake reaches and cannot measure. And two sources are held and drawn nowhere at all: mountain caribou and wolves are classified high-sensitivity, so their locations are withheld entirely rather than coarsened. The map is not a map of everything this lake knows, and the coverage panel lists what is missing from it rather than letting an absence speak.",
    "method": "docs/methods/geographic-coverage.md",
@@ -303,6 +303,60 @@
     "Detection probability correlates 0.938 between epochs, so how likely a bird is to be written on a card did not change even though almost everything else about atlassing did.",
     "The uncorrected reporting-rate comparison gives the same answer, so the conclusion does not rest on the model being right.",
     "Per cell they agree less well, which is why the map beside this claim draws the uncorrected count: a disagreement of a fraction of one species, summed over five hundred of them, is a few whole species in a cell. That the map is the plainer measurement was fixed in advance, in docs/methods/phase1f-atlas-surface.md, as what to do if the two ever parted."
+   ]
+  },
+  {
+   "key": "skill-sparse",
+   "plain": "Knowing the weather and the big climate patterns barely helps predict when next year's migration will pass -- only a scattered few autumn stations beat guessing the average.",
+   "matters": "Migration timing has shifted over thirty years, and it is tempting to assume the shift makes each year predictable. It does not: a trend and year-to-year predictability are different properties, and every forecast this site will ever draw is licensed only where this map is not empty.",
+   "claim": "Interannual passage-timing skill is absent at most stations: spring significant at 11 of 140 (chance bar 11), autumn at 20 of 143 (chance bar 12), with median test-era skill -0.031 and +0.005.",
+   "plain_caveat": "Tested with one deliberately simple model and seven registered inputs; a cleverer model might do better, but it would be answering a different, unregistered question.",
+   "value": "autumn 20/143 stations above chance; spring 11/140 at the chance bar",
+   "scope": "143 US weather-radar stations, 1995-2025, era-split ridge against the training climatology with a per-station year-shuffle null; covariates fixed in docs/methods/phase3a-skill.md before any fit.",
+   "caveat": "One registered model class, one covariate list, one split: absence of skill here is absence under those registered choices, not a theorem about the atmosphere. Part of what skill exists is the shared climate modes wearing local clothes -- where the modes alone predict, the weather's marginal contribution halves -- and the marine and herd halves of the same design produced no skill map at all: the surveys mostly changed gear mid-record, and the herds' usable years fall below the design's own floor. The empty cells are statements about the data and the design, published at the same rank as the filled ones.",
+   "method": "docs/methods/phase3a-skill.md",
+   "realm": "aerial",
+   "taxon_scope": "unattributed",
+   "evidence_type": "flux",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "The continental-US radar network, and only it: the one region on Earth with three decades of nightly aerial biomass at this density. Nothing here speaks for anywhere the instrument does not stand."
+    },
+    {
+     "domain": "temporal",
+     "status": "bounded",
+     "finding": "One era split, fixed in advance: trained on the first seven-tenths of each station's years, tested once on the rest. Thirty-one years total, so the test era is roughly a decade and a station's verdict rests on five to ten test points."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "addressed",
+     "finding": "Deliberately unattributed: the radar measures aerial biomass, and a skill claim about 'birds' would smuggle in the attribution Phase 1c refused."
+    },
+    {
+     "domain": "environmental",
+     "status": "bounded",
+     "finding": "Seven covariates, fixed before any fit: season and pre-season temperature, season precipitation, and four climate modes. A driver outside that list -- wind fields, insect emergence, land use -- had no chance to show skill, and the claim is scoped to the list."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "The 2012 instrument step sits inside every station's training era, and the mode-only comparison (prediction 5) measures how much apparent skill is shared signal rather than local weather: +0.007 marginal against +0.018 solo where the modes already predict."
+    },
+    {
+     "domain": "phenological",
+     "status": "bounded",
+     "finding": "The response is the season's median passage day through fixed calendar windows -- the same windows every phase uses, with the same blindness to a season that moves its own boundaries."
+    }
+   ],
+   "specimen_key": null,
+   "specimen": "",
+   "direction": "limit",
+   "supporting": [
+    "Two of the design's own pre-registered predictions were graded false and stand recorded in the method note -- spring, the literature's temperature-forced season, is indistinguishable from the false-positive rate.",
+    "Autumn's count clears its exact binomial chance bar, so the sparse map is not noise promoted to a story.",
+    "The fits reproduced byte-for-byte across two runs under the registered seed, after a data gap forced the only rerun."
    ]
   },
   {

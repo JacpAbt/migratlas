@@ -3,7 +3,7 @@
 A globe of animal movement — where animals are, how their movements have changed over decades,
 what is driving the change, and where they are heading.
 
-> **Status: Phase 2a.** 8 findings published and recomputed from the lake on every build, across
+> **Status: Phase 2a.** 9 findings published and recomputed from the lake on every build, across
 > 3 realms and 28 registered sources. Live at
 > [jacpabt.github.io/migratlas](https://jacpabt.github.io/migratlas).
 > The counts are guarded by `tests/test_readme_status.py` — they drifted twice when typed freehand.
@@ -114,7 +114,8 @@ Ordered so each phase is the foundation of the next, rather than the most exciti
 | **1i** | Does the thermal-tracking measure transfer across realm and hemisphere? | **no** — the two spatial records agree across the equator; the phenological one sits 0.68 from both |
 | **2a** | How much of the change is attributable to human influence? | **−0.30 of the −0.56**, `f` = 0.98 across 15 CMIP6 models |
 | **2b** | What drives an individual animal's decisions? | not started |
-| **3** | Where will they be? | not started |
+| **3a** | Where is movement *predictable* at all? | mostly nowhere — autumn timing above chance at 20/143 radar stations, spring at the false-positive rate; marine and herd halves excluded by their own registered rules |
+| **3** | Where will they be? | not started — licensed only where 3a's map is not empty |
 
 Phase 1a replicates Horton et al. 2020 on their own window before extending it — reproducing a known
 finding first is what makes the extension believable.
@@ -128,7 +129,7 @@ advance does not track temperature at all and remains unexplained.
 Two things the table cannot show, both deliberate. A **latitude-graded step change at 2012** in the
 southern radar bands is still unexplained after four candidate mechanisms were each tested and each
 failed, so those bands are excluded from every claim. And the evidence has crossed the equator while
-the data that would explain it has not — **35.9% of the time-series rows are southern, against 0.93%
+the data that would explain it has not — **35.9% of the time-series rows are southern, against 1.31%
 of the driver samples** — computed rather than estimated, and published as a finding in its own
 right. Global extent, measurable change and explainable change are, so far, three different data.
 
