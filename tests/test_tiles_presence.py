@@ -15,6 +15,7 @@ from migratlas.tiles.presence import (
     PRESENCE_LAYERS,
     PresenceSpec,
     _cell_label,
+    _label_decimals,
     _require_visible,
     build_presence,
 )
@@ -66,10 +67,27 @@ def test_a_moving_herd_clears_the_visibility_bar() -> None:
 
 def test_the_cell_label_is_a_position_and_nothing_else() -> None:
     frame = pl.DataFrame({"lat": [51.715, -33.375], "lon": [-115.535, 25.125]})
-    labels = frame.select(out=_cell_label(pl.col("lat"), pl.col("lon")))["out"].to_list()
-    # 25.125 sits a hair below .125 in binary, so round-half-even gives .12. The label is a
-    # name, not arithmetic, and the pin is to what the machine actually prints.
-    assert labels == ["51.72°N 115.54°W", "33.38°S 25.12°E"]
+    label = _cell_label(pl.col("lat"), pl.col("lon"), decimals=3)
+    labels = frame.select(out=label)["out"].to_list()
+    assert labels == ["51.715°N 115.535°W", "33.375°S 25.125°E"]
+
+
+def test_adjacent_cells_never_share_a_label() -> None:
+    """The regression that moved a quarter of the herd cells on every rebuild.
+
+    At two decimals the centres 15.075 and 15.085 both printed as 15.08 -- one label for two
+    cells, and the exporter published whichever coordinate won a thread race. The label carries
+    one more decimal than the grid so that a centre prints exactly, always.
+    """
+    assert _label_decimals(0.01) == 3
+    assert _label_decimals(0.001) == 4
+    assert _label_decimals(1.0) == 1
+    centres = [round(k * 0.01 + 0.005, 10) for k in range(1500, 1520)]
+    frame = pl.DataFrame({"lat": [77.815] * len(centres), "lon": centres})
+    labels = frame.select(
+        out=_cell_label(pl.col("lat"), pl.col("lon"), decimals=_label_decimals(0.01))
+    )["out"].to_list()
+    assert len(set(labels)) == len(centres), "two cells share a label"
 
 
 def test_every_registered_surface_sits_on_or_above_its_policy_floor() -> None:

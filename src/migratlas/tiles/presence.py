@@ -20,6 +20,7 @@ Three rules from ADR 0010, enforced here rather than hoped for:
 import logging
 import math
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import TYPE_CHECKING, Final
 
 import polars as pl
@@ -160,7 +161,8 @@ def build_presence(spec: PresenceSpec, destination_root: Path) -> SeriesExport:
     yearly = kept.group_by(["cell_lat", "cell_lon", "year", "week"]).agg(
         animals=pl.col("individual_id").n_unique()
     )
-    label = _cell_label(pl.col("cell_lat"), pl.col("cell_lon"))
+    decimals = _label_decimals(spec.cell_deg)
+    label = _cell_label(pl.col("cell_lat"), pl.col("cell_lon"), decimals=decimals)
     rows = yearly.select(
         site_id=label,
         timestamp=(
@@ -211,12 +213,27 @@ def _km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return math.hypot(dx, dy)
 
 
-def _cell_label(lat: pl.Expr, lon: pl.Expr) -> pl.Expr:
+def _label_decimals(cell_deg: float) -> int:
+    """Decimals that print a cell centre exactly: the grid's own places, plus the half-step.
+
+    A 0.01-degree grid has centres at 15.075 and 15.085; two decimals round both toward 15.08,
+    which is one label for two cells. The exporter then merged their series and published
+    whichever coordinate won a thread race -- a quarter of the herd cells moved one step on
+    every rebuild. The label must carry one more place than the grid, always.
+    """
+    exponent = Decimal(str(cell_deg)).normalize().as_tuple().exponent
+    if not isinstance(exponent, int):
+        msg = f"cell size {cell_deg} has no finite decimal form"
+        raise TypeError(msg)
+    return max(0, -exponent) + 1
+
+
+def _cell_label(lat: pl.Expr, lon: pl.Expr, decimals: int) -> pl.Expr:
     """A cell's name is its position, which is all an id-less surface may say about it."""
     return pl.format(
         "{}°{} {}°{}",
-        lat.abs().round(2),
+        lat.abs().round(decimals),
         pl.when(lat >= 0).then(pl.lit("N")).otherwise(pl.lit("S")),
-        lon.abs().round(2),
+        lon.abs().round(decimals),
         pl.when(lon >= 0).then(pl.lit("E")).otherwise(pl.lit("W")),
     )

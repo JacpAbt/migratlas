@@ -168,6 +168,20 @@ def export_station_series(  # noqa: PLR0913 -- the clearance and column roles ar
     sites = frame.group_by(site).agg(
         pl.col(longitude).first().alias("lon"), pl.col(latitude).first().alias("lat")
     )
+    # Refuse a site id that names two places rather than publish whichever one wins a thread
+    # race. The herd surfaces hit exactly this: a cell label rounded to fewer decimals than the
+    # grid needs collided adjacent cells, `first()` above picked the survivor per run, and a
+    # quarter of the published cells moved one step on every rebuild while their merged series
+    # read as one cell's.
+    collisions = (
+        frame.group_by(site)
+        .agg(places=pl.struct(longitude, latitude).n_unique())
+        .filter(pl.col("places") > 1)
+    )
+    if not collisions.is_empty():
+        offenders = ", ".join(collisions[site].head(3).to_list())
+        msg = f"{collisions.height} site ids name more than one coordinate (e.g. {offenders})"
+        raise ValueError(msg)
     climatology = weekly_climatology(
         frame, site=site, time_column=time_column, value_column=value_column
     ).join(sites, on=site)
