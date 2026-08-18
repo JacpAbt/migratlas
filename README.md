@@ -3,8 +3,8 @@
 A globe of animal movement — where animals are, how their movements have changed over decades,
 what is driving the change, and where they are heading.
 
-> **Status: Phase 2a.** 7 findings published and recomputed from the lake on every build, across
-> 3 realms and 25 registered sources. Live at
+> **Status: Phase 2a.** 8 findings published and recomputed from the lake on every build, across
+> 3 realms and 26 registered sources. Live at
 > [jacpabt.github.io/migratlas](https://jacpabt.github.io/migratlas).
 > The counts are guarded by `tests/test_readme_status.py` — they drifted twice when typed freehand.
 

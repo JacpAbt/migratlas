@@ -99,6 +99,18 @@ export const VIEWS: Record<string, View> = {
       "All three records at once. The two that turned out to agree are the two on opposite " +
       "sides of the equator; the one that did not is the one measuring dates instead of places.",
   },
+  "displacement-flat": {
+    // Both herds at once: Ya Ha Tinda in the Canadian Rockies and the Svalbard archipelago sit
+    // 4,700 km apart, and their great-circle midpoint is in the Canadian high Arctic -- so the
+    // camera stands there, pulled back until both surfaces are on the near side of the sphere.
+    center: [-99, 74],
+    zoom: 2.0,
+    layers: ["yahatinda-herd", "svalbard-herd"],
+    because:
+      "The two herds the claim is measured from, as weekly presence on the clock: elk in the " +
+      "Canadian Rockies, reindeer on Svalbard. What does not appear is the point -- no trend in " +
+      "how far either herd moves.",
+  },
   "coverage-bias": {
     // Deliberately the southern hemisphere, and deliberately far out. This claim is about what the
     // project cannot see, so the camera points at the emptiness rather than at the data.

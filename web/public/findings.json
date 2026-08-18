@@ -306,6 +306,60 @@
    ]
   },
   {
+   "key": "displacement-flat",
+   "plain": "Two collared herds travel about as far between winter and summer as they did when tracking began -- as far as their collars can honestly tell.",
+   "matters": "The obvious measure of animal movement -- distance walked along the track -- mostly measures how often the collar spoke, which changed 104-fold over this record. The distance between winter and summer does not care how often the collar spoke, and it has not changed. Six million fixes in this project's lake carry that lesson for every collar study ever pooled.",
+   "claim": "Winter-summer displacement shows no detectable trend in either herd (-1.84 \u00b1 3.89 and +1.16 \u00b1 2.13 km per decade), while path length tracks the fix interval at rho -0.879 and displacement does not (-0.047).",
+   "plain_caveat": "A change smaller than roughly a doubling per decade could not have been seen, so this is a wide kind of nothing.",
+   "value": "-1.84 \u00b1 3.89 km per decade over 341 elk animal-years; +1.16 \u00b1 2.13 over 219 reindeer animal-years",
+   "scope": "Ya Ha Tinda elk 2001-2024 (130 animals) and Svalbard reindeer 2009-2022 (80), displacement between fixed winter and summer calendar windows, years with ten or more animals.",
+   "caveat": "The null is wide, and that must be said loudly: the elk interval spans roughly the median displacement itself, so anything short of a doubling or halving per decade was invisible. The distribution is a mixture of animals that stayed and animals that left, and whether the *share* that migrates has changed is a different question this design registered away -- it is the next pre-registration, not a post-hoc answer. And a herd that shifted when it moves rather than how far would not appear here at all.",
+   "method": "docs/methods/phase1h-elk.md",
+   "realm": "terrestrial",
+   "taxon_scope": "exact",
+   "evidence_type": "track",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "Two populations: elk of one Canadian mountain valley, reindeer of one Arctic archipelago. Chosen by who collared them, and nothing here speaks for anywhere else."
+    },
+    {
+     "domain": "temporal",
+     "status": "bounded",
+     "finding": "Seventeen and thirteen years of animal-years, unevenly spread; six of the seventeen elk years rest on fewer than ten animals, short of the majority that would have stopped it."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "addressed",
+     "finding": "Two named populations of two named species. The claim reaches exactly that far, and the site draws these herds under the same names."
+    },
+    {
+     "domain": "environmental",
+     "status": "bounded",
+     "finding": "A national-park elk range and a protected archipelago: managed landscapes, whose stability is part of what any flat trend includes."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "The confound is the finding: path length tracks the fix interval at rho -0.879 across a 104-fold sampling change, and the displacement measure's independence was demonstrated by construction -- thin the track and the displacement must not move, and it does not."
+    },
+    {
+     "domain": "phenological",
+     "status": "open",
+     "finding": "The season windows are fixed calendar blocks, so a herd that shifted *when* it moves rather than how far is invisible here -- the trade the method note makes explicitly, because timing is what Phase 1d proved a changing collar record cannot measure."
+    }
+   ],
+   "specimen_key": null,
+   "specimen": "",
+   "direction": "null",
+   "supporting": [
+    "The confound was demonstrated, not asserted: thin the elk track and the path length collapses while the displacement stands still, by construction.",
+    "The trend is flat across animals and within them, so it is not collar turnover wearing a trend's clothes.",
+    "The reindeer, whose fix interval varies only 8-fold, replicate the escape measure's independence -- a confound that is absent cannot be demonstrated, and its absence is the control."
+   ]
+  },
+  {
    "key": "transfer-fails",
    "plain": "Two records on opposite sides of the world agreed about how animals follow a warming climate. The third, measured a different way, did not.",
    "matters": "Almost every published forecast of where wildlife will go assumes a response measured in one place holds in another. It is an assumption because testing it needs several responses measured the same way, which is rare. Here the crossing that everyone worries about \u2014 hemisphere \u2014 turned out to be the one that held, and the one nobody names broke it.",

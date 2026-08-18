@@ -384,12 +384,25 @@ def test_the_published_ledger_spans_more_than_one_realm() -> None:
 
     The core was built taxon-agnostic and then three consecutive sources were birds. A convention
     would drift again; this fails.
-
-    What it deliberately does not yet assert: the terrestrial realm is entirely birds, so a test
-    demanding more than one *class* on land would fail today. That is the honest reason the non-bird
-    non-bird terrestrial sources are queued rather than optional. When one lands, tighten
-    this from realm to class.
     """
     document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
     realms = {item["realm"] for item in document["findings"]} - {"all"}
     assert len(realms) > 1, f"every claim is {realms}"
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_the_terrestrial_realm_is_not_only_birds() -> None:
+    """The tightening the realm test promised itself the day a non-bird land finding existed.
+
+    `displacement-flat` is that finding -- two ungulate herds under TRACK evidence -- so the
+    ledger's terrestrial claims must now span more than one evidence type, which is the class
+    split as the ledger can see it: the atlas claims are SURVEY_INDEX birds, the displacement
+    claim is TRACK mammals, and a ledger that lost either collapses back to one class of animal
+    on land. Written the day the finding published, because the TODO above it had already
+    outlived one arc.
+    """
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    terrestrial = {
+        item["evidence_type"] for item in document["findings"] if item["realm"] == "terrestrial"
+    }
+    assert len(terrestrial) > 1, f"every terrestrial claim is {terrestrial}"
