@@ -239,6 +239,21 @@ def ingest_jrc_gsw() -> None:
     print(f"run {result.run_id}")
 
 
+@app.command("ingest-indices")
+def ingest_indices() -> None:
+    """Land the climate-mode indices (ONI, NAO, AO, PDO) as driver samples.
+
+    The conditioning set phase3a-skill.md registered: their job in every fit is to absorb
+    variance shared across units, never to be interpreted. One write for all four series,
+    because they share every year and the lake replaces the partitions a write touches.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.drivers import indices  # noqa: PLC0415 -- one command needs it
+
+    result = indices.build_indices()
+    print(f"{result.rows} index samples -> {result.path}")
+
+
 @app.command("ingest-greenup")
 def ingest_greenup() -> None:
     """Reduce the PKU GIMMS archives to yearly green-up days (driver samples, gridded).
