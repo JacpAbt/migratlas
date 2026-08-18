@@ -168,3 +168,28 @@ each species' anomaly is referenced to its own train-era mean (a full-period ref
 leak the test years into the response, the same leak the harness closes for covariates), and
 each survey's temperature columns were fixed blind — both where the survey measured both for
 twenty years, surface alone otherwise.
+
+## Results — the herd half, run 2026-08-18
+
+- **Prediction 4 — UNGRADEABLE, and the reason is the registration's own arithmetic.** §1
+  counted 17 and 13 usable years from Phase 1h's animal-year coverage, but the fit's unit is
+  the herd-year that survives *every* registered requirement at once: ten or more animals, a
+  winter snow value, and a green-up value — and the NDVI record ends at 2022, two years before
+  the elk record does. The intersection leaves 9 elk years and 10 reindeer years, both below
+  the fifteen-year floor §2 set. No rule was bent to force a grade: the herds' cells on the
+  skill map publish as "insufficient years", which is exactly the honest empty cell the design
+  said they were included to license — reached by exclusion rather than by a null fit.
+
+## The five predictions, closed
+
+1. **FALSE** — spring timing indistinguishable from chance (11 of 140, bar 11).
+2. **FALSE** — spring's median station predicts worse than climatology (−0.031 vs +0.005).
+3. **FALSE** — marine skill in 1 of 7 units, and the coverage stop condition fired first:
+   the marine half is a coverage statement, not a map.
+4. **UNGRADEABLE** — the registered requirements intersect below the registered floor.
+5. **TRUE** — part of apparent local skill is the shared modes (+0.007 marginal vs +0.018
+   solo), the constraint #55's pre-registration inherits.
+
+One prediction survived, three died, one could not be asked — and the one that survived is a
+warning, not a victory. The atlas the site will draw is mostly empty, with a scatter of autumn
+radar stations above chance. For a project whose argument is honesty, that map is the argument.
