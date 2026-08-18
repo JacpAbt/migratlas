@@ -565,6 +565,15 @@ def report_phase3a() -> None:
     print(phase3a.render())
 
 
+@report_app.command("phase3a-marine")
+def report_phase3a_marine() -> None:
+    """The marine skill map: prediction 3, graded against the in-situ haul temperatures."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3a  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3a.render_marine())
+
+
 @report_app.command("phase1")
 def report_phase1() -> None:
     """Replicate Horton et al. 2020 passage phenology, then extend to 2025."""

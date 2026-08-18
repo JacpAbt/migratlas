@@ -1,7 +1,14 @@
 """Phase 3a's grading arithmetic, tested without touching the lake or the test era."""
 
+import polars as pl
+
 from migratlas.models.skill import Skill
-from migratlas.reports.phase3a import StationSkill, binomial_bar, verdicts
+from migratlas.reports.phase3a import (
+    StationSkill,
+    _species_anomalies,
+    binomial_bar,
+    verdicts,
+)
 
 
 def _skill(score: float, *, significant: bool) -> Skill:
@@ -53,3 +60,22 @@ def test_an_empty_season_reports_rather_than_crashes() -> None:
     only_spring = [_station("A", "spring", 0.3, significant=True)]
     by_season = {v.season: v for v in verdicts(only_spring)}
     assert by_season["autumn"].stations == 0
+
+
+def test_species_references_come_from_the_train_era_alone() -> None:
+    """The response construction must not read the test years, same rule as the covariates."""
+    series = pl.DataFrame(
+        {
+            "taxon_key": [1] * 8 + [2] * 3,
+            "year": [*range(2000, 2008), 2005, 2006, 2007],
+            # Species 1 sits at 50.0 through training, then jumps to 51.0 in the test era; its
+            # anomaly there must be +1.0 against the train mean, not +0.5 against a full-period
+            # mean that peeked.
+            "mean_latitude": [50.0] * 5 + [51.0] * 3 + [60.0, 60.0, 60.0],
+        }
+    )
+    out = _species_anomalies(series, train_years=set(range(2000, 2005)))
+    by_year = {row["year"]: row for row in out.to_dicts()}
+    assert by_year[2006]["anomaly"] == 1.0
+    # Species 2 has no train-era years at all: it contributes nothing, anywhere.
+    assert by_year[2006]["species"] == 1

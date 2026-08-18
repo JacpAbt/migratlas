@@ -190,6 +190,154 @@ def verdicts(results: list[StationSkill]) -> list[SeasonVerdict]:
     return out
 
 
+@dataclass(frozen=True, slots=True)
+class MarineSkill:
+    """One survey's verdict, with the construction facts the note must carry."""
+
+    survey: str
+    years: int
+    species: int
+    columns: str
+    skill: Skill
+
+
+MIN_MARINE_YEARS: Final = 20
+"""Prediction 3's own scope: units with at least twenty years."""
+
+MIN_REFERENCE_YEARS: Final = 5
+"""A species contributes only if its train-era reference stands on at least this many years."""
+
+
+def _species_anomalies(series: pl.DataFrame, train_years: set[int]) -> pl.DataFrame:
+    """Per-year cross-species mean latitude anomaly, referenced to the train era alone.
+
+    Each species' reference is its own train-era mean — full-period references would leak the
+    test years into the response's construction, the same leak the harness closes for the
+    covariates. Species without MIN_REFERENCE_YEARS train-era years contribute nothing.
+    """
+    references = (
+        series.filter(pl.col("year").is_in(sorted(train_years)))
+        .group_by("taxon_key")
+        .agg(reference=pl.col("mean_latitude").mean(), reference_years=pl.len())
+        .filter(pl.col("reference_years") >= MIN_REFERENCE_YEARS)
+    )
+    return (
+        series.join(references, on="taxon_key")
+        .with_columns(anomaly=pl.col("mean_latitude") - pl.col("reference"))
+        .group_by("year")
+        .agg(anomaly=pl.col("anomaly").mean(), species=pl.col("taxon_key").n_unique())
+        .sort("year")
+    )
+
+
+def _haul_temperatures() -> pl.DataFrame:
+    """Per survey-year means of the in-situ temperatures, keyed like phase1b's units."""
+    hauls = scan_dataset("driver_samples", source_id="fishglob").collect()
+    return (
+        hauls.with_columns(
+            survey=pl.col("site_id").str.split(":").list.first(),
+            year=pl.col("period_start").dt.year(),
+        )
+        .group_by("survey", "year", "variable")
+        .agg(pl.col("value").mean())
+        .pivot("variable", index=["survey", "year"], values="value")
+    )
+
+
+def marine() -> tuple[list[MarineSkill], int]:
+    """Every qualifying survey's hindcast, and the count excluded for gear changes."""
+    from migratlas.metrics import range as range_metrics  # noqa: PLC0415 -- report sibling
+    from migratlas.models.skill import era_split  # noqa: PLC0415 -- only marine needs it here
+    from migratlas.reports import phase1b  # noqa: PLC0415 -- report sibling
+
+    cells = range_metrics.to_cells(phase1b.survey_unit(phase1b.load()))
+    temperatures = _haul_temperatures()
+
+    results: list[MarineSkill] = []
+    gear_excluded = 0
+    for (unit,), survey in cells.group_by(["survey_unit"], maintain_order=True):
+        restricted, footprint = range_metrics.consistent_footprint(survey)
+        if footprint.cells < range_metrics.MIN_CELLS:
+            continue
+        # The trend fit absorbs a gear change with a break term; the registered model class
+        # has none, and a level step in the response reads as skill or destroys it. Excluded
+        # rather than modeled, per §2.
+        if phase1b.gear_change_year(restricted) is not None:
+            gear_excluded += 1
+            continue
+        series = range_metrics.centroids(restricted)
+        if series.is_empty():
+            continue
+
+        drivers = temperatures.filter(pl.col("survey") == str(unit))
+        sst_years = drivers.drop_nulls("sea_surface_temperature")["year"].to_list()
+        sbt_years = (
+            drivers.drop_nulls("sea_bottom_temperature")["year"].to_list()
+            if "sea_bottom_temperature" in drivers.columns
+            else []
+        )
+        # Both temperatures when the survey measured both; the water it did measure when not.
+        # Fixed here, blind, so no survey's columns are chosen after seeing its skill.
+        use_sbt = len(sbt_years) >= MIN_MARINE_YEARS
+        driver_years = set(sst_years) & set(sbt_years) if use_sbt else set(sst_years)
+        years = sorted(set(series["year"].to_list()) & driver_years)
+        if len(years) < MIN_MARINE_YEARS:
+            continue
+
+        split = era_split(len(years))
+        if split is None:
+            continue
+        train_years = {years[i] for i in split.train}
+        response = _species_anomalies(series.filter(pl.col("year").is_in(years)), train_years)
+        response = response.filter(pl.col("year").is_in(years)).sort("year")
+        if response.height != len(years):
+            continue
+
+        columns = ["sea_surface_temperature"] + (["sea_bottom_temperature"] if use_sbt else [])
+        x = (
+            drivers.filter(pl.col("year").is_in(years))
+            .sort("year")
+            .select(columns)
+            .to_numpy()
+            .astype(float)
+        )
+        y = response["anomaly"].to_numpy().astype(float)
+        verdict = hindcast(x, y, seed=SEED)
+        if verdict is None:
+            continue
+        results.append(
+            MarineSkill(
+                survey=str(unit),
+                years=len(years),
+                species=int(np.median(response["species"].to_numpy())),
+                columns="+".join(columns),
+                skill=verdict,
+            )
+        )
+        log.info("%s: %d years, skill %+.3f", unit, len(years), verdict.score)
+    return results, gear_excluded
+
+
+def render_marine() -> str:
+    """Prediction 3's grade, and the marine map's counts."""
+    results, gear_excluded = marine()
+    significant = sum(1 for r in results if r.skill.significant)
+    passed = results and significant >= len(results) / 2
+    scores = sorted(r.skill.score for r in results)
+    med = scores[len(scores) // 2] if scores else float("nan")
+    return "\n".join(
+        [
+            f"Surveys fitted: {len(results)} (seed {SEED}); {gear_excluded} excluded for a "
+            f"gear change inside the span, per the registration's comparability rule.",
+            f"Prediction 3 ({'GRADED TRUE' if passed else 'GRADED FALSE'}): haul temperature "
+            f"carries significant positive skill in {significant} of {len(results)} units "
+            f"with >= {MIN_MARINE_YEARS} years, against the registered bar of half.",
+            f"Median skill across fitted surveys: {med:+.3f}. Chance bar for "
+            f"{len(results)} units: {binomial_bar(len(results))}.",
+        ]
+    )
+
+
 def render() -> str:
     """The numbers for the method note's results section, every prediction graded."""
     results = aerial()
