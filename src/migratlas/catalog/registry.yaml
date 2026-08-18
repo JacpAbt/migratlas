@@ -1022,3 +1022,35 @@ sources:
       lines in most months, and the difference is the warming, not an error. Monthly is the
       finest wheel this product turns on, so a weekly clock steps it twelve times a year.
     added: 2026-08-08
+
+  - id: pku_gimms_ndvi
+    title: PKU GIMMS NDVI v1.2 — global half-monthly vegetation index, 1982–2022
+    realm: terrestrial
+    landing_page: https://zenodo.org/records/8253971
+    download_uri: https://zenodo.org/records/8253971/files
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    doi: 10.5281/zenodo.8253971
+    citation: >-
+      Li, M., Cao, S., Zhu, Z., Wang, Z., Myneni, R. B. & Piao, S. (2023). Spatiotemporally
+      consistent global dataset of the GIMMS Normalized Difference Vegetation Index (PKU GIMMS
+      NDVI) from 1982 to 2022. Earth System Science Data 15, 4181-4203.
+      https://doi.org/10.5194/essd-15-4181-2023. Data: v1.2, Zenodo,
+      https://doi.org/10.5281/zenodo.8253971
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: CC BY 4.0 permits redistribution of derived products with attribution.
+    # A vegetation index has no animal in it, and the gate still prices the licence.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      Half-monthly NDVI at 1/12 degree, AVHRR consolidated against MODIS from 2003 -- the
+      consolidation is modelled, and the product ships a per-pixel QC layer this ingest reads
+      only to the extent of the fill value. Published here as a climatology over 1982-2022,
+      which is not the greenness of any particular year: the green wave it draws is the average
+      wave, against which any one spring may run early or late. Fill value 65535 covers both
+      non-vegetated ground and NDVI below zero, so bare desert and open water are absences, not
+      zeros. The lake holds no rows from this source; like the sea-ice edge, it is a published
+      layer built from the cached archive.
+    added: 2026-08-18

@@ -146,6 +146,8 @@ export interface Palette {
   warm: Ramp;
   /** The same idea in blue for water-realm layers, so realm is legible at a glance. */
   cool: Ramp;
+  /** And in green, for the vegetation the year moves through. */
+  growth: Ramp;
   /** The detailed opt-in Protomaps flavour that goes with this surface. */
   flavor: Flavor;
 }
@@ -165,6 +167,7 @@ export const DAY: Palette = {
   border: "#cdbba6",
   warm: ["#dfe6e6", "#e8d9bb", "#d9ab7c", "#b9743f", "#8d4a2c"],
   cool: ["#e6e0d4", "#b9d2de", "#7fadc4", "#4c7f9c", "#2e5a73"],
+  growth: ["#e3ddc4", "#c2c493", "#94ad6b", "#5d8562", "#3a5f45"],
   flavor: EARTH_FLAVOR,
 };
 
@@ -187,6 +190,7 @@ export const NIGHT: Palette = {
   border: "#364a66",
   warm: ["#3a3428", "#6b4f30", "#a3703c", "#cf9450", "#f0c07a"],
   cool: ["#26313a", "#33566a", "#3f7f9c", "#5aa6c4", "#8fcbe4"],
+  growth: ["#2b3328", "#3c5136", "#527347", "#6f9a5c", "#97c47d"],
   flavor: NIGHT_FLAVOR,
 };
 

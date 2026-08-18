@@ -18,7 +18,7 @@ from migratlas.lake.reader import scan
 from migratlas.metrics.phenology import NORTHERN_AUTUMN, passage_quantiles, passage_trends
 from migratlas.redact import clear_for_publication
 from migratlas.reports import phase1e, phase1f
-from migratlas.tiles import ice
+from migratlas.tiles import greenwave, ice
 from migratlas.tiles.export import ExportResult, export_surface, snap_expr
 from migratlas.tiles.presence import PRESENCE_LAYERS, PresenceSpec, build_presence
 from migratlas.tiles.species import SpeciesExport
@@ -382,17 +382,18 @@ def build_derived(spec: DerivedSpec, destination_root: Path | None = None) -> Ex
 
 def build_all(
     destination_root: Path | None = None,
-) -> list[ExportResult | SeriesExport | TrackExport | ice.ContourExport]:
+) -> list[ExportResult | SeriesExport | TrackExport | ice.ContourExport | greenwave.WaveExport]:
     """Export every registered layer."""
     root = destination_root or (get_settings().tiles_dir / "layers")
-    results: list[ExportResult | SeriesExport | TrackExport | ice.ContourExport] = [
-        build(layer, destination_root) for layer in LAYERS
-    ]
+    results: list[
+        ExportResult | SeriesExport | TrackExport | ice.ContourExport | greenwave.WaveExport
+    ] = [build(layer, destination_root) for layer in LAYERS]
     results += [build_series(layer, destination_root) for layer in SERIES_LAYERS]
     results.append(build_derived(ATLAS_CHANGE, destination_root))
     results += [build_presence(spec, root) for spec in PRESENCE_LAYERS]
     results += [build_tracks(spec, root) for spec in TRACK_LAYERS]
     results.append(ice.build_ice(root))
+    results.append(greenwave.build_greenwave(root))
     return results
 
 
@@ -454,6 +455,25 @@ def manifest() -> list[dict[str, object]]:
                 "popup_caveat": tracked.popup_caveat,
             }
         )
+    verdant = catalog.get(greenwave.SOURCE_ID)
+    entries.append(
+        {
+            "name": greenwave.LAYER_NAME,
+            "title": greenwave.TITLE,
+            "description": greenwave.DESCRIPTION,
+            "realm": str(Realm.TERRESTRIAL),
+            "evidence_type": "driver",
+            "kind": "seasonal",
+            "format": "json",
+            "value_kind": "ndvi_x100",
+            "scale": "sequential",
+            "attribution": verdant.citation.strip(),
+            "licence": verdant.licence,
+            "landing_page": str(verdant.landing_page),
+            "caveats": verdant.caveats.strip(),
+            "popup_caveat": greenwave.POPUP_CAVEAT,
+        }
+    )
     frozen = catalog.get(ice.SOURCE_ID)
     entries.append(
         {

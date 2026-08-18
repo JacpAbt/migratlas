@@ -3,6 +3,7 @@
 
   import { addDrawnCoast, createGlobe, setHatch, styleReady } from "../../globe/map";
   import { addContour } from "../../layers/contour";
+  import { addSeasonal } from "../../layers/seasonal";
   import { addSeries } from "../../layers/series";
   import { addTracks } from "../../layers/tracks";
   import { addSurface } from "../../layers/surface";
@@ -92,6 +93,10 @@
             if (meta.kind === "series") return await addSeries(instance, meta, base, week);
             if (meta.kind === "tracks") return await addTracks(instance, meta, base);
             if (meta.kind === "contour") return await addContour(instance, meta, base, week);
+            if (meta.kind === "seasonal") {
+              const siblings = manifest.filter((m) => m.name !== meta.name).map((m) => m.name);
+              return await addSeasonal(instance, meta, base, week, siblings);
+            }
             return await addSurface(instance, meta, base);
           } catch (error) {
             failures = [...failures, `${meta.name}: ${String(error)}`];

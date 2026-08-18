@@ -39,6 +39,7 @@ each source carries its own terms.
 | [Svalbard Reindeer Project - Nordenskiold Land](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study2608802883) | `track` | `terrestrial` | CC BY-NC 4.0 | permitted |
 | [Hebblewhite Alberta-BC Wolves](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study209824313) | `track` | `terrestrial` | CC BY 4.0 | permitted |
 | [Sea Ice Index, version 4 — monthly median ice edge, 1981–2010](https://nsidc.org/data/g02135/versions/4) | driver only | `marine` | Open access; citation required as a condition of use | permitted |
+| [PKU GIMMS NDVI v1.2 — global half-monthly vegetation index, 1982–2022](https://zenodo.org/records/8253971) | driver only | `terrestrial` | CC BY 4.0 | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -513,3 +514,22 @@ Twelve years and 68 individuals, below the fifteen-year floor this project appli
 **Caveats**
 
 The median monthly ice edge over 1981-2010, in the product's polar stereographic projections (EPSG:3411 north, EPSG:3412 south), from passive microwave concentration at roughly 25 km. A climatology's ice, not any year's: the recent edge sits poleward of these lines in most months, and the difference is the warming, not an error. Monthly is the finest wheel this product turns on, so a weekly clock steps it twelve times a year.
+
+## PKU GIMMS NDVI v1.2 — global half-monthly vegetation index, 1982–2022
+
+- **id** `pku_gimms_ndvi`
+- **drivers only**, no evidence rows · **realm** `terrestrial`
+- **landing page** https://zenodo.org/records/8253971
+- **DOI** [10.5281/zenodo.8253971](https://doi.org/10.5281/zenodo.8253971)
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+  - CC BY 4.0 permits redistribution of derived products with attribution.
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> Li, M., Cao, S., Zhu, Z., Wang, Z., Myneni, R. B. & Piao, S. (2023). Spatiotemporally consistent global dataset of the GIMMS Normalized Difference Vegetation Index (PKU GIMMS NDVI) from 1982 to 2022. Earth System Science Data 15, 4181-4203. https://doi.org/10.5194/essd-15-4181-2023. Data: v1.2, Zenodo, https://doi.org/10.5281/zenodo.8253971
+
+**Caveats**
+
+Half-monthly NDVI at 1/12 degree, AVHRR consolidated against MODIS from 2003 -- the consolidation is modelled, and the product ships a per-pixel QC layer this ingest reads only to the extent of the fill value. Published here as a climatology over 1982-2022, which is not the greenness of any particular year: the green wave it draws is the average wave, against which any one spring may run early or late. Fill value 65535 covers both non-vegetated ground and NDVI below zero, so bare desert and open water are absences, not zeros. The lake holds no rows from this source; like the sea-ice edge, it is a published layer built from the cached archive.

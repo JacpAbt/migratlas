@@ -1,0 +1,11 @@
+{
+ "source_id": "pku_gimms_ndvi",
+ "evidence_type": "driver",
+ "realm": "terrestrial",
+ "sensitivity": "not_sensitive",
+ "dwc:dataGeneralizations": "Published at source resolution.; reduced to a 1-degree half-monthly climatology over 1982-2022, vegetated pixels only",
+ "cleared_at": "2026-08-18T09:47:49.339869+00:00",
+ "cells": 14308,
+ "bins": 24,
+ "reduction": "Mean NDVI per one-degree cell per half-month of year, 1982-2022, over vegetated pixels only; a cell-bin below a tenth of its pixels vegetated is absent, not zero. A climatology: no value describes a particular year."
+}

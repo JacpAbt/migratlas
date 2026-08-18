@@ -6,9 +6,9 @@ export interface LayerMeta {
   realm: string;
   evidence_type: string;
   /** Which builder produced it, and so which renderer consumes it. */
-  kind: "surface" | "series" | "tracks" | "contour";
+  kind: "surface" | "series" | "tracks" | "contour" | "seasonal";
   /** Wire shape. A grid carries index arrays; geojson carries one feature per cell. */
-  format: "grid" | "geojson";
+  format: "grid" | "geojson" | "json";
   value_kind: string;
   /**
    * The sentence a feature popup prints beside its numbers. Authored in `reports`-side Python

@@ -212,8 +212,9 @@ test("every layer draws features once it is switched on", async ({ page }) => {
   // 240s was the contended number for a five-layer walk; the movement arc made it eight, each
   // with its own flight and settle, and CI ran past the ceiling mid-walk with every layer that
   // had been reached drawing fine. Same scaling, same reasoning: the ceiling ends a hung run,
-  // DRAW_TIMEOUT_MS catches a wedged map.
-  test.setTimeout(420_000);
+  // DRAW_TIMEOUT_MS catches a wedged map. The ice and the wave made it ten layers, and the
+  // clock ran out mid-settle again with everything reached drawing fine.
+  test.setTimeout(600_000);
   const report = await ready(page);
   expect(report.layers.length).toBeGreaterThan(0);
   await explore(page);
@@ -552,8 +553,12 @@ const BUDGET = {
    * number: the preview server does not compress `.geojson`, so those payloads count raw here and
    * gzip to roughly a third in production -- and the ceiling still catches the mistake it exists
    * for, which is a layer arriving an order of magnitude heavier than intended.
+   *
+   * Raised again at 2498 KiB measured, when two honest growths landed together: the green wave
+   * (226 KiB, the 10th layer) and the herd surfaces recovering the ~40% of their cells a label
+   * collision had been silently merging. Same caveats as above.
    */
-  payloadBytesGzipped: 2_500_000,
+  payloadBytesGzipped: 3_000_000,
 };
 
 /** Data the page fetches for itself. The basemap is excluded: it is not ours and it is not built. */
