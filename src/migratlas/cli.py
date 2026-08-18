@@ -239,6 +239,20 @@ def ingest_jrc_gsw() -> None:
     print(f"run {result.run_id}")
 
 
+@app.command("ingest-era5-land")
+def ingest_era5_land() -> None:
+    """Land monthly ERA5-Land snow depth at the two herd-range centroids (driver samples).
+
+    The terrestrial covariate phase3a-skill.md registered beside green-up. Its own source id,
+    because the lake replaces the partitions a write touches and this must never share era5's.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.drivers import era5_land  # noqa: PLC0415 -- geo extra, only this command
+
+    result = era5_land.ingest()
+    print(f"{result.rows} snow samples -> {result.path}")
+
+
 @app.command("ingest-indices")
 def ingest_indices() -> None:
     """Land the climate-mode indices (ONI, NAO, AO, PDO) as driver samples.

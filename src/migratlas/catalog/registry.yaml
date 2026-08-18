@@ -1087,3 +1087,35 @@ sources:
       absorb shared variance, not to be interpreted. Series lengths differ (ONI from 1950, PDO
       documented from 1854); the fits use the overlap with each response, never the union.
     added: 2026-08-18
+
+  - id: era5_land
+    title: ERA5-Land monthly means — snow depth at the herd ranges
+    realm: terrestrial
+    landing_page: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land-monthly-means
+    download_uri: https://cds.climate.copernicus.eu/api/retrieve/v1/processes/reanalysis-era5-land-monthly-means
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      Muñoz Sabater, J. (2019). ERA5-Land monthly averaged data from 1950 to present. Copernicus
+      Climate Change Service (C3S) Climate Data Store (CDS).
+      https://doi.org/10.24381/cds.68d2bb30
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        CC BY 4.0, the same terms and the same token as ERA5; credit the Copernicus Climate
+        Change Service and do not represent the Commission or ECMWF as endorsing the result.
+    credential: cds_token
+    # Snow on the ground. Nothing here has a heartbeat.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      Its own source id rather than a variable inside `era5`, because the lake replaces the
+      partitions a write touches and the two must never delete each other's years. The variable
+      is ERA5-Land's snow_depth — true snow thickness in metres (sde), not the water equivalent
+      plain ERA5 publishes under the same words; the canonical name snow_depth_true_m says
+      which. A 9 km land reanalysis smooths the topographic snow variation of a mountain front,
+      which is why the step-selection work pairs it with terrain rather than trusting it alone.
+      Sampled at two herd-range centroids only: this is a covariate for two specific
+      populations, not a snow product.
+    added: 2026-08-18

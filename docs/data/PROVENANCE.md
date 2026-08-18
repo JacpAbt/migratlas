@@ -41,6 +41,7 @@ each source carries its own terms.
 | [Sea Ice Index, version 4 — monthly median ice edge, 1981–2010](https://nsidc.org/data/g02135/versions/4) | driver only | `marine` | Open access; citation required as a condition of use | permitted |
 | [PKU GIMMS NDVI v1.2 — global half-monthly vegetation index, 1982–2022](https://zenodo.org/records/8253971) | driver only | `terrestrial` | CC BY 4.0 | permitted |
 | [NOAA climate-mode indices — ONI, NAO, AO, PDO monthly series](https://www.cpc.ncep.noaa.gov/data/indices/) | driver only | `aerial` | Public domain (U.S. Government work, 17 U.S.C. §105) | permitted |
+| [ERA5-Land monthly means — snow depth at the herd ranges](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land-monthly-means) | driver only | `terrestrial` | CC BY 4.0 | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -552,3 +553,22 @@ Half-monthly NDVI at 1/12 degree, AVHRR consolidated against MODIS from 2003 -- 
 **Caveats**
 
 Each index is one research group's definition of a mode, not the mode itself — the CPC NAO is a rotated-PC definition that differs from the station-based Hurrell NAO, and a result that survives only one definition is a result about the definition. The modes are conditioning variables in the skill work (phase3a-skill.md §2), where their role is to absorb shared variance, not to be interpreted. Series lengths differ (ONI from 1950, PDO documented from 1854); the fits use the overlap with each response, never the union.
+
+## ERA5-Land monthly means — snow depth at the herd ranges
+
+- **id** `era5_land`
+- **drivers only**, no evidence rows · **realm** `terrestrial`
+- **landing page** https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land-monthly-means
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+  - CC BY 4.0, the same terms and the same token as ERA5; credit the Copernicus Climate Change Service and do not represent the Commission or ECMWF as endorsing the result.
+- **sensitivity** `not_sensitive` by default
+- **credential** `MIGRATLAS_CRED_CDS_TOKEN` required
+
+**Cite as**
+
+> Muñoz Sabater, J. (2019). ERA5-Land monthly averaged data from 1950 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS). https://doi.org/10.24381/cds.68d2bb30
+
+**Caveats**
+
+Its own source id rather than a variable inside `era5`, because the lake replaces the partitions a write touches and the two must never delete each other's years. The variable is ERA5-Land's snow_depth — true snow thickness in metres (sde), not the water equivalent plain ERA5 publishes under the same words; the canonical name snow_depth_true_m says which. A 9 km land reanalysis smooths the topographic snow variation of a mountain front, which is why the step-selection work pairs it with terrain rather than trusting it alone. Sampled at two herd-range centroids only: this is a covariate for two specific populations, not a snow product.
