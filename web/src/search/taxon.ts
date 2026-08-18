@@ -75,6 +75,12 @@ export class TaxonIndex {
     return this.#entries.length;
   }
 
+  /** The entry for one GBIF key, for a caller that arrives with a key rather than a name. */
+  byKey(key: number): TaxonHit | null {
+    const entry = this.#entries.find((candidate) => candidate.key === key);
+    return entry ? { ...entry, score: 1 } : null;
+  }
+
   search(query: string, limit = 8): TaxonHit[] {
     const needle = query.trim().toLowerCase();
     if (needle.length < 2) return [];

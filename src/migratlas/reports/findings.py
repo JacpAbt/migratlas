@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION: Final = 3
+SCHEMA_VERSION: Final = 4
 
 # Enforced by a test rather than by trimming. A plain sentence that grows past this has become a
 # second dense paragraph, and the reader who needed it has been lost twice.
@@ -148,6 +148,17 @@ class Finding:
 
     bias: list[BiasDomain] = field(default_factory=list)
     """The ROBITT assessment. Required in practice -- a test refuses a claim without one."""
+
+    specimen_key: int | None = None
+    """GBIF key of one animal whose own card is this claim's argument in miniature.
+
+    None where no single animal carries it, which is most claims: a radar measurement has no
+    animal to name, and naming one anyway would be the overclaim the plates rule refuses.
+    """
+
+    specimen: str = ""
+    """The invitation the claim card prints on the way to that animal. Authored here, like all
+    frontend prose, and empty exactly when `specimen_key` is None."""
 
     direction: str = "neutral"
     """`change`, `null`, or `limit` -- so the frontend can group rather than parse the text."""
@@ -617,6 +628,7 @@ def collect() -> list[Finding]:
     # copy of the data preparation is a second thing that can drift from the published method.
     _, pooled, _ = phase1b.analyse(range_metrics.to_cells(phase1b.survey_unit(phase1b.load())))
     shift = pooled["per_decade"].to_numpy().astype(float)
+    exemplar = _two_way_specimen(pooled)
     findings.append(
         Finding(
             key="marine-null",
@@ -656,6 +668,12 @@ def collect() -> list[Finding]:
             ),
             method="docs/methods/phase1b-marine.md",
             direction="null",
+            specimen_key=exemplar[0] if exemplar else None,
+            specimen=(
+                f"{exemplar[1]} went north in one survey and south in another. Watch it happen."
+                if exemplar
+                else ""
+            ),
         )
     )
 
@@ -1106,3 +1124,29 @@ def write(destination: Path, computed: list[Finding] | None = None) -> int:
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(payload + "\n", encoding="utf-8")
     return len(payload)
+
+
+def _two_way_specimen(pooled: pl.DataFrame) -> tuple[int, str] | None:
+    """The species that most decisively went both ways: the claim's argument on one animal.
+
+    Scored by the smaller of its strongest northward and strongest southward shift, so the winner
+    is the fish for which neither direction is a rounding artefact. Thresholded at the same
+    FLAT_DEGREES the species cards use to say "no clear movement", because the specimen and the
+    card it leads to must agree about what counts as moving.
+    """
+    from migratlas.reports.species import FLAT_DEGREES  # noqa: PLC0415 -- sibling, cycle-safe
+
+    scored = (
+        pooled.group_by("taxon_key", "taxon_label")
+        .agg(
+            north=pl.col("per_decade").max(),
+            south=pl.col("per_decade").min(),
+        )
+        .filter((pl.col("north") > FLAT_DEGREES) & (pl.col("south") < -FLAT_DEGREES))
+        .with_columns(score=pl.min_horizontal(pl.col("north"), -pl.col("south")))
+        .sort("score", descending=True)
+    )
+    if scored.is_empty():
+        return None
+    best = scored.row(0, named=True)
+    return int(best["taxon_key"]), str(best["taxon_label"])

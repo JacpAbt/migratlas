@@ -9,7 +9,13 @@
     finding,
     onshow,
     onexplore,
-  }: { finding: Finding; onshow: () => void; onexplore: () => void } = $props();
+    onwatch,
+  }: {
+    finding: Finding;
+    onshow: () => void;
+    onexplore: () => void;
+    onwatch: () => void;
+  } = $props();
 </script>
 
 <!--
@@ -44,6 +50,13 @@
       <button type="button" class="way" onclick={onexplore}>
         <Boxed seed="way-explore" />
         Just let me explore
+      </button>
+      <!-- ADR 0007 offered two ways out; ADR 0009 promised a third once something on the globe
+           actually moved. The passage flows, the herds breathe, the ice walks its year -- so the
+           door exists now, and it starts the clock rather than leaving the reader to find it. -->
+      <button type="button" class="way" onclick={onwatch}>
+        <Boxed seed="way-watch" />
+        Watch a year of movement
       </button>
     </div>
 

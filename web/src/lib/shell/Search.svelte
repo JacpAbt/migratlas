@@ -7,10 +7,16 @@
   let {
     selection,
     surfaces,
+    preselect = null,
+    onpreselected = () => {},
     onfocus,
   }: {
     selection: SpeciesSelection | null;
     surfaces: SpeciesSurfaces;
+    /** A taxon to choose on arrival -- a claim's specimen button lands here, and choosing goes
+        through `choose` so it is exactly the path a visitor's own click takes. */
+    preselect?: number | null;
+    onpreselected?: () => void;
     onfocus: (at: [number, number]) => void;
   } = $props();
 
@@ -32,6 +38,16 @@
 
   // Every entry has a surface, a study, or both, so a hit is never a dead end.
   const hits = $derived(index && query.trim().length > 1 ? index.search(query) : []);
+
+  // Consume a preselect once the index can resolve it. A key the index does not hold is
+  // consumed and dropped rather than retried forever -- the claim that sent it names an animal
+  // the same build published, so a miss means the build is inconsistent, not that waiting helps.
+  $effect(() => {
+    if (!index || preselect === null || !selection) return;
+    const hit = index.byKey(preselect);
+    onpreselected();
+    if (hit) void choose(hit);
+  });
 
   async function choose(hit: TaxonHit): Promise<void> {
     if (!selection) return;

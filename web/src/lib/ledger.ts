@@ -43,6 +43,10 @@ export interface Finding {
   bias: BiasDomain[];
   direction: FindingDirection;
   supporting: string[];
+  /** GBIF key of one animal whose card is this claim's argument in miniature; null for most. */
+  specimen_key: number | null;
+  /** The invitation printed on the way to that animal; empty exactly when the key is null. */
+  specimen: string;
 }
 
 export interface Ledger {
@@ -50,7 +54,7 @@ export interface Ledger {
   findings: Finding[];
 }
 
-export const SUPPORTED_SCHEMA = 3;
+export const SUPPORTED_SCHEMA = 4;
 
 export const REPOSITORY = "https://github.com/JacpAbt/migratlas/blob/main/";
 

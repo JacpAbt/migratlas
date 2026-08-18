@@ -752,7 +752,9 @@ test("a control is drawn, not bordered", async ({ page }) => {
   await expect(page.locator(".arrival__card")).toBeVisible();
 
   for (const selector of [".way--primary", ".way:not(.way--primary)"]) {
-    const button = page.locator(selector);
+    // `.first()`: the third door made the secondary way plural, and all of them share one class
+    // and one style -- probing one probes the pen.
+    const button = page.locator(selector).first();
     expect(
       await button.evaluate((node) => getComputedStyle(node).borderTopWidth),
       `${selector} still has a border`,
@@ -767,9 +769,11 @@ test("a control is drawn, not bordered", async ({ page }) => {
   }
 
   // Pressed and chosen are a second pass of the pen, not a fill. A hand has "drawn" and "gone over
-  // twice"; it does not have a hover colour.
+  // twice"; it does not have a hover colour. Counted per button, because the third door made the
+  // secondary way plural and each carries exactly one pass.
   await expect(page.locator(".way--primary .ink-box")).toHaveCount(2);
-  await expect(page.locator(".way:not(.way--primary) .ink-box")).toHaveCount(1);
+  const secondary = await page.locator(".way:not(.way--primary)").count();
+  await expect(page.locator(".way:not(.way--primary) .ink-box")).toHaveCount(secondary);
 });
 
 test("only the chosen option is circled", async ({ page }) => {
