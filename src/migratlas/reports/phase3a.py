@@ -338,6 +338,112 @@ def render_marine() -> str:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class HerdSkill:
+    """One herd's verdict, or the reason it has none."""
+
+    herd: str
+    years: int
+    columns: str
+    skill: Skill | None
+    excluded: str = ""
+
+
+MIN_HERD_ANIMALS: Final = 10
+"""A herd-year speaks only when at least this many animals stand behind it — the same floor
+the displacement-flat finding's scope names."""
+
+WINTER_MONTHS: Final = (1, 2, 3)
+
+
+def herds() -> list[HerdSkill]:
+    """Prediction 4's fits: displacement against green-up and snow, per herd."""
+    from migratlas.drivers.era5_land import BOX_DEG, herd_centroid  # noqa: PLC0415
+    from migratlas.reports import phase1h  # noqa: PLC0415 -- report sibling
+
+    greenup = _monthly("pku_gimms_ndvi")
+    snow = _monthly("era5_land")
+
+    results: list[HerdSkill] = []
+    for herd in phase1h.SOURCES:
+        rows = phase1h.seasons(herd)
+        yearly = (
+            pl.DataFrame(
+                {
+                    "year": [s.year for s in rows],
+                    "displacement": [s.displacement_km for s in rows],
+                }
+            )
+            .group_by("year")
+            .agg(displacement=pl.col("displacement").median(), animals=pl.len())
+            .filter(pl.col("animals") >= MIN_HERD_ANIMALS)
+        )
+
+        centre = herd_centroid(herd)
+        cells = greenup.filter(
+            (pl.col("latitude") - centre.latitude).abs() <= BOX_DEG,
+            (pl.col("longitude") - centre.longitude).abs() <= BOX_DEG,
+        )
+        green_years = cells.group_by("year").agg(greenup=pl.col("value").mean())
+        winter = (
+            snow.filter(pl.col("site_id") == herd, pl.col("month").is_in(WINTER_MONTHS))
+            .group_by("year")
+            .agg(snow=pl.col("value").mean())
+        )
+
+        # Green-up when the herd's box has dated cells; snow always. Fixed blind: a polar range
+        # whose NDVI never clears the metric's own refusals fits on the snow it does have.
+        columns = (["greenup"] if green_years.height > 0 else []) + ["snow"]
+        unit = yearly.join(winter, on="year")
+        if "greenup" in columns:
+            unit = unit.join(green_years, on="year")
+        unit = unit.sort("year")
+
+        verdict = hindcast(
+            unit.select(columns).to_numpy().astype(float),
+            unit["displacement"].to_numpy().astype(float),
+            seed=SEED,
+        )
+        results.append(
+            HerdSkill(
+                herd=herd,
+                years=unit.height,
+                columns="+".join(columns),
+                skill=verdict,
+                excluded="" if verdict else "below the registration's own 15-year floor",
+            )
+        )
+        log.info("%s: %d herd-years, columns %s", herd, unit.height, "+".join(columns))
+    return results
+
+
+def render_herds() -> str:
+    """Prediction 4's grade: the herds must show nothing, and honestly."""
+    results = herds()
+    fitted = [r for r in results if r.skill is not None]
+    lines = []
+    for r in results:
+        if r.skill is None:
+            lines.append(f"{r.herd}: not fitted — {r.years} usable years, {r.excluded}.")
+        else:
+            lines.append(
+                f"{r.herd}: skill {r.skill.score:+.3f} against a null bar of "
+                f"{r.skill.null_threshold:+.3f} ({r.columns}, {r.years} years) — "
+                f"{'SIGNIFICANT' if r.skill.significant else 'not significant'}."
+            )
+    none_significant = all(not r.skill.significant for r in fitted if r.skill)
+    if fitted:
+        grade = "GRADED TRUE" if none_significant else "GRADED FALSE"
+        lines.append(
+            f"Prediction 4 ({grade}): displacement shows "
+            f"{'no' if none_significant else ''} significant skill in "
+            f"{'any' if none_significant else 'a'} fitted herd."
+        )
+    else:
+        lines.append("Prediction 4 (UNGRADEABLE): no herd cleared the year floor.")
+    return "\n".join(lines)
+
+
 def render() -> str:
     """The numbers for the method note's results section, every prediction graded."""
     results = aerial()
