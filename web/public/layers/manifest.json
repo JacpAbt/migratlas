@@ -94,6 +94,22 @@
   "popup_caveat": "one animal's journeys, daily medians a kilometre coarse \u2014 where this collar went, not where the species lives, and no trend."
  },
  {
+  "name": "green-wave",
+  "title": "The green wave",
+  "description": "Vegetation greenness per one-degree cell, half-month by half-month: the average wave of 1982-2022, moving north each spring as the passage brightens behind it. A climatology, not this year's spring -- any one year runs early or late against it, and that gap is a finding, not an error. A cell's value averages only its vegetated ground; deserts and open water are absences, not zeros.",
+  "realm": "terrestrial",
+  "evidence_type": "driver",
+  "kind": "seasonal",
+  "format": "json",
+  "value_kind": "ndvi_x100",
+  "scale": "sequential",
+  "attribution": "Li, M., Cao, S., Zhu, Z., Wang, Z., Myneni, R. B. & Piao, S. (2023). Spatiotemporally consistent global dataset of the GIMMS Normalized Difference Vegetation Index (PKU GIMMS NDVI) from 1982 to 2022. Earth System Science Data 15, 4181-4203. https://doi.org/10.5194/essd-15-4181-2023. Data: v1.2, Zenodo, https://doi.org/10.5281/zenodo.8253971",
+  "licence": "CC BY 4.0",
+  "landing_page": "https://zenodo.org/records/8253971",
+  "caveats": "Half-monthly NDVI at 1/12 degree, AVHRR consolidated against MODIS from 2003 -- the consolidation is modelled, and the product ships a per-pixel QC layer this ingest reads only to the extent of the fill value. Published here as a climatology over 1982-2022, which is not the greenness of any particular year: the green wave it draws is the average wave, against which any one spring may run early or late. Fill value 65535 covers both non-vegetated ground and NDVI below zero, so bare desert and open water are absences, not zeros. The lake holds no rows from this source; like the sea-ice edge, it is a published layer built from the cached archive.",
+  "popup_caveat": "the average greenness of 1982-2022 for this half-month \u2014 a climatology's spring, which any particular year runs early or late against."
+ },
+ {
   "name": "sea-ice-edge",
   "title": "The sea ice's median edge",
   "description": "Where the ice edge stood in the median year of 1981-2010, month by month, both poles. A climatology's ice, not this year's: the recent edge sits poleward of these lines in most months, and the difference is the warming rather than an error. The clock steps it monthly, the finest wheel the product turns on.",

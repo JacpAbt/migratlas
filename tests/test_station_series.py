@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import polars as pl
+import pytest
 
 from migratlas.evidence import EvidenceType, Realm, TaxonScope
 from migratlas.redact import PublicationClearance, Sensitivity, clear_for_publication
@@ -69,6 +70,17 @@ def test_climatology_finds_the_seasonal_peak() -> None:
 def test_climatology_counts_the_years_behind_each_week() -> None:
     frame = weekly_climatology(nights(years=range(2000, 2020)))
     assert frame["years"].unique().to_list() == [20]
+
+
+def test_a_site_id_naming_two_places_is_refused(tmp_path: Path) -> None:
+    """One id, two coordinates: the exporter must refuse, not publish a thread race's winner.
+
+    The herd surfaces hit this when a cell label rounded two adjacent cells to one name --
+    their series merged and the drawn point moved between rebuilds.
+    """
+    two_places = pl.concat([nights(lon=-75.98), nights(lon=-75.97)])
+    with pytest.raises(ValueError, match="more than one coordinate"):
+        export_station_series(two_places, clearance(), tmp_path / "aerial.geojson")
 
 
 def test_export_writes_one_feature_per_station(tmp_path: Path) -> None:

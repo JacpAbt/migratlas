@@ -277,7 +277,10 @@ test("a claim's specimen button opens the fish that carries its argument", async
   await invitation.click();
 
   await expect(page.locator(".explore")).toBeVisible();
-  await expect(page.locator(".study")).toBeVisible();
+  // The preselect is consumed through the same code path as a visitor's click, which runs after
+  // explore's data is up -- and the wave made that load heavier. CI hit 5s with the study still
+  // on its way; this is the load-gated wait other tests already get, not a new patience.
+  await expect(page.locator(".study")).toBeVisible({ timeout: 15_000 });
   await expect(page.locator(".study")).toContainText("north");
 });
 

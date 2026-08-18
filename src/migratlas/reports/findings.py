@@ -214,6 +214,41 @@ AUTUMN_ADVANCE_BIAS: Final = _domains(
     ),
 )
 
+DISPLACEMENT_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "Two populations: elk of one Canadian mountain valley, reindeer of one Arctic "
+        "archipelago. Chosen by who collared them, and nothing here speaks for anywhere else.",
+    ),
+    temporal=(
+        "bounded",
+        "Seventeen and thirteen years of animal-years, unevenly spread; six of the seventeen elk "
+        "years rest on fewer than ten animals, short of the majority that would have stopped it.",
+    ),
+    taxonomic=(
+        "addressed",
+        "Two named populations of two named species. The claim reaches exactly that far, and "
+        "the site draws these herds under the same names.",
+    ),
+    environmental=(
+        "bounded",
+        "A national-park elk range and a protected archipelago: managed landscapes, whose "
+        "stability is part of what any flat trend includes.",
+    ),
+    detectability=(
+        "addressed",
+        "The confound is the finding: path length tracks the fix interval at rho -0.879 across a "
+        "104-fold sampling change, and the displacement measure's independence was demonstrated "
+        "by construction -- thin the track and the displacement must not move, and it does not.",
+    ),
+    phenological=(
+        "open",
+        "The season windows are fixed calendar blocks, so a herd that shifted *when* it moves "
+        "rather than how far is invisible here -- the trade the method note makes explicitly, "
+        "because timing is what Phase 1d proved a changing collar record cannot measure.",
+    ),
+)
+
 MARINE_NULL_BIAS: Final = _domains(
     geographic=(
         "bounded",
@@ -560,7 +595,7 @@ def collect() -> list[Finding]:
     # so a top-level import would close a cycle.
     from migratlas.metrics import range as range_metrics  # noqa: PLC0415
     from migratlas.reports import phase1b  # noqa: PLC0415
-    from migratlas.reports.phase1 import AUTUMN, load_conus_nights, station_slopes  # noqa: PLC0415
+    from migratlas.reports.phase1 import AUTUMN  # noqa: PLC0415
 
     _, first_year, last_year = _radar_coverage()
     coverage = _coverage()
@@ -568,58 +603,7 @@ def collect() -> list[Finding]:
     findings: list[Finding] = []
 
     # --- The headline -------------------------------------------------------
-    slopes = station_slopes(load_conus_nights(), max_year=last_year)
-    autumn = slopes.filter(
-        pl.col("season") == "autumn",
-        pl.col("quantile") == "q50_doy",
-        pl.col("latitude").is_between(37, 50, closed="left"),
-    )
-    values = autumn["days_per_decade"].to_numpy().astype(float)
-    mean = float(values.mean())
-    ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size)
-    findings.append(
-        Finding(
-            key="autumn-advance",
-            realm=Realm.AERIAL.value,
-            taxon_scope=TaxonScope.UNATTRIBUTED.value,
-            evidence_type=EvidenceType.FLUX.value,
-            bias=AUTUMN_ADVANCE_BIAS,
-            # "Whatever flies", not "birds". The plain register may drop precision and may never
-            # add reach, and this is the sentence where the temptation is strongest.
-            plain=(
-                "Whatever flies over the middle of the United States on autumn nights is passing "
-                "earlier in the year than it did thirty years ago."
-            ),
-            matters=(
-                "Timing is most of how migration works: animals move when weather, daylight and "
-                "food line up. When the calendar shifts and the things it is tuned to do not, "
-                "animals arrive somewhere that has already moved on without them."
-            ),
-            plain_caveat=(
-                "Weather radar sees a mass of animals in the air, not species. Some of it is bats, "
-                "and some is insects."
-            ),
-            claim="Nocturnal autumn passage over the mid-latitude US is happening earlier.",
-            value=f"{mean:+.2f} ± {ci:.2f} days per decade",
-            scope=(
-                f"{autumn.height} US weather-radar stations between 37°N and 50°N, "
-                f"{first_year}-{last_year}. Not the whole continent: the southern bands carry a "
-                "step change at 2012 that four candidate explanations have failed to account for."
-            ),
-            caveat=(
-                "The radar measures aerial biomass, not birds — it cannot separate birds from "
-                "bats from insects. Bats in particular are not excluded."
-            ),
-            method="docs/methods/phase1-phenology.md",
-            direction="change",
-            supporting=[
-                "Reproduces a published result on its own window before extending it.",
-                "Survives four break specifications, a mid-winter placebo and a permutation null.",
-                "Unchanged when the speed weighting is removed from the metric.",
-                "Unchanged when the non-bird nights are deleted outright.",
-            ],
-        )
-    )
+    findings.append(_autumn_advance(first_year, last_year))
 
     # --- The null that matters just as much --------------------------------
     # Through the same three steps `phase1b.render` uses, in the same order: the survey unit has
@@ -992,6 +976,12 @@ def collect() -> list[Finding]:
         )
     )
 
+    displacement = _displacement_finding()
+    if displacement is not None:
+        findings.append(displacement)
+    else:
+        log.warning("displacement-flat withheld: the escape correlation exceeded its bar")
+
     # --- Phase 1i: does any of this transfer? -----------------------------
     # The slowest entry in the build by a wide margin: it re-runs all three legs, and two of them
     # are whole analyses that already ran above. Kept whole rather than cached because the claim is
@@ -1150,3 +1140,135 @@ def _two_way_specimen(pooled: pl.DataFrame) -> tuple[int, str] | None:
         return None
     best = scored.row(0, named=True)
     return int(best["taxon_key"]), str(best["taxon_label"])
+
+
+def _displacement_finding() -> Finding | None:
+    """The Phase 1h claim, or None while the escape correlation exceeds its registered bar.
+
+    Published only while the escape holds in both herds: the claim is that displacement is
+    independent of the sampling, and a correlation past the bar would make the sentence false.
+    Same shape as composition-stable: the condition for publishing is the finding.
+    """
+    from migratlas.reports import phase1h  # noqa: PLC0415
+
+    herds = {source_id: phase1h.grade(phase1h.seasons(source_id)) for source_id in phase1h.SOURCES}
+    first_herd, second_herd = (herds[source_id] for source_id in phase1h.SOURCES)
+    if not all(verdict.escape_holds for verdict in herds.values()):
+        return None
+    return Finding(
+        key="displacement-flat",
+        realm=Realm.TERRESTRIAL.value,
+        taxon_scope=TaxonScope.EXACT.value,
+        evidence_type=EvidenceType.TRACK.value,
+        bias=DISPLACEMENT_BIAS,
+        plain=(
+            "Two collared herds travel about as far between winter and summer as they "
+            "did when tracking began -- as far as their collars can honestly tell."
+        ),
+        matters=(
+            "The obvious measure of animal movement -- distance walked along the track -- "
+            "mostly measures how often the collar spoke, which changed 104-fold over "
+            "this record. The distance between winter and summer does not care how "
+            "often the collar spoke, and it has not changed. Six million fixes in this "
+            "project's lake carry that lesson for every collar study ever pooled."
+        ),
+        plain_caveat=(
+            "A change smaller than roughly a doubling per decade could not have been "
+            "seen, so this is a wide kind of nothing."
+        ),
+        claim=(
+            "Winter-summer displacement shows no detectable trend in either herd "
+            f"({first_herd.slope_km_per_decade:+.2f} ± {first_herd.slope_ci95:.2f} and "
+            f"{second_herd.slope_km_per_decade:+.2f} ± {second_herd.slope_ci95:.2f} km "
+            "per decade), while path length tracks the fix interval at rho "
+            f"{first_herd.path_vs_gap:+.3f} and displacement does not "
+            f"({first_herd.displacement_vs_gap:+.3f})."
+        ),
+        value=(
+            f"{first_herd.slope_km_per_decade:+.2f} ± {first_herd.slope_ci95:.2f} km per "
+            f"decade over {first_herd.animal_years} elk animal-years; "
+            f"{second_herd.slope_km_per_decade:+.2f} ± {second_herd.slope_ci95:.2f} over "
+            f"{second_herd.animal_years} reindeer animal-years"
+        ),
+        scope=(
+            f"Ya Ha Tinda elk 2001-2024 ({first_herd.animals} animals) and Svalbard "
+            f"reindeer 2009-2022 ({second_herd.animals}), displacement between fixed "
+            "winter and summer calendar windows, years with ten or more animals."
+        ),
+        caveat=(
+            "The null is wide, and that must be said loudly: the elk interval spans "
+            "roughly the median displacement itself, so anything short of a doubling or "
+            "halving per decade was invisible. The distribution is a mixture of animals "
+            "that stayed and animals that left, and whether the *share* that migrates "
+            "has changed is a different question this design registered away -- it is "
+            "the next pre-registration, not a post-hoc answer. And a herd that shifted "
+            "when it moves rather than how far would not appear here at all."
+        ),
+        method="docs/methods/phase1h-elk.md",
+        direction="null",
+        supporting=[
+            "The confound was demonstrated, not asserted: thin the elk track and the "
+            "path length collapses while the displacement stands still, by construction.",
+            "The trend is flat across animals and within them, so it is not collar "
+            "turnover wearing a trend's clothes.",
+            "The reindeer, whose fix interval varies only 8-fold, replicate the escape "
+            "measure's independence -- a confound that is absent cannot be demonstrated, "
+            "and its absence is the control.",
+        ],
+    )
+
+
+def _autumn_advance(first_year: int, last_year: int) -> Finding:
+    """The headline claim, recomputed from the station slopes on every build."""
+    from migratlas.reports.phase1 import load_conus_nights, station_slopes  # noqa: PLC0415
+
+    slopes = station_slopes(load_conus_nights(), max_year=last_year)
+    autumn = slopes.filter(
+        pl.col("season") == "autumn",
+        pl.col("quantile") == "q50_doy",
+        pl.col("latitude").is_between(37, 50, closed="left"),
+    )
+    values = autumn["days_per_decade"].to_numpy().astype(float)
+    mean = float(values.mean())
+    ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size)
+    return Finding(
+        key="autumn-advance",
+        realm=Realm.AERIAL.value,
+        taxon_scope=TaxonScope.UNATTRIBUTED.value,
+        evidence_type=EvidenceType.FLUX.value,
+        bias=AUTUMN_ADVANCE_BIAS,
+        # "Whatever flies", not "birds". The plain register may drop precision and may never
+        # add reach, and this is the sentence where the temptation is strongest.
+        plain=(
+            "Whatever flies over the middle of the United States on autumn nights is passing "
+            "earlier in the year than it did thirty years ago."
+        ),
+        matters=(
+            "Timing is most of how migration works: animals move when weather, daylight and "
+            "food line up. When the calendar shifts and the things it is tuned to do not, "
+            "animals arrive somewhere that has already moved on without them."
+        ),
+        plain_caveat=(
+            "Weather radar sees a mass of animals in the air, not species. Some of it is bats, "
+            "and some is insects."
+        ),
+        claim="Nocturnal autumn passage over the mid-latitude US is happening earlier.",
+        value=f"{mean:+.2f} ± {ci:.2f} days per decade",
+        scope=(
+            f"{autumn.height} US weather-radar stations between 37°N and 50°N, "
+            f"{first_year}-{last_year}. Not the whole continent: the southern bands carry a "
+            "step change at 2012 that four candidate explanations have failed to account for."
+        ),
+        caveat=(
+            "The radar measures aerial biomass, not birds — it cannot separate birds from "
+            "bats from insects. Bats in particular are not excluded."
+        ),
+        method="docs/methods/phase1-phenology.md",
+        direction="change",
+        supporting=[
+            "Reproduces a published result on its own window before extending it.",
+            "Survives four break specifications, a mid-winter placebo and a permutation null.",
+            "Unchanged when the speed weighting is removed from the metric.",
+            "Unchanged when the non-bird nights are deleted outright.",
+        ],
+    )
