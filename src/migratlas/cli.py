@@ -556,6 +556,15 @@ def report_phase1h() -> None:
     print(phase1h.render())
 
 
+@report_app.command("phase3a")
+def report_phase3a() -> None:
+    """The aerial skill map: the registered hindcasts, run once, every prediction graded."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3a  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3a.render())
+
+
 @report_app.command("phase1")
 def report_phase1() -> None:
     """Replicate Horton et al. 2020 passage phenology, then extend to 2025."""
