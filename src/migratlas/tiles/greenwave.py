@@ -34,6 +34,7 @@ from migratlas.ingest.http import Checksum, RemoteFile, fetch
 from migratlas.redact import clear_for_publication
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -237,6 +238,65 @@ def _reduce_archive(archive: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
             if position % 100 == 0:
                 log.info("  %s: %d/%d rasters", archive.name, position, len(members))
     return total, count, rasters
+
+
+def yearly_means(archive: Path) -> Iterator[tuple[int, np.ndarray]]:
+    """Per year in one archive: 24 half-month cell means, NaN below the vegetated-share floor.
+
+    The climatology above pools years before dividing; this keeps them apart, because the
+    drivers work (Phase 3a) needs the years the tile deliberately averages away. Yields in year
+    order — member names sort by their date stamp, so one year's rasters are consecutive and
+    only one year's accumulator is alive at a time.
+    """
+    import rasterio  # noqa: PLC0415 -- geo extra, only this builder
+
+    height = int(180 / CELL_DEG)
+    width = int(360 / CELL_DEG)
+    floor = MIN_VALID_SHARE * (CELL_DEG * SOURCE_CELLS_PER_DEGREE) ** 2
+
+    def finish(total: np.ndarray, count: np.ndarray) -> np.ndarray:
+        with np.errstate(invalid="ignore"):
+            mean = np.where(count > 0, total / np.maximum(count, 1), np.nan)
+        mean[count < floor] = np.nan
+        return mean
+
+    with zipfile.ZipFile(archive) as bundle:
+        members = sorted(m for m in bundle.namelist() if m.endswith(".tif"))
+        year: int | None = None
+        total = np.zeros((HALF_MONTHS, height, width), dtype=np.float64)
+        count = np.zeros((HALF_MONTHS, height, width), dtype=np.int64)
+        for member in members:
+            bin_index = _bin_of(member)
+            stamp_year = _year_of(member)
+            if bin_index is None or stamp_year is None:
+                log.warning("unrecognised member name %s; skipped", member)
+                continue
+            if year is not None and stamp_year != year:
+                yield year, finish(total, count)
+                total[:] = 0.0
+                count[:] = 0
+            year = stamp_year
+            with rasterio.open(f"zip://{archive}!{member}") as raster:
+                ndvi = raster.read(1)
+            valid = ndvi != FILL
+            block_sum, block_count = _block_reduce(
+                np.where(valid, ndvi.astype(np.float64) * SCALE, 0.0),
+                valid,
+            )
+            total[bin_index] += block_sum
+            count[bin_index] += block_count
+        if year is not None:
+            yield year, finish(total, count)
+
+
+def _year_of(member: str) -> int | None:
+    """The year from the product's date stamp, or None if the name is foreign."""
+    stem = member.rsplit("/", maxsplit=1)[-1].removesuffix(".tif")
+    digits = stem.rsplit("_", maxsplit=1)[-1]
+    stamp_width = 8
+    if len(digits) != stamp_width or not digits.isdigit():
+        return None
+    return int(digits[:4])
 
 
 def _bin_of(member: str) -> int | None:
