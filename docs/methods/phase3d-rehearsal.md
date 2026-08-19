@@ -86,3 +86,32 @@ Anything about spring (unlicensed by 3a and untested here); anything about long-
 (#13's question, different machinery); station-level guarantees (eight years per station is a
 coarse instrument, and the map-level count is the only registered verdict); anything about
 other forecast systems — one issue month of one system is what this note binds.
+
+---
+
+## Results — run 2026-08-19
+
+136 stations graded, eight June issues each, seed as registered.
+
+- **Prediction 3 — GRADED TRUE.** The driver calibration passes: SEAS5's June-issued season
+  temperature correlates with the observed one at a map-median of +0.344. The forecast is not
+  the weak link, which makes the verdict below interpretable.
+- **Prediction 1 — GRADED TRUE, as registered.** The full pipeline does not beat chance: 6 of
+  136 stations significant against a chance bar of 11, median skill −0.014. Knowing in June
+  what SEAS5 knew, the standing prediction would have been indistinguishable from guessing the
+  climatology, eight autumns running.
+- **Prediction 2 — GRADED TRUE, with its comparison named.** Phase 3a's observed-driver autumn
+  median was +0.005; the full pipeline's is −0.014. The designs differ (one era split with
+  modes there, rolling origins without modes here), so the comparison is between recorded
+  medians, not a shared test set — but the direction is the registered one: forecasting the
+  drivers costs what little skill observation offered.
+- **The licence: REFUSED.** Per §5, #57 does not go live. The rehearsal cost one afternoon and
+  one CDS licence click; the alternative was a year per grade of a prediction this note now
+  shows would have graded as noise.
+
+What survives is worth stating plainly: the two-stage architecture works as machinery — the
+archive supplied real issued forecasts, the driver signal is present, the pipeline runs end to
+end and grades honestly. What is missing is a response that translates seasonal temperature
+into passage timing strongly enough to survive the forecast's own error. If a future response
+model earns more observed-driver skill than Phase 3a's, this rehearsal re-runs unchanged and
+the licence question reopens on evidence.
