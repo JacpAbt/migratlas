@@ -655,6 +655,15 @@ def report_phase3e() -> None:
     print(phase3e.render())
 
 
+@report_app.command("forecast-a")
+def report_forecast_a() -> None:
+    """The fitted response under scenario warming, and where it stops being sayable."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import forecast_a  # noqa: PLC0415 -- heavy, and only this command
+
+    print(forecast_a.render())
+
+
 @report_app.command("phase3g")
 def report_phase3g() -> None:
     """Does the water's oxygen sort the movers from the stayers, where its temperature did not?"""

@@ -203,8 +203,39 @@ def _envelope_evidence(envelope: dict[float, float], unit: str) -> list[Variant]
     ]
 
 
-def collect() -> Response:
-    """Read the published fit, measure its envelope, and build the dials. Reads the lake."""
+@dataclass(frozen=True, slots=True)
+class Fitted:
+    """The published response, its envelope, and how many stations it rests on.
+
+    Shared by the dial and by Forecast A rather than computed twice. Both read the same `S` and the
+    same envelope by construction, which is the only way a slider and a scenario map can be
+    guaranteed not to contradict each other on the same page.
+    """
+
+    stations: int
+    thermal: float
+    thermal_ci: float
+    wind: float
+    wind_ci: float
+    temperature_envelope: dict[float, float]
+    wind_envelope: dict[float, float]
+
+    @property
+    def band(self) -> tuple[float, float]:
+        """The bound the dial answers inside and the forecast masks outside."""
+        return (
+            self.temperature_envelope[ENVELOPE_BAND[0]],
+            self.temperature_envelope[ENVELOPE_BAND[1]],
+        )
+
+    @property
+    def extremes(self) -> tuple[float, float]:
+        """The absolute observed range, reported as a sensitivity and never as the bound."""
+        return (self.temperature_envelope[0.0], self.temperature_envelope[1.0])
+
+
+def fitted_response() -> Fitted | None:
+    """Read the published fit and measure its envelope. Reads the lake; estimates nothing."""
     # Private names, imported rather than duplicated: the dial has to aggregate the fit exactly the
     # way the published table does, and two copies of an aggregation are two things that drift.
     from migratlas.reports.phase2a_timing import (  # noqa: PLC0415 -- heavy, and only here
@@ -216,20 +247,38 @@ def collect() -> Response:
 
     fitted = [item for item in sensitivities() if CLAIM_BAND[0] <= item.latitude < CLAIM_BAND[1]]
     if not fitted:
-        log.warning("no stations in the claim band; the dial cannot be built")
-        return Response(schema_version=SCHEMA_VERSION, knobs=[], refusals=[])
+        log.warning("no stations in the claim band; the response cannot be read")
+        return None
 
-    stations = len(fitted)
     in_band = {item.station_id for item in fitted}
     thermal, thermal_ci = _mean_ci(np.array([item.per_degree for item in fitted]))
     wind, wind_ci = _mean_ci(np.array([item.per_wind for item in fitted]))
+    return Fitted(
+        stations=len(fitted),
+        thermal=thermal,
+        thermal_ci=thermal_ci,
+        wind=wind,
+        wind_ci=wind_ci,
+        temperature_envelope=anomaly_envelope(
+            pre_season_temperature().filter(pl.col("station_id").is_in(in_band)), "temperature"
+        ),
+        wind_envelope=anomaly_envelope(
+            wind_support().filter(pl.col("station_id").is_in(in_band)), "support"
+        ),
+    )
 
-    temperature_envelope = anomaly_envelope(
-        pre_season_temperature().filter(pl.col("station_id").is_in(in_band)), "temperature"
-    )
-    wind_envelope = anomaly_envelope(
-        wind_support().filter(pl.col("station_id").is_in(in_band)), "support"
-    )
+
+def collect() -> Response:
+    """Read the published fit, measure its envelope, and build the dials. Reads the lake."""
+    read = fitted_response()
+    if read is None:
+        return Response(schema_version=SCHEMA_VERSION, knobs=[], refusals=[])
+
+    stations = read.stations
+    thermal, thermal_ci = read.thermal, read.thermal_ci
+    wind, wind_ci = read.wind, read.wind_ci
+    temperature_envelope = read.temperature_envelope
+    wind_envelope = read.wind_envelope
     log.info(
         "%d claim-band stations; thermal %+.3f+-%.3f, wind %+.3f+-%.3f",
         stations,
