@@ -23,6 +23,7 @@ draw instead of once per station per draw is the difference between minutes and 
 """
 
 import logging
+import zlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -136,6 +137,22 @@ class ArmResult:
     skills: dict[str, Skill]
 
 
+def unit_key(station_id: str) -> int:
+    """A per-unit null seed that depends on the unit and on nothing else.
+
+    Found by measuring twice: the first run drew every unit's permutations from one generator in
+    list order, and `units()` does not return a stable order -- 142 of 143 autumn stations changed
+    position between two calls in one process. Observed skill was identical across orders, as it
+    must be, and the *null thresholds* were not, so the significant-unit count wobbled by three
+    across reruns of the same seed. Keying the stream to the station makes a unit's null a property
+    of that unit rather than of the list it arrived in.
+
+    crc32 rather than `hash`, which is salted per process for strings and would reintroduce exactly
+    the irreproducibility this closes.
+    """
+    return zlib.crc32(station_id.encode("utf-8"))
+
+
 def nightly_support(season_name: str) -> pl.DataFrame:
     """Per-night wind support for one season, from the term Phase 2a registered."""
     season = SEASONS[season_name]
@@ -240,7 +257,9 @@ def units(season_name: str) -> tuple[list[Unit], list[str]]:
             )
         )
     log.info("%s: %d units, %d dropped", season_name, len(built), len(dropped))
-    return built, dropped
+    # Sorted, because the panel's row order is not stable across calls and an unsorted table is a
+    # table that changes between rebuilds. The fits no longer depend on the order; the report does.
+    return sorted(built, key=lambda unit: unit.station_id), sorted(dropped)
 
 
 def natural_spline(values: np.ndarray, knots: np.ndarray) -> np.ndarray:
@@ -395,14 +414,17 @@ class Pooled:
                 best, best_error = float(lam), error
         return best
 
-    def _shuffled(self, rng: np.random.Generator) -> np.ndarray:
+    def _shuffled(self, generators: list[np.random.Generator]) -> np.ndarray:
         """Each unit's whole record permuted, exactly as `models.skill.hindcast` does it.
 
         The pairing between a year's drivers and its passage date breaks; both marginals survive;
         and the rows that were test rows stay test rows.
+
+        One generator per unit, keyed by `unit_key`, so the draw a station gets does not depend on
+        the order the units arrived in. See that function for what this cost to find.
         """
         out = np.empty_like(self._raw)
-        for rows in self._rows:
+        for rows, rng in zip(self._rows, generators, strict=True):
             out[rows] = self._raw[rng.permutation(rows)]
         return out
 
@@ -412,10 +434,12 @@ class Pooled:
         lam = self.choose_lambda(design)
         observed = self._scores(design, self._solve(design, lam))
 
-        rng = np.random.default_rng(seed)
+        generators = [
+            np.random.default_rng([seed, unit_key(unit.station_id)]) for unit in self.units
+        ]
         null = np.empty((PERMUTATIONS, len(self.units)))
         for draw in range(PERMUTATIONS):
-            null_design = self._design(self._shuffled(rng))
+            null_design = self._design(self._shuffled(generators))
             null[draw] = self._scores(null_design, self._solve(null_design, lam))
             if draw and draw % 250 == 0:
                 log.info("    null draw %d/%d", draw, PERMUTATIONS)

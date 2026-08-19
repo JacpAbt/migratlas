@@ -271,3 +271,129 @@ one.
 - **Whether a better response *variable* exists.** The ladder varies the estimator, the covariates
   and the basis. It holds the response fixed, so a ceiling found here is a ceiling on predicting
   *this* quantity — the median passage day — and not on predicting movement.
+
+## Results — run 2026-08-19
+
+**Two corrections first, per house rule, and the second one voids the phase's own headline.**
+
+**Correction 1: the null was not reproducible, and measuring twice is what found it.** The first
+run's counts could not be reproduced. Autumn arm B came out 47, then 48, then 50 across three
+executions of the same seed. The cause: every unit's permutations were drawn from one generator in
+list order, and `units()` does not return a stable order — a probe found **142 of 143 autumn
+stations in a different position** between two calls inside one process, because the panel's row
+order comes from joins that are not order-stable. Observed skill was identical across orders, as it
+must be; the *null thresholds* were not. So the number that moved was the bar, not the score, which
+is why nothing looked wrong. The fix keys each unit's permutation stream to `crc32(station_id)`
+rather than to its position, making a unit's null a property of that unit; `units()` also sorts, so
+the printed table is stable. Two runs of the fixed harness are now byte-identical, and
+`tests/test_phase3f.py` pins order-independence directly. **Every number below is from the fixed
+harness.** The defect moved counts by up to three and moved no median at all.
+
+**Correction 2: the registration contradicted itself, and it cost the calibration.** §3 says arm A
+is "Phase 3a's `hindcast` verbatim" and then fixes seed `20260819`. Those cannot both hold, because
+the null is seeded. Measured: under Phase 3a's own seed `20260818`, arm A returns spring **11 of
+140** — Phase 3a's published number exactly — and under the registered seed it returns **12**. The
+median is `−0.0308` under both. One borderline station flips, and it flips across the bar.
+
+So the harness reproduces Phase 3a on every deterministic quantity: spring median `−0.0308` against
+3a's `−0.031`, autumn median `+0.0055` against `+0.005`, autumn count 20 of 143 exactly, and the
+same two stations dropped for the same reason (KJAN at 9 years, KHDC at 2). What was wrong was the
+registration — twice over. It contained the contradiction above, and it built a calibration
+criterion on a *seeded count* when a *deterministic median* was sitting right there. **The seed is
+not being changed now.** Picking the seed after seeing which one clears the bar is exactly what this
+convention exists to prevent, and the fix belongs to the successor.
+
+### The ladder, both seasons, for the record
+
+Seed `20260819`, 1,000 draws per unit, λ grid 0.01 to 1e4 in 13 steps.
+
+| season | arm | scope | units | signif | bar | median skill | λ |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| spring | A | all | 140 | 12 | 11 | −0.0308 | per-unit |
+| spring | B | all | 140 | 52 | 11 | **+0.0084** | 100 |
+| spring | B′ | all | 140 | 55 | 11 | −0.0175 | 316 |
+| spring | C | all | 140 | 53 | 11 | −0.0039 | 316 |
+| spring | C | projectable | 140 | 52 | 11 | +0.0084 | 100 |
+| spring | D | all | 140 | 54 | 11 | +0.0019 | 316 |
+| spring | D | projectable | 140 | 52 | 11 | +0.0084 | 100 |
+| spring | E | all | 140 | 38 | 11 | **+0.0239** | 0.01 |
+| spring | E | projectable | 140 | 47 | 11 | +0.0158 | 0.01 |
+| autumn | A | all | 143 | **20** | 12 | +0.0055 | per-unit |
+| autumn | B | all | 143 | 49 | 12 | −0.0351 | 31.6 |
+| autumn | B′ | all | 143 | 48 | 12 | −0.0357 | 31.6 |
+| autumn | C | all | 143 | 49 | 12 | −0.0535 | 31.6 |
+| autumn | C | projectable | 143 | 49 | 12 | −0.0351 | 31.6 |
+| autumn | D | all | 143 | 47 | 12 | −0.0621 | 31.6 |
+| autumn | D | projectable | 143 | 49 | 12 | −0.0351 | 31.6 |
+| autumn | E | all | 143 | 27 | 12 | −0.0784 | 0.01 |
+| autumn | E | projectable | 143 | 31 | 12 | −0.0623 | 0.0316 |
+
+One internal consistency check passes: arms C and D restricted to projectable drivers reproduce arm
+B exactly in both seasons — same count, same median, same λ — which is what the design predicts,
+since every driver those arms add is one a forecast cannot supply.
+
+### Grading
+
+**Prediction 1 — GRADED FALSE, and its stop condition fires.** Autumn reproduced at 20 of 143
+exactly. Spring came in at 12 of 140 against a bar of 11, one station above, for the seeded reason
+in Correction 2. §5's condition is written as "autumn outside 20 ± 3, **or spring above its bar**",
+so it fires as registered.
+
+**Predictions 2 to 6 — UNGRADEABLE, by the fired stop condition.** No arm above A is interpreted.
+The table above is printed in full because a stop condition is a reason not to draw conclusions, not
+a reason to hide measurements.
+
+### The design flaw the run exposed, which outlives the seed
+
+This is the part worth more than the phase's own numbers, and it is reportable because it is a fact
+about the instrument rather than an interpretation of an arm.
+
+**The ladder's count comparison was never valid.** A pooled fit on year-shuffled drivers cannot
+manufacture per-unit skill the way a 19-row per-station fit can, so its null is far tighter.
+Measured as the median per-unit null threshold:
+
+| season | arm A (per-station) | arm B (pooled) |
+| --- | --- | --- |
+| spring | 0.1746 | 0.0880 |
+| autumn | 0.1330 | 0.0730 |
+
+Arm B's units clear a bar roughly **half the height** of arm A's. So arm A's 20 and arm B's 49 are
+counts against two different bars, and the jump from 20 to 49 is substantially the bar moving rather
+than the model improving — which is confirmed by the deterministic column, where autumn's median
+skill *falls* from `+0.0055` to `−0.0351` over the same step.
+
+Predictions 2 and 3 were both written as count comparisons across estimators. They are therefore not
+merely ungradeable by the fired stop condition; they are **unanswerable as posed**. That is a flaw in
+this registration, recorded rather than repaired in place, and any successor must state its
+predictions in the units that are comparable across estimators — the Murphy median — or compare
+counts only within one estimator.
+
+### What #57 may take from this
+
+Nothing. #57 stays refused exactly where Phase 3d left it, and this phase did not reopen it: the
+attempt did not complete. The projectable-only medians are the only column that could ever have
+spoken to a forecast, and they are not interpreted. It would be as wrong to read this as "the
+response model is confirmed to be the ceiling" as to read it as a gain — a fired calibration means
+the experiment did not report, not that it reported nothing.
+
+Two things are nonetheless *measured* facts that a successor inherits, because they are deterministic
+and seed-free:
+
+- Autumn median skill is negative under every pooled arm, and pooling alone takes it from `+0.0055`
+  to `−0.0351`. Whatever pooling does at these stations, it does not raise typical-station autumn
+  skill.
+- The spline arm's λ collapsed to the grid **minimum** in three of the four cases it ran
+  (0.01, 0.01, 0.01, 0.0316), meaning leave-one-station-out chose essentially no regularisation for a
+  37-column design. That is a diagnostic about the λ rule, not about splines, and it should be
+  resolved before arm E is read anywhere.
+
+### What the successor has to fix
+
+1. **One seed, named once**, and a calibration criterion built on a **deterministic** quantity — the
+   observed median, which reproduces Phase 3a to three significant figures — rather than on a seeded
+   count that a single borderline station can flip.
+2. **Predictions in comparable units.** Median skill across estimators; counts only within one.
+3. **The λ rule for a wide basis**, given arm E's collapse to the grid floor.
+4. Everything else in §§1–3 carries over unchanged, including the reporting split, which did its job:
+   the projectable and all-driver columns stayed separate and the projectable ones reproduced arm B
+   exactly, so no mechanism gain could have leaked into a forecast claim even if there had been one.

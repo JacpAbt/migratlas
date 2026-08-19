@@ -21,6 +21,7 @@ from migratlas.reports.phase3f import (
     favourable_share,
     natural_spline,
     spline_knots,
+    unit_key,
 )
 
 
@@ -172,3 +173,34 @@ def test_the_instrument_column_survives_the_spline_arm_unsplined() -> None:
     assert width_linear == 3
     assert width_splined > width_linear
     assert splined._knot_sets[2] is None
+
+
+def test_the_null_does_not_depend_on_the_order_the_units_arrived_in() -> None:
+    """The defect measuring twice caught, pinned so it cannot come back.
+
+    The first run drew every unit's permutations from one generator in list order, and the unit
+    order is not stable across calls -- so the null thresholds, and with them the significant-unit
+    count, moved by three between reruns of the same seed. Observed skill was always identical,
+    which is exactly why this needed a test rather than an eyeball: the number that moved was the
+    bar, not the score.
+    """
+    units = _shared_signal_units(stations=6, years=18)
+    forward = Pooled(units, (TEMPERATURE, WIND), spline=False)
+    backward = Pooled(list(reversed(units)), (TEMPERATURE, WIND), spline=False)
+
+    first, _ = forward.skills(seed=7)
+    second, _ = backward.skills(seed=7)
+
+    assert set(first) == set(second)
+    for station in first:
+        assert np.isclose(first[station].score, second[station].score)
+        assert np.isclose(first[station].null_threshold, second[station].null_threshold)
+        assert first[station].significant == second[station].significant
+
+
+def test_the_unit_key_is_stable_across_processes() -> None:
+    """`hash` is salted per process for strings, which would reintroduce the irreproducibility."""
+    assert unit_key("KABR") == unit_key("KABR")
+    assert unit_key("KABR") != unit_key("KABX")
+    # A literal, so a change to the keying function is visible in the diff rather than silent.
+    assert unit_key("KABR") == 1529084552
