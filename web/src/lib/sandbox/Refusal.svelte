@@ -10,6 +10,11 @@
   // once when they agree, per-row when they do not -- because then it is the interesting part.
   const counts = $derived(new Set(refusal.evidence.map((item) => item.n).filter(Boolean)));
   const sharedCount = $derived(counts.size === 1 ? [...counts][0] : null);
+  // Written generically once this component picked up a second document. The sentence used to say
+  // "All four ... taxon-cell rows", which was true of the one refusal that existed and would have
+  // been wrong about any other -- a hardcoded row count and a hardcoded unit, both reachable the
+  // moment `response.json` started rendering through here.
+  const rowCount = $derived(refusal.evidence.length);
 </script>
 
 <!--
@@ -41,7 +46,9 @@
       {/each}
     </dl>
     {#if sharedCount}
-      <p class="refusal__n">All four over the same {sharedCount.toLocaleString()} taxon-cell rows.</p>
+      <p class="refusal__n">
+        All {rowCount} over the same {sharedCount.toLocaleString()} rows.
+      </p>
     {/if}
   {:else}
     <button type="button" onclick={() => (shown = true)}>
