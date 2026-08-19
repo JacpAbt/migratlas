@@ -46,6 +46,7 @@ each source carries its own terms.
 | [ECMWF SEAS5 seasonal forecasts — June-issued monthly means over the radar band](https://cds.climate.copernicus.eu/datasets/seasonal-monthly-single-levels) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [NOAA OISST v2.1 — monthly mean sea surface temperature, 1981–present](https://psl.noaa.gov/data/gridded/data.noaa.oisst.v2.highres.html) | driver only | `marine` | Public domain (U.S. Government work, 17 U.S.C. §105) | permitted |
 | [Copernicus Marine global biogeochemistry hindcast — monthly dissolved oxygen, 1993–present](https://data.marine.copernicus.eu/product/GLOBAL_MULTIYEAR_BGC_001_029/description) | driver only | `marine` | Copernicus Marine Service licence (free of charge, derived works permitted for any purpose) | permitted |
+| [CMIP6 ScenarioMIP — near-surface air temperature under four SSPs, 2015–2100](https://pcmdi.llnl.gov/CMIP6/) | driver only | `aerial` | CMIP6 terms of use (unrestricted research use, citation and acknowledgement required) | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -651,3 +652,21 @@ An optimum-interpolation product of satellite and in-situ observations at 0.25 d
 **Caveats**
 
 A reanalysis, and a biogeochemical one, which is a weaker thing than a physical reanalysis and must not be read as a measurement. There is no Argo-scale oxygen observing network, so this field is largely ocean dynamics plus parameterised biology rather than assimilated oxygen observations, and a trend in it partly reflects how its own observing system changed across 1993–present. Spatially it is 0.25 degrees on 75 depth levels: the level nearest a trawl's median haul depth over a shelf is not the water that trawl fished, which is the same distinction OISST carries and further from the animal rather than closer. This project holds no oxygen observations to validate it against, so phase3g-oxygen.md §3 gates it on physics instead — warming and oxygen must correlate negatively across units, because solubility requires it — and §6 refuses the word "measured" for any number derived from it. The product is updated and reissued, so the raw copy is the fetch date's snapshot.
+
+## CMIP6 ScenarioMIP — near-surface air temperature under four SSPs, 2015–2100
+
+- **id** `cmip6_scenariomip`
+- **drivers only**, no evidence rows · **realm** `aerial`
+- **landing page** https://pcmdi.llnl.gov/CMIP6/
+- **licence** [CMIP6 terms of use (unrestricted research use, citation and acknowledgement required)](https://pcmdi.llnl.gov/CMIP6/TermsOfUse/TermsOfUse6-1.html)
+- **redistribution** permitted, attribution required
+  - Unrestricted research use with the modelling groups credited and the CMIP6 terms acknowledged; the contributing model and member travel in derived_from on every row, so a derived number can always be traced to the simulation that produced it.
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> Eyring, V., Bony, S., Meehl, G. A., Senior, C. A., Stevens, B., Stouffer, R. J. & Taylor, K. E. (2016). Overview of the Coupled Model Intercomparison Project Phase 6 (CMIP6) experimental design and organization. Geoscientific Model Development 9, 1937-1958. Scenario design: O'Neill, B. C. et al. (2016). The Scenario Model Intercomparison Project (ScenarioMIP) for CMIP6. Geoscientific Model Development 9, 3461-3482. Accessed through the Pangeo CMIP6 cloud catalogue.
+
+**Caveats**
+
+A model's projection, not an observation, and four of them are scenarios rather than forecasts — an SSP is a coherent story about emissions, not a probability. Read only as each model's own anomaly against its own 1995–2014 baseline, because absolute model temperatures carry biases of degrees and the anomaly is what cancels them; forecast-a.md fixes that rule and the two masks that bound it. Thirteen of the fifteen models this project holds a paired historical run for carry all four SSPs — GFDL-CM4 lacks ssp126 and ssp370, HadGEM3-GC31-LL lacks ssp370 — so a per-scenario ensemble is not the same ensemble across scenarios, and any cross-scenario comparison inherits that. Members are capped at three per model and averaged within model before anything crosses models, because CanESM5 and MIROC6 publish fifty each and an uncapped mean would be a statement about two models. Monthly `Amon` output only: a degree-day or extreme-day form of this driver needs the `day` table, which is a different and much larger commitment and is excluded in forecast-a.md §2.

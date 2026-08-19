@@ -205,6 +205,10 @@ phase1b-report:  ## Marine distribution shift from FISHGLOB trawl surveys
 phase1c-report:  ## Speed-weighting control and precipitation-screening test
 	$(RUN) migratlas report phase1c
 
+.PHONY: ingest-scenariomip
+ingest-scenariomip:  ## CMIP6 ScenarioMIP pre-season temperature -> lake (Forecast A's driver)
+	$(RUN) migratlas ingest-scenariomip
+
 .PHONY: ingest-cmems
 ingest-cmems:  ## CMEMS oxygen at each survey's fishing depth -> lake (driver samples, gridded)
 	$(RUN) migratlas ingest-cmems

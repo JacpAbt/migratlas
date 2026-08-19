@@ -1268,3 +1268,50 @@ sources:
       requires it — and §6 refuses the word "measured" for any number derived from it. The
       product is updated and reissued, so the raw copy is the fetch date's snapshot.
     added: 2026-08-19
+
+  # The 33rd source, and the one Forecast A exists or does not exist because of. Its own id rather
+  # than a second variable under `cmip6_damip`, and that is a correctness requirement rather than
+  # tidiness: the lake replaces the partitions a write touches, so scenarios landing beside the
+  # DAMIP rows would delete the `historical` and `hist-nat` series the attribution rests on.
+  # Licensed by forecast-a.md, written before this entry and before any store was opened.
+  - id: cmip6_scenariomip
+    title: CMIP6 ScenarioMIP — near-surface air temperature under four SSPs, 2015–2100
+    realm: aerial
+    landing_page: https://pcmdi.llnl.gov/CMIP6/
+    download_uri: https://storage.googleapis.com/cmip6/pangeo-cmip6.csv
+    # Same terms as the DAMIP entry, which is the same archive under a different activity. CMIP6
+    # output is released for unrestricted research use with a citation and acknowledgement duty;
+    # the Pangeo mirror on Google Cloud is a redistribution of it and needs no account.
+    licence: CMIP6 terms of use (unrestricted research use, citation and acknowledgement required)
+    licence_url: https://pcmdi.llnl.gov/CMIP6/TermsOfUse/TermsOfUse6-1.html
+    citation: >-
+      Eyring, V., Bony, S., Meehl, G. A., Senior, C. A., Stevens, B., Stouffer, R. J. & Taylor,
+      K. E. (2016). Overview of the Coupled Model Intercomparison Project Phase 6 (CMIP6)
+      experimental design and organization. Geoscientific Model Development 9, 1937-1958.
+      Scenario design: O'Neill, B. C. et al. (2016). The Scenario Model Intercomparison Project
+      (ScenarioMIP) for CMIP6. Geoscientific Model Development 9, 3461-3482. Accessed through the
+      Pangeo CMIP6 cloud catalogue.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        Unrestricted research use with the modelling groups credited and the CMIP6 terms
+        acknowledged; the contributing model and member travel in derived_from on every row, so a
+        derived number can always be traced to the simulation that produced it.
+    # Simulated air temperature. There is no animal in it.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      A model's projection, not an observation, and four of them are scenarios rather than
+      forecasts — an SSP is a coherent story about emissions, not a probability. Read only as each
+      model's own anomaly against its own 1995–2014 baseline, because absolute model temperatures
+      carry biases of degrees and the anomaly is what cancels them; forecast-a.md fixes that rule
+      and the two masks that bound it. Thirteen of the fifteen models this project holds a paired
+      historical run for carry all four SSPs — GFDL-CM4 lacks ssp126 and ssp370, HadGEM3-GC31-LL
+      lacks ssp370 — so a per-scenario ensemble is not the same ensemble across scenarios, and any
+      cross-scenario comparison inherits that. Members are capped at three per model and averaged
+      within model before anything crosses models, because CanESM5 and MIROC6 publish fifty each
+      and an uncapped mean would be a statement about two models. Monthly `Amon` output only: a
+      degree-day or extreme-day form of this driver needs the `day` table, which is a different and
+      much larger commitment and is excluded in forecast-a.md §2.
+    added: 2026-08-19

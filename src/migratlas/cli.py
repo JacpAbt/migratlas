@@ -697,6 +697,28 @@ def ingest_oisst() -> None:
     print(f"{result.rows} footprint-months -> {result.path}")
 
 
+@app.command("ingest-scenariomip")
+def ingest_scenariomip() -> None:
+    """Land June-July scenario temperature at the radar stations (driver samples, simulated).
+
+    Forecast A's driver: four SSPs, monthly `Amon tas`, each model's own anomaly territory. Under
+    its own source id -- sharing `cmip6_damip`'s would delete the counterfactual the attribution
+    rests on, because a lake write replaces the partitions it touches.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    # The same station set the DAMIP run used, built the same way, so the scenario anomalies and
+    # the counterfactual are read at identical points.
+    points = narr.stations_from(phase1.load_conus_nights())
+    result = cmip6.ingest(
+        points,
+        experiments=cmip6.SCENARIOS,
+        end=cmip6.SCENARIO_END,
+        source_id=cmip6.SCENARIO_SOURCE_ID,
+        require_paired=False,
+    )
+    print(f"{result.rows} scenario samples -> {result.path}")
+
+
 @app.command("ingest-cmems")
 def ingest_cmems() -> None:
     """Land footprint-mean dissolved oxygen per survey unit (driver samples, gridded).
