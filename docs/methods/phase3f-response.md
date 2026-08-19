@@ -190,6 +190,36 @@ forecast claim is exactly the failure Phase 3d's refusal was protecting against.
 - **Arm D restricted to 37–50°N** — the band where Phase 1c found the step near zero. Reported
   beside the full-panel number, never instead of it.
 
+### Amendments, 2026-08-19, written while implementing and before the registered run
+
+Five things §3 above under-specified, resolved here rather than silently in code. All five were
+settled **before any significant-unit count existed**, and none of them was chosen by looking at
+one.
+
+1. **Scaling.** The design above says *centre* and does not say *scale*. Ridge is not
+   scale-invariant, so a single penalty applied to degrees Celsius, millimetres and a
+   dimensionless index at once would be arbitrary. Every column is divided by its **pooled
+   training-era standard deviation** after centring. Pooled rather than per-station on purpose: a
+   per-station scale would equalise the influence of a station with variable weather and one with
+   steady weather, throwing away exactly the information that identifies a shared response.
+2. **Whose quartiles.** "Its training-era quartiles" did not say whether the knots come from each
+   station or from the pool. **Pooled** — nineteen points do not locate a quartile.
+3. **The instrument dummy is not splined.** A two-valued column has no quartiles to put knots at
+   and a spline basis on it is rank-deficient. It enters arm E as a single linear column.
+4. **The null holds knots and scales fixed across draws.** The shuffle permutes which year a
+   covariate row is paired with, so it leaves each station's covariate *marginals* alone, and
+   knots and scales are properties of those marginals. Holding them fixed is therefore not a
+   shortcut that flatters the observed fit, and it is what makes a thousand pooled refits
+   affordable. Per-unit centring *is* recomputed inside each draw, because the shuffled training
+   subset genuinely differs — which is what `models.skill.hindcast` does.
+5. **A smoke test exposed the observed medians early, and nothing was changed because of it.** A
+   crash check with five null draws was run before the registered run, to exercise array shapes
+   after Phase 3b's runner had crashed on first contact with its lake. Median skill does not depend
+   on the null, so that check displayed every arm's observed autumn median. It is recorded here
+   rather than left implicit, and the consequence is binding rather than cosmetic: no covariate,
+   threshold, knot count, λ grid or arm was touched afterwards. The significant-unit counts —
+   which predictions 1 to 3 are actually graded on — need the null and were not visible.
+
 ## 4. Predictions
 
 1. **Arm A reproduces Phase 3a.** Autumn significant at 20 ± 3 of 143 stations, spring at or below
