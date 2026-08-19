@@ -42,6 +42,7 @@ each source carries its own terms.
 | [PKU GIMMS NDVI v1.2 — global half-monthly vegetation index, 1982–2022](https://zenodo.org/records/8253971) | driver only | `terrestrial` | CC BY 4.0 | permitted |
 | [NOAA climate-mode indices — ONI, NAO, AO, PDO monthly series](https://www.cpc.ncep.noaa.gov/data/indices/) | driver only | `aerial` | Public domain (U.S. Government work, 17 U.S.C. §105) | permitted |
 | [ERA5-Land monthly means — snow depth at the herd ranges](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land-monthly-means) | driver only | `terrestrial` | CC BY 4.0 | permitted |
+| [Continuous Plankton Recorder — western North Atlantic occurrences and counts, 1958–2022](https://www.bco-dmo.org/dataset/765141) | driver only | `marine` | CC BY 4.0 | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -572,3 +573,22 @@ Each index is one research group's definition of a mode, not the mode itself —
 **Caveats**
 
 Its own source id rather than a variable inside `era5`, because the lake replaces the partitions a write touches and the two must never delete each other's years. The variable is ERA5-Land's snow_depth — true snow thickness in metres (sde), not the water equivalent plain ERA5 publishes under the same words; the canonical name snow_depth_true_m says which. A 9 km land reanalysis smooths the topographic snow variation of a mountain front, which is why the step-selection work pairs it with terrain rather than trusting it alone. Sampled at two herd-range centroids only: this is a covariate for two specific populations, not a snow product.
+
+## Continuous Plankton Recorder — western North Atlantic occurrences and counts, 1958–2022
+
+- **id** `cpr_bcodmo`
+- **drivers only**, no evidence rows · **realm** `marine`
+- **landing page** https://www.bco-dmo.org/dataset/765141
+- **DOI** [10.26008/1912/bco-dmo.765141.6](https://doi.org/10.26008/1912/bco-dmo.765141.6)
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+  - CC BY 4.0 permits redistribution of derived aggregate products with attribution; the NC-licensed DASSH archives are deliberately not used, so nothing here inherits their clause.
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> Continuous Plankton Recorder Survey Team (2025). Continuous Plankton Recorder (CPR) phytoplankton and zooplankton occurrence and count data from the Western North Atlantic Ocean from 1958 to 2022. Biological and Chemical Oceanography Data Management Office (BCO-DMO), version 6. https://doi.org/10.26008/1912/bco-dmo.765141.6
+
+**Caveats**
+
+Route-sampled, not gridded: tows follow commercial shipping lanes that moved over the decades, so spatial coverage is a braid of lines, not a field. Counting is semi-quantitative on silk, and methods standardised only from 1958 — the analysis start the CPR literature itself uses. Phase 3c consumes only bloom-timing anomalies within CPR regions (phase3c-coupling.md), where route drift matters less than it would for abundance levels, and that judgement is recorded there rather than assumed here.

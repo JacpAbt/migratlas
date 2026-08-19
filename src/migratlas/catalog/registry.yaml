@@ -1119,3 +1119,40 @@ sources:
       Sampled at two herd-range centroids only: this is a covariate for two specific
       populations, not a snow product.
     added: 2026-08-18
+
+  - id: cpr_bcodmo
+    title: Continuous Plankton Recorder — western North Atlantic occurrences and counts, 1958–2022
+    realm: marine
+    landing_page: https://www.bco-dmo.org/dataset/765141
+    download_uri: https://datadocs.bco-dmo.org/dataset/765141/file/WWrAqKPH6qLEvw/765141_v6_cpr-plankton-abundance.csv
+    # The CPR's CC BY door: the same survey the famous plankton literature is built on carries a
+    # CC BY-NC licence at its UK home (DASSH), which collides with redistributing derived tiles.
+    # BCO-DMO republishes the western-Atlantic share under plain CC BY 4.0 -- verified on the
+    # dataset page 2026-08-18, the covariate survey's plankton section records the comparison.
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    doi: 10.26008/1912/bco-dmo.765141.6
+    citation: >-
+      Continuous Plankton Recorder Survey Team (2025). Continuous Plankton Recorder (CPR)
+      phytoplankton and zooplankton occurrence and count data from the Western North Atlantic
+      Ocean from 1958 to 2022. Biological and Chemical Oceanography Data Management Office
+      (BCO-DMO), version 6. https://doi.org/10.26008/1912/bco-dmo.765141.6
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        CC BY 4.0 permits redistribution of derived aggregate products with attribution; the
+        NC-licensed DASSH archives are deliberately not used, so nothing here inherits their
+        clause.
+    # Plankton counted on silk. The gate still prices the licence; nothing here resolves to an
+    # animal anyone could seek out.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      Route-sampled, not gridded: tows follow commercial shipping lanes that moved over the
+      decades, so spatial coverage is a braid of lines, not a field. Counting is
+      semi-quantitative on silk, and methods standardised only from 1958 — the analysis start
+      the CPR literature itself uses. Phase 3c consumes only bloom-timing anomalies within CPR
+      regions (phase3c-coupling.md), where route drift matters less than it would for
+      abundance levels, and that judgement is recorded there rather than assumed here.
+    added: 2026-08-19

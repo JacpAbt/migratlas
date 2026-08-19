@@ -239,6 +239,21 @@ def ingest_jrc_gsw() -> None:
     print(f"run {result.run_id}")
 
 
+@app.command("ingest-cpr")
+def ingest_cpr() -> None:
+    """Land the CPR's western North Atlantic as one aggregate plankton series (SURVEY_INDEX).
+
+    The 29th source, licensed by phase3c-coupling.md before the file was fetched. One row per
+    sample, taxon_key null, scope AGGREGATE -- the bloom-timing node needs no taxon and the
+    CPR's internal ids map to no spine this project holds.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.ingest import cpr  # noqa: PLC0415 -- one command needs it
+
+    result = cpr.ingest()
+    print(f"{result.rows} plankton samples -> {result.path}")
+
+
 @app.command("ingest-era5-land")
 def ingest_era5_land() -> None:
     """Land monthly ERA5-Land snow depth at the two herd-range centroids (driver samples).
