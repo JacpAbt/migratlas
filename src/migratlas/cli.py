@@ -603,6 +603,29 @@ def report_phase3c() -> None:
     print(phase3c.render())
 
 
+@report_app.command("phase3d")
+def report_phase3d() -> None:
+    """The dress rehearsal: the full two-stage pipeline graded on 2017-2024, run once."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3d  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3d.render())
+
+
+@app.command("ingest-seas5")
+def ingest_seas5() -> None:
+    """Land SEAS5's June-issued forecasts at the radar stations (driver samples, simulated).
+
+    The archived forecasts the world actually received, licensed by phase3d-rehearsal.md.
+    Needs the seasonal dataset's licence accepted once on the CDS account.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.drivers import seas5  # noqa: PLC0415 -- geo extra, only this command
+
+    result = seas5.ingest()
+    print(f"{result.rows} forecast samples -> {result.path}")
+
+
 @report_app.command("phase3b")
 def report_phase3b() -> None:
     """The marine heterogeneity fits, on the longest single-gear segments, run once."""

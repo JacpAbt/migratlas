@@ -43,6 +43,7 @@ each source carries its own terms.
 | [NOAA climate-mode indices — ONI, NAO, AO, PDO monthly series](https://www.cpc.ncep.noaa.gov/data/indices/) | driver only | `aerial` | Public domain (U.S. Government work, 17 U.S.C. §105) | permitted |
 | [ERA5-Land monthly means — snow depth at the herd ranges](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land-monthly-means) | driver only | `terrestrial` | CC BY 4.0 | permitted |
 | [Continuous Plankton Recorder — western North Atlantic occurrences and counts, 1958–2022](https://www.bco-dmo.org/dataset/765141) | driver only | `marine` | CC BY 4.0 | permitted |
+| [ECMWF SEAS5 seasonal forecasts — June-issued monthly means over the radar band](https://cds.climate.copernicus.eu/datasets/seasonal-monthly-single-levels) | driver only | `aerial` | CC BY 4.0 | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -592,3 +593,22 @@ Its own source id rather than a variable inside `era5`, because the lake replace
 **Caveats**
 
 Route-sampled, not gridded: tows follow commercial shipping lanes that moved over the decades, so spatial coverage is a braid of lines, not a field. Counting is semi-quantitative on silk, and methods standardised only from 1958 — the analysis start the CPR literature itself uses. Phase 3c consumes only bloom-timing anomalies within CPR regions (phase3c-coupling.md), where route drift matters less than it would for abundance levels, and that judgement is recorded there rather than assumed here.
+
+## ECMWF SEAS5 seasonal forecasts — June-issued monthly means over the radar band
+
+- **id** `seas5`
+- **drivers only**, no evidence rows · **realm** `aerial`
+- **landing page** https://cds.climate.copernicus.eu/datasets/seasonal-monthly-single-levels
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+  - CC BY 4.0 with the standard Copernicus credit line; derived verification statistics may be redistributed with attribution.
+- **sensitivity** `not_sensitive` by default
+- **credential** `MIGRATLAS_CRED_CDS_TOKEN` required
+
+**Cite as**
+
+> Copernicus Climate Change Service (2018): Seasonal forecast monthly statistics on single levels. ECMWF SEAS5. Copernicus Climate Change Service (C3S) Climate Data Store (CDS). https://doi.org/10.24381/cds.68dd14c3
+
+**Caveats**
+
+These are the forecasts the world actually received, fetched from the archive rather than recomputed, which is the whole point: phase3d-rehearsal.md grades what a June issue could have said about the coming autumn, so nothing here may be bias-corrected against observations from after each issue date. Ensemble monthly means at 1 degree; the June issue's lead months 1-6 cover June through November. Only the rehearsal's issue month and band are fetched -- this is a verification source for two variables over one region, not a mirror of the archive.

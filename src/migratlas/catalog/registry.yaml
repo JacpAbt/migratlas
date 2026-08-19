@@ -1156,3 +1156,36 @@ sources:
       regions (phase3c-coupling.md), where route drift matters less than it would for
       abundance levels, and that judgement is recorded there rather than assumed here.
     added: 2026-08-19
+
+  - id: seas5
+    title: ECMWF SEAS5 seasonal forecasts — June-issued monthly means over the radar band
+    realm: aerial
+    landing_page: https://cds.climate.copernicus.eu/datasets/seasonal-monthly-single-levels
+    download_uri: https://cds.climate.copernicus.eu/api/retrieve/v1/processes/seasonal-monthly-single-levels
+    # CC-BY per the C3S seasonal service; using ECMWF SEAS5 alone avoids the additional
+    # non-European-contributions acknowledgement clause the covariate survey recorded.
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      Copernicus Climate Change Service (2018): Seasonal forecast monthly statistics on single
+      levels. ECMWF SEAS5. Copernicus Climate Change Service (C3S) Climate Data Store (CDS).
+      https://doi.org/10.24381/cds.68dd14c3
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        CC BY 4.0 with the standard Copernicus credit line; derived verification statistics may
+        be redistributed with attribution.
+    credential: cds_token
+    # A forecast of the weather. Nothing here has a heartbeat.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      These are the forecasts the world actually received, fetched from the archive rather than
+      recomputed, which is the whole point: phase3d-rehearsal.md grades what a June issue could
+      have said about the coming autumn, so nothing here may be bias-corrected against
+      observations from after each issue date. Ensemble monthly means at 1 degree; the June
+      issue's lead months 1-6 cover June through November. Only the rehearsal's issue month and
+      band are fetched -- this is a verification source for two variables over one region, not
+      a mirror of the archive.
+    added: 2026-08-19

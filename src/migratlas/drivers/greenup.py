@@ -42,21 +42,28 @@ MIN_AMPLITUDE: Final = 0.1
 BINS_PER_YEAR: Final = greenwave.HALF_MONTHS
 
 
-def greenup_day(values: np.ndarray) -> float | None:
-    """Day of year when NDVI first crosses the midpoint of this year's amplitude, or None.
+def greenup_day(
+    values: np.ndarray,
+    *,
+    bins: int = BINS_PER_YEAR,
+    min_amplitude: float = MIN_AMPLITUDE,
+) -> float | None:
+    """Day of year when the series first crosses the midpoint of this year's amplitude, or None.
 
-    ``values`` is one cell-year: 24 half-month means in order. None when any bin is missing (a
-    gap would masquerade as timing), when the amplitude is below MIN_AMPLITUDE (nothing to
-    date), or when the year opens already green — southern-hemisphere seasons put the crossing
-    in the previous calendar year, and pretending day 1 was the green-up would fabricate a
-    series with no variance. Linear interpolation inside the crossing bin, so the answer is a
-    day rather than a half-month: consumers difference these across years, and a 15-day
-    quantum would swallow the signal it exists to carry.
+    ``values`` is one unit-year of within-year bins in order: 24 half-months for NDVI, 12
+    months when Phase 3c applies the same metric to plankton abundance — one definition, two
+    kingdoms, which is why the bin count is a parameter and not two functions that would drift.
+    None when any bin is missing (a gap would masquerade as timing), when the amplitude is
+    below ``min_amplitude`` (nothing to date; the caller's units decide the floor), or when the
+    year opens already above its midpoint — a crossing that belongs to the previous year would
+    fabricate a series with no variance. Linear interpolation inside the crossing bin, so the
+    answer is a day rather than a bin: consumers difference these across years, and a
+    bin-width quantum would swallow the signal it exists to carry.
     """
-    if values.shape != (BINS_PER_YEAR,) or np.isnan(values).any():
+    if values.shape != (bins,) or np.isnan(values).any():
         return None
     low, high = float(values.min()), float(values.max())
-    if high - low < MIN_AMPLITUDE:
+    if high - low < min_amplitude:
         return None
     midpoint = low + (high - low) / 2.0
     above = values >= midpoint
@@ -65,7 +72,7 @@ def greenup_day(values: np.ndarray) -> float | None:
     index = int(np.argmax(above))
     span = float(values[index] - values[index - 1])
     fraction = 0.5 if span == 0 else float(midpoint - values[index - 1]) / span
-    return ((index - 1) + fraction + 0.5) * (365.0 / BINS_PER_YEAR)
+    return ((index - 1) + fraction + 0.5) * (365.0 / bins)
 
 
 def build_greenup(root: Path | None = None) -> WriteResult:
