@@ -205,6 +205,14 @@ phase1b-report:  ## Marine distribution shift from FISHGLOB trawl surveys
 phase1c-report:  ## Speed-weighting control and precipitation-screening test
 	$(RUN) migratlas report phase1c
 
+.PHONY: ingest-cmems
+ingest-cmems:  ## CMEMS oxygen at each survey's fishing depth -> lake (driver samples, gridded)
+	$(RUN) migratlas ingest-cmems
+
+.PHONY: report-phase3g
+report-phase3g:  ## Oxygen against poleward movement, gated by two calibrations
+	$(RUN) migratlas report phase3g
+
 .PHONY: report-phase3f
 report-phase3f:  ## The response-model ladder: pooling, the wind, its form, the model class
 	$(RUN) migratlas report phase3f

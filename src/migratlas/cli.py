@@ -655,6 +655,15 @@ def report_phase3e() -> None:
     print(phase3e.render())
 
 
+@report_app.command("phase3g")
+def report_phase3g() -> None:
+    """Does the water's oxygen sort the movers from the stayers, where its temperature did not?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3g  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3g.render())
+
+
 @report_app.command("phase3f")
 def report_phase3f() -> None:
     """The response-model ladder: pooling, the wind, its form, and the model class."""
@@ -685,6 +694,21 @@ def ingest_oisst() -> None:
     from migratlas.drivers import oisst  # noqa: PLC0415 -- geo extra, only this command
 
     result = oisst.ingest()
+    print(f"{result.rows} footprint-months -> {result.path}")
+
+
+@app.command("ingest-cmems")
+def ingest_cmems() -> None:
+    """Land footprint-mean dissolved oxygen per survey unit (driver samples, gridded).
+
+    Phase 3g's non-thermal driver, read at the depth level nearest each survey's own median haul
+    depth. The store is a public ARCO zarr, so this needs no credential despite the registry
+    recording one -- and a 403 from it means the zarr format, not the account.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.drivers import cmems  # noqa: PLC0415 -- geo extra, only this command
+
+    result = cmems.ingest()
     print(f"{result.rows} footprint-months -> {result.path}")
 
 

@@ -1220,3 +1220,51 @@ sources:
       exist (phase3e-marine-oisst.md §3), and that judgement lives there rather than here. The
       file updates monthly and carries no checksum; the raw copy is the fetch date's snapshot.
     added: 2026-08-19
+
+  # The 32nd source, and the one the addendum had to defer for want of an account. It exists
+  # because WOA23 -- the free route to ocean oxygen -- publishes a climatology and nothing else:
+  # cell_methods reads "time: mean within years time: mean over years" and every decadal path
+  # returns 404, so it cannot carry a trend at any depth. Licensed by phase3g-oxygen.md, which
+  # was written before this entry and before any request.
+  - id: cmems_bgc
+    title: Copernicus Marine global biogeochemistry hindcast — monthly dissolved oxygen, 1993–present
+    realm: marine
+    landing_page: https://data.marine.copernicus.eu/product/GLOBAL_MULTIYEAR_BGC_001_029/description
+    download_uri: https://stac.marine.copernicus.eu/metadata/GLOBAL_MULTIYEAR_BGC_001_029/cmems_mod_glo_bgc_my_0.25deg_P1M-m_202406/dataset.stac.json
+    credential: cmems_username
+    # Licence clause 2.2, read from the current terms page on 2026-08-19 rather than remembered:
+    # a worldwide, non-exclusive, royalty-free, perpetual licence to "(b) modify, adapt, develop,
+    # create and distribute Value Added Products or Derivative Work from Copernicus Marine Service
+    # Products for any purpose" and "(c) redistribute, disseminate any Copernicus Marine Service
+    # Product in their original form via any media". Clause 2.1: granted free of charge. So unlike
+    # eBird, and unlike the CPR's UK mirror, nothing here restricts a derived tile.
+    licence: Copernicus Marine Service licence (free of charge, derived works permitted for any purpose)
+    licence_url: https://marine.copernicus.eu/user-corner/service-commitments-and-licence
+    citation: >-
+      Copernicus Marine Service (2024). Global Ocean Biogeochemistry Hindcast,
+      GLOBAL_MULTIYEAR_BGC_001_029, dataset cmems_mod_glo_bgc_my_0.25deg_P1M-m. E.U. Copernicus
+      Marine Service Information. doi 10.48670/moi-00019.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        Clause 2.2(b) permits derived and value-added products for any purpose and 2.2(c) permits
+        redistribution of the product in original form; clause 2.3 carries the attribution duty
+        under Regulation (EU) 1159/2013. Credit the Copernicus Marine Service and cite the product
+        doi, which the provenance document does from this entry.
+    # A modelled field of dissolved gas. There is no animal in it, so there is nothing to protect.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      A reanalysis, and a biogeochemical one, which is a weaker thing than a physical reanalysis
+      and must not be read as a measurement. There is no Argo-scale oxygen observing network, so
+      this field is largely ocean dynamics plus parameterised biology rather than assimilated
+      oxygen observations, and a trend in it partly reflects how its own observing system changed
+      across 1993–present. Spatially it is 0.25 degrees on 75 depth levels: the level nearest a
+      trawl's median haul depth over a shelf is not the water that trawl fished, which is the same
+      distinction OISST carries and further from the animal rather than closer. This project holds
+      no oxygen observations to validate it against, so phase3g-oxygen.md §3 gates it on physics
+      instead — warming and oxygen must correlate negatively across units, because solubility
+      requires it — and §6 refuses the word "measured" for any number derived from it. The
+      product is updated and reissued, so the raw copy is the fetch date's snapshot.
+    added: 2026-08-19

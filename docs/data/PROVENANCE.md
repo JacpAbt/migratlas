@@ -45,6 +45,7 @@ each source carries its own terms.
 | [Continuous Plankton Recorder — western North Atlantic occurrences and counts, 1958–2022](https://www.bco-dmo.org/dataset/765141) | driver only | `marine` | CC BY 4.0 | permitted |
 | [ECMWF SEAS5 seasonal forecasts — June-issued monthly means over the radar band](https://cds.climate.copernicus.eu/datasets/seasonal-monthly-single-levels) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [NOAA OISST v2.1 — monthly mean sea surface temperature, 1981–present](https://psl.noaa.gov/data/gridded/data.noaa.oisst.v2.highres.html) | driver only | `marine` | Public domain (U.S. Government work, 17 U.S.C. §105) | permitted |
+| [Copernicus Marine global biogeochemistry hindcast — monthly dissolved oxygen, 1993–present](https://data.marine.copernicus.eu/product/GLOBAL_MULTIYEAR_BGC_001_029/description) | driver only | `marine` | Copernicus Marine Service licence (free of charge, derived works permitted for any purpose) | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -631,3 +632,22 @@ These are the forecasts the world actually received, fetched from the archive ra
 **Caveats**
 
 An optimum-interpolation product of satellite and in-situ observations at 0.25 degrees: the sea surface as estimated, not the bottom water a trawl fishes. Phase 3e uses it only as footprint-mean trends, gated by a calibration against the haul temperatures where both exist (phase3e-marine-oisst.md §3), and that judgement lives there rather than here. The file updates monthly and carries no checksum; the raw copy is the fetch date's snapshot.
+
+## Copernicus Marine global biogeochemistry hindcast — monthly dissolved oxygen, 1993–present
+
+- **id** `cmems_bgc`
+- **drivers only**, no evidence rows · **realm** `marine`
+- **landing page** https://data.marine.copernicus.eu/product/GLOBAL_MULTIYEAR_BGC_001_029/description
+- **licence** [Copernicus Marine Service licence (free of charge, derived works permitted for any purpose)](https://marine.copernicus.eu/user-corner/service-commitments-and-licence)
+- **redistribution** permitted, attribution required
+  - Clause 2.2(b) permits derived and value-added products for any purpose and 2.2(c) permits redistribution of the product in original form; clause 2.3 carries the attribution duty under Regulation (EU) 1159/2013. Credit the Copernicus Marine Service and cite the product doi, which the provenance document does from this entry.
+- **sensitivity** `not_sensitive` by default
+- **credential** `MIGRATLAS_CRED_CMEMS_USERNAME` required
+
+**Cite as**
+
+> Copernicus Marine Service (2024). Global Ocean Biogeochemistry Hindcast, GLOBAL_MULTIYEAR_BGC_001_029, dataset cmems_mod_glo_bgc_my_0.25deg_P1M-m. E.U. Copernicus Marine Service Information. doi 10.48670/moi-00019.
+
+**Caveats**
+
+A reanalysis, and a biogeochemical one, which is a weaker thing than a physical reanalysis and must not be read as a measurement. There is no Argo-scale oxygen observing network, so this field is largely ocean dynamics plus parameterised biology rather than assimilated oxygen observations, and a trend in it partly reflects how its own observing system changed across 1993–present. Spatially it is 0.25 degrees on 75 depth levels: the level nearest a trawl's median haul depth over a shelf is not the water that trawl fished, which is the same distinction OISST carries and further from the animal rather than closer. This project holds no oxygen observations to validate it against, so phase3g-oxygen.md §3 gates it on physics instead — warming and oxygen must correlate negatively across units, because solubility requires it — and §6 refuses the word "measured" for any number derived from it. The product is updated and reissued, so the raw copy is the fetch date's snapshot.
