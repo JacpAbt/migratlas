@@ -204,8 +204,10 @@ discarded). Second attempt, on those stretches: most European surveys, it turned
 recorded water temperature — fish without their water — and the count fell below the
 registered minimum again. Each stop produced a precise, published reason. The successor —
 using satellite sea-surface temperature over each survey's own fishing grounds, gated by a
-check that satellite and shipboard thermometers agree where both exist — is running as this
-snapshot is written.
+check that satellite and shipboard thermometers agree where both exist — ran the same day and
+delivered the answer: the thermometers agree, the seas genuinely differ (a heterogeneity score
+nearly ten times its chance bar across 18 seas), and warming alone does not sort the movers
+from the stayers.
 
 **The coupling experiment.** The owner's founding intuition: migrations are connected — birds
 follow food, fish follow plankton, everything follows the climate see-saws. The honest way to
