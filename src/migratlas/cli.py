@@ -239,6 +239,21 @@ def ingest_jrc_gsw() -> None:
     print(f"run {result.run_id}")
 
 
+@app.command("ingest-cpr")
+def ingest_cpr() -> None:
+    """Land the CPR's western North Atlantic as one aggregate plankton series (SURVEY_INDEX).
+
+    The 29th source, licensed by phase3c-coupling.md before the file was fetched. One row per
+    sample, taxon_key null, scope AGGREGATE -- the bloom-timing node needs no taxon and the
+    CPR's internal ids map to no spine this project holds.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.ingest import cpr  # noqa: PLC0415 -- one command needs it
+
+    result = cpr.ingest()
+    print(f"{result.rows} plankton samples -> {result.path}")
+
+
 @app.command("ingest-era5-land")
 def ingest_era5_land() -> None:
     """Land monthly ERA5-Land snow depth at the two herd-range centroids (driver samples).
@@ -577,6 +592,71 @@ def report_phase3a() -> None:
     from migratlas.reports import phase3a  # noqa: PLC0415 -- heavy, and only this command
 
     print(phase3a.render())
+
+
+@report_app.command("phase3c")
+def report_phase3c() -> None:
+    """The four registered coupling edges, run once, no novelty claimed."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3c  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3c.render())
+
+
+@report_app.command("phase3e")
+def report_phase3e() -> None:
+    """The marine question with OISST, calibrated against the haul thermometers, run once."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3e  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3e.render())
+
+
+@report_app.command("phase3d")
+def report_phase3d() -> None:
+    """The dress rehearsal: the full two-stage pipeline graded on 2017-2024, run once."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3d  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3d.render())
+
+
+@app.command("ingest-oisst")
+def ingest_oisst() -> None:
+    """Land footprint-mean OISST per survey unit (driver samples, gridded).
+
+    Phase 3e's warming driver: the satellite's estimate of the surface over the water each
+    survey fished, licensed by phase3e-marine-oisst.md and gated there by a calibration
+    against the haul thermometers.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.drivers import oisst  # noqa: PLC0415 -- geo extra, only this command
+
+    result = oisst.ingest()
+    print(f"{result.rows} footprint-months -> {result.path}")
+
+
+@app.command("ingest-seas5")
+def ingest_seas5() -> None:
+    """Land SEAS5's June-issued forecasts at the radar stations (driver samples, simulated).
+
+    The archived forecasts the world actually received, licensed by phase3d-rehearsal.md.
+    Needs the seasonal dataset's licence accepted once on the CDS account.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.drivers import seas5  # noqa: PLC0415 -- geo extra, only this command
+
+    result = seas5.ingest()
+    print(f"{result.rows} forecast samples -> {result.path}")
+
+
+@report_app.command("phase3b")
+def report_phase3b() -> None:
+    """The marine heterogeneity fits, on the longest single-gear segments, run once."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3b  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3b.render())
 
 
 @report_app.command("phase3a-herds")

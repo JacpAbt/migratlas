@@ -102,3 +102,11 @@ condition before any novelty claim. Visser 1998, Both & Visser 2001 and Youngfle
 are cited from background knowledge, not re-fetched this session. The Nowosad et al. 2024
 author list was not verified. Absence-of-prior-art claims rest on searches, not on
 exhaustiveness — they are "not found", never "does not exist".
+
+---
+
+**Status update, 2026-08-19.** The owner has no access to Suzuki et al. 2026. The stop condition
+is resolved by removal rather than by waiting: `phase3c-coupling.md` claims no novelty anywhere,
+so there is no novelty sentence for the unread review to falsify. The unoccupied-spaces
+statements above remain scoped to what this survey's own search reached, which is all they ever
+claimed.

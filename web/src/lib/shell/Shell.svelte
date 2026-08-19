@@ -718,6 +718,14 @@
       padding: var(--gap) var(--gap) calc(var(--strip) + var(--attrib) + var(--gap-tight));
     }
 
+    /* The map's own buttons live in the band the explore panel occupies on a phone, and a
+       covered zoom control is a control that does not exist -- measured at 390px as a 78x132
+       intersection. Lifted above the panel's ceiling while explore is open; 55% is the panel's
+       max-height, so the buttons clear it even when the panel runs shorter. */
+    .shell:has(:global(.explore)) :global(.maplibregl-ctrl-bottom-right) {
+      bottom: calc(55% + var(--strip) + var(--attrib) + var(--gap-tight));
+    }
+
     .shell__sheet {
       padding: var(--gap);
     }

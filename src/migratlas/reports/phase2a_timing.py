@@ -20,7 +20,7 @@ from migratlas.drivers import era5, narr
 from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan_dataset
-from migratlas.metrics.phenology import passage_quantiles
+from migratlas.metrics.phenology import Season, passage_quantiles
 from migratlas.reports.phase1 import (
     AUTUMN,
     LATITUDE_BANDS,
@@ -88,20 +88,21 @@ def pre_season_temperature() -> pl.DataFrame:
     )
 
 
-def wind_support() -> pl.DataFrame:
-    """Mean autumn-window wind support per station per year, in m/s.
+def support_series(nights: pl.DataFrame, winds: pl.DataFrame) -> pl.DataFrame:
+    """Wind support per station-year, from an already-seasoned night panel. Reads no lake.
 
-    Support is the wind's component along the station's own mean autumn heading, so a station whose
-    migrants leave south-west is not scored against a southward reference. The heading comes from
-    the radar's own reflectivity-weighted direction, which is the only estimate of where the
-    animals were actually going.
+    Split out of `wind_support` so the two things that can go silently wrong here are testable
+    against frames written by hand. The heading is a traffic-weighted *circular* mean, so 350
+    degrees and 10 degrees have to average to north rather than to south -- the same property the
+    dart layer needed in TASKS #39. And the support is a projection onto that heading, so its sign
+    is a claim: positive means the wind was helping.
+
+    Args:
+        nights: station_id, timestamp, direction_deg, magnitude, already filtered to one season
+            and to usable nights. Which nights are usable is the caller's registered decision,
+            not this function's.
+        winds: station_id, date, and the NARR component columns, pivoted wide.
     """
-    nights = load_conus_nights(quantity="reflectivity_traffic").filter(
-        pl.col("timestamp").dt.ordinal_day().is_between(AUTUMN.start_doy, AUTUMN.end_doy),
-        pl.col("coverage_fraction") >= MIN_COVERAGE,
-        pl.col("direction_deg").is_not_null(),
-        pl.col("magnitude") > 0,
-    )
     if nights.is_empty():
         return pl.DataFrame()
 
@@ -124,7 +125,29 @@ def wind_support() -> pl.DataFrame:
         .select("station_id", "heading_east", "heading_north")
     )
 
-    winds = (
+    u_column = f"wind_u_{narr.LEVEL_HPA}hPa"
+    v_column = f"wind_v_{narr.LEVEL_HPA}hPa"
+    if u_column not in winds.columns:
+        return pl.DataFrame()
+
+    seasonal = nights.select(
+        "station_id", date=pl.col("timestamp").dt.date(), year=pl.col("timestamp").dt.year()
+    )
+    return (
+        seasonal.join(winds, on=("station_id", "date"), how="inner")
+        .join(headings, on="station_id", how="inner")
+        .with_columns(
+            support=pl.col(u_column) * pl.col("heading_east")
+            + pl.col(v_column) * pl.col("heading_north")
+        )
+        .group_by("station_id", "year")
+        .agg(pl.col("support").mean().alias("support"))
+    )
+
+
+def night_winds() -> pl.DataFrame:
+    """The NARR night wind components at the stations, pivoted wide by variable."""
+    return (
         scan_dataset(DRIVER_SAMPLES.name, source_id=narr.SOURCE_ID)
         .filter(pl.col("variable").str.starts_with("wind_"))
         .select(
@@ -136,24 +159,33 @@ def wind_support() -> pl.DataFrame:
         .collect()
         .pivot(on="variable", index=("station_id", "date"), values="value")
     )
-    u_column = f"wind_u_{narr.LEVEL_HPA}hPa"
-    v_column = f"wind_v_{narr.LEVEL_HPA}hPa"
-    if u_column not in winds.columns:
-        return pl.DataFrame()
 
-    autumn_nights = nights.select(
-        "station_id", date=pl.col("timestamp").dt.date(), year=pl.col("timestamp").dt.year()
+
+def wind_support(season: Season = AUTUMN) -> pl.DataFrame:
+    """Mean wind support per station per year inside one season's window, in m/s.
+
+    Support is the wind's component along the station's own mean heading for that season, so a
+    station whose migrants leave south-west is not scored against a southward reference. The
+    heading comes from the radar's own reflectivity-weighted direction, which is the only estimate
+    of where the animals were actually going.
+
+    The default is autumn: that is the call `sensitivities()` makes, and the one the published
+    `per_wind` was fitted from. The argument exists for Phase 3f, which needs the same term in
+    spring -- where the heading points the other way and so is computed rather than assumed.
+
+    Two different things guard the split. `tests/test_phase2a_timing.py` pins the arithmetic in
+    `support_series` against hand-written frames; the published numbers were pinned by re-running
+    `make phase2a-timing` against the lake on 2026-08-19, which reproduced the claim band to the
+    digit -- S -0.659 +/- 0.17, wind -0.243 +/- 0.385, corr(temp, wind) +0.025 +/- 0.048. A unit
+    test cannot check the second thing and the lake cannot be in the suite, so both are recorded.
+    """
+    nights = load_conus_nights(quantity="reflectivity_traffic").filter(
+        pl.col("timestamp").dt.ordinal_day().is_between(season.start_doy, season.end_doy),
+        pl.col("coverage_fraction") >= MIN_COVERAGE,
+        pl.col("direction_deg").is_not_null(),
+        pl.col("magnitude") > 0,
     )
-    return (
-        autumn_nights.join(winds, on=("station_id", "date"), how="inner")
-        .join(headings, on="station_id", how="inner")
-        .with_columns(
-            support=pl.col(u_column) * pl.col("heading_east")
-            + pl.col(v_column) * pl.col("heading_north")
-        )
-        .group_by("station_id", "year")
-        .agg(pl.col("support").mean().alias("support"))
-    )
+    return support_series(nights, night_winds())
 
 
 def _fit(design: np.ndarray, response: np.ndarray) -> np.ndarray | None:
