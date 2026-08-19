@@ -201,6 +201,10 @@ phase1b-report:  ## Marine distribution shift from FISHGLOB trawl surveys
 phase1c-report:  ## Speed-weighting control and precipitation-screening test
 	$(RUN) migratlas report phase1c
 
+.PHONY: report-phase3f
+report-phase3f:  ## The response-model ladder: pooling, the wind, its form, the model class
+	$(RUN) migratlas report phase3f
+
 .PHONY: gpu-check
 gpu-check:  ## Confirm a CUDA device is visible from inside the venv
 	$(RUN) python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"

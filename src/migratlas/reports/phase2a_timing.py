@@ -88,20 +88,29 @@ def pre_season_temperature() -> pl.DataFrame:
     )
 
 
-def support_series(nights: pl.DataFrame, winds: pl.DataFrame) -> pl.DataFrame:
-    """Wind support per station-year, from an already-seasoned night panel. Reads no lake.
+def support_nights(nights: pl.DataFrame, winds: pl.DataFrame) -> pl.DataFrame:
+    """Wind support for every night of an already-seasoned panel. Reads no lake.
 
-    Split out of `wind_support` so the two things that can go silently wrong here are testable
-    against frames written by hand. The heading is a traffic-weighted *circular* mean, so 350
-    degrees and 10 degrees have to average to north rather than to south -- the same property the
-    dart layer needed in TASKS #39. And the support is a projection onto that heading, so its sign
-    is a claim: positive means the wind was helping.
+    The per-night form, because two different statistics are built from it: the seasonal mean
+    that Phase 2a fitted, and the favourable-night share that `phase3f-response.md` registers.
+    A mean over roughly a hundred and twenty nights can sit flat while the number of usable
+    nights moves, so the two are not interchangeable and neither is derivable from the other.
+
+    Two properties fail silently rather than loudly and both are pinned by
+    `tests/test_phase2a_timing.py`. The heading is a traffic-weighted *circular* mean, so 350
+    degrees and 10 degrees have to average to north rather than to south -- the same property
+    the dart layer needed in TASKS #39. And the support is a projection onto that heading, so
+    its sign is a claim: positive means the wind was helping.
 
     Args:
         nights: station_id, timestamp, direction_deg, magnitude, already filtered to one season
             and to usable nights. Which nights are usable is the caller's registered decision,
             not this function's.
         winds: station_id, date, and the NARR component columns, pivoted wide.
+
+    Returns:
+        station_id, year, date, support -- or an empty frame if there are no usable nights or
+        the wind frame does not carry the registered level's columns.
     """
     if nights.is_empty():
         return pl.DataFrame()
@@ -140,9 +149,16 @@ def support_series(nights: pl.DataFrame, winds: pl.DataFrame) -> pl.DataFrame:
             support=pl.col(u_column) * pl.col("heading_east")
             + pl.col(v_column) * pl.col("heading_north")
         )
-        .group_by("station_id", "year")
-        .agg(pl.col("support").mean().alias("support"))
+        .select("station_id", "year", "date", "support")
     )
+
+
+def support_series(nights: pl.DataFrame, winds: pl.DataFrame) -> pl.DataFrame:
+    """Mean wind support per station-year. The statistic Phase 2a fitted."""
+    per_night = support_nights(nights, winds)
+    if per_night.is_empty():
+        return pl.DataFrame()
+    return per_night.group_by("station_id", "year").agg(pl.col("support").mean().alias("support"))
 
 
 def night_winds() -> pl.DataFrame:
