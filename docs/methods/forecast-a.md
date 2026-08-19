@@ -170,3 +170,86 @@ Phase 3f has spent.
   have spoken to it — is unread behind a fired calibration.
 - **That the mask is conservative enough.** It is drawn from the observed departure band, which is a
   statement about what was sampled and not about where the biology holds.
+
+## Results — run 2026-08-20
+
+**The mask is the result, as §1 said it would be.** Three of eight scenario-windows are entirely
+unsayable, and by the late century under SSP5-8.5 the models put June–July at **+6.11 °C** above the
+1995–2014 baseline against a fitted envelope reaching **+1.74**. There is nothing to draw there, and
+that is the finding rather than a failure of it.
+
+Paired models per scenario: ssp126 13, ssp245 15, ssp370 13, ssp585 15 — all at or above the
+registered floor of 13. (§1 counted 14 for ssp126 from the catalogue; 13 survived reading, which is
+the difference between a store existing and a store being readable.)
+
+### The mask
+
+| scenario | window | sayable | of | share | median ΔT | median shift where sayable |
+| --- | --- | --- | --- | --- | --- | --- |
+| ssp126 | 2040–2059 | 38 | 78 | **49%** | +1.74 °C | −1.06 d |
+| ssp126 | 2080–2099 | 29 | 78 | 37% | +1.85 °C | −1.05 d |
+| ssp245 | 2040–2059 | 5 | 78 | 6% | +2.12 °C | −0.98 d |
+| ssp245 | 2080–2099 | 0 | 78 | **0%** | +3.50 °C | — masked — |
+| ssp370 | 2040–2059 | 5 | 78 | 6% | +2.17 °C | −0.95 d |
+| ssp370 | 2080–2099 | 0 | 78 | **0%** | +4.89 °C | — masked — |
+| ssp585 | 2040–2059 | 2 | 78 | 3% | +2.73 °C | −1.13 d |
+| ssp585 | 2080–2099 | 0 | 78 | **0%** | +6.11 °C | — masked — |
+
+### Grading
+
+- **Prediction 1 — GRADED TRUE.** The sayable share falls monotonically across scenarios within
+  each window and across windows within each scenario.
+- **Prediction 2 — GRADED TRUE.** SSP5-8.5 late century is 0% sayable, against a bar of under 10%.
+- **Prediction 3 — GRADED FALSE, by one station.** SSP1-2.6 mid-century is sayable at 38 of 78,
+  which is **49%** against a registered bar of *more than* 50%. Forty would have passed. It is
+  recorded as false because that is what the registration says, and the margin is stated so nobody
+  has to wonder whether it was close: it was one station short of a bar chosen for its roundness.
+- **Prediction 4 — GRADED TRUE.** The largest sayable shift is 1.14 days, under the 2-day ceiling.
+- **Prediction 5 — GRADED TRUE, and emphatically.** At 2040–2059 the inter-model range of ΔT,
+  carried through `S`, is **1.37 days** against the response function's own interval of **0.35
+  days**. Which model you pick matters about four times as much as the uncertainty in `S`.
+
+### The one number in this table that invites a wrong reading
+
+**"Median shift where sayable" is not a projected advance.** It sits near −1 day in every
+scenario-window, and that is an artefact of the mask rather than a finding about birds: masking
+removes every cell warmer than +1.74 °C, so the cells that survive are the ones bunched against the
+envelope's upper edge, and `S × 1.7 ≈ −1.1` day by arithmetic. The column says *what the fitted
+response implies at the warmest warming the envelope permits* — a bound, not an expectation. Read as
+a projection it would understate every scenario, because the warmer half of each scenario is exactly
+what was removed.
+
+That the number is nearly identical across four scenarios should be the tell. Scenarios that differ
+by four degrees of warming cannot imply the same shift; what they share is the envelope's edge.
+
+### What this establishes, stated narrowly
+
+Under the one scenario consistent with strong mitigation, about half the claim-band stations sit
+inside the range the response was fitted over at mid-century, and there the thermal component of the
+advance is bounded near a day. Under every other scenario, and under all of them by the late century,
+the warming leaves the fitted range entirely and this project declines to extrapolate into it.
+
+`DATASETS.md` predicted this outcome in July, before the driver existed: *"the novelty mask is likely
+to be the headline."* It is, and it is worth being clear about why that is a real result and not an
+evasion. A projection of a linear response three degrees outside the band it was fitted in is not a
+cautious estimate — it is arithmetic wearing the clothes of evidence, and it is the single most
+common way range-shift forecasting goes wrong.
+
+### What it does not establish, restated because the table looks like a forecast
+
+Nothing about a particular year: Phase 3a found interannual skill at 20 of 143 stations and Phase 3d
+refused this project a standing prediction on measured grounds. Nothing about passage date, only its
+thermally-driven component — `anthropogenic-share` puts that at `−0.30 ± 0.09` of the observed
+`−0.56 ± 0.25` days per decade, and the remainder tracks nothing found so far. Nothing outside
+37–50°N aerial. And nothing about whether the response stays linear, which is what the envelope
+declines to assert and which Phase 3f's spline arm might have spoken to had its calibration not
+fired.
+
+### No ledger finding yet
+
+The mask is publishable and the sayable projections are bounded, but the column most likely to be
+read — the median shift — needs the mask-selection caveat above beside it or it misleads. That is a
+presentation problem rather than an analysis one, and it belongs to the presentation arc (#52) where
+the seventh chapter can carry it with the figure. A successor should also consider reporting the
+sayable *share* as the headline number rather than any shift, since the share is what the reader
+should take away.
