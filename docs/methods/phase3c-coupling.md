@@ -104,3 +104,34 @@ tempted to say more. Anything discovered — the four edges were chosen by mecha
 space of unchosen edges stays unexplored by design. Anything about realms whose series could
 not enter: the herds, the atlases, the Southern Hemisphere — the same emptiness `coverage-bias`
 already publishes, now with a coupling shape.
+
+---
+
+## Results — run 2026-08-19
+
+**A calibration edge failed, and the stop condition speaks for the whole phase.**
+
+- **C1, winter NAO → green-up day: not detected** (coefficient −0.05, interval [−3.3, +3.9]
+  against a rotation bar of 3.0, 41 years). The teleconnection the literature guarantees is
+  invisible to this machinery over this band at this length.
+- **C2, spring SST → plankton bloom day: detected** (+9.7 days per °C, interval [+2.9, +17.4]
+  against a bar of 8.8, 38 years). The instrument is not blind — it sees a known marine signal
+  where the signal is strong.
+- **Prediction 1 — GRADED FALSE** (it required both), and §5 does what it was written to do:
+  **no hypothesis edge is interpreted.** H1 and all ten H2 lag-variants were printed for the
+  record and every one is null; they are observations about nothing until a calibration
+  passes on their side of the design.
+- **Prediction 2 — GRADED FALSE** mechanically (the conditioned H1 coefficient is not smaller
+  than the unconditioned), and uninterpreted for the same reason as everything else.
+- **Prediction 3 — GRADED TRUE.** The plankton-to-fish edge was registered as an expected
+  null and the null held, ten times over.
+- **Prediction 4 — deferred to publication**: the intervals publish beside their caveats when
+  the coupling page ships with #52.
+
+**What the split calibration actually says.** The failure is specific: the NAO's strongest
+footprint is the North Atlantic's rim, and the response tested here is a continental-interior
+band mean — a pairing this registration chose and must own. Any future coupling registration
+starts from the C1 failure as a measured fact about band-mean green-up, not from a hope that a
+different test would have passed. The page this phase publishes is the one §5 promised: at
+these lengths, over these regions, the instrument saw one known signal out of two, and
+therefore claims nothing it cannot see.
