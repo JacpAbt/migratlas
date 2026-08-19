@@ -12,6 +12,11 @@ the driver modules; every claim about an external source was verified against it
 and licence text on this date, and where verification failed the failure is stated rather than
 papered over.
 
+**Continued 2026-08-19** in [`covariate-survey-2026-08-addendum.md`](covariate-survey-2026-08-addendum.md), which asks the explanatory question rather than the four
+tasks' question, and which corrects two things below: `narr` is described here as a control and was
+already fitted as a co-predictor in Phase 2a, and §3's unverified CDS variable strings turned out to
+be machine-readable after all.
+
 ## 1. What the lake already holds
 
 | Source | Variables | Span / cadence | Licence | Role |
