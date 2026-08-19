@@ -16,6 +16,7 @@ from typing import Final, NamedTuple
 import numpy as np
 import polars as pl
 
+from migratlas.constants import CLAIM_BAND, MIN_COVERAGE, MIN_NIGHTS, PRE_SEASON
 from migratlas.drivers import era5, narr
 from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.evidence import EvidenceType, spec_for
@@ -24,8 +25,6 @@ from migratlas.metrics.phenology import Season, passage_quantiles
 from migratlas.reports.phase1 import (
     AUTUMN,
     LATITUDE_BANDS,
-    MIN_COVERAGE,
-    MIN_NIGHTS,
     MIN_YEARS,
     load_conus_nights,
 )
@@ -35,10 +34,9 @@ log = logging.getLogger(__name__)
 
 # June and July. Before the August-November passage window and not touching it: a predictor that
 # overlapped the response would partly be the response.
-PRE_SEASON: Final[tuple[int, ...]] = (6, 7)
 
 # Where the surviving Phase 1a claim lives, and so the only band an attribution is claimed for.
-CLAIM_BAND: Final[tuple[int, int]] = (37, 50)
+
 
 TEMPERATURE: Final = "air_temperature_2m"
 
@@ -177,6 +175,24 @@ def night_winds() -> pl.DataFrame:
     )
 
 
+def usable_nights(season: Season = AUTUMN) -> pl.DataFrame:
+    """The nights the wind term may be computed over, for one season.
+
+    One definition, because which nights are usable is a *registered* analysis decision and not an
+    implementation detail: coverage at or above the Phase 1 floor, a fitted direction, and non-zero
+    traffic to weight it by. Phase 3f copied these four filters verbatim into its own module before
+    this function existed, which is precisely the drift this project keeps paying for -- two copies
+    of a decision are two things that can move apart, and the copy would have gone on agreeing right
+    up until somebody changed one of them.
+    """
+    return load_conus_nights(quantity="reflectivity_traffic").filter(
+        pl.col("timestamp").dt.ordinal_day().is_between(season.start_doy, season.end_doy),
+        pl.col("coverage_fraction") >= MIN_COVERAGE,
+        pl.col("direction_deg").is_not_null(),
+        pl.col("magnitude") > 0,
+    )
+
+
 def wind_support(season: Season = AUTUMN) -> pl.DataFrame:
     """Mean wind support per station per year inside one season's window, in m/s.
 
@@ -195,13 +211,7 @@ def wind_support(season: Season = AUTUMN) -> pl.DataFrame:
     digit -- S -0.659 +/- 0.17, wind -0.243 +/- 0.385, corr(temp, wind) +0.025 +/- 0.048. A unit
     test cannot check the second thing and the lake cannot be in the suite, so both are recorded.
     """
-    nights = load_conus_nights(quantity="reflectivity_traffic").filter(
-        pl.col("timestamp").dt.ordinal_day().is_between(season.start_doy, season.end_doy),
-        pl.col("coverage_fraction") >= MIN_COVERAGE,
-        pl.col("direction_deg").is_not_null(),
-        pl.col("magnitude") > 0,
-    )
-    return support_series(nights, night_winds())
+    return support_series(usable_nights(season), night_winds())
 
 
 def _fit(design: np.ndarray, response: np.ndarray) -> np.ndarray | None:
@@ -231,7 +241,7 @@ def sensitivities() -> list[Sensitivity]:
     )
 
     results: list[Sensitivity] = []
-    for (station,), group in panel.group_by(["station_id"]):
+    for (station,), group in panel.sort("station_id").group_by(["station_id"], maintain_order=True):
         series = group.drop_nulls(["q50_doy", "temperature", "support"]).sort("year")
         if series.height < MIN_YEARS:
             continue

@@ -30,12 +30,13 @@ from typing import TYPE_CHECKING, Final
 import numpy as np
 import polars as pl
 
+from migratlas.constants import MIN_COVERAGE, MIN_NIGHTS
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.metrics.phenology import passage_quantiles
 from migratlas.models.skill import Skill, era_split, hindcast, murphy_score
-from migratlas.reports.phase1 import AUTUMN, MIN_COVERAGE, MIN_NIGHTS, SPRING, load_conus_nights
+from migratlas.reports.phase1 import AUTUMN, SPRING, load_conus_nights
 from migratlas.reports.phase1_robustness import FLEET_MIDPOINT_YEAR
-from migratlas.reports.phase2a_timing import night_winds, support_nights
+from migratlas.reports.phase2a_timing import night_winds, support_nights, usable_nights
 
 # The covariate assembly is imported rather than copied, private name and all: the ladder's whole
 # claim is that its bottom rung reproduces Phase 3a, and two copies of a join are two things that
@@ -69,7 +70,11 @@ MIN_UNITS: Final = 100
 WIND: Final = "wind_support"
 SHARE: Final = "favourable_share"
 POST: Final = "post"
-TEMPERATURE: Final = "temp_season"
+# Named for the column, not for the concept: `phase2a_timing.TEMPERATURE` is the ERA5 *variable*
+# ("air_temperature_2m") while this is a *covariate column* ("temp_season"). This module already
+# imports from that one, so two constants sharing a name and meaning different strings is a trap
+# one careless addition to the import list away from firing.
+TEMP_COLUMN: Final = "temp_season"
 
 # Every driver this phase adds is one a seasonal forecast cannot supply, so the projectable subset
 # is Phase 3a's own list plus the instrument term -- projectable trivially, being a known constant
@@ -154,15 +159,13 @@ def unit_key(station_id: str) -> int:
 
 
 def nightly_support(season_name: str) -> pl.DataFrame:
-    """Per-night wind support for one season, from the term Phase 2a registered."""
-    season = SEASONS[season_name]
-    nights = load_conus_nights(quantity="reflectivity_traffic").filter(
-        pl.col("timestamp").dt.ordinal_day().is_between(season.start_doy, season.end_doy),
-        pl.col("coverage_fraction") >= MIN_COVERAGE,
-        pl.col("direction_deg").is_not_null(),
-        pl.col("magnitude") > 0,
-    )
-    return support_nights(nights, night_winds())
+    """Per-night wind support for one season, from the term Phase 2a registered.
+
+    The night filter is `phase2a_timing.usable_nights`, imported rather than repeated: this module
+    used to carry its own byte-identical copy of those four conditions, which would have agreed
+    forever and then silently stopped agreeing the day Phase 2a changed one.
+    """
+    return support_nights(usable_nights(SEASONS[season_name]), night_winds())
 
 
 def favourable_share(nightly: pl.DataFrame, train_years: set[int]) -> pl.DataFrame:
@@ -357,9 +360,9 @@ class Pooled:
             pieces.append(column[:, None] if knots is None else natural_spline(column, knots))
         # The one registered interaction, on the raw centred columns rather than on their bases,
         # so it stays a single column and the design does not explode combinatorially.
-        if WIND in self.columns and TEMPERATURE in self.columns:
+        if WIND in self.columns and TEMP_COLUMN in self.columns:
             wind = centred[:, self.columns.index(WIND)]
-            temperature = centred[:, self.columns.index(TEMPERATURE)]
+            temperature = centred[:, self.columns.index(TEMP_COLUMN)]
             pieces.append((wind * temperature)[:, None])
         return np.asarray(np.column_stack(pieces), dtype=float)
 

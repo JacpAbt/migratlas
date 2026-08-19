@@ -19,6 +19,7 @@ import polars as pl
 
 from migratlas.catalog import loader as catalog
 from migratlas.config import get_settings
+from migratlas.constants import TARGET_YEARS  # fetch and grade share the years
 from migratlas.drivers.era5 import CONUS_AREA, Area, RetrievalError, request_tag, wait
 from migratlas.drivers.era5 import Field as Era5Field
 from migratlas.drivers.era5_land import _unwrap
@@ -40,7 +41,6 @@ ISSUE_MONTH: Final = 6
 LEAD_MONTHS: Final = (1, 2, 3, 4, 5, 6)
 """June's leads 1-6 are June through November: the pre-season and the season in one issue."""
 
-TARGET_YEARS: Final = tuple(range(2017, 2025))
 """The real-time SEAS5 era, so every forecast is one the world actually received."""
 
 FIELDS: Final[dict[str, Era5Field]] = {

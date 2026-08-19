@@ -21,6 +21,7 @@ import numpy as np
 import polars as pl
 
 from migratlas.catalog import loader as catalog
+from migratlas.constants import PRE_SEASON  # fetch and fit must share this window
 from migratlas.drivers.schema import DRIVER_SAMPLES, DriverKind
 from migratlas.lake.writer import WriteResult, write_table
 
@@ -46,7 +47,6 @@ KELVIN: Final = 273.15
 EXPERIMENTS: Final[dict[str, str]] = {"historical": "CMIP", "hist-nat": "DAMIP"}
 
 # June and July, matching the pre-season window the response function was fitted on.
-PRE_SEASON: Final[tuple[int, ...]] = (6, 7)
 
 # `historical` ends in 2014, so that is the last year both experiments cover. The window problem
 # and why a ratio survives it are in the method note.

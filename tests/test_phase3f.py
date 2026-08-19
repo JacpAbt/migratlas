@@ -14,7 +14,7 @@ from migratlas.reports.phase3f import (
     ALL_COLUMNS,
     POST,
     SHARE,
-    TEMPERATURE,
+    TEMP_COLUMN,
     WIND,
     Pooled,
     Unit,
@@ -126,7 +126,7 @@ def _shared_signal_units(stations: int = 12, years: int = 20) -> list[Unit]:
         built.append(
             _unit(
                 f"K{index:03d}",
-                {TEMPERATURE: temperature, WIND: wind},
+                {TEMP_COLUMN: temperature, WIND: wind},
                 offset + 3.0 * temperature - 2.0 * wind,
                 train=14,
             )
@@ -135,7 +135,7 @@ def _shared_signal_units(stations: int = 12, years: int = 20) -> list[Unit]:
 
 
 def test_the_pooled_fit_recovers_a_shared_response_and_scores_it() -> None:
-    pooled = Pooled(_shared_signal_units(), (TEMPERATURE, WIND), spline=False)
+    pooled = Pooled(_shared_signal_units(), (TEMP_COLUMN, WIND), spline=False)
     design = pooled._design(pooled._raw)
     weights = pooled._solve(design, lam=1e-6)
     scores = pooled._scores(design, weights)
@@ -151,7 +151,7 @@ def test_the_within_station_centring_leaves_each_training_mean_at_zero() -> None
     If this drifts, a shared slope vector starts trying to explain why Florida and Minnesota
     differ in level, which is the thing the centring exists to prevent.
     """
-    pooled = Pooled(_shared_signal_units(), (TEMPERATURE, WIND), spline=False)
+    pooled = Pooled(_shared_signal_units(), (TEMP_COLUMN, WIND), spline=False)
     centred = pooled._centre(pooled._raw)
     for rows, train in zip(pooled._rows, pooled._train, strict=True):
         assert np.allclose(centred[train].mean(axis=0), 0.0)
@@ -164,8 +164,8 @@ def test_the_instrument_column_survives_the_spline_arm_unsplined() -> None:
     for unit in units:
         unit.x[:, ALL_COLUMNS.index(POST)] = (unit.years >= 2014).astype(float)
 
-    linear = Pooled(units, (TEMPERATURE, WIND, POST), spline=False)
-    splined = Pooled(units, (TEMPERATURE, WIND, POST), spline=True)
+    linear = Pooled(units, (TEMP_COLUMN, WIND, POST), spline=False)
+    splined = Pooled(units, (TEMP_COLUMN, WIND, POST), spline=True)
     width_linear = linear._design(linear._raw).shape[1]
     width_splined = splined._design(splined._raw).shape[1]
 
@@ -185,8 +185,8 @@ def test_the_null_does_not_depend_on_the_order_the_units_arrived_in() -> None:
     bar, not the score.
     """
     units = _shared_signal_units(stations=6, years=18)
-    forward = Pooled(units, (TEMPERATURE, WIND), spline=False)
-    backward = Pooled(list(reversed(units)), (TEMPERATURE, WIND), spline=False)
+    forward = Pooled(units, (TEMP_COLUMN, WIND), spline=False)
+    backward = Pooled(list(reversed(units)), (TEMP_COLUMN, WIND), spline=False)
 
     first, _ = forward.skills(seed=7)
     second, _ = backward.skills(seed=7)

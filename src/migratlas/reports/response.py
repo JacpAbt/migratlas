@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING, Final
 import numpy as np
 import polars as pl
 
+from migratlas.constants import CLAIM_BAND
 from migratlas.reports.sandbox import Knob, Refusal, Variant
 
 if TYPE_CHECKING:
@@ -67,6 +68,15 @@ ENVELOPE_QUANTILES: Final[tuple[float, ...]] = (0.0, 0.05, 0.95, 1.0)
 # license the whole dial for all seventy-eight. The 5th-95th band is the range the fit is actually
 # informed over, and a bound that a single observation can move is not a bound.
 ENVELOPE_BAND: Final[tuple[float, float]] = (0.05, 0.95)
+
+# Digits kept in the published document. Two reasons, and the second is what forced it. A response
+# of 0.9877751290066686 days is false precision for a quantity whose interval is +/- 0.25, and the
+# panel displays two or three digits anyway. And this file is committed: polars sums a group across
+# threads, so the last bit of a mean moves between runs, and at full precision the artifact
+# diffed on
+# every rebuild with no input having changed. Six decimals is three orders finer than the interval
+# and coarse enough to be stable.
+PUBLISHED_DIGITS: Final = 6
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,8 +147,8 @@ def _dial(  # noqa: PLR0913 -- every argument is a published choice, and a confi
         Variant(
             key=_key(setting),
             label=_label(setting, unit, warmer, cooler),
-            value=sensitivity * setting if setting else 0.0,
-            ci95=ci95 * abs(setting),
+            value=round(sensitivity * setting, PUBLISHED_DIGITS) if setting else 0.0,
+            ci95=round(ci95 * abs(setting), PUBLISHED_DIGITS),
             unit="days",
             n=stations,
             note=(
@@ -165,18 +175,26 @@ def _dial(  # noqa: PLR0913 -- every argument is a published choice, and a confi
     )
 
 
+def _envelope_label(share: float) -> str:
+    """A label for any quantile, derived rather than looked up.
+
+    This was a dict keyed by the exact floats in `ENVELOPE_QUANTILES`, which meant adding a
+    quantile without also adding a label crashed the build on a `KeyError` -- two constants
+    coupled by nothing but the author remembering. Derived, they cannot drift apart.
+    """
+    if share == 0.0:
+        return "the least any station's season departed from its own usual"
+    if share == 1.0:
+        return "the most any station's season departed from its own usual"
+    return f"{share:.0%} of departures lie below this"
+
+
 def _envelope_evidence(envelope: dict[float, float], unit: str) -> list[Variant]:
-    labels = {
-        0.0: "the least any station's season departed from its own usual",
-        0.05: "5th percentile of departures",
-        0.95: "95th percentile of departures",
-        1.0: "the most any station's season departed from its own usual",
-    }
     return [
         Variant(
             key=f"q{share:g}",
-            label=labels[share],
-            value=value,
+            label=_envelope_label(share),
+            value=round(value, PUBLISHED_DIGITS),
             unit=unit,
             n=0,
             note="",
@@ -190,7 +208,6 @@ def collect() -> Response:
     # Private names, imported rather than duplicated: the dial has to aggregate the fit exactly the
     # way the published table does, and two copies of an aggregation are two things that drift.
     from migratlas.reports.phase2a_timing import (  # noqa: PLC0415 -- heavy, and only here
-        CLAIM_BAND,
         _mean_ci,
         pre_season_temperature,
         sensitivities,

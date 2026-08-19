@@ -23,6 +23,7 @@ from typing import Final
 import numpy as np
 import polars as pl
 
+from migratlas.constants import MIN_COVERAGE
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan
 from migratlas.metrics.phenology import passage_quantiles
@@ -153,8 +154,7 @@ def radar_climatology() -> pl.DataFrame:
     nights = phase1.load_conus_nights()
     return (
         nights.filter(
-            pl.col("coverage_fraction").is_null()
-            | (pl.col("coverage_fraction") >= phase1.MIN_COVERAGE)
+            pl.col("coverage_fraction").is_null() | (pl.col("coverage_fraction") >= MIN_COVERAGE)
         )
         .with_columns(week=((pl.col("timestamp").dt.ordinal_day() - 1) // 7).clip(0, 51))
         .group_by("week")

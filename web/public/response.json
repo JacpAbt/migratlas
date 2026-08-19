@@ -13,28 +13,28 @@
     {
      "key": "minus-1-5",
      "label": "1.5 \u00b0C cooler",
-     "value": 0.9877751290066686,
+     "value": 0.987775,
      "unit": "days",
      "n": 78,
-     "ci95": 0.24810387992453956,
+     "ci95": 0.248104,
      "note": "The fitted response, read at 1.5 \u00b0C. Inside the range the fit is informed over, -1.86 to +1.74 \u00b0C."
     },
     {
      "key": "minus-1",
      "label": "1 \u00b0C cooler",
-     "value": 0.6585167526711124,
+     "value": 0.658517,
      "unit": "days",
      "n": 78,
-     "ci95": 0.1654025866163597,
+     "ci95": 0.165403,
      "note": "The fitted response, read at 1 \u00b0C. Inside the range the fit is informed over, -1.86 to +1.74 \u00b0C."
     },
     {
      "key": "minus-0-5",
      "label": "0.5 \u00b0C cooler",
-     "value": 0.3292583763355562,
+     "value": 0.329258,
      "unit": "days",
      "n": 78,
-     "ci95": 0.08270129330817985,
+     "ci95": 0.082701,
      "note": "The fitted response, read at 0.5 \u00b0C. Inside the range the fit is informed over, -1.86 to +1.74 \u00b0C."
     },
     {
@@ -49,28 +49,28 @@
     {
      "key": "plus-0-5",
      "label": "0.5 \u00b0C warmer",
-     "value": -0.3292583763355562,
+     "value": -0.329258,
      "unit": "days",
      "n": 78,
-     "ci95": 0.08270129330817985,
+     "ci95": 0.082701,
      "note": "The fitted response, read at 0.5 \u00b0C. Inside the range the fit is informed over, -1.86 to +1.74 \u00b0C."
     },
     {
      "key": "plus-1",
      "label": "1 \u00b0C warmer",
-     "value": -0.6585167526711124,
+     "value": -0.658517,
      "unit": "days",
      "n": 78,
-     "ci95": 0.1654025866163597,
+     "ci95": 0.165403,
      "note": "The published sensitivity itself."
     },
     {
      "key": "plus-1-5",
      "label": "1.5 \u00b0C warmer",
-     "value": -0.9877751290066686,
+     "value": -0.987775,
      "unit": "days",
      "n": 78,
-     "ci95": 0.24810387992453956,
+     "ci95": 0.248104,
      "note": "The fitted response, read at 1.5 \u00b0C. Inside the range the fit is informed over, -1.86 to +1.74 \u00b0C."
     }
    ]
@@ -87,19 +87,19 @@
     {
      "key": "minus-1",
      "label": "1 m/s less favourable",
-     "value": 0.24281423003092456,
+     "value": 0.242814,
      "unit": "days",
      "n": 78,
-     "ci95": 0.38502678528260886,
+     "ci95": 0.385027,
      "note": "The fitted response, read at 1 m/s. Inside the range the fit is informed over, -1.22 to +1.18 m/s."
     },
     {
      "key": "minus-0-5",
      "label": "0.5 m/s less favourable",
-     "value": 0.12140711501546228,
+     "value": 0.121407,
      "unit": "days",
      "n": 78,
-     "ci95": 0.19251339264130443,
+     "ci95": 0.192513,
      "note": "The fitted response, read at 0.5 m/s. Inside the range the fit is informed over, -1.22 to +1.18 m/s."
     },
     {
@@ -114,19 +114,19 @@
     {
      "key": "plus-0-5",
      "label": "0.5 m/s more favourable",
-     "value": -0.12140711501546228,
+     "value": -0.121407,
      "unit": "days",
      "n": 78,
-     "ci95": 0.19251339264130443,
+     "ci95": 0.192513,
      "note": "The fitted response, read at 0.5 m/s. Inside the range the fit is informed over, -1.22 to +1.18 m/s."
     },
     {
      "key": "plus-1",
      "label": "1 m/s more favourable",
-     "value": -0.24281423003092456,
+     "value": -0.242814,
      "unit": "days",
      "n": 78,
-     "ci95": 0.38502678528260886,
+     "ci95": 0.385027,
      "note": "The published sensitivity itself."
     }
    ]
@@ -141,7 +141,7 @@
     {
      "key": "q0",
      "label": "the least any station's season departed from its own usual",
-     "value": -3.572706653225808,
+     "value": -3.572707,
      "unit": "\u00b0C",
      "n": 0,
      "ci95": null,
@@ -149,8 +149,8 @@
     },
     {
      "key": "q0.05",
-     "label": "5th percentile of departures",
-     "value": -1.8636639994959685,
+     "label": "5% of departures lie below this",
+     "value": -1.863664,
      "unit": "\u00b0C",
      "n": 0,
      "ci95": null,
@@ -158,8 +158,8 @@
     },
     {
      "key": "q0.95",
-     "label": "95th percentile of departures",
-     "value": 1.7392016995337711,
+     "label": "95% of departures lie below this",
+     "value": 1.739202,
      "unit": "\u00b0C",
      "n": 0,
      "ci95": null,
@@ -168,7 +168,7 @@
     {
      "key": "q1",
      "label": "the most any station's season departed from its own usual",
-     "value": 3.965824250252016,
+     "value": 3.965824,
      "unit": "\u00b0C",
      "n": 0,
      "ci95": null,

@@ -28,6 +28,8 @@ from typing import TYPE_CHECKING, Final
 import numpy as np
 import polars as pl
 
+from migratlas.constants import CLAIM_BAND  # the band the ledger publishes in
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -36,7 +38,6 @@ log = logging.getLogger(__name__)
 SCHEMA_VERSION: Final = 2
 
 # The band the aerial claim survives in, matching `reports/findings.py` and `phase2a_timing`.
-CLAIM_BAND: Final[tuple[int, int]] = (37, 50)
 
 # Effort thresholds for the marine footprint rule. 0.8 is what Phase 1b published and 0.6/0.95 are
 # its pre-registered sensitivity checks; 0.0 is the one this module adds, and the one that matters

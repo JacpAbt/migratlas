@@ -159,6 +159,27 @@ def ingest_sabap2() -> None:
     print(f"run {result.run_id}")
 
 
+@ingest_app.command("sabap2-request")
+def ingest_sabap2_request(
+    *,
+    notify: Annotated[bool, typer.Option(help="Email when the archive is ready.")] = False,
+) -> None:
+    """Mint a fresh GBIF download key for SABAP2, and print it with what to do next.
+
+    Not part of an ingest run: `ingest sabap2` reads the pinned `DOWNLOAD_KEY`, because a result
+    cites the exact records it was computed on rather than "SABAP2 as of whenever". This exists
+    because that pin expires -- GBIF keeps a prepared download for six months -- and the function
+    that replaces it had no command, so the documented remedy was reachable only by calling Python
+    by hand. That is the class of gap TASKS #37 was opened for.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    key = sabap2.request_download(notify=notify)
+    print(f"download key: {key}")
+    print(f"status: {sabap2.API}/occurrence/download/{key}")
+    print("When it reports SUCCEEDED, put the key in sabap2.DOWNLOAD_KEY with its new DOI and")
+    print("row count, and keep the superseded one documented beside it.")
+
+
 @ingest_app.command("sabap1")
 def ingest_sabap1() -> None:
     """Land the first Southern African Bird Atlas (SURVEY_INDEX, terrestrial).

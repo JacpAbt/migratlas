@@ -15,14 +15,13 @@ from typing import TYPE_CHECKING, Final
 import numpy as np
 import polars as pl
 
+from migratlas.constants import MIN_COVERAGE, MIN_NIGHTS
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.metrics import breaks
 from migratlas.metrics.phenology import Season, passage_quantiles
 from migratlas.reports.phase1 import (
     AUTUMN,
     LATITUDE_BANDS,
-    MIN_COVERAGE,
-    MIN_NIGHTS,
     MIN_YEARS,
     SPRING,
     load_conus_nights,

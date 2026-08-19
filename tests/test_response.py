@@ -14,8 +14,8 @@ from pathlib import Path
 import polars as pl
 import pytest
 
+from migratlas.constants import CLAIM_BAND
 from migratlas.reports import response
-from migratlas.reports.phase2a_timing import CLAIM_BAND
 
 REPO = Path(__file__).resolve().parents[1]
 PUBLISHED = REPO / "web" / "public" / "response.json"

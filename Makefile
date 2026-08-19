@@ -209,10 +209,6 @@ phase1c-report:  ## Speed-weighting control and precipitation-screening test
 report-phase3f:  ## The response-model ladder: pooling, the wind, its form, the model class
 	$(RUN) migratlas report phase3f
 
-.PHONY: gpu-check
-gpu-check:  ## Confirm a CUDA device is visible from inside the venv
-	$(RUN) python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"
-
 # ---------------------------------------------------------------------------
 # Frontend (runs on Windows -- node lives there)
 # ---------------------------------------------------------------------------
@@ -256,6 +252,10 @@ ingest-sabap2:  ## SABAP2 atlas cards -> SURVEY_INDEX (terrestrial, southern hem
 .PHONY: ingest-bbs
 ingest-bbs:  ## Breeding Bird Survey route counts -> SURVEY_INDEX (terrestrial, 1966-2025)
 	$(RUN) migratlas ingest bbs
+
+.PHONY: ingest-sabap2-request
+ingest-sabap2-request:  ## Mint a fresh GBIF download key for SABAP2 (the pinned one expires)
+	$(RUN) migratlas ingest sabap2-request
 
 .PHONY: ingest-sabap1
 ingest-sabap1:  ## SABAP1 atlas cards -> SURVEY_INDEX (terrestrial, southern hemisphere)

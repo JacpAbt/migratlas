@@ -140,17 +140,6 @@ def names_for(http: httpx.Client, usage_key: int, *, language: str = "eng") -> T
     )
 
 
-def vernacular_name(http: httpx.Client, usage_key: int, *, language: str = "eng") -> str | None:
-    """Best common name for a taxon, or ``None`` if GBIF has none.
-
-    Prefers the curated ``vernacularName`` on the species record. The full
-    vernacularNames list is a poor substitute: it pools every regional name ever
-    published, so picking by frequency yields "Maneater" for the great white shark and
-    "Kelt" — a post-spawning condition, not a species — for Atlantic salmon.
-    """
-    return names_for(http, usage_key, language=language).vernacular or None
-
-
 _QUALIFIER = re.compile(r"[\[(][^\])]*[\])]")
 
 
