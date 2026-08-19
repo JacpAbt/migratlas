@@ -90,3 +90,30 @@ across ~17 units); species-level stories (the unit is the survey-segment, delibe
 anything about vertical movement (depth centroids exist in the machinery but this registration
 binds only the latitude estimand — a depth companion would be its own note); anything about the
 four fragmented surveys, whose absence is a statement about their sampling, not their fish.
+
+---
+
+## Results — run 2026-08-19
+
+**The stop condition fired, and the bottleneck moved.** The gear salvage did what §1 measured
+it would: seventeen surveys hold a qualifying single-gear segment. But the registration's
+driver requirement — twenty years of the survey's own in-situ surface temperature *inside the
+segment* — cut those seventeen to **ten**: NS-IBTS-1, NEUS-Fall, NEUS-Spring, SCS-SUMMER, EBS,
+GMEX-Summer, GMEX-Fall and the three SEUS seasons. The European units mostly measure fish
+without recording the water (GSL, SWC-IBTS, NS-IBTS-3, SP-NORTH, EVHOE all fell here, not on
+gear). Ten is below §5's floor of twelve, so **the regression was not run and this phase
+publishes as a coverage statement**, exactly as registered.
+
+- **Predictions 1–3 — UNGRADEABLE**, by the stop condition's own design: no regression ran,
+  so no heterogeneity test, no warming slope, no depth interaction was ever computed. The
+  per-unit estimands above were logged in passing and are not interpreted.
+- **Prediction 4 — GRADED FALSE.** Ten units entered, against the predicted fifteen. The
+  salvage beat Phase 3a's seven, but the prediction bound to the wrong bottleneck: gear was
+  solved, temperature coverage was not.
+
+**What this licenses next, and what it does not.** The path this note explicitly reserved —
+gridded SST (OISST, verified no-auth, 1981–present) sampled over each survey's footprint as
+the warming driver — would restore most of the temperature-poor units, at the cost this note
+named: a reanalysis of the shelf instead of the water the fish were in. That trade now has a
+measured price (seven units) and belongs to its own registration, written like this one,
+before any pairing is looked at. Nothing in this run is carried over as a prior.
