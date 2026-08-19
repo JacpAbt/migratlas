@@ -269,6 +269,29 @@ def fit(fitted: list[OxygenUnit]) -> Fit:
     )
 
 
+def leverage(fitted: list[OxygenUnit]) -> list[tuple[str, float, float, bool]]:
+    """Leave-one-unit-out on the oxygen slope. UNREGISTERED, and labelled so wherever it prints.
+
+    §3 did not ask for this, so it is a diagnostic and can never be a graded prediction -- run after
+    the result was seen, it could only ever confirm what somebody hoped. It is here because
+    publishing a slope over sixteen points without asking whether one of them carries it would be
+    indefensible, and because one unit's driver is fourteen times the median: GSL-N at -29.4 mmol
+    m-3 per decade against -2.0.
+
+    That extreme is real rather than an artefact. The Gulf of St Lawrence deep channel is among the
+    best-documented cases of shelf deoxygenation anywhere and the ingested values agree -- 47 to 147
+    mmol m-3 at 245 m, far below every other unit. A true extreme with high leverage is still high
+    leverage, which is the whole point.
+    """
+    out = []
+    for index, unit in enumerate(fitted):
+        rest = [u for position, u in enumerate(fitted) if position != index]
+        one = fit(rest)
+        clear = abs(one.oxygen_slope) > one.oxygen_ci and one.oxygen_slope < 0
+        out.append((unit.segment.survey, one.oxygen_slope, one.oxygen_ci, clear))
+    return out
+
+
 def _grade(passed: bool) -> str:  # noqa: FBT001 -- a grade is a boolean by nature
     return "GRADED TRUE" if passed else "GRADED FALSE"
 
@@ -378,6 +401,36 @@ def render() -> str:
         ]
     else:
         out += ["", "  3, 4 and 6: UNGRADEABLE -- the calibration gate closed above."]
+
+    fragile = [name for name, _, _, clear in leverage(fitted) if not clear]
+    out += [
+        "",
+        "=" * 92,
+        "UNREGISTERED DIAGNOSTIC: leave one unit out",
+        "=" * 92,
+        "Not a graded prediction and it cannot become one -- §3 did not ask for it. Run because a",
+        "positive slope over sixteen points needs asking whether one of them carries it.",
+        "",
+        f"  {'dropped':22s} {'oxygen slope':>14s} {'+/-':>8s} {'still clear':>12s}",
+    ]
+    for name, slope, interval, clear in leverage(fitted):
+        out.append(f"  {name:22s} {slope:+14.4f} {interval:8.4f} {'yes' if clear else 'NO':>12s}")
+    out += [
+        "",
+        f"  units whose removal breaks the result: {len(fragile)}"
+        + (f" -- {', '.join(fragile)}" if fragile else " (none)"),
+    ]
+    if fragile:
+        out += [
+            "",
+            "  So the registered predictions grade true and the association rests on "
+            f"{len(fragile)} of {len(fitted)}",
+            "  units. That does not unmake the grade -- the registration is what it is -- and it",
+            "  does decide what may be claimed: this phase reports an association carried by one",
+            "  sea,",
+            "  and does not enter the ledger as a positive finding. A successor registration that",
+            "  wants it has to say in advance how it will treat leverage.",
+        ]
 
     out += [
         "",

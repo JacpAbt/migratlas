@@ -182,3 +182,110 @@ carries anything the thermometer did not.
   the word *measured* is not available for any number below.
 - **Anything outside sixteen northern shelf surveys**, and nothing at all about the individuals,
   the timing, or the other realms.
+
+## Results — run 2026-08-19
+
+**Every registered prediction that could be graded came back true, and an unregistered diagnostic
+then decided what the phase may claim. Read both halves or neither.**
+
+### The units
+
+Sixteen entered, thirteen went to coverage (AI, DFO-QCS, GOA, GSL-S, IE-IGFS, NEUS-Fall,
+NEUS-Spring, NIGFS, Nor-BTS, PT-IBTS, SCS-FALL, WCANN, WCTRI). GSL-S went for the reason §1
+predicted: no recorded haul depth anywhere in its segment, refused by Phase 3e's guard rather than
+handed a substituted depth. NEUS-Fall and NEUS-Spring went for the reason §1 also predicted — the
+46-year run Phase 3e recovered ends in 2008 and holds sixteen years inside this window.
+
+| survey | years | lat/decade | O₂/decade | read at | haul | SST/decade |
+| --- | --- | --- | --- | --- | --- | --- |
+| BITS-1 | 25 | −0.184 | **+3.569** | 41.2 m | 38 m | +0.646 |
+| BITS-4 | 22 | −0.104 | −0.433 | 35.7 m | 35 m | +0.513 |
+| EBS | 27 | +0.008 | −5.153 | 77.6 m | 75 m | +0.360 |
+| EVHOE | 24 | −0.035 | −5.060 | 133.1 m | 130 m | +0.108 |
+| GMEX-Fall | 32 | −0.024 | −1.434 | 30.9 m | 33 m | +0.245 |
+| GMEX-Summer | 31 | −0.043 | −1.434 | 30.9 m | 35 m | +0.245 |
+| GSL-N | 27 | +0.167 | **−29.434** | 244.9 m | 254 m | +0.309 |
+| NS-IBTS-1 | 28 | −0.002 | −1.950 | 61.1 m | 66 m | +0.349 |
+| NS-IBTS-3 | 28 | +0.072 | −2.130 | 69.0 m | 70 m | +0.348 |
+| SCS-SUMMER | 28 | +0.039 | −8.872 | 120.0 m | 122 m | +0.588 |
+| SEUS-fall | 27 | −0.120 | −0.650 | 8.1 m | 8 m | −0.397 |
+| SEUS-spring | 27 | −0.006 | −0.650 | 8.1 m | 8 m | −0.397 |
+| SEUS-summer | 27 | −0.030 | −0.650 | 8.1 m | 8 m | −0.397 |
+| SP-NORTH | 26 | −0.026 | −6.335 | 147.4 m | 145 m | +0.221 |
+| SWC-IBTS-1 | 28 | +0.052 | −2.637 | 120.0 m | 125 m | +0.187 |
+| SWC-IBTS-4 | 27 | +0.281 | −2.877 | 120.0 m | 125 m | +0.162 |
+
+The depths read are the model's own levels, not the requested ones, and they track the haul depths
+closely — 8.1 m for a survey fishing at 8, 244.9 m for one fishing at 254. Oxygen values are
+physically sensible without being asked to be: 200–247 mmol m⁻³ in the warm shallow SEUS water,
+283–316 in Arctic Nor-BTS, and 47–147 at 245 m in GSL-N, which is the Gulf of St Lawrence's
+documented deep hypoxia arriving unprompted.
+
+### The calibrations
+
+- **C1 — deoxygenation is present. PASSES.** Median unit oxygen trend **−2.040 mmol m⁻³ per
+  decade**. Fifteen of sixteen units lose oxygen; BITS-1 alone gains it.
+- **C2 — the oxygen behaves like oxygen. PASSES.** Warming and oxygen correlate at **−0.155**
+  across units, the sign solubility requires.
+
+**A criticism of C2 that belongs here rather than in a later apology.** §3 set its bar at *negative*,
+with no magnitude, so a correlation of −0.155 over sixteen units passes a test that had roughly even
+odds of passing on noise. It confirms no sign error in the depth choice or the aggregation, which was
+its stated job, and it is much weaker evidence that the sampling is sound than the word "calibration"
+suggests. A successor should set a magnitude in advance.
+
+### The registered fit
+
+`latitude_trend ~ 1 + oxygen_trend + warming_trend`, both drivers standardised, weights and the Q
+test as Phase 3b defines them.
+
+| | |
+| --- | --- |
+| units | 16 |
+| Cochran's Q | **112.9** against a bar of 25.0 → heterogeneous |
+| oxygen slope | **−0.054 ± 0.041** °latitude per decade per sd |
+| warming slope | **−0.004 ± 0.047** |
+
+- **Prediction 1 — GRADED TRUE.** C1 passes.
+- **Prediction 2 — GRADED TRUE.** C2 passes, with the caveat above.
+- **Prediction 3 — GRADED TRUE.** The oxygen coefficient is negative and its interval clears zero:
+  the seas losing more oxygen are the seas whose fish moved further poleward.
+- **Prediction 4 — GRADED TRUE.** Oxygen's interval excludes zero while warming's includes it,
+  reproducing Phase 3e's null (`+0.039 ± 0.179` there, `−0.004 ± 0.047` here on a standardised
+  scale) with oxygen carrying what the thermometer did not.
+- **Prediction 5 — GRADED TRUE.** Sixteen units against a predicted fifteen.
+- **Prediction 6 — NOT RUN.** `nppv` is a registered *secondary* and is deliberately not fitted
+  while what the primary driver means is unresolved. Running it now would be looking for a better
+  number after the first one arrived fragile.
+
+### The unregistered diagnostic, and it decides what this may claim
+
+§3 asked for no leverage check, so what follows is a diagnostic and can never be a graded
+prediction — run after the result was seen, it could only ever confirm a hope. It is here because
+one unit's driver is **fourteen times the median** (−29.4 against −2.0) and publishing a slope over
+sixteen points without asking whether one of them carries it would be indefensible.
+
+**It does.** Dropping GSL-N takes the oxygen slope from −0.054 ± 0.041 to **−0.021 ± 0.030**, no
+longer clear of zero. Every other unit's removal leaves the result standing, most of them barely
+moving it. One of sixteen units carries the association.
+
+And GSL-N is not an artefact to be excluded. The Gulf of St Lawrence deep channel is among the
+best-documented shelf deoxygenation cases anywhere, and the ingested values agree with that
+literature without having been asked to. It is a true extreme with high leverage, which is worse
+than a bad point rather than better: there is nothing to clean, and the fit still rests on it.
+
+**So the conclusion is narrower than the grades.** Sixteen shelf seas, and the only one where
+deoxygenation is dramatic is also one where the fish moved poleward. That is worth having measured
+and it is not "oxygen sorts the movers from the stayers". **This phase does not enter the public
+ledger as a positive finding.** A successor that wants the claim has to register in advance how it
+will treat leverage — a robust estimator, a pre-specified influence bound, or more units — and
+should set C2 a magnitude while it is there.
+
+### What Phase 3e's question still gets from this
+
+Not an answer, and something. Phase 3e established that warming does not sort the movers and asked
+what does; this establishes that oxygen at fishing depth is *readable* at this scale, that a
+biogeochemical reanalysis reproduces known deoxygenation at the median unit, and that across these
+sixteen units the oxygen association is not distinguishable from the leverage of one extreme sea.
+The remaining non-thermal candidates the addendum named — primary production, fishing pressure,
+marine-heatwave days, climate velocity — are untouched by this and none is refuted by it.
