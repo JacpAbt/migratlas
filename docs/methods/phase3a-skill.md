@@ -146,3 +146,50 @@ working as registered: a trend (Phase 1's −0.56 d/decade) and interannual pred
 different properties, and this design just measured the difference. The skill map the site
 publishes will show mostly empty cells with a scatter of autumn stations, which is the honest
 picture.
+
+## Results — the marine half, run 2026-08-18
+
+**A stop condition fires first.** Of the surveys with twenty or more years, eight of fifteen
+carried a gear change inside their span and were excluded by §2's comparability rule — the
+trend fit absorbs a step with a break term, but the registered model class has none. Seven
+units survived, below §5's floor of ten, so **the marine half publishes as a coverage
+statement, not a skill map**: the honest sentence is that FISHGLOB's long surveys mostly
+changed their instruments mid-record, and a skill claim built on the seven that did not would
+be a claim about survey administration.
+
+- **Prediction 3 — GRADED FALSE.** Haul temperature carries significant positive skill in 1 of
+  7 fitted units, against the registered bar of half — and 1 is exactly the chance bar for
+  seven units. Median skill +0.010. The water the fish were actually in does not predict next
+  year's cross-taxa centroid anomaly at these surveys, at interannual scale, through this
+  model class.
+
+The response construction is worth restating because it is where this fit could have lied:
+each species' anomaly is referenced to its own train-era mean (a full-period reference would
+leak the test years into the response, the same leak the harness closes for covariates), and
+each survey's temperature columns were fixed blind — both where the survey measured both for
+twenty years, surface alone otherwise.
+
+## Results — the herd half, run 2026-08-18
+
+- **Prediction 4 — UNGRADEABLE, and the reason is the registration's own arithmetic.** §1
+  counted 17 and 13 usable years from Phase 1h's animal-year coverage, but the fit's unit is
+  the herd-year that survives *every* registered requirement at once: ten or more animals, a
+  winter snow value, and a green-up value — and the NDVI record ends at 2022, two years before
+  the elk record does. The intersection leaves 9 elk years and 10 reindeer years, both below
+  the fifteen-year floor §2 set. No rule was bent to force a grade: the herds' cells on the
+  skill map publish as "insufficient years", which is exactly the honest empty cell the design
+  said they were included to license — reached by exclusion rather than by a null fit.
+
+## The five predictions, closed
+
+1. **FALSE** — spring timing indistinguishable from chance (11 of 140, bar 11).
+2. **FALSE** — spring's median station predicts worse than climatology (−0.031 vs +0.005).
+3. **FALSE** — marine skill in 1 of 7 units, and the coverage stop condition fired first:
+   the marine half is a coverage statement, not a map.
+4. **UNGRADEABLE** — the registered requirements intersect below the registered floor.
+5. **TRUE** — part of apparent local skill is the shared modes (+0.007 marginal vs +0.018
+   solo), the constraint #55's pre-registration inherits.
+
+One prediction survived, three died, one could not be asked — and the one that survived is a
+warning, not a victory. The atlas the site will draw is mostly empty, with a scatter of autumn
+radar stations above chance. For a project whose argument is honesty, that map is the argument.

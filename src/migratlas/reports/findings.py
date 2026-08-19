@@ -249,6 +249,46 @@ DISPLACEMENT_BIAS: Final = _domains(
     ),
 )
 
+SKILL_SPARSE_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "The continental-US radar network, and only it: the one region on Earth with three "
+        "decades of nightly aerial biomass at this density. Nothing here speaks for anywhere "
+        "the instrument does not stand.",
+    ),
+    temporal=(
+        "bounded",
+        "One era split, fixed in advance: trained on the first seven-tenths of each station's "
+        "years, tested once on the rest. Thirty-one years total, so the test era is roughly a "
+        "decade and a station's verdict rests on five to ten test points.",
+    ),
+    taxonomic=(
+        "addressed",
+        "Deliberately unattributed: the radar measures aerial biomass, and a skill claim about "
+        "'birds' would smuggle in the attribution Phase 1c refused.",
+    ),
+    environmental=(
+        "bounded",
+        "Seven covariates, fixed before any fit: season and pre-season temperature, season "
+        "precipitation, and four climate modes. A driver outside that list -- wind fields, "
+        "insect emergence, land use -- had no chance to show skill, and the claim is scoped to "
+        "the list.",
+    ),
+    detectability=(
+        "addressed",
+        "The 2012 instrument step sits inside every station's training era, and the mode-only "
+        "comparison (prediction 5) measures how much apparent skill is shared signal rather "
+        "than local weather: +0.007 marginal against +0.018 solo where the modes already "
+        "predict.",
+    ),
+    phenological=(
+        "bounded",
+        "The response is the season's median passage day through fixed calendar windows -- the "
+        "same windows every phase uses, with the same blindness to a season that moves its "
+        "own boundaries.",
+    ),
+)
+
 MARINE_NULL_BIAS: Final = _domains(
     geographic=(
         "bounded",
@@ -976,6 +1016,8 @@ def collect() -> list[Finding]:
         )
     )
 
+    findings.append(_skill_finding())
+
     displacement = _displacement_finding()
     if displacement is not None:
         findings.append(displacement)
@@ -1270,5 +1312,79 @@ def _autumn_advance(first_year: int, last_year: int) -> Finding:
             "Survives four break specifications, a mid-winter placebo and a permutation null.",
             "Unchanged when the speed weighting is removed from the metric.",
             "Unchanged when the non-bird nights are deleted outright.",
+        ],
+    )
+
+
+def _skill_finding() -> Finding:
+    """Phase 3a's product: the predictability of timing, measured and mostly absent.
+
+    Recomputed from the lake on every build like every other finding -- the fits are the
+    registered era-split hindcasts, deterministic under their fixed seed, so this is slow on
+    purpose rather than cached into staleness.
+    """
+    from migratlas.reports import phase3a  # noqa: PLC0415 -- sibling, heavy
+
+    results = phase3a.aerial()
+    seasons = {v.season: v for v in phase3a.verdicts(results)}
+    spring, autumn = seasons["spring"], seasons["autumn"]
+    return Finding(
+        key="skill-sparse",
+        realm=Realm.AERIAL.value,
+        taxon_scope=TaxonScope.UNATTRIBUTED.value,
+        evidence_type=EvidenceType.FLUX.value,
+        bias=SKILL_SPARSE_BIAS,
+        plain=(
+            "Knowing the weather and the big climate patterns barely helps predict when next "
+            "year's migration will pass -- only a scattered few autumn stations beat guessing "
+            "the average."
+        ),
+        matters=(
+            "Migration timing has shifted over thirty years, and it is tempting to assume the "
+            "shift makes each year predictable. It does not: a trend and year-to-year "
+            "predictability are different properties, and every forecast this site will ever "
+            "draw is licensed only where this map is not empty."
+        ),
+        plain_caveat=(
+            "Tested with one deliberately simple model and seven registered inputs; a cleverer "
+            "model might do better, but it would be answering a different, unregistered "
+            "question."
+        ),
+        claim=(
+            f"Interannual passage-timing skill is absent at most stations: spring significant "
+            f"at {spring.significant} of {spring.stations} (chance bar {spring.binomial_bar}), "
+            f"autumn at {autumn.significant} of {autumn.stations} (chance bar "
+            f"{autumn.binomial_bar}), with median test-era skill "
+            f"{spring.median_skill:+.3f} and {autumn.median_skill:+.3f}."
+        ),
+        value=(
+            f"autumn {autumn.significant}/{autumn.stations} stations above chance; spring "
+            f"{spring.significant}/{spring.stations} at the chance bar"
+        ),
+        scope=(
+            f"{autumn.stations} US weather-radar stations, 1995-2025, era-split ridge against "
+            "the training climatology with a per-station year-shuffle null; covariates fixed "
+            "in docs/methods/phase3a-skill.md before any fit."
+        ),
+        caveat=(
+            "One registered model class, one covariate list, one split: absence of skill here "
+            "is absence under those registered choices, not a theorem about the atmosphere. "
+            "Part of what skill exists is the shared climate modes wearing local clothes -- "
+            "where the modes alone predict, the weather's marginal contribution halves -- and "
+            "the marine and herd halves of the same design produced no skill map at all: the "
+            "surveys mostly changed gear mid-record, and the herds' usable years fall below "
+            "the design's own floor. The empty cells are statements about the data and the "
+            "design, published at the same rank as the filled ones."
+        ),
+        method="docs/methods/phase3a-skill.md",
+        direction="limit",
+        supporting=[
+            "Two of the design's own pre-registered predictions were graded false and stand "
+            "recorded in the method note -- spring, the literature's temperature-forced "
+            "season, is indistinguishable from the false-positive rate.",
+            "Autumn's count clears its exact binomial chance bar, so the sparse map is not "
+            "noise promoted to a story.",
+            "The fits reproduced byte-for-byte across two runs under the registered seed, "
+            "after a data gap forced the only rerun.",
         ],
     )

@@ -99,6 +99,16 @@ export const VIEWS: Record<string, View> = {
       "All three records at once. The two that turned out to agree are the two on opposite " +
       "sides of the equator; the one that did not is the one measuring dates instead of places.",
   },
+  "skill-sparse": {
+    // The same band as the headline claim, because the two are the same instrument asked
+    // opposite questions: the trend is real, and the year-to-year forecast mostly is not.
+    center: [-96, 42],
+    zoom: 3.1,
+    layers: ["aerial-passage"],
+    because:
+      "The same stations as the headline claim, asked the opposite question: not whether " +
+      "timing drifted over decades, but whether any single year can be predicted. Mostly, no.",
+  },
   "displacement-flat": {
     // Both herds at once: Ya Ha Tinda in the Canadian Rockies and the Svalbard archipelago sit
     // 4,700 km apart, and their great-circle midpoint is in the Canadian high Arctic -- so the
