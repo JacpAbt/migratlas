@@ -594,6 +594,15 @@ def report_phase3a() -> None:
     print(phase3a.render())
 
 
+@report_app.command("phase3c")
+def report_phase3c() -> None:
+    """The four registered coupling edges, run once, no novelty claimed."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3c  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3c.render())
+
+
 @report_app.command("phase3b")
 def report_phase3b() -> None:
     """The marine heterogeneity fits, on the longest single-gear segments, run once."""
