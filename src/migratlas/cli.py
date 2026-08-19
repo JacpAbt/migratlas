@@ -509,6 +509,28 @@ def build_sandbox(
     print(f"sandbox -> {out} ({size / 1024:.1f} KiB)")
 
 
+@app.command("build-response")
+def build_response(
+    out: Annotated[Path, typer.Option(help="Where to write the response document.")] = Path(
+        "web/public/response.json"
+    ),
+) -> None:
+    """Publish the fitted response as a dial, with its envelope and its two refusals.
+
+    Reads the fit `anthropogenic-share` already rests on; estimates nothing new. The envelope is
+    measured from within-station anomalies, and a dial position outside it is refused rather than
+    extrapolated.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import response  # noqa: PLC0415 -- reads the lake, only this command
+
+    computed = response.collect()
+    size = response.write(out, computed)
+    dials = ", ".join(knob.key for knob in computed.knobs)
+    print(f"{len(computed.knobs)} dial(s) ({dials}), {len(computed.refusals)} refusal(s)")
+    print(f"response -> {out} ({size / 1024:.1f} KiB)")
+
+
 @app.command("build-findings")
 def build_findings(
     out: Annotated[Path, typer.Option(help="Where to write the findings document.")] = Path(

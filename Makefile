@@ -94,6 +94,10 @@ detectability:  ## Where change could ever be measured -> web/public/detectabili
 sandbox:  ## Recompute the analysis with each safeguard off -> web/public/sandbox.json
 	$(RUN) migratlas build-sandbox
 
+.PHONY: response
+response:  ## Publish the fitted response as a dial with its envelope -> web/public/response.json
+	$(RUN) migratlas build-response
+
 .PHONY: provenance
 provenance:  ## Regenerate docs/data/PROVENANCE.md from the source registry
 	$(RUN) migratlas catalog provenance

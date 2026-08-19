@@ -1,0 +1,209 @@
+{
+ "schema_version": 1,
+ "knobs": [
+  {
+   "key": "pre-season-warmth",
+   "question": "What if the June-July before migration were warmer?",
+   "why": "This is the response function `anthropogenic-share` is built on, read forwards. It was fitted within station across thirty years, with wind support alongside it so the thermal term is not credited with the wind's work, and it is the S in the S x W arithmetic that attributes half the observed advance to human forcing. Reading it forwards is not predicting: it says what a warmer pre-season has been followed by, not what next year will bring.",
+   "plain_why": "Warmer Junes have been followed by earlier autumn migration. This says by how much -- not what will happen next year.",
+   "claim": "anthropogenic-share",
+   "source": "reports.phase2a_timing.sensitivities().per_degree",
+   "default": "plus-1",
+   "variants": [
+    {
+     "key": "minus-1-5",
+     "label": "1.5 \u00b0C cooler",
+     "value": 0.9877751290066686,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.24810387992453956,
+     "note": "The fitted response, read at 1.5 \u00b0C. Inside the range the fit is informed over, -1.86 to +1.74 \u00b0C."
+    },
+    {
+     "key": "minus-1",
+     "label": "1 \u00b0C cooler",
+     "value": 0.6585167526711124,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.1654025866163597,
+     "note": "The fitted response, read at 1 \u00b0C. Inside the range the fit is informed over, -1.86 to +1.74 \u00b0C."
+    },
+    {
+     "key": "minus-0-5",
+     "label": "0.5 \u00b0C cooler",
+     "value": 0.3292583763355562,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.08270129330817985,
+     "note": "The fitted response, read at 0.5 \u00b0C. Inside the range the fit is informed over, -1.86 to +1.74 \u00b0C."
+    },
+    {
+     "key": "unchanged",
+     "label": "as it was",
+     "value": 0.0,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.0,
+     "note": "No change asked for, so no shift implied."
+    },
+    {
+     "key": "plus-0-5",
+     "label": "0.5 \u00b0C warmer",
+     "value": -0.3292583763355562,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.08270129330817985,
+     "note": "The fitted response, read at 0.5 \u00b0C. Inside the range the fit is informed over, -1.86 to +1.74 \u00b0C."
+    },
+    {
+     "key": "plus-1",
+     "label": "1 \u00b0C warmer",
+     "value": -0.6585167526711124,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.1654025866163597,
+     "note": "The published sensitivity itself."
+    },
+    {
+     "key": "plus-1-5",
+     "label": "1.5 \u00b0C warmer",
+     "value": -0.9877751290066686,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.24810387992453956,
+     "note": "The fitted response, read at 1.5 \u00b0C. Inside the range the fit is informed over, -1.86 to +1.74 \u00b0C."
+    }
+   ]
+  },
+  {
+   "key": "wind-support",
+   "question": "What if the season's winds were more favourable?",
+   "why": "The obvious mechanism, and it measures nothing. Wind support is the wind's component along each station's own migration heading, and its fitted coefficient is indistinguishable from zero -- while being essentially uncorrelated with temperature within station, so this is a real null rather than the thermal term having absorbed it. The dial is published *because* it is flat: a panel that only carried drivers that worked would be a panel selecting for the story.",
+   "plain_why": "Helpful winds are the obvious explanation, and in this record they do nothing measurable. The dial shows a driver that turned out flat.",
+   "claim": "anthropogenic-share",
+   "source": "reports.phase2a_timing.sensitivities().per_wind",
+   "default": "plus-1",
+   "variants": [
+    {
+     "key": "minus-1",
+     "label": "1 m/s less favourable",
+     "value": 0.24281423003092456,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.38502678528260886,
+     "note": "The fitted response, read at 1 m/s. Inside the range the fit is informed over, -1.22 to +1.18 m/s."
+    },
+    {
+     "key": "minus-0-5",
+     "label": "0.5 m/s less favourable",
+     "value": 0.12140711501546228,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.19251339264130443,
+     "note": "The fitted response, read at 0.5 m/s. Inside the range the fit is informed over, -1.22 to +1.18 m/s."
+    },
+    {
+     "key": "unchanged",
+     "label": "as it was",
+     "value": 0.0,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.0,
+     "note": "No change asked for, so no shift implied."
+    },
+    {
+     "key": "plus-0-5",
+     "label": "0.5 m/s more favourable",
+     "value": -0.12140711501546228,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.19251339264130443,
+     "note": "The fitted response, read at 0.5 m/s. Inside the range the fit is informed over, -1.22 to +1.18 m/s."
+    },
+    {
+     "key": "plus-1",
+     "label": "1 m/s more favourable",
+     "value": -0.24281423003092456,
+     "unit": "days",
+     "n": 78,
+     "ci95": 0.38502678528260886,
+     "note": "The published sensitivity itself."
+    }
+   ]
+  }
+ ],
+ "refusals": [
+  {
+   "key": "beyond-the-envelope",
+   "question": "What if the pre-season were 2 \u00b0C warmer than usual?",
+   "naive": "The fitted line continues, and would read -1.32 days.",
+   "evidence": [
+    {
+     "key": "q0",
+     "label": "the least any station's season departed from its own usual",
+     "value": -3.572706653225808,
+     "unit": "\u00b0C",
+     "n": 0,
+     "ci95": null,
+     "note": ""
+    },
+    {
+     "key": "q0.05",
+     "label": "5th percentile of departures",
+     "value": -1.8636639994959685,
+     "unit": "\u00b0C",
+     "n": 0,
+     "ci95": null,
+     "note": ""
+    },
+    {
+     "key": "q0.95",
+     "label": "95th percentile of departures",
+     "value": 1.7392016995337711,
+     "unit": "\u00b0C",
+     "n": 0,
+     "ci95": null,
+     "note": ""
+    },
+    {
+     "key": "q1",
+     "label": "the most any station's season departed from its own usual",
+     "value": 3.965824250252016,
+     "unit": "\u00b0C",
+     "n": 0,
+     "ci95": null,
+     "note": ""
+    }
+   ],
+   "verdict": "Withheld, and the number above is shown only to say why it is not published. Ninety per cent of the departures this response was fitted over lie between -1.86 and +1.74 \u00b0C from a station's own usual, and 2 \u00b0C is outside that. The record does reach +3.97 \u00b0C once, at one station in one year -- which is the reason the bound is the band, not the extreme: a limit one observation can move is not a limit. A straight line extended past its data is arithmetic rather than evidence, and it is the most common way a range-shift projection goes wrong, which is why every forecast this project plans carries a novelty mask.",
+   "method": "docs/methods/phase2a-timing.md"
+  },
+  {
+   "key": "not-a-forecast",
+   "question": "So will this coming autumn be early?",
+   "naive": "A sensitivity plus a seasonal weather forecast looks like it should answer that.",
+   "evidence": [
+    {
+     "key": "stations-with-skill",
+     "label": "radar stations where autumn timing beats chance",
+     "value": 20.0,
+     "unit": "of 143",
+     "n": 143,
+     "ci95": null,
+     "note": "Phase 3a, era-split against a per-station year-shuffle null."
+    },
+    {
+     "key": "rehearsal",
+     "label": "blind years the full pipeline was graded on",
+     "value": 8.0,
+     "unit": "years",
+     "n": 8,
+     "ci95": null,
+     "note": "Phase 3d stood at June 1st of 2017-2024 with the forecast actually issued that month. The forecast half carried real signal; the pipeline still failed to beat chance."
+    }
+   ],
+   "verdict": "Not published, and the refusal is this project's own. The pipeline that would answer it was built, graded on eight blind years, and refused its licence: seasonal forecasts do carry temperature signal, and the migration prediction on top of them still did not beat chance. A sensitivity says what warmth has been followed by. It does not say what next year holds, and the difference between those two sentences is the whole reason this panel exists.",
+   "method": "docs/methods/phase3d-rehearsal.md"
+  }
+ ]
+}
