@@ -66,8 +66,15 @@ export class Clock {
     return this.#timer !== null;
   }
 
-  /** Advance `minutesPerTick` of simulated time on each animation frame. */
-  play(minutesPerTick = 8): void {
+  /**
+   * Advance `minutesPerTick` of simulated time on each animation frame.
+   *
+   * The default paces a year at roughly ninety seconds. It was 8 -- an eighteen-minute year --
+   * and the weekly layers stepped once every twenty-one seconds, which read as a Play button
+   * that did nothing: the defect #53 reported was not a broken control but an imperceptible
+   * pace.
+   */
+  play(minutesPerTick = 96): void {
     if (this.#timer !== null) return;
     const tick = (): void => {
       const total = this.#state.minute + minutesPerTick;
