@@ -79,3 +79,42 @@ Everything Phase 3b's §6 lists, plus one more: the water the fish were actually
 the sea surface as satellites and ships estimate it at 0.25°; bottom trawls live at the bottom.
 The calibration bounds this substitution where it can be bounded and the caveat carries it
 where it cannot.
+
+---
+
+## Results — run 2026-08-19
+
+**Correction first, per house rule.** The first run crashed in the cross-unit solver: one
+survey (GSL-S) has no recorded haul depths in its segment, its median depth was NaN, and NaN
+poisons a least-squares solve silently until it does not. The guard added — a unit without its
+registered depth estimand goes to coverage, since the depth-interaction regression cannot admit
+it — was written after the per-unit trends had been logged but **before any cross-unit result
+or calibration verdict existed**; nothing the predictions grade had been seen. Both marine
+runners carry the guard now.
+
+**The run: 18 units fitted, 11 coverage rows.**
+
+- **Prediction 1 — GRADED TRUE.** The calibration passes: OISST and in-situ warming correlate
+  at +0.216 across the ten dual-record units. Modest, positive, and enough to interpret what
+  follows — the satellite tracks the shelf's direction of change.
+- **Prediction 2 — GRADED TRUE, and loudly.** Cochran's Q is **235.7 against a chi-square bar
+  of 27.6**. The heterogeneity `marine-null` glimpsed is real at any reasonable standard:
+  these eighteen seas are not one population with noise, they are genuinely doing different
+  things. The 2026-07 framing is vindicated as a tested claim.
+- **Prediction 3 — GRADED FALSE.** Warming water does not predict moving fish: the cross-unit
+  slope is +0.039 ± 0.179 °latitude per °C (both per decade), indistinguishable from zero.
+  The literature's expectation — faster-warming seas shift faster — fails across these units.
+- **Prediction 4 — GRADED FALSE, with the sign reversed.** The warming × depth interaction is
+  +0.176 ± 0.131: not merely non-negative but nominally positive — deeper surveys show, if
+  anything, *more* latitude response per degree, the opposite of the shallow-forces-horizontal
+  expectation. Reported exactly as the graded failure it is. If the reversal deserves pursuit,
+  it gets its own registration; it does not get a story here.
+- **Prediction 5 — GRADED TRUE.** Eighteen units against the predicted fifteen: the
+  era-clipping salvage did what §1 measured it would.
+
+**What this settles, and what it opens.** The marine question that began with `marine-null` in
+July now has its answer at a unit count that carries it: the seas differ enormously, and
+simple warming — measured either by the water the fish were in or by the satellite above it —
+does not explain who moves. Whatever sorts the movers from the stayers, it is not the
+thermometer alone. That is a finding-shaped result, and whether it enters the public ledger is
+the next decision, not an automatic step.

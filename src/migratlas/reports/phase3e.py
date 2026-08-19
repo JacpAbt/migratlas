@@ -57,6 +57,28 @@ def _oisst_by_unit_year() -> pl.DataFrame:
     )
 
 
+def _warming(
+    oisst: pl.DataFrame, insitu: pl.DataFrame, name: str, start: int, end: int
+) -> tuple[float, tuple[float, float] | None] | None:
+    """One unit's OISST warming trend, and its calibration pair where both waters exist.
+
+    None when the OISST series is shorter than the segment floor; the pair is None for the
+    units that never recorded their own water.
+    """
+    water = oisst.filter(pl.col("survey") == name, pl.col("year").is_between(start, end)).sort(
+        "year"
+    )
+    if water.height < MIN_SEGMENT_YEARS:
+        return None
+    sst_trend, _ = _trend_per_decade(water["year"].to_numpy(), water["sst"].to_numpy())
+    both = water.join(insitu.filter(pl.col("survey") == name), on=["survey", "year"]).sort("year")
+    if both.height < MIN_SEGMENT_YEARS:
+        return sst_trend, None
+    insitu_trend, _ = _trend_per_decade(both["year"].to_numpy(), both["insitu_sst"].to_numpy())
+    matched, _ = _trend_per_decade(both["year"].to_numpy(), both["sst"].to_numpy())
+    return sst_trend, (matched, insitu_trend)
+
+
 def units_3e() -> tuple[list[Unit], list[str], Calibration]:
     """Every qualifying unit under the 3e rules, the coverage rows, and the calibration."""
     from migratlas.metrics import range as range_metrics  # noqa: PLC0415 -- report sibling
@@ -111,27 +133,21 @@ def units_3e() -> tuple[list[Unit], list[str], Calibration]:
             continue
         shifts = latitude["per_decade"].to_numpy().astype(float)
 
-        water = oisst.filter(
-            pl.col("survey") == str(name), pl.col("year").is_between(start, segment.end)
-        ).sort("year")
-        if water.height < MIN_SEGMENT_YEARS:
+        warming = _warming(oisst, insitu, str(name), start, segment.end)
+        if warming is None:
             coverage.append(str(name))
             continue
-        sst_trend, _ = _trend_per_decade(water["year"].to_numpy(), water["sst"].to_numpy())
+        sst_trend, pair = warming
+        if pair is not None:
+            calibration_pairs.append(pair)
 
-        both = water.join(insitu.filter(pl.col("survey") == str(name)), on=["survey", "year"]).sort(
-            "year"
-        )
-        if both.height >= MIN_SEGMENT_YEARS:
-            insitu_trend, _ = _trend_per_decade(
-                both["year"].to_numpy(), both["insitu_sst"].to_numpy()
-            )
-            oisst_trend_matched, _ = _trend_per_decade(
-                both["year"].to_numpy(), both["sst"].to_numpy()
-            )
-            calibration_pairs.append((oisst_trend_matched, insitu_trend))
-
-        depth = float(np.median(inside["site_depth_m"].drop_nulls().to_numpy()))
+        depths = inside["site_depth_m"].drop_nulls().to_numpy()
+        if depths.size == 0:
+            # The registered regression needs the depth interaction; a survey that never
+            # recorded haul depth cannot enter it, and NaN poisons the solver silently.
+            coverage.append(str(name))
+            continue
+        depth = float(np.median(depths))
         fitted.append(
             Unit(
                 segment=segment,

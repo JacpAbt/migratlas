@@ -189,7 +189,13 @@ def units() -> tuple[list[Unit], list[str]]:
                     bottom["sea_bottom_temperature"].to_numpy(),
                 )
 
-        depth = float(np.median(inside["site_depth_m"].drop_nulls().to_numpy()))
+        depths = inside["site_depth_m"].drop_nulls().to_numpy()
+        if depths.size == 0:
+            # The registered regression needs the depth interaction; a survey that never
+            # recorded haul depth cannot enter it, and NaN poisons the solver silently.
+            coverage.append(str(name))
+            continue
+        depth = float(np.median(depths))
         fitted.append(
             Unit(
                 segment=segment,
