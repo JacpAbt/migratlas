@@ -1189,3 +1189,34 @@ sources:
       band are fetched -- this is a verification source for two variables over one region, not
       a mirror of the archive.
     added: 2026-08-19
+
+  - id: oisst
+    title: NOAA OISST v2.1 — monthly mean sea surface temperature, 1981–present
+    realm: marine
+    landing_page: https://psl.noaa.gov/data/gridded/data.noaa.oisst.v2.highres.html
+    download_uri: https://downloads.psl.noaa.gov/Datasets/noaa.oisst.v2.highres/sst.mon.mean.nc
+    # A U.S. Government work; NCEI/PSL request citation of Huang et al. 2021. The download URL
+    # was verified live (HTTP 200, ~2.1 GB netCDF) before this entry was written -- the CPR
+    # entry taught that lesson.
+    licence: Public domain (U.S. Government work, 17 U.S.C. §105)
+    licence_url: https://www.weather.gov/disclaimer
+    citation: >-
+      Huang, B., Liu, C., Banzon, V., Freeman, E., Graham, G., Hankins, B., Smith, T. & Zhang,
+      H.-M. (2021). Improvements of the Daily Optimum Interpolation Sea Surface Temperature
+      (DOISST) Version 2.1. Journal of Climate, 34, 2923-2939. Data from NOAA PSL.
+    redistribution:
+      allowed: true
+      attribution_required: false
+      commercial_use: true
+      notes: >-
+        Public domain; NOAA requests citation as a courtesy and the provenance travels in
+        derived_from regardless.
+    # An estimate of the sea's skin temperature. Nothing here has a heartbeat.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      An optimum-interpolation product of satellite and in-situ observations at 0.25 degrees:
+      the sea surface as estimated, not the bottom water a trawl fishes. Phase 3e uses it only
+      as footprint-mean trends, gated by a calibration against the haul temperatures where both
+      exist (phase3e-marine-oisst.md §3), and that judgement lives there rather than here. The
+      file updates monthly and carries no checksum; the raw copy is the fetch date's snapshot.
+    added: 2026-08-19

@@ -603,6 +603,15 @@ def report_phase3c() -> None:
     print(phase3c.render())
 
 
+@report_app.command("phase3e")
+def report_phase3e() -> None:
+    """The marine question with OISST, calibrated against the haul thermometers, run once."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3e  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3e.render())
+
+
 @report_app.command("phase3d")
 def report_phase3d() -> None:
     """The dress rehearsal: the full two-stage pipeline graded on 2017-2024, run once."""
@@ -610,6 +619,21 @@ def report_phase3d() -> None:
     from migratlas.reports import phase3d  # noqa: PLC0415 -- heavy, and only this command
 
     print(phase3d.render())
+
+
+@app.command("ingest-oisst")
+def ingest_oisst() -> None:
+    """Land footprint-mean OISST per survey unit (driver samples, gridded).
+
+    Phase 3e's warming driver: the satellite's estimate of the surface over the water each
+    survey fished, licensed by phase3e-marine-oisst.md and gated there by a calibration
+    against the haul thermometers.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.drivers import oisst  # noqa: PLC0415 -- geo extra, only this command
+
+    result = oisst.ingest()
+    print(f"{result.rows} footprint-months -> {result.path}")
 
 
 @app.command("ingest-seas5")

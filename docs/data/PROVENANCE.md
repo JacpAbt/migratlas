@@ -44,6 +44,7 @@ each source carries its own terms.
 | [ERA5-Land monthly means — snow depth at the herd ranges](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land-monthly-means) | driver only | `terrestrial` | CC BY 4.0 | permitted |
 | [Continuous Plankton Recorder — western North Atlantic occurrences and counts, 1958–2022](https://www.bco-dmo.org/dataset/765141) | driver only | `marine` | CC BY 4.0 | permitted |
 | [ECMWF SEAS5 seasonal forecasts — June-issued monthly means over the radar band](https://cds.climate.copernicus.eu/datasets/seasonal-monthly-single-levels) | driver only | `aerial` | CC BY 4.0 | permitted |
+| [NOAA OISST v2.1 — monthly mean sea surface temperature, 1981–present](https://psl.noaa.gov/data/gridded/data.noaa.oisst.v2.highres.html) | driver only | `marine` | Public domain (U.S. Government work, 17 U.S.C. §105) | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -612,3 +613,21 @@ Route-sampled, not gridded: tows follow commercial shipping lanes that moved ove
 **Caveats**
 
 These are the forecasts the world actually received, fetched from the archive rather than recomputed, which is the whole point: phase3d-rehearsal.md grades what a June issue could have said about the coming autumn, so nothing here may be bias-corrected against observations from after each issue date. Ensemble monthly means at 1 degree; the June issue's lead months 1-6 cover June through November. Only the rehearsal's issue month and band are fetched -- this is a verification source for two variables over one region, not a mirror of the archive.
+
+## NOAA OISST v2.1 — monthly mean sea surface temperature, 1981–present
+
+- **id** `oisst`
+- **drivers only**, no evidence rows · **realm** `marine`
+- **landing page** https://psl.noaa.gov/data/gridded/data.noaa.oisst.v2.highres.html
+- **licence** [Public domain (U.S. Government work, 17 U.S.C. §105)](https://www.weather.gov/disclaimer)
+- **redistribution** permitted
+  - Public domain; NOAA requests citation as a courtesy and the provenance travels in derived_from regardless.
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> Huang, B., Liu, C., Banzon, V., Freeman, E., Graham, G., Hankins, B., Smith, T. & Zhang, H.-M. (2021). Improvements of the Daily Optimum Interpolation Sea Surface Temperature (DOISST) Version 2.1. Journal of Climate, 34, 2923-2939. Data from NOAA PSL.
+
+**Caveats**
+
+An optimum-interpolation product of satellite and in-situ observations at 0.25 degrees: the sea surface as estimated, not the bottom water a trawl fishes. Phase 3e uses it only as footprint-mean trends, gated by a calibration against the haul temperatures where both exist (phase3e-marine-oisst.md §3), and that judgement lives there rather than here. The file updates monthly and carries no checksum; the raw copy is the fetch date's snapshot.

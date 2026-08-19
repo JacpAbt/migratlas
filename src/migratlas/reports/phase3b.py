@@ -21,9 +21,9 @@ log = logging.getLogger(__name__)
 MIN_SEGMENT_YEARS: Final = 20
 MIN_SPECIES_YEARS: Final = 15
 MIN_UNITS: Final = 12
+"""Below this the phase publishes as a coverage statement and the regression is not run."""
 PREDICTED_MINIMUM_UNITS: Final = 15
 """Prediction 4's registered number: the salvage must beat Phase 3a's seven by at least this."""
-"""Below this the phase publishes as a coverage statement and the regression is not run."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +62,24 @@ class Regression:
     temp_ci: float
     interaction_slope: float
     interaction_ci: float
+
+
+def gear_by_year(restricted: pl.DataFrame) -> pl.DataFrame:
+    """A year's gear: the one with the most hauls, ties broken lexicographically.
+
+    Registered in phase3e-marine-oisst.md §1 after measuring the segments twice returned
+    different Baltic answers: `mode().first()` orders ties unstably, and a segmentation that
+    changes between runs is an instrument measuring itself.
+    """
+    return (
+        restricted.select("year", gear=pl.col("protocol").str.split("gear=").list.last())
+        .group_by("year", "gear")
+        .agg(hauls=pl.len())
+        .sort(["year", "hauls", "gear"], descending=[False, True, False])
+        .group_by("year", maintain_order=True)
+        .agg(gear=pl.col("gear").first())
+        .sort("year")
+    )
 
 
 def longest_segment(year_gear: list[tuple[int, str]]) -> Segment | None:
@@ -119,12 +137,7 @@ def units() -> tuple[list[Unit], list[str]]:
         restricted, footprint = range_metrics.consistent_footprint(survey)
         if footprint.cells < range_metrics.MIN_CELLS:
             continue
-        year_gear = (
-            restricted.select("year", gear=pl.col("protocol").str.split("gear=").list.last())
-            .group_by("year")
-            .agg(gear=pl.col("gear").mode().first())
-            .sort("year")
-        )
+        year_gear = gear_by_year(restricted)
         segment = longest_segment([(int(r["year"]), str(r["gear"])) for r in year_gear.to_dicts()])
         if segment is None:
             coverage.append(str(name))
