@@ -258,3 +258,71 @@ would have silently wrecked the leg.
   with a radar record, and it is a worse description of British butterfly phenology than the
   literature this scheme already supports. Anyone wanting that should read the scheme's own reports.
 - **Not enough to license a forecast.** Nothing here is projectable and nothing here is asked to be.
+
+## Results — the ingest gate, run 2026-08-20
+
+Landed: **627,752 flight periods, 3,144 sites, 59 taxa, 1973–2021.** From 830,132 published rows,
+189,739 pooled-brood rows were dropped as §2 required, and 12,641 more for sites whose position the
+scheme withholds.
+
+### Grading
+
+**Prediction 1 — TRUE.** The archive carries `MEAN_FLIGHT_DATE` per species-site-year exactly as the
+catalogue advertised, and the Open Government Licence is stated in the supporting document inside
+the archive as well as on the record.
+
+**Prediction 2 — FALSE, on one of its three clauses.**
+
+| clause | floor | actual | |
+| --- | --- | --- | --- |
+| sites clearing fifteen years within 1995–2021 | 800 | **550** | fails |
+| taxa clearing fifteen years within 1995–2021 | 25 | 56 | holds |
+| phenology rows joining a published coordinate | 90% | **98.0%** | holds |
+
+**§5's stop condition therefore fires: the ingest is reported as a coverage statement and no leg
+is computed.** That is what the registration says happens, and it happens.
+
+### The correction that goes with it
+
+The prediction was specified on the wrong quantity, and this is recorded rather than edited away.
+
+§2 fixes the unit as a **site-species-generation**. Prediction 2 then set its floor on *sites*,
+which is not the unit and is not what the leg needs — a site carries many species and some species carry
+two generations. Measured on the unit the note actually declared: **10,941 units clear fifteen
+years inside the registered window**, out of 88,230. The aerial leg this is being compared against has 143.
+
+So the honest position is uncomfortable in a specific way: the data is ample, and the prediction that
+failed was a badly chosen proxy for whether it is ample. Both halves of that are true and neither
+cancels the other. Proceeding anyway would make the stop condition decorative — the whole point of
+writing one down is that it binds when it is inconvenient — so the leg waits for a successor
+registration that sets the floor on the unit, and that registration inherits this measurement rather
+than pretending to be blind to it.
+
+### Four things the fetch found that the catalogue did not say
+
+- **The span starts in 1973, not 1976.** Both the catalogue page and the supporting document say the
+  scheme runs from 1976; the file carries 91 rows across three earlier years. Trivial in volume and
+  worth writing down, because a note claiming 1976 beside data starting in 1973 is the kind of small
+  discrepancy that makes a reader doubt the rest.
+- **Both CSVs are Windows-1252, not UTF-8.** One byte proves it: a curly apostrophe in "RSPB
+  Chafey's Weymouth", 81.7 MB into the phenology file. Polars reports `invalid utf-8 sequence` with
+  no indication of where or why, and a reader that had guessed latin-1 would have turned that
+  character into a different one and carried on.
+- **One name in fifty-nine will not resolve bare.** `Limenitis camilla`, the White Admiral, matches
+  only its *genus* in the GBIF Backbone — matchType `HIGHERRANK`, which the matcher refuses rather
+  than accepting a genus for a species. Appending the authority resolves it at confidence 100 to key
+  7712938, the same key the Backbone's own accepted name `Ladoga camilla` gives. Recorded in
+  `ingest/ukbms.SYNONYMS` with the check that was run, as `sabap1` does for exactly this case.
+- **The publisher's withheld sites propagate without any code deciding it.** 12,641 rows name a site
+  whose position the scheme does not publish, and because `SURVEY_INDEX` requires a non-null
+  longitude and latitude they cannot be written at all. Another organisation's sensitivity judgement
+  enforced by this project's schema, which is the first time that has happened here.
+
+### What the successor needs
+
+1. **A floor on the unit**, and 10,941 is the number to set it against.
+2. **The ERA5 sample at UK coordinates**, which does not exist yet and which §5 already makes a stop
+   condition of its own — the leg needs a measured seasonal slope and no literature constant
+   substitutes for it.
+3. **The 1995–2021 window and the migrant species list stay as registered.** Neither was chosen
+   after seeing anything, and re-opening them now would cost the thing this convention buys.

@@ -229,6 +229,10 @@ report-phase3g:  ## Oxygen against poleward movement, gated by two calibrations
 report-phase3f:  ## The response-model ladder: pooling, the wind, its form, the model class
 	$(RUN) migratlas report phase3f
 
+.PHONY: ingest-ukbms
+ingest-ukbms:  ## UK butterfly flight-period phenology: the fourth leg's response
+	$(RUN) migratlas ingest-ukbms
+
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
 	$(RUN) migratlas report phase3h

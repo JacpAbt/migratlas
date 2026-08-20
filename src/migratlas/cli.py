@@ -260,6 +260,21 @@ def ingest_jrc_gsw() -> None:
     print(f"run {result.run_id}")
 
 
+@app.command("ingest-ukbms")
+def ingest_ukbms() -> None:
+    """Land UK butterfly flight-period phenology (SURVEY_INDEX): the first insect series here.
+
+    Registered in phase1j-fourth-leg.md before the fetch, as the fourth leg of the transfer test --
+    a timing record that is phenological like the radar and is not radar. Needs the geo extra for
+    the British National Grid transform, and drops any site whose position the scheme withholds.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.ingest import ukbms  # noqa: PLC0415 -- one command needs it
+
+    result = ukbms.ingest()
+    print(f"{result.rows} flight periods -> {result.path}")
+
+
 @app.command("ingest-cpr")
 def ingest_cpr() -> None:
     """Land the CPR's western North Atlantic as one aggregate plankton series (SURVEY_INDEX).

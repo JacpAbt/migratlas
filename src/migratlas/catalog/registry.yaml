@@ -1356,7 +1356,11 @@ sources:
     # judgement that every taxon in a national scheme is.
     default_sensitivity: low
     caveats: >-
-      **The day columns count from 1 April, not from 1 January** — the archive's own documentation
+      Landed 2026-08-20: 627,752 rows, 3,144 sites, 59 taxa. **The span is 1973-2021, not the
+      1976-2021 the catalogue and the supporting document both state** -- 91 rows sit in three
+      earlier years. **Both CSVs are Windows-1252**, proved by a single curly apostrophe 81.7 MB in,
+      and polars reports only `invalid utf-8 sequence` without saying where. **The day columns count
+      from 1 April, not from 1 January** — the archive's own documentation
       says so, with "20 = 20th April" as its example, and reading them as a day of year puts every
       date about ninety days early while looking entirely plausible. A derived product, not counts.
       Phenology is computed only from the weekly standard transects, so the Wider Countryside squares
