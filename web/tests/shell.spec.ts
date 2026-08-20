@@ -373,6 +373,50 @@ test("every published claim has a view, and every view names a real layer", asyn
   expect(problems.keys, "the arrival claim is not in the ledger").toContain(ARRIVAL_KEY);
 });
 
+test("every published claim has exactly one chapter, and every chapter is real", async ({ page }) => {
+  /*
+    ADR 0013 asked for this guard by name: the chapters are the argument, so a claim with no chapter
+    is a result the book has nowhere to put. Two failures it has to catch, and they fail differently
+    -- an unplaced claim disappears from the book silently, while a claim placed twice appears twice
+    and reads as two findings.
+  */
+  await arrive(page);
+  const keys = await page.evaluate(async () => {
+    const ledger = (await fetch("findings.json").then((r) => r.json())) as {
+      findings: { key: string }[];
+    };
+    return ledger.findings.map((f) => f.key);
+  });
+
+  const { CHAPTERS, chapterOf } = await import("../src/lib/story");
+
+  for (const key of keys) {
+    const chapter = chapterOf(key);
+    expect(chapter, `no chapter carries the claim "${key}"`).toBeTruthy();
+    const homes = CHAPTERS.filter((c) => c.keys.includes(key)).map((c) => c.slug);
+    expect(homes, `"${key}" is in more than one chapter`).toHaveLength(1);
+  }
+
+  // And nothing is promised that the ledger does not publish: a key here with no finding behind it
+  // would render a chapter with a hole in it rather than fail.
+  for (const chapter of CHAPTERS) {
+    for (const key of chapter.keys) {
+      expect(keys, `chapter "${chapter.slug}" names a claim "${key}" that is not published`).toContain(
+        key,
+      );
+    }
+    expect(chapter.title, `chapter "${chapter.slug}" has no title`).toBeTruthy();
+    expect(chapter.tab, `chapter "${chapter.slug}" has no tab label`).toBeTruthy();
+    // The tab is the word on the thumb; the mock found seven full titles ran past the foot of the
+    // book, so this holds the shorthand to something a tab can actually carry.
+    expect(chapter.tab.length, `chapter "${chapter.slug}" has a tab label too long to set`)
+      .toBeLessThanOrEqual(12);
+  }
+
+  const slugs = CHAPTERS.map((c) => c.slug);
+  expect(new Set(slugs).size, "two chapters share a slug").toBe(slugs.length);
+});
+
 /**
  * Small screens.
  *

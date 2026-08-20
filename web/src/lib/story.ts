@@ -158,6 +158,75 @@ export function exploreView(available: string[]): View {
 }
 
 /**
+ * The chapters, and which claims each one carries.
+ *
+ * ADR 0013 made the chapters the argument rather than a menu, and asked for this table to live
+ * beside `VIEWS` with the guards extended to it: a published claim with no chapter fails the build.
+ * The order is the ledger's own logic and not a ranking -- what changed, what did not, what cannot
+ * be seen, what can be predicted, why it changed -- with an introduction before any claim and the
+ * world in the back pocket.
+ *
+ * `tab` is deliberately not `title`. A thumb tab carries a word and the page carries the sentence;
+ * seven full titles set vertically ran past the foot of the book in the mock ADR 0015 records.
+ *
+ * `anthropogenic-share` sits in *Why it changed* rather than in *What changed*, which is the one
+ * departure from ADR 0013's own list and is the amendment that ADR made room for: the attribution
+ * is the answer to why, and the chapter that holds it also holds the mechanism dial and the
+ * forecast's novelty mask.
+ */
+export interface Chapter {
+  /** Stable identity, and what goes in the URL. */
+  slug: string;
+  /** The heading on the page this opens. */
+  title: string;
+  /** The word on the thumb tab. */
+  tab: string;
+  /** Ledger keys, in the order the argument makes them. Empty for the two chapters that carry no
+      claim of their own -- the way in, and the way out. */
+  keys: string[];
+}
+
+export const CHAPTERS: readonly Chapter[] = [
+  { slug: "how-to-read", title: "How to read this", tab: "How to read", keys: [] },
+  {
+    slug: "what-changed",
+    title: "What changed",
+    tab: "Changed",
+    keys: ["autumn-advance", "composition-stable"],
+  },
+  {
+    slug: "what-did-not",
+    title: "What did not",
+    tab: "Did not",
+    keys: ["marine-null", "atlas-no-net-change", "displacement-flat"],
+  },
+  {
+    slug: "cannot-see",
+    title: "What we cannot see",
+    tab: "Cannot see",
+    keys: ["coverage-bias", "transfer-fails"],
+  },
+  {
+    slug: "can-be-predicted",
+    title: "What can be predicted",
+    tab: "Predicted",
+    keys: ["skill-sparse"],
+  },
+  { slug: "why-it-changed", title: "Why it changed", tab: "Why", keys: ["anthropogenic-share"] },
+  { slug: "the-world", title: "The world", tab: "The world", keys: [] },
+];
+
+/** The chapter carrying a claim, or undefined -- which the build guard turns into a failure. */
+export function chapterOf(key: string): Chapter | undefined {
+  return CHAPTERS.find((chapter) => chapter.keys.includes(key));
+}
+
+/** A chapter by its slug, for reading one out of the URL. */
+export function chapterAt(slug: string | null): Chapter | undefined {
+  return CHAPTERS.find((chapter) => chapter.slug === slug);
+}
+
+/**
  * The claim a visitor arrives on.
  *
  * The autumn advance, because it is the only claim in the ledger with a complete audited chain
