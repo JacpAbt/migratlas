@@ -65,8 +65,12 @@ function lines(): GeoJSON.FeatureCollection {
     const points: [number, number][] = [];
     for (let lon = -180; lon <= 180; lon += STEP) {
       const t = (lon + 180) / 360;
+      // Scaled by cos(latitude) for the coastline's reason: a degree of latitude covers
+      // 1/cos(latitude) more screen than a degree of longitude, so an unscaled wobble ripples a
+      // parallel twice as far at 60 degrees as the meridians beside it.
       // Clamped, so a wobbled parallel near the top of the range cannot cross the pole.
-      points.push([lon, Math.max(-89, Math.min(89, lat + wander(t, seed)))]);
+      const squash = Math.cos((lat * Math.PI) / 180);
+      points.push([lon, Math.max(-89, Math.min(89, lat + wander(t, seed) * squash))]);
     }
     add(points);
     seed += 1;

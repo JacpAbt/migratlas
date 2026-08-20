@@ -941,6 +941,69 @@ test("the drawn coastline is bounded, and hands over to the surveyed one", async
   expect(untouched, "no island was small enough to be left alone").toBeGreaterThan(0);
 });
 
+test("the drawn shore wobbles the same amount in both directions, at every latitude", async () => {
+  // The bound above is in degrees; the promise in the module's docstring is in pixels. Those are
+  // the same thing only near the equator, because a degree of longitude is cos(latitude) times
+  // shorter than a degree of latitude. One degree amplitude on both axes therefore drew a wobble
+  // stretched north-south by 1/cos(latitude) -- 5.1 across the Svalbard bands and 7.0 above 80
+  // degrees, measured on the geometry this repository ships, before the fix. On any locally
+  // conformal projection that is vertical smearing rather than a pen, and it was worst exactly
+  // where the Svalbard herd layer lives.
+  //
+  // So this asserts what a degree bound cannot: that the excursion is round in *ground* distance.
+  // The tolerance is wide because each ring carries its own sine phase and a band's vertices are
+  // not evenly spread through it. What it catches is the systematic growth, which reached sevenfold
+  // and now stays inside a third either way.
+  const land = JSON.parse(
+    await readFile("public/basemap/land.geojson", "utf8"),
+  ) as GeoJSON.FeatureCollection;
+  const drawn = drawnCoast(land);
+
+  const rings: number[][][] = [];
+  for (const feature of land.features) {
+    const geometry = feature.geometry;
+    if (geometry.type === "Polygon") rings.push(...geometry.coordinates);
+    else if (geometry.type === "MultiPolygon") rings.push(...geometry.coordinates.flat());
+  }
+
+  const KM_PER_DEGREE = 111.195;
+  const bands = new Map<number, { east: number; north: number; n: number }>();
+  let cursor = 0;
+  for (const ring of rings.filter((points) => points.length >= 4)) {
+    const lons = ring.map(([lon]) => lon!);
+    const lats = ring.map(([, lat]) => lat!);
+    const small =
+      Math.max(...lons) - Math.min(...lons) < MIN_EXTENT &&
+      Math.max(...lats) - Math.min(...lats) < MIN_EXTENT;
+    for (let pass = 0; pass < (small ? 1 : 2); pass += 1) {
+      const stroke = (drawn.features[cursor]!.geometry as GeoJSON.LineString).coordinates;
+      cursor += 1;
+      if (small) continue;
+      for (const [index, [lon, lat]] of stroke.entries()) {
+        const [trueLon, trueLat] = ring[index] as [number, number];
+        const band = Math.min(80, Math.floor(Math.abs(trueLat) / 10) * 10);
+        const seen = bands.get(band) ?? { east: 0, north: 0, n: 0 };
+        seen.east += Math.abs(lon! - trueLon) * KM_PER_DEGREE * Math.cos((trueLat * Math.PI) / 180);
+        seen.north += Math.abs(lat! - trueLat) * KM_PER_DEGREE;
+        seen.n += 1;
+        bands.set(band, seen);
+      }
+    }
+  }
+
+  // The high-latitude bands are the ones that were wrong and the ones the herd layers need.
+  for (const band of [60, 70, 80]) {
+    const seen = bands.get(band);
+    expect(seen, `no coastline vertices in the ${band}-degree band`).toBeTruthy();
+    const ratio = seen!.north / seen!.east;
+    expect(ratio, `at ${band}N the wobble is ${ratio.toFixed(2)}x taller than wide`).toBeLessThan(2);
+    expect(
+      ratio,
+      `at ${band}N the wobble is ${(1 / ratio).toFixed(2)}x wider than tall`,
+    ).toBeGreaterThan(0.5);
+  }
+});
+
 test("the panel and the map never disagree about what is drawn", async ({ page }) => {
   // A small viewport, and it costs this test nothing: what is asserted is layout properties and
   // checkbox state, neither of which depends on how many pixels MapLibre fills. What it saves is
