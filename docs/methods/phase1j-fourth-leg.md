@@ -287,12 +287,13 @@ is computed.** That is what the registration says happens, and it happens.
 The prediction was specified on the wrong quantity, and this is recorded rather than edited away.
 
 §2 fixes the unit as a **site-species-generation**. Prediction 2 then set its floor on *sites*,
-which is not the unit and is not what the leg needs — a site carries many species and some species carry
-two generations. Measured on the unit the note actually declared: **10,941 units clear fifteen
-years inside the registered window**, out of 88,230. The aerial leg this is being compared against has 143.
+which is not the unit and is not what the leg needs — a site carries many species and some
+species carry two generations. Measured on the unit the note actually declared: **10,941 units
+clear fifteen years inside the registered window**, out of 88,230. The aerial leg this is being
+compared against has 143.
 
-So the honest position is uncomfortable in a specific way: the data is ample, and the prediction that
-failed was a badly chosen proxy for whether it is ample. Both halves of that are true and neither
+So the honest position is uncomfortable in a specific way: the data is ample, and the prediction
+that failed was a badly chosen proxy for whether it is ample. Both halves of that are true and neither
 cancels the other. Proceeding anyway would make the stop condition decorative — the whole point of
 writing one down is that it binds when it is inconvenient — so the leg waits for a successor
 registration that sets the floor on the unit, and that registration inherits this measurement rather
