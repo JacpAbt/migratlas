@@ -773,6 +773,16 @@ h1.hand {
   z-index: 3;
   overflow: hidden;
   pointer-events: none;
+  /*
+    Paper of its own, for the same reason `.leaf__face` has some.
+
+    `.page` carries no background -- the real pages are transparent and the spread's paper shows
+    through them, which works because they share its stacking context and the grain multiplies
+    against it. `z-index` here makes a new stacking context, so a cloned page inside it had nothing
+    beneath for its grain to blend with and painted the raw texture instead: the covered page went
+    pale during every turn.
+  */
+  background: var(--paper);
 }
 
 .stale--left {
