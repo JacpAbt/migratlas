@@ -1,7 +1,11 @@
 # ADR 0013 — The scroll and the chapters
 
 **Status:** accepted as direction · 2026-08-19, with one question deliberately left open behind a
-measurement. This is the build-time ADR that ADR 0012 promised: the backend it waited for is
+measurement. **Decision 1's register is superseded by
+[ADR 0014](0014-the-field-sketchbook-not-the-chart.md)** (2026-08-20): a field sketchbook rather
+than an old chart, and ignorance drawn as a surveyor's record rather than as an invented creature.
+The decision text below is left as written -- decisions 2 to 5 stand, and a superseded one is
+recorded rather than edited away. This is the build-time ADR that ADR 0012 promised: the backend it waited for is
 finished — nine findings, thirty-one sources, five phase-3 method notes with every prediction
 graded — so the presentation arc now has a complete story to present.
 
