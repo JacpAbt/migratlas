@@ -555,6 +555,21 @@ async function turnTo(index: number): Promise<void> {
   const back = face.querySelector<HTMLElement>(".leaf__back");
   front?.replaceChildren(lifted.cloneNode(true));
 
+  /*
+    The half the leaf is about to land on keeps its old page until it gets there.
+
+    Turning forward lifts the right page and lays it over the left one, so the left page is the one
+    being *covered*. Updating the spread here is required -- it is what makes the newly revealed
+    right page correct -- but it also flipped the left page to the new chapter while the leaf was
+    still travelling towards it, so the page underneath turned into the page about to land on it.
+    A copy of the outgoing page is parked on that half for the length of the turn instead.
+  */
+  const stale = document.querySelector<HTMLElement>("[data-stale]");
+  if (stale) {
+    stale.className = forward ? "stale stale--left" : "stale stale--right";
+    stale.replaceChildren(arriving.cloneNode(true));
+  }
+
   open = index;
   fill(open);
   tabs();
@@ -584,6 +599,8 @@ async function turnTo(index: number): Promise<void> {
     cast?.classList.remove("is-sweeping");
     front?.replaceChildren();
     back?.replaceChildren();
+    // The leaf has landed, so the real page underneath is the right one to show again.
+    stale?.replaceChildren();
   };
   face.addEventListener("animationend", settle, { once: true });
   const ms = Number.parseFloat(token("--draw-slow")) || 900;

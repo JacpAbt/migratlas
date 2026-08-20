@@ -35,18 +35,30 @@
   */
   --plate-paper: color-mix(in srgb, var(--paper) 55%, var(--paper-sunken));
   --plate-tipped: color-mix(in srgb, var(--paper-sunken) 85%, var(--ink) 4%);
+
+  /*
+    How much paper stays in a tab's stock, and the accents need their own figure.
+
+    The dark palette's accents are *lighter* than its page -- rust is #a3441f by day and #ffa870 by
+    night -- so the same mix that tints a cream page darker tints a near-black one much lighter, and
+    the ink on it fell to 3.74:1 against a 4.5 floor. Eased for the dark surfaces only, below.
+  */
+  --mix-stock: 68%;
+  --mix-accent: 68%;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-surface="day"]) {
     --plate-paper: color-mix(in srgb, var(--paper) 86%, var(--pencil));
     --plate-tipped: color-mix(in srgb, var(--paper) 78%, var(--pencil));
+    --mix-accent: 86%;
   }
 }
 
 :root[data-surface="night"] {
   --plate-paper: color-mix(in srgb, var(--paper) 86%, var(--pencil));
   --plate-tipped: color-mix(in srgb, var(--paper) 78%, var(--pencil));
+  --mix-accent: 86%;
 }
 
 body {
@@ -574,36 +586,94 @@ h1.hand {
     Tied to the book's height, with a ceiling and a floor.
 
     Seven vertical labels stack to **38 times** the font size -- measured, not guessed: 548px of
-    stack at 14.42px. At a fixed 0.95rem that stack was exactly the book height on a 620px-tall
-    window, with no margin at all, and overflowed on anything shorter while the book kept shrinking
-    around it. Dividing by 38 would pin it back to zero slack by construction, so this divides by 42
-    for about a tenth of the column in reserve. The ceiling is the size that was asked for; the floor
-    is where a label stops being worth reading at all.
+    stack at 14.42px. A fixed size therefore overflowed on a short window while the book kept
+    shrinking around it. Dividing by 38 would pin it to zero slack by construction, so this divides
+    by 42 for about a tenth of the column in reserve. The ceiling is what binds on a large monitor,
+    which is where the labels still read small, so raising it is the part that was actually asked
+    for; the floor is where a label stops being worth reading at all.
   */
-  font-size: clamp(0.7rem, calc(var(--book-h) / 42), 0.95rem);
+  font-size: clamp(0.7rem, calc(var(--book-h) / 42), 1.05rem);
   writing-mode: vertical-rl;
-  /* Tight along the stacking axis: at 15.2px the seven labels want the whole book height, and the
-     padding is the only part of that not carrying text. */
-  padding: 0.42em 0.44em;
-  color: var(--ink-soft);
-  background: color-mix(in srgb, var(--paper) 84%, var(--paper-sunken));
-  border: 1px solid var(--rule);
+  /* Tight along the stacking axis, because that is the axis that runs out; generous across it, so
+     the tab reaches further out of the book and reads as a tab rather than a sliver. */
+  padding: 0.42em 0.72em;
+  color: var(--ink);
+  /*
+    Coloured stock, from the palette's own hues and nothing else.
+
+    Real index tabs are different colours, and `--tint` is set per tab below out of tokens that
+    already exist -- mixed into the page's paper rather than used at full strength, which is what
+    keeps seven of them from shouting. Mixing against `--paper` also means they invert with the
+    surface for free: on the night page the same mix lands as a dark tinted stock rather than a
+    pastel one.
+  */
+  --tint: var(--pencil);
+  /*
+    How much paper is left in the stock. 68% rather than 76%: at the weaker mix the neighbouring
+    tabs separated by only about 28 units of RGB, which is not a colour difference anyone would
+    call one. Per-tab, because one hue needs less of itself -- see the yellow below.
+  */
+  --mix: var(--mix-stock);
+  background: color-mix(in srgb, var(--paper) var(--mix), var(--tint));
+  border: 1px solid color-mix(in srgb, var(--tint) 45%, var(--rule));
   border-left: none;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 7px 7px 0;
   cursor: pointer;
   box-shadow: 2px 2px 3px rgb(0 0 0 / 12%);
 }
 
+/*
+  Seven hues that the stylesheet already had. Ordered so no two neighbours share one: the greys sit
+  at the ends, where the introduction and the back pocket are, and the three saturated ones are
+  spread through the middle where the claims are.
+*/
+.tab:nth-child(1) {
+  --tint: var(--pencil);
+}
+
+.tab:nth-child(2) {
+  --tint: var(--rust);
+  --mix: var(--mix-accent);
+}
+
+.tab:nth-child(3) {
+  --tint: var(--line-counterfactual);
+}
+
+/*
+  The yellow is the one hue lighter than the page in both surfaces, so at the common mix it dragged
+  the stock towards the ink and `--ink` on it measured 4.33:1 -- under the 4.5 floor this project
+  holds text to. Less of it, and the contrast comes back without losing the hue.
+*/
+.tab:nth-child(4) {
+  --tint: var(--detect-short);
+  --mix: 84%;
+}
+
+.tab:nth-child(5) {
+  --tint: var(--moss);
+}
+
+.tab:nth-child(6) {
+  --tint: var(--rust-ink);
+  --mix: var(--mix-accent);
+}
+
+.tab:nth-child(7) {
+  --tint: var(--ink-soft);
+}
+
 .tab:hover {
-  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) calc(var(--mix) - 12%), var(--tint));
 }
 
 .tab.is-on {
-  background: var(--paper);
-  color: var(--rust);
-  border-color: color-mix(in srgb, var(--rust) 60%, var(--rule));
+  /* Its own colour, at strength, rather than a different colour: an open tab is the same tab. */
+  background: color-mix(in srgb, var(--paper) calc(var(--mix) - 22%), var(--tint));
+  border-color: var(--tint);
   /* The open tab sits proud of the others. */
   transform: translateX(3px);
+  box-shadow: 3px 2px 5px rgb(0 0 0 / 16%);
 }
 
 /* --- The page that turns ------------------------------------------------ */
@@ -678,10 +748,45 @@ h1.hand {
   travels with the sheet, which is what was wanted from this rule in the first place.
 */
 
-/* The clone is a whole `.page`, so it needs to fill the face it was put in. */
-.leaf__face > .page {
+/* A clone is a whole `.page`, so it fills whatever it was put in. */
+.leaf__face > .page,
+.stale > .page {
   position: absolute;
   inset: 0;
+}
+
+/*
+  The outgoing page, held on the half the leaf is about to cover.
+
+  Turning forward lifts the right page and lays it over the left one, so the left page is *covered*
+  and must still show what it showed -- but the spread beneath is updated at the start of the turn so
+  the revealed right page is correct, which flipped the left one to the new chapter while the leaf
+  was still on its way to it. That read as the page underneath changing into the page about to land
+  on it. This holds the old one there until the leaf arrives, and is cleared when it does.
+
+  Below the cast shadow, because the shadow falls on it, and below the leaf.
+*/
+.stale {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.stale--left {
+  left: 0;
+  right: 50%;
+}
+
+.stale--right {
+  left: 50%;
+  right: 0;
+}
+
+.stale:empty {
+  display: none;
 }
 
 .leaf__back {
