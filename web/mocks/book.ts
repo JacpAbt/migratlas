@@ -197,6 +197,12 @@ const svgEl = <K extends keyof SVGElementTagNameMap>(name: K): SVGElementTagName
  * wide and the plate can be anywhere from 500 to 1200 CSS pixels depending on the window, so a
  * fixed viewBox size drew at 8px on a laptop and 18px on a monitor. Divided by the draw scale, one
  * number now means one apparent size everywhere.
+ *
+ * And multiplied by `--font-scale-hand`, which is the whole reason these still read small after
+ * being pinned to pixels. tokens.css carries that factor because the hand faces do not share an
+ * x-height with the body faces -- "dropping one in at the same pixel size makes it look a size
+ * larger or smaller than the last" -- and every hand-set size in the app is scaled by it. These
+ * were not, so 16px of Virgil was sitting next to 16px of Shantell Sans and losing.
  */
 function label(
   x: number,
@@ -211,7 +217,8 @@ function label(
   node.setAttribute("x", String(x));
   node.setAttribute("y", String(y));
   node.setAttribute("fill", fill);
-  node.setAttribute("font-size", String(size / scale));
+  const hand = Number.parseFloat(token("--font-scale-hand")) || 1;
+  node.setAttribute("font-size", String((size * hand) / scale));
   node.setAttribute("font-family", token("--font-hand") || "cursive");
   if (angle) node.setAttribute("transform", `rotate(${angle} ${x} ${y})`);
   node.textContent = text;
@@ -295,7 +302,7 @@ function drawMap(host: HTMLElement): void {
       seed: 5,
     }),
   );
-  svg.append(label(xOf(-103), yOf(53), "37–50°N, 78 stations", rust, 15, scale, -2));
+  svg.append(label(xOf(-103), yOf(53), "37–50°N, 78 stations", rust, 17, scale, -2));
 
   /*
     ADR 0014 decision 2, drawn rather than described. The southern ocean and the interior of Africa
@@ -321,9 +328,9 @@ function drawMap(host: HTMLElement): void {
   );
   // `--ink-soft` rather than `--pencil`: the pencil is what the hatching is drawn in, and text in
   // the same tone as the marks behind it was the part of this plate that could not be read at all.
-  svg.append(label(xOf(-24), yOf(-20), "no coverage, 1995–2025", token("--ink-soft"), 16, scale, 1.5));
+  svg.append(label(xOf(-24), yOf(-20), "no coverage, 1995–2025", token("--ink-soft"), 18, scale, 1.5));
   svg.append(
-    label(xOf(-24), yOf(-27), "not surveyed the same way", token("--ink-soft"), 13, scale, 1.5),
+    label(xOf(-24), yOf(-27), "not surveyed the same way", token("--ink-soft"), 15, scale, 1.5),
   );
 
   // A leader from the note to the band, because a surveyor points at what the note is about.
@@ -353,7 +360,7 @@ function drawMap(host: HTMLElement): void {
       { stroke: ink, strokeWidth: 1.6, roughness: 1.3, seed: 22 },
     ),
   );
-  svg.append(label(nx - 5, ny + 50, "N", ink, 15, scale));
+  svg.append(label(nx - 5, ny + 50, "N", ink, 17, scale));
 
   const sx = 44;
   const sy = H - 40;
@@ -363,10 +370,10 @@ function drawMap(host: HTMLElement): void {
   svg.append(
     rc.line(sx + sw, sy - 5, sx + sw, sy + 5, { stroke: ink, strokeWidth: 1.4, roughness: 1.2, seed: 33 }),
   );
-  svg.append(label(sx, sy - 12, "30° at the equator", ink, 13, scale));
+  svg.append(label(sx, sy - 12, "30° at the equator", ink, 15, scale));
 
   // Signed and dated, the way a plate is.
-  svg.append(label(W - 230, H - 22, "traced from Natural Earth · 1:110m", moss, 13, scale, -0.8));
+  svg.append(label(W - 230, H - 22, "traced from Natural Earth · 1:110m", moss, 14, scale, -0.8));
 }
 
 // --- Drawn marks --------------------------------------------------------
@@ -533,17 +540,26 @@ async function turnTo(index: number): Promise<void> {
     free, because the spread beneath is updated before the turn starts -- turning the right page
     forward should expose the next recto, and that is exactly what is now there.
   */
+  /*
+    The whole page element is cloned, class and all, not just its children.
+
+    Cloning `childNodes` dropped the `.page--recto` / `.page--verso` wrapper, and the padding that
+    keeps text off the binding is written as `.page--recto .page__inner`. Without the ancestor the
+    selector did not match, so the turning page's content sat half a fold nearer the crease than the
+    page it was standing in for -- a twenty-pixel jump in the prose at the start and end of every
+    turn, with the geometry of the leaf itself perfectly correct.
+  */
   const lifted = forward ? recto : verso;
   const arriving = forward ? verso : recto;
   const front = face.querySelector<HTMLElement>(".leaf__front");
   const back = face.querySelector<HTMLElement>(".leaf__back");
-  front?.replaceChildren(...lifted.cloneNode(true).childNodes);
+  front?.replaceChildren(lifted.cloneNode(true));
 
   open = index;
   fill(open);
   tabs();
   repaint();
-  back?.replaceChildren(...arriving.cloneNode(true).childNodes);
+  back?.replaceChildren(arriving.cloneNode(true));
 
   face.classList.remove("is-turning", "leaf--right", "leaf--left");
   face.classList.add(forward ? "leaf--right" : "leaf--left");

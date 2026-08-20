@@ -266,7 +266,13 @@ body {
 
 /* --- The fold, which the owner asked to be unmistakable ------------------ */
 
-/* Over the pages rather than between them, and below the turning leaf. */
+/*
+  Above the turning leaf, not below it, and that is geometry rather than taste: the crease *is* the
+  axis the page rotates about, so a page can never pass in front of it -- at the hinge it has zero
+  width. Under the leaf it was hidden for the length of the turn and reappeared when the leaf hid,
+  which read as the middle line being added at the end of the animation instead of being there all
+  along.
+*/
 .gutter {
   position: absolute;
   top: 0;
@@ -274,7 +280,7 @@ body {
   left: 50%;
   width: var(--fold);
   transform: translateX(-50%);
-  z-index: 3;
+  z-index: 7;
   pointer-events: none;
   /* 12% rather than 16%: the pages now meet under this instead of being separated by it, so their
      own inner-edge gradients stack with it and the crease was compounding to about 27%. */
@@ -659,6 +665,12 @@ h1.hand {
   background:
     linear-gradient(to left, rgb(255 255 255 / 6%) 0 5%, transparent 20%),
     linear-gradient(to right, rgb(0 0 0 / 16%), transparent 24%);
+}
+
+/* The clone is a whole `.page`, so it needs to fill the face it was put in. */
+.leaf__face > .page {
+  position: absolute;
+  inset: 0;
 }
 
 .leaf__back {
