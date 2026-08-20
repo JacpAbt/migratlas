@@ -3,17 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Migratlas — four ways to build the book</title>
+    <title>Migratlas — the book on the desk</title>
     <!--
-      The real stylesheets, and that is the point of this file.
+      Second pass. The first showed four *layouts* when the problem was that none of them read as an
+      object you could pick up. Owner's notes, 2026-08-20: a true double page with a line down the
+      middle, a shadow under it so it sits on something, the map sketched and *inside* the book
+      rather than behind it, much bigger, page-flip when a chapter tab is clicked, plates that look
+      drawn on or taped in — and less clean.
 
-      `mocks/index.html` links only fonts.css and defines its own palette, because it *was* the
-      palette decision (ADR 0008). This is not that: the register, the fonts, the two surfaces and
-      every colour are settled and are not being reopened. So tokens.css is linked directly and
-      nothing here may declare a colour of its own -- what is on screen is what the build has.
-
-      What is open is ADR 0013's layout: the scroll as primary canvas, chapters as thumb tabs, the
-      introduction first. Four readings of that, side by side, on real ledger text.
+      Fonts, the two surfaces and the palette are fixed and come from tokens.css, which this links
+      and never overrides. Everything else here is arrangement, texture and drawn marks.
     -->
     <link rel="stylesheet" href="/src/styles/fonts.css" />
     <link rel="stylesheet" href="/src/styles/tokens.css" />
@@ -21,11 +20,10 @@
   </head>
   <body>
     <nav class="picker">
-      <span class="picker__what">Layout</span>
-      <button type="button" data-go="a" class="is-on">A · Tabbed ledger</button>
-      <button type="button" data-go="b">B · Sheet over the world</button>
-      <button type="button" data-go="c">C · The open spread</button>
-      <button type="button" data-go="d">D · Pinned plate</button>
+      <span class="picker__what">How the plate is attached</span>
+      <button type="button" data-skin="taped" class="is-on">1 · Taped in</button>
+      <button type="button" data-skin="inked">2 · Drawn on the page</button>
+      <button type="button" data-skin="tipped">3 · Tipped-in plate</button>
       <span class="picker__sep"></span>
       <label>surface
         <select id="surface">
@@ -40,133 +38,89 @@
           <option value="dyslexic">dyslexic</option>
         </select>
       </label>
+      <label>size
+        <select id="scale">
+          <option value="1">100%</option>
+          <option value="1.15" selected>115%</option>
+          <option value="1.3">130%</option>
+        </select>
+      </label>
     </nav>
 
-    <!-- ================================================== A · Tabbed ledger -->
-    <section class="mock" id="a" data-live>
-      <p class="mock__note">
-        <b>A · Tabbed ledger.</b> The literal reading of ADR 0013: index tabs down the outer edge,
-        one column of prose at a comfortable measure, the map as a plate set into the chapter with a
-        caption under it, and the risk-of-bias furniture in the margin where a notebook keeps it.
-        The map is a figure inside the argument rather than the ground the argument sits on.
-      </p>
-      <div class="a">
-        <nav class="tabs tabs--left" data-tabs></nav>
-        <article class="a__page">
-          <div class="sheet-grain"></div>
-          <p class="kicker">chapter two</p>
-          <h1 class="hand">What changed</h1>
-          <svg class="rule-drawn" data-rough="underline"></svg>
-          <p class="lede" data-claim="plain"></p>
-          <p class="value" data-claim="value"></p>
-          <p class="body" data-claim="matters"></p>
-          <figure class="plate">
-            <div class="plate__map" data-map></div>
-            <figcaption>
-              <b>Plate 2.</b> <span data-claim="scope"></span>
-            </figcaption>
-          </figure>
-          <p class="body">
-            The same signal appears in an independent record with a different instrument, which is
-            the only reason it is written down here as a change rather than as a curiosity.
-          </p>
-        </article>
-        <aside class="a__margin">
-          <p class="margin__h">risk of bias</p>
-          <dl class="margin__list">
-            <dt>coverage</dt><dd>78 of 143 stations</dd>
-            <dt>attribution</dt><dd>partial</dd>
-            <dt>effort</dt><dd>fixed by design</dd>
-          </dl>
-          <p class="margin__caveat" data-claim="caveat"></p>
-        </aside>
-      </div>
-    </section>
+    <div class="desk">
+      <div class="book is-taped" data-book>
+        <!-- The block of pages this spread is somewhere inside. -->
+        <div class="block block--under"></div>
+        <div class="block block--edge"></div>
 
-    <!-- ============================================ B · Sheet over the world -->
-    <section class="mock" id="b" hidden>
-      <p class="mock__note">
-        <b>B · Sheet over the world.</b> The map is the canvas and never leaves; the chapter is a
-        sheet laid on top of it, tabs hanging off the sheet's edge. Closest to the shell that exists
-        today, so the least risky to build, and the option where "the scroll is the primary canvas"
-        is true in the strongest sense. The cost is that prose always sits on top of something.
-      </p>
-      <div class="b">
-        <div class="b__world" data-map></div>
-        <nav class="tabs tabs--hang" data-tabs></nav>
-        <article class="b__sheet">
-          <div class="sheet-grain"></div>
-          <p class="kicker">chapter two</p>
-          <h1 class="hand">What changed</h1>
-          <svg class="rule-drawn" data-rough="underline"></svg>
-          <p class="lede" data-claim="plain"></p>
-          <p class="value" data-claim="value"></p>
-          <p class="body" data-claim="matters"></p>
-          <p class="caveat-inline" data-claim="caveat"></p>
-        </article>
-      </div>
-    </section>
+        <div class="spread" data-spread>
+          <!-- Left page: the argument. -->
+          <section class="page page--verso">
+            <div class="page__grain"></div>
+            <div class="page__inner">
+              <p class="folio" data-folio></p>
+              <p class="kicker" data-kicker></p>
+              <h1 class="hand" data-title></h1>
+              <svg class="mark mark--rule" data-rough="rule"></svg>
 
-    <!-- ==================================================== C · Open spread -->
-    <section class="mock" id="c" hidden>
-      <p class="mock__note">
-        <b>C · The open spread.</b> Two facing pages with a gutter: the argument on the left, the
-        plate on the right, tabs on the outer edge. The most notebook-like of the four and the most
-        distinctive; also the one that has to fold to a single column on a narrow screen, which is
-        a second layout to design rather than a reflow.
-      </p>
-      <div class="c">
-        <div class="c__book">
-          <div class="sheet-grain"></div>
-          <article class="c__verso">
-            <p class="kicker">chapter two</p>
-            <h1 class="hand">What changed</h1>
-            <svg class="rule-drawn" data-rough="underline"></svg>
-            <p class="lede" data-claim="plain"></p>
-            <p class="value" data-claim="value"></p>
-            <p class="body" data-claim="matters"></p>
-            <p class="caveat-inline" data-claim="caveat"></p>
-          </article>
-          <div class="c__gutter"></div>
-          <article class="c__recto">
-            <div class="plate__map plate__map--tall" data-map></div>
-            <p class="figcap"><b>Plate 2.</b> <span data-claim="scope"></span></p>
-          </article>
-        </div>
-        <nav class="tabs tabs--right" data-tabs></nav>
-      </div>
-    </section>
+              <p class="lede" data-claim="plain"></p>
 
-    <!-- =================================================== D · Pinned plate -->
-    <section class="mock" id="d" hidden>
-      <p class="mock__note">
-        <b>D · Pinned plate.</b> The plate is pinned in view while the notes scroll past it, and it
-        changes as each section arrives — the map answers the prose instead of illustrating it. Best
-        at carrying a sequence of claims; the most machinery, and the one where a reader who scrolls
-        fast can outrun the thing they are being shown.
-      </p>
-      <div class="d">
-        <nav class="tabs tabs--rail" data-tabs></nav>
-        <div class="d__notes">
-          <div class="sheet-grain"></div>
-          <p class="kicker">chapter two</p>
-          <h1 class="hand">What changed</h1>
-          <svg class="rule-drawn" data-rough="underline"></svg>
-          <p class="lede" data-claim="plain"></p>
-          <p class="value" data-claim="value"></p>
-          <p class="body" data-claim="matters"></p>
-          <p class="body">
-            Scrolling on would bring the next claim, and the plate beside it would change to the
-            record that claim is about, rather than to a different view of this one.
-          </p>
-          <p class="caveat-inline" data-claim="caveat"></p>
+              <div class="figure-value">
+                <svg class="mark mark--ring" data-rough="ring"></svg>
+                <p class="value" data-claim="value"></p>
+              </div>
+
+              <p class="body" data-claim="matters"></p>
+
+              <aside class="marginalia">
+                <svg class="mark mark--bracket" data-rough="bracket"></svg>
+                <p class="marginalia__text" data-claim="caveat"></p>
+              </aside>
+            </div>
+          </section>
+
+          <!-- The fold. A line, two shadows and a slight curl either side of it. -->
+          <div class="gutter" aria-hidden="true">
+            <span class="gutter__line"></span>
+          </div>
+
+          <!-- Right page: the plate. -->
+          <section class="page page--recto">
+            <div class="page__grain"></div>
+            <div class="page__inner">
+              <div class="plate" data-plate>
+                <span class="tape tape--tl"><svg data-rough="tape"></svg></span>
+                <span class="tape tape--br"><svg data-rough="tape"></svg></span>
+                <span class="clip" aria-hidden="true"><svg data-rough="clip"></svg></span>
+                <div class="plate__paper">
+                  <div class="plate__map" data-map></div>
+                </div>
+              </div>
+              <p class="figcap">
+                <b data-plateno></b> <span data-claim="scope"></span>
+              </p>
+              <p class="scrawl" data-scrawl></p>
+            </div>
+          </section>
         </div>
-        <div class="d__plate">
-          <div class="plate__map plate__map--fill" data-map></div>
-          <p class="figcap"><b>Plate 2.</b> <span data-claim="scope"></span></p>
+
+        <!-- The page that turns. Front is the recto you were reading; back is what is coming. -->
+        <div class="leaf" data-leaf aria-hidden="true">
+          <div class="leaf__face leaf__front"><div class="page__grain"></div></div>
+          <div class="leaf__face leaf__back"><div class="page__grain"></div></div>
+          <div class="leaf__shade"></div>
         </div>
+
+        <nav class="tabs" data-tabs aria-label="chapters"></nav>
       </div>
-    </section>
+    </div>
+
+    <p class="footnote">
+      Prose and every figure come from <code>findings.json</code>, because frontend prose is authored
+      in Python and rendered verbatim — nothing here is written by hand. The map is this
+      repository's own land geometry carrying its own wobble, redrawn as a sketch; it is a still, so
+      what this mock cannot show you is panning and zooming.
+    </p>
 
     <script type="module" src="/mocks/book.ts"></script>
   </body>

@@ -1,11 +1,14 @@
 /**
- * Layout only. Not one colour, face or size is declared here.
+ * The book, on a desk. Layout, texture and shadow only — no colour is declared here.
  *
- * Everything visual comes from `/src/styles/tokens.css`, which this file links rather than copies,
- * because the palette and the type are settled and the open question is arrangement. If a mock
- * needs a colour that is not a token, that is a finding about the token set and belongs in
- * tokens.css -- not a local hex here, which is the rule ADR 0008 already set for the app and which
- * a mock is not exempt from just because it is disposable.
+ * Everything visual comes from `/src/styles/tokens.css`. Where this file needs a shade that is not
+ * a token it composes one from `color-mix()` against a token, so switching surface still moves it:
+ * a hardcoded rgba would be a light-mode decision baked into a dark page. The one exception is
+ * neutral black and white inside shadow and highlight gradients, which are light rather than paint.
+ *
+ * `--pt` is a local reading-size multiplier, wired to the picker. The owner's note was that the
+ * first pass was too small to read; if a size here is chosen, `tokens.css` gains a book scale and
+ * this variable goes away.
  */
 
 *,
@@ -14,22 +17,27 @@
   box-sizing: border-box;
 }
 
+:root {
+  --pt: 1.15;
+  --fold: 2.5rem;
+}
+
 body {
   margin: 0;
+  min-height: 100vh;
   background: var(--paper-sunken);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: calc(var(--size-body) * var(--font-scale-body));
   line-height: var(--leading-body);
   letter-spacing: var(--tracking-body);
 }
 
-/* --- The picker, which is scaffolding and says so ------------------------- */
+/* --- Picker: scaffolding, and it looks like it ---------------------------- */
 
 .picker {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 60;
   display: flex;
   flex-wrap: wrap;
   gap: var(--gap-tight);
@@ -51,11 +59,12 @@ body {
   flex: 1;
 }
 
-.picker button {
+.picker button,
+.picker select {
   font-family: var(--font-body);
   font-size: var(--size-margin);
   color: var(--ink);
-  background: transparent;
+  background: var(--paper);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   padding: 0.3em 0.7em;
@@ -67,46 +76,169 @@ body {
   color: var(--rust);
 }
 
-.picker select {
-  font-family: var(--font-body);
-  font-size: var(--size-margin);
-  color: var(--ink);
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  margin-left: 0.3em;
-}
-
-.mock {
-  padding: var(--gap-wide) var(--gap);
-}
-
-.mock__note {
-  max-width: 44rem;
-  margin: 0 auto var(--gap-wide);
-  padding: var(--gap);
+.footnote {
+  max-width: 52rem;
+  margin: var(--gap-wide) auto var(--gap-wide);
+  padding: 0 var(--gap);
   font-size: var(--size-margin);
   color: var(--ink-soft);
-  border-left: 2px solid var(--rust);
-  background: var(--paper);
+  text-align: center;
 }
 
-/* --- Shared page furniture ----------------------------------------------- */
+/* --- The desk ------------------------------------------------------------ */
 
-/* The grain, as tokens.css composites it: a texture over paper, not a filter on it. */
-.sheet-grain {
+/*
+  Darker than the page and slightly uneven, so the book has something to cast onto. Two very soft
+  radial washes rather than a flat fill: a flat ground under a shadowed object reads as a rectangle
+  floating on a colour, which is what the first pass did.
+*/
+.desk {
+  display: grid;
+  place-items: start center;
+  padding: var(--gap-wide) var(--gap) 0;
+  background:
+    radial-gradient(120% 80% at 30% 0%, rgb(255 255 255 / 5%), transparent 60%),
+    radial-gradient(100% 90% at 75% 100%, rgb(0 0 0 / 7%), transparent 65%);
+}
+
+/* --- The book ----------------------------------------------------------- */
+
+.book {
+  position: relative;
+  width: min(97vw, 1560px);
+  /* Two pages of roughly 3:4 each, so the open spread is a touch wider than 3:2. */
+  aspect-ratio: 1.58;
+  perspective: 2600px;
+  /* The whole object lifts off the desk. A long soft shadow for the height, a tight dark one at the
+     contact edge, because a real book touches the surface somewhere. */
+  filter:
+    drop-shadow(0 22px 34px rgb(0 0 0 / 26%))
+    drop-shadow(0 3px 3px rgb(0 0 0 / 22%));
+}
+
+/* The block of pages under this one: two slabs, offset and barely rotated, so the spread is a page
+   in a book rather than a sheet on a table. */
+.block {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  border: 1px solid color-mix(in srgb, var(--rule) 70%, var(--ink) 8%);
+}
+
+.block--under {
+  transform: rotate(-0.45deg) translate(-5px, 6px);
+}
+
+.block--edge {
+  transform: rotate(0.3deg) translate(4px, 3px);
+  /* Page edges seen almost end-on: a stack of fine lines rather than a solid tone. */
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 3px,
+      color-mix(in srgb, var(--rule) 55%, transparent) 3px 4px
+    ),
+    var(--paper);
+}
+
+/* --- The spread --------------------------------------------------------- */
+
+.spread {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr var(--fold) 1fr;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+}
+
+.page {
+  position: relative;
+  overflow: hidden;
+}
+
+.page__inner {
+  position: relative;
+  height: 100%;
+  padding: clamp(1.6rem, 3.2vw, 3.4rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.page__grain {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background-image: var(--grain);
   background-size: var(--grain-size);
   mix-blend-mode: var(--grain-blend);
-  opacity: 0.85;
+  opacity: 0.9;
+}
+
+/*
+  The curl. Paper does not lie flat next to a binding, so both inner edges darken towards the fold
+  and both outer edges catch a little light. Purely gradients: no extra element, and it survives a
+  surface change because it is light and not paint.
+*/
+.page--verso::after,
+.page--recto::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.page--verso::after {
+  background:
+    linear-gradient(to right, rgb(255 255 255 / 5%) 0 6%, transparent 22%),
+    linear-gradient(to left, rgb(0 0 0 / 13%), transparent 16%);
+}
+
+.page--recto::after {
+  background:
+    linear-gradient(to left, rgb(255 255 255 / 5%) 0 6%, transparent 22%),
+    linear-gradient(to right, rgb(0 0 0 / 13%), transparent 16%);
+}
+
+/* --- The fold, which the owner asked to be unmistakable ------------------ */
+
+.gutter {
+  position: relative;
+  background:
+    linear-gradient(to right, rgb(0 0 0 / 16%), rgb(0 0 0 / 3%) 42%),
+    linear-gradient(to left, rgb(0 0 0 / 16%), rgb(0 0 0 / 3%) 42%);
+}
+
+/* The crease itself: one hard line, darker than any rule on the page. */
+.gutter__line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-0.5px);
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--ink) 55%, transparent) 4%,
+    color-mix(in srgb, var(--ink) 55%, transparent) 96%,
+    transparent
+  );
+}
+
+/* --- Type on the page --------------------------------------------------- */
+
+.folio {
+  margin: 0 0 var(--gap);
+  font-family: var(--font-mono);
+  font-size: calc(0.7rem * var(--pt));
+  color: var(--pencil);
+  letter-spacing: var(--tracking-label);
 }
 
 .kicker {
-  margin: 0 0 var(--gap-tight);
-  font-size: var(--size-label);
+  margin: 0 0 var(--gap-hair);
+  font-size: calc(var(--size-label) * var(--pt));
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--moss);
@@ -115,65 +247,100 @@ body {
 h1.hand {
   margin: 0;
   font-family: var(--font-hand);
-  font-size: var(--size-claim);
+  font-size: calc(clamp(1.5rem, 2.5vw, 2.5rem) * var(--font-scale-hand));
   line-height: var(--leading-hand);
   font-weight: 400;
 }
 
-.rule-drawn {
+.mark {
   display: block;
-  width: min(18rem, 60%);
-  height: 12px;
-  margin: var(--gap-hair) 0 var(--gap);
+  pointer-events: none;
+}
+
+.mark--rule {
+  width: min(20rem, 62%);
+  height: 14px;
+  margin: 0.1rem 0 var(--gap);
 }
 
 .lede {
   margin: 0 0 var(--gap);
   font-family: var(--font-hand);
-  font-size: calc(1.06rem * var(--font-scale-hand));
-  line-height: var(--leading-hand);
+  font-size: calc(1.12rem * var(--pt) * var(--font-scale-hand));
+  line-height: 1.45;
+}
+
+/* The headline number, ringed by hand the way somebody circles the thing that matters. */
+.figure-value {
+  position: relative;
+  align-self: start;
+  margin: var(--gap-tight) 0 var(--gap);
+  padding: 0.35em 1.1em 0.35em 0.6em;
+}
+
+.mark--ring {
+  position: absolute;
+  inset: -0.3em -0.5em;
+  width: auto;
+  height: auto;
 }
 
 .value {
-  margin: 0 0 var(--gap);
+  position: relative;
+  margin: 0;
   font-family: var(--font-mono);
-  font-size: var(--size-value);
+  font-size: calc(1.32rem * var(--pt));
   color: var(--rust);
 }
 
 .body {
   margin: 0 0 var(--gap);
+  font-size: calc(0.95rem * var(--pt) * var(--font-scale-body));
 }
 
-.caveat-inline,
-.margin__caveat {
-  margin: var(--gap) 0 0;
-  padding-left: var(--gap-tight);
-  font-size: var(--size-margin);
+/* The caveat, in the margin, bracketed. Not a footnote: this project puts the limit beside the
+   number, so on a page it belongs alongside and not underneath. */
+.marginalia {
+  position: relative;
+  margin-top: auto;
+  padding-left: 1.6rem;
+}
+
+.mark--bracket {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.1rem;
+  height: 100%;
+}
+
+.marginalia__text {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: calc(0.86rem * var(--pt) * var(--font-scale-hand));
+  line-height: 1.4;
   color: var(--ink-soft);
-  border-left: 2px solid var(--rule);
+  transform: rotate(-0.5deg);
 }
 
-.figcap,
-.plate figcaption {
-  margin: var(--gap-tight) 0 0;
-  font-size: var(--size-margin);
-  color: var(--ink-soft);
-}
-
-/* --- The map plate ------------------------------------------------------- */
+/* --- The plate --------------------------------------------------------- */
 
 .plate {
-  margin: var(--gap-wide) 0;
+  position: relative;
+  flex: 1;
+  display: grid;
+  place-items: stretch;
+  min-height: 0;
+}
+
+.plate__paper {
+  position: relative;
+  min-height: 0;
 }
 
 .plate__map {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1000 / 568;
-  background: var(--paper-sunken);
-  border: 1px solid var(--rule);
-  overflow: hidden;
+  position: absolute;
+  inset: 0;
 }
 
 .plate__map svg {
@@ -182,233 +349,270 @@ h1.hand {
   height: 100%;
 }
 
-.plate__map--tall {
-  aspect-ratio: 3 / 4;
+/* Variant 1 — taped in. A separate sheet, a shade off the page, hung slightly crooked. */
+.book.is-taped .plate__paper {
+  background: color-mix(in srgb, var(--paper) 88%, var(--paper-sunken));
+  transform: rotate(-1.1deg);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 18%),
+    0 6px 14px rgb(0 0 0 / 12%);
 }
 
-.plate__map--fill {
-  aspect-ratio: auto;
-  height: min(62vh, 30rem);
+.book.is-taped .tape {
+  display: block;
 }
 
-/* --- Thumb tabs ---------------------------------------------------------- */
+/* Variant 2 — drawn straight onto the page. No sheet, no shadow, and the ink runs to the margin. */
+.book.is-inked .plate__paper {
+  background: transparent;
+  transform: none;
+  box-shadow: none;
+}
+
+.book.is-inked .plate {
+  margin: 0 calc(clamp(1.6rem, 3.2vw, 3.4rem) * -0.55);
+}
+
+/* Variant 3 — a tipped-in plate: different stock, a fold along its inner edge, one paper clip. */
+.book.is-tipped .plate__paper {
+  background: color-mix(in srgb, var(--paper-sunken) 70%, var(--paper));
+  transform: rotate(0.5deg);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 20%),
+    0 10px 18px rgb(0 0 0 / 14%);
+}
+
+/* The fold it was bound in on, along the left edge. */
+.book.is-tipped .plate__paper::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1.1rem;
+  background: linear-gradient(to right, rgb(0 0 0 / 20%), transparent);
+}
+
+.book.is-tipped .clip {
+  display: block;
+}
+
+.tape,
+.clip {
+  display: none;
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.tape {
+  width: 5.4rem;
+  height: 1.7rem;
+}
+
+.tape svg,
+.clip svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tape--tl {
+  top: -0.7rem;
+  left: -1.1rem;
+  transform: rotate(-26deg);
+}
+
+.tape--br {
+  right: -1.2rem;
+  bottom: -0.6rem;
+  transform: rotate(-21deg);
+}
+
+.clip {
+  top: -0.9rem;
+  right: 12%;
+  width: 2.1rem;
+  height: 3.4rem;
+}
+
+.figcap {
+  margin: var(--gap) 0 0;
+  font-size: calc(var(--size-margin) * var(--pt));
+  color: var(--ink-soft);
+}
+
+/* A note added afterwards, in a hurry, at an angle. */
+.scrawl {
+  margin: var(--gap-tight) 0 0;
+  align-self: end;
+  max-width: 22rem;
+  font-family: var(--font-hand);
+  font-size: calc(0.84rem * var(--pt) * var(--font-scale-hand));
+  line-height: 1.35;
+  color: var(--moss);
+  transform: rotate(-1.4deg);
+}
+
+/* --- Thumb tabs, sticking out past the edge ----------------------------- */
 
 .tabs {
+  position: absolute;
+  top: 8%;
+  right: 0;
+  z-index: 6;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  transform: translateX(calc(100% - 3px));
 }
 
 .tab {
   font-family: var(--font-hand);
-  font-size: var(--size-margin);
+  font-size: calc(0.74rem * var(--pt));
   writing-mode: vertical-rl;
-  padding: var(--gap-tight) 0.35em;
-  background: var(--paper-sunken);
+  padding: 0.75em 0.42em;
   color: var(--ink-soft);
+  background: color-mix(in srgb, var(--paper) 84%, var(--paper-sunken));
   border: 1px solid var(--rule);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
   cursor: pointer;
+  box-shadow: 2px 2px 3px rgb(0 0 0 / 12%);
+}
+
+.tab:hover {
+  color: var(--ink);
 }
 
 .tab.is-on {
   background: var(--paper);
   color: var(--rust);
-  border-color: var(--rust);
+  border-color: color-mix(in srgb, var(--rust) 60%, var(--rule));
+  /* The open tab sits proud of the others. */
+  transform: translateX(3px);
 }
 
-.tabs--left .tab {
-  border-right: none;
-  border-radius: var(--radius) 0 0 var(--radius);
-}
+/* --- The page that turns ------------------------------------------------ */
 
-.tabs--right .tab,
-.tabs--rail .tab {
-  border-left: none;
-  border-radius: 0 var(--radius) var(--radius) 0;
-}
-
-.tabs--hang {
+.leaf {
   position: absolute;
-  top: var(--gap-wide);
-  left: 0;
-  transform: translateX(-100%);
-  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: calc(50% + var(--fold) / 2);
+  right: 0;
+  z-index: 5;
+  transform-style: preserve-3d;
+  transform-origin: left center;
+  transform: rotateY(0deg);
+  visibility: hidden;
+  pointer-events: none;
 }
 
-.tabs--rail {
-  align-self: start;
+.leaf.is-turning {
+  visibility: visible;
+  animation: turn var(--draw-slow) var(--ease-pen) forwards;
 }
 
-/* --- A · Tabbed ledger --------------------------------------------------- */
-
-.a {
-  display: grid;
-  grid-template-columns: auto minmax(0, 34rem) var(--margin-column);
-  gap: 0 var(--gap-wide);
-  justify-content: center;
-  align-items: start;
-}
-
-.a__page {
-  position: relative;
-  padding: var(--gap-wide);
+.leaf__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
   background: var(--paper);
-  box-shadow: var(--shadow-sheet);
-}
-
-.a__page > *,
-.b__sheet > *,
-.c__verso > *,
-.d__notes > * {
-  position: relative;
-}
-
-.a__margin {
-  padding-top: var(--gap-wide);
-}
-
-.margin__h {
-  margin: 0 0 var(--gap-tight);
-  font-size: var(--size-label);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  color: var(--moss);
-}
-
-.margin__list {
-  margin: 0;
-  font-size: var(--size-margin);
-}
-
-.margin__list dt {
-  color: var(--ink-soft);
-}
-
-.margin__list dd {
-  margin: 0 0 var(--gap-tight);
-  font-family: var(--font-mono);
-}
-
-/* --- B · Sheet over the world ------------------------------------------- */
-
-.b {
-  position: relative;
-  min-height: 40rem;
-  background: var(--paper-sunken);
   border: 1px solid var(--rule);
   overflow: hidden;
 }
 
-.b__world {
+.leaf__back {
+  transform: rotateY(180deg);
+}
+
+/* The shadow the turning page throws across the spread beneath it. */
+.leaf__shade {
   position: absolute;
   inset: 0;
+  background: linear-gradient(to left, rgb(0 0 0 / 28%), transparent 55%);
+  opacity: 0;
 }
 
-.b__world svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.leaf.is-turning .leaf__shade {
+  animation: sweep var(--draw-slow) var(--ease-pen) forwards;
 }
 
-.b__sheet {
-  position: relative;
-  width: min(38rem, 90%);
-  margin: var(--gap-wide) auto;
-  padding: var(--gap-wide);
-  background: var(--paper);
-  box-shadow: var(--shadow-sheet);
-}
-
-/* --- C · The open spread ------------------------------------------------ */
-
-.c {
-  display: flex;
-  justify-content: center;
-  align-items: start;
-}
-
-.c__book {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  max-width: 68rem;
-  padding: var(--gap-wide);
-  background: var(--paper);
-  box-shadow: var(--shadow-sheet);
-}
-
-.c__verso,
-.c__recto {
-  position: relative;
-  padding: 0 var(--gap-wide);
-}
-
-/* The gutter, as a fold rather than a border: two gradients meeting, which is what a bound spread
-   does to the light. */
-.c__gutter {
-  width: var(--gap-wide);
-  background:
-    linear-gradient(to right, transparent, rgb(0 0 0 / 7%)),
-    linear-gradient(to left, transparent, rgb(0 0 0 / 7%));
-}
-
-/* --- D · Pinned plate --------------------------------------------------- */
-
-.d {
-  display: grid;
-  grid-template-columns: auto minmax(0, 30rem) minmax(0, 1fr);
-  gap: 0 var(--gap-wide);
-  justify-content: center;
-  align-items: start;
-  max-width: 76rem;
-  margin: 0 auto;
-}
-
-.d__notes {
-  position: relative;
-  padding: var(--gap-wide);
-  background: var(--paper);
-  box-shadow: var(--shadow-sheet);
-}
-
-.d__plate {
-  position: sticky;
-  top: 5rem;
-}
-
-/* --- Narrow screens: every layout folds to one column ------------------- */
-
-@media (width < 60rem) {
-  .a,
-  .d {
-    grid-template-columns: minmax(0, 1fr);
+@keyframes turn {
+  from {
+    transform: rotateY(0deg);
   }
 
-  .c__book {
-    grid-template-columns: minmax(0, 1fr);
+  to {
+    transform: rotateY(-168deg);
+  }
+}
+
+@keyframes sweep {
+  0% {
+    opacity: 0;
   }
 
-  .c__gutter {
+  45% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/*
+  Reduced motion is a full path and not a faster one, which is tokens.css's own rule: every duration
+  there goes to zero, so the animation lands on its final frame immediately. The turn is then simply
+  not shown, and `book.ts` skips it rather than running a zero-length animation.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .leaf.is-turning {
+    animation: none;
+    visibility: hidden;
+  }
+}
+
+/* --- Narrow screens: one page at a time --------------------------------- */
+
+@media (width < 62rem) {
+  .book {
+    aspect-ratio: 0.78;
+  }
+
+  .spread {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .gutter,
+  .leaf {
     display: none;
   }
 
-  .a__margin {
-    padding-top: var(--gap);
+  .page--recto {
+    border-top: 1px solid var(--rule);
   }
 
   .tabs {
+    position: static;
     flex-direction: row;
     flex-wrap: wrap;
-    order: -1;
+    transform: none;
+    padding: var(--gap-tight);
   }
 
   .tab {
     writing-mode: horizontal-tb;
+    border-left: 1px solid var(--rule);
+    border-radius: var(--radius);
   }
+}
 
-  .tabs--hang {
-    position: static;
-    transform: none;
-  }
+/* A chapter with no claim of its own: no figure to ring, no limit to bracket. */
+.page--verso.has-no-claim .figure-value,
+.page--verso.has-no-claim .marginalia {
+  display: none;
 }
