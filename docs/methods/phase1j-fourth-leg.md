@@ -293,7 +293,7 @@ clear fifteen years inside the registered window**, out of 88,230. The aerial le
 compared against has 143.
 
 So the honest position is uncomfortable in a specific way: the data is ample, and the prediction
-that failed was a badly chosen proxy for whether it is ample. Both halves of that are true and neither
+that failed was a badly chosen proxy for whether it is ample. Both halves are true and neither
 cancels the other. Proceeding anyway would make the stop condition decorative — the point of
 writing one down is that it binds when it is inconvenient — so the leg waits for a successor
 registration that sets the floor on the unit, and that registration inherits this measurement rather
