@@ -655,6 +655,15 @@ def report_phase3e() -> None:
     print(phase3e.render())
 
 
+@report_app.command("response-floor")
+def report_response_floor() -> None:
+    """How much of the passage-date wobble any driver could ever explain, per station and pooled."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import response_floor  # noqa: PLC0415 -- heavy, and only this command
+
+    print(response_floor.render())
+
+
 @report_app.command("forecast-a")
 def report_forecast_a() -> None:
     """The fitted response under scenario warming, and where it stops being sayable."""

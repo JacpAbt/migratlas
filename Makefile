@@ -213,6 +213,10 @@ ingest-scenariomip:  ## CMIP6 ScenarioMIP pre-season temperature -> lake (Foreca
 ingest-cmems:  ## CMEMS oxygen at each survey's fishing depth -> lake (driver samples, gridded)
 	$(RUN) migratlas ingest-cmems
 
+.PHONY: report-response-floor
+report-response-floor:  ## What any driver could reach: per-station bound and pooled reliability
+	$(RUN) migratlas report response-floor
+
 .PHONY: report-forecast-a
 report-forecast-a:  ## The response under scenario warming, and the novelty mask that bounds it
 	$(RUN) migratlas report forecast-a
