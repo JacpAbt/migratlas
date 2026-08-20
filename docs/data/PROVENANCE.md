@@ -47,6 +47,8 @@ each source carries its own terms.
 | [NOAA OISST v2.1 — monthly mean sea surface temperature, 1981–present](https://psl.noaa.gov/data/gridded/data.noaa.oisst.v2.highres.html) | driver only | `marine` | Public domain (U.S. Government work, 17 U.S.C. §105) | permitted |
 | [Copernicus Marine global biogeochemistry hindcast — monthly dissolved oxygen, 1993–present](https://data.marine.copernicus.eu/product/GLOBAL_MULTIYEAR_BGC_001_029/description) | driver only | `marine` | Copernicus Marine Service licence (free of charge, derived works permitted for any purpose) | permitted |
 | [CMIP6 ScenarioMIP — near-surface air temperature under four SSPs, 2015–2100](https://pcmdi.llnl.gov/CMIP6/) | driver only | `aerial` | CMIP6 terms of use (unrestricted research use, citation and acknowledgement required) | permitted |
+| [UK Butterfly Monitoring Scheme — flight-period phenology, 1976–2021](https://catalogue.ceh.ac.uk/documents/0c59eb20-26e3-4066-86f5-418afae18769) | `survey_index` | `terrestrial` | Open Government Licence | permitted |
+| [UK Butterfly Monitoring Scheme — transect site locations, 2021 v2](https://catalogue.ceh.ac.uk/documents/1cfdcd20-afb8-4b58-9ab2-604b90f5242d) | driver only | `terrestrial` | Open Government Licence | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -670,3 +672,40 @@ A reanalysis, and a biogeochemical one, which is a weaker thing than a physical 
 **Caveats**
 
 A model's projection, not an observation, and four of them are scenarios rather than forecasts — an SSP is a coherent story about emissions, not a probability. Read only as each model's own anomaly against its own 1995–2014 baseline, because absolute model temperatures carry biases of degrees and the anomaly is what cancels them; forecast-a.md fixes that rule and the two masks that bound it. Thirteen of the fifteen models this project holds a paired historical run for carry all four SSPs — GFDL-CM4 lacks ssp126 and ssp370, HadGEM3-GC31-LL lacks ssp370 — so a per-scenario ensemble is not the same ensemble across scenarios, and any cross-scenario comparison inherits that. Members are capped at three per model and averaged within model before anything crosses models, because CanESM5 and MIROC6 publish fifty each and an uncapped mean would be a statement about two models. Monthly `Amon` output only: a degree-day or extreme-day form of this driver needs the `day` table, which is a different and much larger commitment and is excluded in forecast-a.md §2.
+
+## UK Butterfly Monitoring Scheme — flight-period phenology, 1976–2021
+
+- **id** `ukbms_phenology`
+- **evidence type** `survey_index` · **realm** `terrestrial` · **taxon scope** `exact`
+- **landing page** https://catalogue.ceh.ac.uk/documents/0c59eb20-26e3-4066-86f5-418afae18769
+- **DOI** [10.5285/0c59eb20-26e3-4066-86f5-418afae18769](https://doi.org/10.5285/0c59eb20-26e3-4066-86f5-418afae18769)
+- **licence** [Open Government Licence](http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)
+- **redistribution** permitted, attribution required
+  - The Open Government Licence permits copying, adapting and commercial reuse with attribution. The dataset's own conditions are that the citation including the DOI appears in full in the reference list of anything describing research that used the data, and that this exact statement travels with any derived information or image: "Contains UK Butterfly Monitoring Scheme (UKBMS) data © copyright and database right Butterfly Conservation, the Centre for Ecology & Hydrology, British Trust for Ornithology, and the Joint Nature Conservation Committee." Both are satisfied by the citation above and by PROVENANCE.md, and the attribution line has to reach any published figure as well.
+- **sensitivity** `low` by default
+
+**Cite as**
+
+> Botham, M.; Middlebrook, I.; Harrower, C.; Roy, D.B. (2022). United Kingdom Butterfly Monitoring Scheme: phenology 2021. NERC EDS Environmental Information Data Centre. https://doi.org/10.5285/0c59eb20-26e3-4066-86f5-418afae18769. Scheme organised and funded by Butterfly Conservation, the UK Centre for Ecology & Hydrology, the British Trust for Ornithology and the Joint Nature Conservation Committee.
+
+**Caveats**
+
+**The day columns count from 1 April, not from 1 January** — the archive's own documentation says so, with "20 = 20th April" as its example, and reading them as a day of year puts every date about ninety days early while looking entirely plausible. A derived product, not counts. Phenology is computed only from the weekly standard transects, so the Wider Countryside squares and targeted surveys in the site table contribute none of it. Thirteen species carry split flight periods — eleven multivoltine plus Brimstone and Peacock, which overwinter as adults — and for those the pooled `BROOD = 0` row is an average across generations that no animal experienced. The scheme's visit-level transect data is not openly published, so the flight-period summary has to be taken as issued — which means this source carries a **mean** flight date while the radar response carries a **median** passage date. Any use comparing the two must use a ratio of trends, where a constant mean-against-median offset cancels, and must check for a trend in the flight curve's shape, which would not; the published duration and standard deviation are what make that checkable and phase1j-fourth-leg.md §3a registers it as a stop condition. "Mean flight date" also names two different biologies — emergence for a resident, arrival plus residence for a migrant — and eleven multi-voltine species carry separate generations that must stay separate, because a species-level mean across broods is an average of two peaks and a trough and is not a date any animal experienced. Positions come from the scheme's separate site-location dataset and the publisher withholds the sensitive ones; because SURVEY_INDEX requires a position, those sites cannot enter this lake at all, which is the publisher's sensitivity decision enforced by the schema rather than by code here. Effort is fixed by design — a Pollard walk is a fixed route walked weekly under stated weather criteria — but not by personnel: sites and recorders turn over, and a site whose recorder changed mid-series may carry a step nothing here looks for. One island's climate, so this is a national scheme rather than a realm.
+
+## UK Butterfly Monitoring Scheme — transect site locations, 2021 v2
+
+- **id** `ukbms_sites`
+- **drivers only**, no evidence rows · **realm** `terrestrial`
+- **landing page** https://catalogue.ceh.ac.uk/documents/1cfdcd20-afb8-4b58-9ab2-604b90f5242d
+- **DOI** [10.5285/1cfdcd20-afb8-4b58-9ab2-604b90f5242d](https://doi.org/10.5285/1cfdcd20-afb8-4b58-9ab2-604b90f5242d)
+- **licence** [Open Government Licence](http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)
+- **redistribution** permitted, attribution required
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> Botham, M.S.; Middlebrook, I.; Harris, S.; Harrower, C.; Lowe, M.; Roy, D.B. (2023). United Kingdom Butterfly Monitoring Scheme: site location data 2021 v2. NERC EDS Environmental Information Data Centre. https://doi.org/10.5285/1cfdcd20-afb8-4b58-9ab2-604b90f5242d.
+
+**Caveats**
+
+**The publisher excludes the locations of sites it classes as sensitive**, with a request route for the rest that this project is not taking; see docs/ETHICS.md and task #50. So the join against ukbms_phenology is deliberately incomplete and its rate is a graded prediction in phase1j-fourth-leg.md rather than an assumption. Covers standard UKBMS transects, Wider Countryside Butterfly Survey squares and targeted single-species surveys together, which are three different protocols sharing one site table.

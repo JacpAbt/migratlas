@@ -64,7 +64,8 @@ Known problems, before any download:
   pools both, because that is what makes it commensurable with an aerial leg that also pools
   whatever flew; the migrant-resident split is a **declared secondary** in §4 with its species list
   fixed below before any fit.
-- **Eleven species are multi-voltine and the source splits their generations.** A species-level mean
+- **Thirteen species have their generations split by the source** (eleven multivoltine plus two
+  overwintering univoltines; corrected from eleven in amendment D). A species-level mean
   flight date across broods would be an average of two peaks and a trough, which is not a date any
   animal experienced. Generations are kept separate and treated as distinct units.
 - **The decade does not match, and that is one of the four axes already confounded.** UKBMS starts
@@ -115,6 +116,82 @@ it joins against. Sensitivity is `low` rather than `not_sensitive` on the same r
 records: the rows are site-level aggregates over a protocol with no individual and no nest in them,
 but the gate should not minute a judgement that the taxa themselves are safe.
 
+## 3a. Amendments, written while implementing and before any fetch
+
+Three things found by reading the catalogue further, each of which would have been a silent
+assumption otherwise. Recorded here rather than folded into the sections above, so what was known
+when §1 to §3 were written stays legible.
+
+**A. The weekly transect counts are not openly published, so the date cannot be derived here.** The
+open products are the site indices, the collated indices and the phenology summary; the collection
+page directs anyone wanting more to request it from the scheme. The better design was therefore
+unavailable: the radar leg derives its date from nightly `flux` rows through
+`metrics/phenology.py`, and had the visit-level counts been open, this leg could have used *the same
+metric on the same statistic*. It cannot. It must take the publisher's **mean** flight date against
+the radar's **median** passage date.
+
+That mismatch is bounded rather than waved away. The leg is a ratio of *trends*, so any constant
+offset between a mean and a median cancels exactly; only a **trend in the skew** of the flight curve
+could bias it. That is partly checkable, because the source publishes the flight-period duration and
+the standard deviation around the mean flight date, so a trend in either is a trend in shape. Both
+are reported beside the leg, and a significant trend in either is grounds to withdraw the comparison
+rather than to caveat it. Registered as prediction 6.
+
+**B. The publisher withholds sensitive site locations itself, and that is respected rather than
+worked around.** The site-location dataset states that the locations of some sites are sensitive and
+are excluded, with a request route for the rest. This project does not take that route here: #50 is
+the only legitimate one and it is not being opened for this leg. Two consequences. Prediction 2's
+join rate becomes a real test rather than a formality. And the exclusion propagates automatically,
+because `SURVEY_INDEX` requires a non-null longitude and latitude — a site whose position the
+publisher withheld **cannot be written to this lake at all**, without any code here deciding it. The
+schema enforces another organisation's sensitivity judgement for free, which is worth writing down
+because it is the first time that has happened in this project.
+
+**C. The encoding, decided before the fetch because the obvious one is a trap.** A phenology summary
+fits none of the seven evidence shapes cleanly, which `evidence/types.py` says is a design
+conversation. The tempting move — `count` = mean flight date as a day of year — puts a *coordinate
+on the time axis* into the table's `value_column`, where `sabap1` puts a reporting rate and
+`fishglob` a standardised index. Every one of those is an intensity; a date is not, and anything
+that aggregates `count` would then be averaging calendars. So instead:
+
+- `period_start` = first appearance, `period_end` = last appearance. A true period, in the columns
+  that hold dates.
+- `count` = **days from first appearance to the mean flight date**. A genuine count of days, and the
+  mean flight date is recovered exactly as `period_start + count`, with no approximation.
+
+Nothing is stored under a name that misdescribes it, and nothing published is lost. If a later phase
+needs dates as first-class objects across realms, the design conversation is an eighth evidence type
+and this encoding is not an argument against it.
+
+**D. What the supporting documentation says, read after the fetch and before any row was written.**
+The archive carries a `.docx` that settles four things the catalogue page did not, and the first
+would have silently wrecked the leg.
+
+- **The day numbers are counted from 1 April, not from 1 January.** Verbatim: *"FIRSTDAY: the day
+  number after 1st April on which a species was first recorded ... (e.g. 20 = 20th April)"*, and the
+  same for `LASTDAY`, `PEAKDAY` and `MEAN_FLIGHT_DATE`. Read as a day of year, every date would have
+  landed about ninety days early and looked perfectly plausible — a Peacock flying on 20 January
+  rather than 20 April. The conversion is explicit in the adapter and pinned by a test.
+- **`MEAN_FLIGHT_DATE` is the count-weighted mean date**, not an unweighted mean of survey dates.
+  That is a closer analogue to the radar's traffic-weighted `q50_doy` than amendment A assumed:
+  both are centroids of an intensity-weighted time distribution, differing in being a mean against a
+  median rather than in what they are a summary of. Amendment A's caution stands and its bound is
+  the same, but the two quantities are more alike than it feared.
+- **Phenology comes only from the weekly standard transects.** The scheme's own words: the reduced
+  effort and Wider Countryside squares are visited two or three times a year, so *"phenology data
+  can only be calculated from standard butterfly transects where weekly counts are made"*. The
+  effort behind this response is therefore the 26-visit Pollard walk and nothing else, which is
+  stronger than §1 claimed and removes the mixed-protocol worry the site table raises.
+- **Thirteen species carry split flight periods, not eleven, and §2 is corrected.** Eleven are
+  multivoltine; two more are univoltine adults that overwinter — Brimstone and Peacock — whose two
+  periods are the same generation before and after winter rather than two generations. `BROOD = 0`
+  is the pooled row for every species and is exactly the average-of-two-peaks-and-a-trough §2
+  refused: it is present in the file for all thirteen and must be dropped for them and kept for
+  everyone else. The documentation also warns that `FIRSTDAY` and `LASTDAY` are unreliable where a
+  flight period runs past the 1 April to 30 September window, and recommends the mean flight date
+  and its standard deviation as *"less sensitive to the UKBMS methodology"* — which is what this leg
+  uses, arrived at independently in amendment C and confirmed here.
+
 ## 4. Predictions
 
 **The ingest gate, graded first. Nothing below it is interpreted if it fails.**
@@ -144,6 +221,11 @@ but the gate should not minute a judgement that the taxa themselves are safe.
    from and not where it was counted. Registered weakly — *V. atalanta* has become partly resident
    in southern England over this very window, which blurs the group it is assigned to, and that is
    stated now rather than discovered later.
+
+6. **The flight curve's shape did not trend**, so the mean-against-median mismatch in amendment A
+   stays a cancelling offset. Neither the flight-period duration nor the standard deviation around
+   the mean flight date carries a trend distinguishable from zero over 1995-2021, pooled across
+   units. If either does, the comparison is withdrawn rather than caveated.
 
 ## 5. Stop conditions
 

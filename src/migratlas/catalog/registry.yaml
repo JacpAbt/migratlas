@@ -1315,3 +1315,103 @@ sources:
       degree-day or extreme-day form of this driver needs the `day` table, which is a different and
       much larger commitment and is excluded in forecast-a.md §2.
     added: 2026-08-19
+
+  - id: ukbms_phenology
+    title: UK Butterfly Monitoring Scheme — flight-period phenology, 1976–2021
+    realm: terrestrial
+    evidence_type: survey_index
+    taxon_scope: exact
+    landing_page: https://catalogue.ceh.ac.uk/documents/0c59eb20-26e3-4066-86f5-418afae18769
+    # Version DOI for the 2021 release, not a floating concept DOI, for darkecology's reason: a
+    # published figure has to stay reproducible when the scheme issues next year's file.
+    doi: 10.5285/0c59eb20-26e3-4066-86f5-418afae18769
+    # The bare /data/<uuid> path answers with a one-link "your data is ready" page rather than
+    # the archive, and httpx follows no link, so a fetch of it lands 1,196 bytes of HTML named
+    # .zip. The archive is that path plus the extension. No form, no checkbox, nothing to accept.
+    download_uri: https://data-package.ceh.ac.uk/data/0c59eb20-26e3-4066-86f5-418afae18769.zip
+    licence: Open Government Licence
+    licence_url: http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+    citation: >-
+      Botham, M.; Middlebrook, I.; Harrower, C.; Roy, D.B. (2022). United Kingdom Butterfly
+      Monitoring Scheme: phenology 2021. NERC EDS Environmental Information Data Centre.
+      https://doi.org/10.5285/0c59eb20-26e3-4066-86f5-418afae18769. Scheme organised and funded by
+      Butterfly Conservation, the UK Centre for Ecology & Hydrology, the British Trust for
+      Ornithology and the Joint Nature Conservation Committee.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        The Open Government Licence permits copying, adapting and commercial reuse with attribution.
+        The dataset's own conditions are that the citation including the DOI appears in full in the
+        reference list of anything describing research that used the data, and that this exact
+        statement travels with any derived information or image: "Contains UK Butterfly Monitoring
+        Scheme (UKBMS) data © copyright and database right Butterfly Conservation, the Centre for
+        Ecology & Hydrology, British Trust for Ornithology, and the Joint Nature Conservation
+        Committee." Both are satisfied by the citation above and by PROVENANCE.md, and the
+        attribution line has to reach any published figure as well.
+    # Site-level summaries over a fixed-route protocol pooled across recorders: no individual, no
+    # nest, no coordinate finer than the transect the scheme itself publishes. `low` rather than
+    # `not_sensitive` on sabap1's reasoning -- the rows are safe, and the gate should not minute a
+    # judgement that every taxon in a national scheme is.
+    default_sensitivity: low
+    caveats: >-
+      **The day columns count from 1 April, not from 1 January** — the archive's own documentation
+      says so, with "20 = 20th April" as its example, and reading them as a day of year puts every
+      date about ninety days early while looking entirely plausible. A derived product, not counts.
+      Phenology is computed only from the weekly standard transects, so the Wider Countryside squares
+      and targeted surveys in the site table contribute none of it. Thirteen species carry split
+      flight periods — eleven multivoltine plus Brimstone and Peacock, which overwinter as adults —
+      and for those the pooled `BROOD = 0` row is an average across generations that no animal
+      experienced. The scheme's visit-level transect data is not openly published,
+      so the flight-period summary has to be taken as issued — which means this source carries a
+      **mean** flight date while the radar response carries a **median** passage date. Any use
+      comparing the two must use a ratio of trends, where a constant mean-against-median offset
+      cancels, and must check for a trend in the flight curve's shape, which would not; the
+      published duration and standard deviation are what make that checkable and
+      phase1j-fourth-leg.md §3a registers it as a stop condition. "Mean flight date" also names two
+      different biologies — emergence for a resident, arrival plus residence for a migrant — and
+      eleven multi-voltine species carry separate generations that must stay separate, because a
+      species-level mean across broods is an average of two peaks and a trough and is not a date any
+      animal experienced. Positions come from the scheme's separate site-location dataset and the
+      publisher withholds the sensitive ones; because SURVEY_INDEX requires a position, those sites
+      cannot enter this lake at all, which is the publisher's sensitivity decision enforced by the
+      schema rather than by code here. Effort is fixed by design — a Pollard walk is a fixed route
+      walked weekly under stated weather criteria — but not by personnel: sites and recorders turn
+      over, and a site whose recorder changed mid-series may carry a step nothing here looks for.
+      One island's climate, so this is a national scheme rather than a realm.
+    added: 2026-08-20
+
+  - id: ukbms_sites
+    title: UK Butterfly Monitoring Scheme — transect site locations, 2021 v2
+    realm: terrestrial
+    # Neither evidence nor a driver: the positions every ukbms_phenology row needs to satisfy a
+    # non-null coordinate. Registered anyway, for the reason the Source model gives about drivers --
+    # the registry is where a licence is recorded and PROVENANCE.md is generated from, so anything
+    # fetched and left out would be a source whose terms nothing states.
+    # v2, which supersedes the first 2021 release. The superseded one is 1cb8f31e-5c09-473c-96e6-
+    # ea4047d324a2 and its /data/ path 404s, which is how this was noticed rather than inherited.
+    landing_page: https://catalogue.ceh.ac.uk/documents/1cfdcd20-afb8-4b58-9ab2-604b90f5242d
+    doi: 10.5285/1cfdcd20-afb8-4b58-9ab2-604b90f5242d
+    download_uri: https://data-package.ceh.ac.uk/data/1cfdcd20-afb8-4b58-9ab2-604b90f5242d.zip
+    licence: Open Government Licence
+    licence_url: http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+    citation: >-
+      Botham, M.S.; Middlebrook, I.; Harris, S.; Harrower, C.; Lowe, M.; Roy, D.B. (2023). United
+      Kingdom Butterfly Monitoring Scheme: site location data 2021 v2. NERC EDS Environmental
+      Information Data Centre. https://doi.org/10.5285/1cfdcd20-afb8-4b58-9ab2-604b90f5242d.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+    # Transect positions, with the sensitive ones already removed by the publisher. Nothing here is
+    # an animal record.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      **The publisher excludes the locations of sites it classes as sensitive**, with a request
+      route for the rest that this project is not taking; see docs/ETHICS.md and task #50. So the
+      join against ukbms_phenology is deliberately incomplete and its rate is a graded prediction in
+      phase1j-fourth-leg.md rather than an assumption. Covers standard UKBMS transects, Wider
+      Countryside Butterfly Survey squares and targeted single-species surveys together, which are
+      three different protocols sharing one site table.
+    added: 2026-08-20
