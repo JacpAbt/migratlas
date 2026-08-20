@@ -58,6 +58,11 @@
     display: flex;
     flex-direction: column;
     padding: var(--page-pad);
+    /* A chapter can carry three claims, which is taller than a page. The page scrolls rather than
+       the book growing: a spread that changed height between chapters would not read as one object,
+       and the crease and the tabs are positioned against its height. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /* Extra room on the bound edge: the pages meet on the crease, so there is no gutter column

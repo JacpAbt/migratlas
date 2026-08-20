@@ -140,3 +140,86 @@ test("the turn clears itself even where the animation never fires", async ({ pag
   await expect(page.locator(".stale")).toHaveCount(0);
   await expect(page.locator(".tab.is-on")).toHaveText("Predicted");
 });
+
+test("the plate is drawn, and its marks are named", async ({ page }) => {
+  await openBook(page, "#ch=what-did-not");
+  const svg = page.locator(".plate__sheet svg");
+  await expect(svg).toBeVisible();
+
+  // Named, because `ink.ts` says an anonymous `<g>` of paths is useless to select and the suite has
+  // to reach for these by name rather than by "the second path inside the third svg".
+  for (const name of ["ink-graticule", "ink-land", "ink-here"]) {
+    await expect(page.locator(`.plate__sheet svg .${name}`)).toHaveCount(1);
+  }
+  // The caption cites the camera line `story.ts` already records and a test already guards.
+  await expect(page.locator("figcaption")).toContainText("bottom-trawl surveys");
+});
+
+test("the plate's pen is the same weight at any window size", async ({ page }) => {
+  /*
+    The rule `notebook/ink.ts` states and the mock in `web/mocks/` breaks: geometry generated in a
+    fixed viewBox and scaled to fit keeps its coordinates in user units while the stroke is applied
+    in screen units, so the same 1.3px pen renders at 0.6px on a laptop and 1.7px on a monitor. The
+    plate takes the measured box instead, so this asserts the weights do not move when the box does.
+  */
+  const read = async () => {
+    await expect(page.locator(".plate__sheet svg")).toBeVisible();
+    return page.evaluate(() => {
+      const svg = document.querySelector(".plate__sheet svg")!;
+      const widths = [...svg.querySelectorAll("path")].map((path) =>
+        Number(path.getAttribute("stroke-width") ?? 0),
+      );
+      return {
+        size: `${svg.getAttribute("width")}x${svg.getAttribute("height")}`,
+        weights: [...new Set(widths)].sort((first, second) => first - second),
+        scaled: svg.hasAttribute("viewBox"),
+      };
+    });
+  };
+
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await openBook(page, "#ch=what-did-not");
+  const wide = await read();
+
+  await page.setViewportSize({ width: 1100, height: 700 });
+  await page.reload();
+  await expect(page.locator(".book")).toBeVisible();
+  const narrow = await read();
+
+  expect(narrow.size, "the plate did not resize, so this proves nothing").not.toBe(wide.size);
+  expect(narrow.weights, "the pen changed weight with the window").toEqual(wide.weights);
+  expect(wide.scaled, "a viewBox means the drawing is being scaled after the fact").toBe(false);
+  expect(narrow.scaled).toBe(false);
+});
+
+test("the plate's geometry resamples by length and projects into its box", async () => {
+  const { projection, resample, TOP_LAT, BOTTOM_LAT } = await import("../src/lib/book/plate");
+
+  // Resampling by arc length rather than by index: a ring whose vertices bunch at one end must come
+  // back evenly spaced, or the whole point budget is spent on Norway's fjords.
+  const lopsided: number[][] = [
+    [0, 0],
+    [0.1, 0],
+    [0.2, 0],
+    [10, 0],
+    [0, 0],
+  ];
+  const even = resample(lopsided, 8);
+  expect(even).toHaveLength(8);
+  const gaps = even
+    .slice(1)
+    .map((point, index) => Math.hypot(point[0] - even[index]![0], point[1] - even[index]![1]));
+  const spread = Math.max(...gaps) / Math.min(...gaps);
+  expect(spread, `resampled gaps vary by ${spread.toFixed(1)}x`).toBeLessThan(2);
+
+  const { x, y } = projection(1000, 500);
+  expect(x(-180)).toBeCloseTo(0);
+  expect(x(180)).toBeCloseTo(1000);
+  expect(x(0)).toBeCloseTo(500);
+  expect(y(TOP_LAT)).toBeCloseTo(0);
+  expect(y(BOTTOM_LAT)).toBeCloseTo(500);
+  // Clamped rather than sent to infinity, which is what Mercator does with a pole.
+  expect(Number.isFinite(y(90))).toBe(true);
+  expect(y(90)).toBeCloseTo(y(TOP_LAT));
+});
+

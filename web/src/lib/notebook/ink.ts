@@ -46,7 +46,7 @@ export function pen(host: SVGSVGElement) {
  * is not a contract anybody can keep. Every mark this file makes carries an `ink-*` class saying
  * which mark it is.
  */
-function mark(host: SVGSVGElement, name: string, node: SVGGElement): void {
+export function mark(host: SVGSVGElement, name: string, node: SVGGElement): void {
   node.classList.add(`ink-${name}`);
   host.append(node);
 }

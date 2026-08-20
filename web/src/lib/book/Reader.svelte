@@ -1,10 +1,11 @@
 <script lang="ts">
   import Book from "./Book.svelte";
+  import Plate from "./Plate.svelte";
   import Claim from "../claim/Claim.svelte";
   import { CHAPTERS, chapterAt, type Chapter } from "../story";
   import type { Finding } from "../ledger";
 
-  let { findings }: { findings: Finding[] } = $props();
+  let { findings, base }: { findings: Finding[]; base: string } = $props();
 
   const CHAPTER_PARAM = "ch";
 
@@ -62,22 +63,26 @@
     {@const claims = held(chapter)}
     {#if side === "verso"}
       <p class="chapter">{chapter.title}</p>
-      {#if claims[0]}
-        <Claim finding={claims[0]} />
+      {#if claims.length}
+        <!-- Every claim the chapter carries, not just the first: "What did not" holds three, and a
+             page showing one of them would drop two results on the floor. The argument is the left
+             page and the plate is the right one. -->
+        {#each claims as finding (finding.key)}
+          <Claim {finding} />
+        {/each}
       {:else}
         <p class="aside">
           No claim of its own. This chapter says how to read the ones that follow.
         </p>
       {/if}
+    {:else if claims[0]}
+      <!-- The plate is a figure: where on Earth this chapter's first claim is. The map itself is
+           the world chapter, per ADR 0013, which is why a still is right here. -->
+      <Plate finding={claims[0]} number={CHAPTERS.indexOf(chapter)} {base} />
     {:else}
-      {#each claims.slice(1) as finding (finding.key)}
-        <Claim {finding} />
-      {/each}
-      {#if claims.length <= 1}
-        <p class="aside aside--quiet">
-          The plate for this chapter lands here: the map, drawn, with the extent of the claim on it.
-        </p>
-      {/if}
+      <p class="aside aside--quiet">
+        No plate: this chapter is the way in, or the way out.
+      </p>
     {/if}
   {/snippet}
 </Book>

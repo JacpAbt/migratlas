@@ -36,7 +36,7 @@ if (new URLSearchParams(location.search).has("book")) {
     import("./lib/ledger"),
   ]);
   const ledger = await loadLedger(base);
-  mount(Reader, { target, props: { findings: ledger.findings } });
+  mount(Reader, { target, props: { findings: ledger.findings, base } });
 } else {
   mount(Shell, { target, props: { base } });
 }
