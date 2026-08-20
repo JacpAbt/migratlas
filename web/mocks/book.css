@@ -1,0 +1,414 @@
+/**
+ * Layout only. Not one colour, face or size is declared here.
+ *
+ * Everything visual comes from `/src/styles/tokens.css`, which this file links rather than copies,
+ * because the palette and the type are settled and the open question is arrangement. If a mock
+ * needs a colour that is not a token, that is a finding about the token set and belongs in
+ * tokens.css -- not a local hex here, which is the rule ADR 0008 already set for the app and which
+ * a mock is not exempt from just because it is disposable.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper-sunken);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: calc(var(--size-body) * var(--font-scale-body));
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+}
+
+/* --- The picker, which is scaffolding and says so ------------------------- */
+
+.picker {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-tight);
+  align-items: center;
+  padding: var(--gap-tight) var(--gap);
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+
+.picker__what,
+.picker label {
+  font-size: var(--size-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.picker__sep {
+  flex: 1;
+}
+
+.picker button {
+  font-family: var(--font-body);
+  font-size: var(--size-margin);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.3em 0.7em;
+  cursor: pointer;
+}
+
+.picker button.is-on {
+  border-color: var(--rust);
+  color: var(--rust);
+}
+
+.picker select {
+  font-family: var(--font-body);
+  font-size: var(--size-margin);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  margin-left: 0.3em;
+}
+
+.mock {
+  padding: var(--gap-wide) var(--gap);
+}
+
+.mock__note {
+  max-width: 44rem;
+  margin: 0 auto var(--gap-wide);
+  padding: var(--gap);
+  font-size: var(--size-margin);
+  color: var(--ink-soft);
+  border-left: 2px solid var(--rust);
+  background: var(--paper);
+}
+
+/* --- Shared page furniture ----------------------------------------------- */
+
+/* The grain, as tokens.css composites it: a texture over paper, not a filter on it. */
+.sheet-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--grain);
+  background-size: var(--grain-size);
+  mix-blend-mode: var(--grain-blend);
+  opacity: 0.85;
+}
+
+.kicker {
+  margin: 0 0 var(--gap-tight);
+  font-size: var(--size-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--moss);
+}
+
+h1.hand {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: var(--size-claim);
+  line-height: var(--leading-hand);
+  font-weight: 400;
+}
+
+.rule-drawn {
+  display: block;
+  width: min(18rem, 60%);
+  height: 12px;
+  margin: var(--gap-hair) 0 var(--gap);
+}
+
+.lede {
+  margin: 0 0 var(--gap);
+  font-family: var(--font-hand);
+  font-size: calc(1.06rem * var(--font-scale-hand));
+  line-height: var(--leading-hand);
+}
+
+.value {
+  margin: 0 0 var(--gap);
+  font-family: var(--font-mono);
+  font-size: var(--size-value);
+  color: var(--rust);
+}
+
+.body {
+  margin: 0 0 var(--gap);
+}
+
+.caveat-inline,
+.margin__caveat {
+  margin: var(--gap) 0 0;
+  padding-left: var(--gap-tight);
+  font-size: var(--size-margin);
+  color: var(--ink-soft);
+  border-left: 2px solid var(--rule);
+}
+
+.figcap,
+.plate figcaption {
+  margin: var(--gap-tight) 0 0;
+  font-size: var(--size-margin);
+  color: var(--ink-soft);
+}
+
+/* --- The map plate ------------------------------------------------------- */
+
+.plate {
+  margin: var(--gap-wide) 0;
+}
+
+.plate__map {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1000 / 568;
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
+
+.plate__map svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.plate__map--tall {
+  aspect-ratio: 3 / 4;
+}
+
+.plate__map--fill {
+  aspect-ratio: auto;
+  height: min(62vh, 30rem);
+}
+
+/* --- Thumb tabs ---------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tab {
+  font-family: var(--font-hand);
+  font-size: var(--size-margin);
+  writing-mode: vertical-rl;
+  padding: var(--gap-tight) 0.35em;
+  background: var(--paper-sunken);
+  color: var(--ink-soft);
+  border: 1px solid var(--rule);
+  cursor: pointer;
+}
+
+.tab.is-on {
+  background: var(--paper);
+  color: var(--rust);
+  border-color: var(--rust);
+}
+
+.tabs--left .tab {
+  border-right: none;
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.tabs--right .tab,
+.tabs--rail .tab {
+  border-left: none;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.tabs--hang {
+  position: absolute;
+  top: var(--gap-wide);
+  left: 0;
+  transform: translateX(-100%);
+  z-index: 2;
+}
+
+.tabs--rail {
+  align-self: start;
+}
+
+/* --- A · Tabbed ledger --------------------------------------------------- */
+
+.a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 34rem) var(--margin-column);
+  gap: 0 var(--gap-wide);
+  justify-content: center;
+  align-items: start;
+}
+
+.a__page {
+  position: relative;
+  padding: var(--gap-wide);
+  background: var(--paper);
+  box-shadow: var(--shadow-sheet);
+}
+
+.a__page > *,
+.b__sheet > *,
+.c__verso > *,
+.d__notes > * {
+  position: relative;
+}
+
+.a__margin {
+  padding-top: var(--gap-wide);
+}
+
+.margin__h {
+  margin: 0 0 var(--gap-tight);
+  font-size: var(--size-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--moss);
+}
+
+.margin__list {
+  margin: 0;
+  font-size: var(--size-margin);
+}
+
+.margin__list dt {
+  color: var(--ink-soft);
+}
+
+.margin__list dd {
+  margin: 0 0 var(--gap-tight);
+  font-family: var(--font-mono);
+}
+
+/* --- B · Sheet over the world ------------------------------------------- */
+
+.b {
+  position: relative;
+  min-height: 40rem;
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
+
+.b__world {
+  position: absolute;
+  inset: 0;
+}
+
+.b__world svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.b__sheet {
+  position: relative;
+  width: min(38rem, 90%);
+  margin: var(--gap-wide) auto;
+  padding: var(--gap-wide);
+  background: var(--paper);
+  box-shadow: var(--shadow-sheet);
+}
+
+/* --- C · The open spread ------------------------------------------------ */
+
+.c {
+  display: flex;
+  justify-content: center;
+  align-items: start;
+}
+
+.c__book {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  max-width: 68rem;
+  padding: var(--gap-wide);
+  background: var(--paper);
+  box-shadow: var(--shadow-sheet);
+}
+
+.c__verso,
+.c__recto {
+  position: relative;
+  padding: 0 var(--gap-wide);
+}
+
+/* The gutter, as a fold rather than a border: two gradients meeting, which is what a bound spread
+   does to the light. */
+.c__gutter {
+  width: var(--gap-wide);
+  background:
+    linear-gradient(to right, transparent, rgb(0 0 0 / 7%)),
+    linear-gradient(to left, transparent, rgb(0 0 0 / 7%));
+}
+
+/* --- D · Pinned plate --------------------------------------------------- */
+
+.d {
+  display: grid;
+  grid-template-columns: auto minmax(0, 30rem) minmax(0, 1fr);
+  gap: 0 var(--gap-wide);
+  justify-content: center;
+  align-items: start;
+  max-width: 76rem;
+  margin: 0 auto;
+}
+
+.d__notes {
+  position: relative;
+  padding: var(--gap-wide);
+  background: var(--paper);
+  box-shadow: var(--shadow-sheet);
+}
+
+.d__plate {
+  position: sticky;
+  top: 5rem;
+}
+
+/* --- Narrow screens: every layout folds to one column ------------------- */
+
+@media (width < 60rem) {
+  .a,
+  .d {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .c__book {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .c__gutter {
+    display: none;
+  }
+
+  .a__margin {
+    padding-top: var(--gap);
+  }
+
+  .tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    order: -1;
+  }
+
+  .tab {
+    writing-mode: horizontal-tb;
+  }
+
+  .tabs--hang {
+    position: static;
+    transform: none;
+  }
+}

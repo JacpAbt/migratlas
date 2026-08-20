@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en" data-type="hand">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Migratlas — four ways to build the book</title>
+    <!--
+      The real stylesheets, and that is the point of this file.
+
+      `mocks/index.html` links only fonts.css and defines its own palette, because it *was* the
+      palette decision (ADR 0008). This is not that: the register, the fonts, the two surfaces and
+      every colour are settled and are not being reopened. So tokens.css is linked directly and
+      nothing here may declare a colour of its own -- what is on screen is what the build has.
+
+      What is open is ADR 0013's layout: the scroll as primary canvas, chapters as thumb tabs, the
+      introduction first. Four readings of that, side by side, on real ledger text.
+    -->
+    <link rel="stylesheet" href="/src/styles/fonts.css" />
+    <link rel="stylesheet" href="/src/styles/tokens.css" />
+    <link rel="stylesheet" href="/mocks/book.css" />
+  </head>
+  <body>
+    <nav class="picker">
+      <span class="picker__what">Layout</span>
+      <button type="button" data-go="a" class="is-on">A · Tabbed ledger</button>
+      <button type="button" data-go="b">B · Sheet over the world</button>
+      <button type="button" data-go="c">C · The open spread</button>
+      <button type="button" data-go="d">D · Pinned plate</button>
+      <span class="picker__sep"></span>
+      <label>surface
+        <select id="surface">
+          <option value="day">day</option>
+          <option value="night">night</option>
+        </select>
+      </label>
+      <label>type
+        <select id="type">
+          <option value="hand">hand</option>
+          <option value="clear">clear</option>
+          <option value="dyslexic">dyslexic</option>
+        </select>
+      </label>
+    </nav>
+
+    <!-- ================================================== A · Tabbed ledger -->
+    <section class="mock" id="a" data-live>
+      <p class="mock__note">
+        <b>A · Tabbed ledger.</b> The literal reading of ADR 0013: index tabs down the outer edge,
+        one column of prose at a comfortable measure, the map as a plate set into the chapter with a
+        caption under it, and the risk-of-bias furniture in the margin where a notebook keeps it.
+        The map is a figure inside the argument rather than the ground the argument sits on.
+      </p>
+      <div class="a">
+        <nav class="tabs tabs--left" data-tabs></nav>
+        <article class="a__page">
+          <div class="sheet-grain"></div>
+          <p class="kicker">chapter two</p>
+          <h1 class="hand">What changed</h1>
+          <svg class="rule-drawn" data-rough="underline"></svg>
+          <p class="lede" data-claim="plain"></p>
+          <p class="value" data-claim="value"></p>
+          <p class="body" data-claim="matters"></p>
+          <figure class="plate">
+            <div class="plate__map" data-map></div>
+            <figcaption>
+              <b>Plate 2.</b> <span data-claim="scope"></span>
+            </figcaption>
+          </figure>
+          <p class="body">
+            The same signal appears in an independent record with a different instrument, which is
+            the only reason it is written down here as a change rather than as a curiosity.
+          </p>
+        </article>
+        <aside class="a__margin">
+          <p class="margin__h">risk of bias</p>
+          <dl class="margin__list">
+            <dt>coverage</dt><dd>78 of 143 stations</dd>
+            <dt>attribution</dt><dd>partial</dd>
+            <dt>effort</dt><dd>fixed by design</dd>
+          </dl>
+          <p class="margin__caveat" data-claim="caveat"></p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============================================ B · Sheet over the world -->
+    <section class="mock" id="b" hidden>
+      <p class="mock__note">
+        <b>B · Sheet over the world.</b> The map is the canvas and never leaves; the chapter is a
+        sheet laid on top of it, tabs hanging off the sheet's edge. Closest to the shell that exists
+        today, so the least risky to build, and the option where "the scroll is the primary canvas"
+        is true in the strongest sense. The cost is that prose always sits on top of something.
+      </p>
+      <div class="b">
+        <div class="b__world" data-map></div>
+        <nav class="tabs tabs--hang" data-tabs></nav>
+        <article class="b__sheet">
+          <div class="sheet-grain"></div>
+          <p class="kicker">chapter two</p>
+          <h1 class="hand">What changed</h1>
+          <svg class="rule-drawn" data-rough="underline"></svg>
+          <p class="lede" data-claim="plain"></p>
+          <p class="value" data-claim="value"></p>
+          <p class="body" data-claim="matters"></p>
+          <p class="caveat-inline" data-claim="caveat"></p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ==================================================== C · Open spread -->
+    <section class="mock" id="c" hidden>
+      <p class="mock__note">
+        <b>C · The open spread.</b> Two facing pages with a gutter: the argument on the left, the
+        plate on the right, tabs on the outer edge. The most notebook-like of the four and the most
+        distinctive; also the one that has to fold to a single column on a narrow screen, which is
+        a second layout to design rather than a reflow.
+      </p>
+      <div class="c">
+        <div class="c__book">
+          <div class="sheet-grain"></div>
+          <article class="c__verso">
+            <p class="kicker">chapter two</p>
+            <h1 class="hand">What changed</h1>
+            <svg class="rule-drawn" data-rough="underline"></svg>
+            <p class="lede" data-claim="plain"></p>
+            <p class="value" data-claim="value"></p>
+            <p class="body" data-claim="matters"></p>
+            <p class="caveat-inline" data-claim="caveat"></p>
+          </article>
+          <div class="c__gutter"></div>
+          <article class="c__recto">
+            <div class="plate__map plate__map--tall" data-map></div>
+            <p class="figcap"><b>Plate 2.</b> <span data-claim="scope"></span></p>
+          </article>
+        </div>
+        <nav class="tabs tabs--right" data-tabs></nav>
+      </div>
+    </section>
+
+    <!-- =================================================== D · Pinned plate -->
+    <section class="mock" id="d" hidden>
+      <p class="mock__note">
+        <b>D · Pinned plate.</b> The plate is pinned in view while the notes scroll past it, and it
+        changes as each section arrives — the map answers the prose instead of illustrating it. Best
+        at carrying a sequence of claims; the most machinery, and the one where a reader who scrolls
+        fast can outrun the thing they are being shown.
+      </p>
+      <div class="d">
+        <nav class="tabs tabs--rail" data-tabs></nav>
+        <div class="d__notes">
+          <div class="sheet-grain"></div>
+          <p class="kicker">chapter two</p>
+          <h1 class="hand">What changed</h1>
+          <svg class="rule-drawn" data-rough="underline"></svg>
+          <p class="lede" data-claim="plain"></p>
+          <p class="value" data-claim="value"></p>
+          <p class="body" data-claim="matters"></p>
+          <p class="body">
+            Scrolling on would bring the next claim, and the plate beside it would change to the
+            record that claim is about, rather than to a different view of this one.
+          </p>
+          <p class="caveat-inline" data-claim="caveat"></p>
+        </div>
+        <div class="d__plate">
+          <div class="plate__map plate__map--fill" data-map></div>
+          <p class="figcap"><b>Plate 2.</b> <span data-claim="scope"></span></p>
+        </div>
+      </div>
+    </section>
+
+    <script type="module" src="/mocks/book.ts"></script>
+  </body>
+</html>
