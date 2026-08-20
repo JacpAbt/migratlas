@@ -691,6 +691,15 @@ def report_phase3f() -> None:
     print(phase3f.render())
 
 
+@report_app.command("phase3h")
+def report_phase3h() -> None:
+    """The pooled-response ladder: does predicting a region beat predicting a station?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3h  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3h.render())
+
+
 @report_app.command("phase3d")
 def report_phase3d() -> None:
     """The dress rehearsal: the full two-stage pipeline graded on 2017-2024, run once."""

@@ -87,6 +87,16 @@ def region_of(latitude: float, longitude: float) -> str | None:
     return f"{flyway} {band}" if flyway and band else None
 
 
+def station_sites(nights: pl.DataFrame) -> dict[str, tuple[float, float]]:
+    """Every station's position, for `region_of`. Lives here because `region_of` does."""
+    return {
+        str(row["station_id"]): (float(row["lat"]), float(row["lon"]))
+        for row in nights.group_by("station_id")
+        .agg(lat=pl.col("station_latitude").first(), lon=pl.col("station_longitude").first())
+        .to_dicts()
+    }
+
+
 def pooled_series(members: list[dict[int, float]], years: list[int]) -> np.ndarray:
     """Mean passage date across a set of stations per year, NaN where none of them reported."""
     out = []
@@ -297,12 +307,7 @@ def collect() -> list[SeasonFloor]:
         min_coverage=MIN_COVERAGE,
         min_observations=MIN_NIGHTS,
     ).drop_nulls("q50_doy")
-    sites = {
-        str(row["station_id"]): (float(row["lat"]), float(row["lon"]))
-        for row in nights.group_by("station_id")
-        .agg(lat=pl.col("station_latitude").first(), lon=pl.col("station_longitude").first())
-        .to_dicts()
-    }
+    sites = station_sites(nights)
     return [measure(season, panel, sites) for season in ("autumn", "spring")]
 
 
