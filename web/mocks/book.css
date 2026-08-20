@@ -22,43 +22,8 @@
   --fold: 2.5rem;
   --pad: clamp(1.6rem, 3.2vw, 3.4rem);
 
-  /*
-    The taped-in sheet, and it has to be a token of its own rather than a mix chosen once.
-
-    By day the page is #f3eddc and the sunken tone #e5dec9, so a sheet mixed between them reads as
-    a separate piece of paper laid on the page. By night those two are #0d131e and #070c14 -- both
-    near-black, 6 units apart -- so the same mix is invisible and the tape appears to hold nothing.
-    A real second sheet under a lamp is *lighter* than the page it sits on, not darker, so the dark
-    surfaces mix toward the pencil instead and the relationship inverts along with the light.
-
-    Written twice below for tokens.css's own reason: a media query cannot join a selector list.
-  */
-  --plate-paper: color-mix(in srgb, var(--paper) 55%, var(--paper-sunken));
-  --plate-tipped: color-mix(in srgb, var(--paper-sunken) 85%, var(--ink) 4%);
-
-  /*
-    How much paper stays in a tab's stock, and the accents need their own figure.
-
-    The dark palette's accents are *lighter* than its page -- rust is #a3441f by day and #ffa870 by
-    night -- so the same mix that tints a cream page darker tints a near-black one much lighter, and
-    the ink on it fell to 3.74:1 against a 4.5 floor. Eased for the dark surfaces only, below.
-  */
-  --mix-stock: 68%;
-  --mix-accent: 68%;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-surface="day"]) {
-    --plate-paper: color-mix(in srgb, var(--paper) 86%, var(--pencil));
-    --plate-tipped: color-mix(in srgb, var(--paper) 78%, var(--pencil));
-    --mix-accent: 86%;
-  }
-}
-
-:root[data-surface="night"] {
-  --plate-paper: color-mix(in srgb, var(--paper) 86%, var(--pencil));
-  --plate-tipped: color-mix(in srgb, var(--paper) 78%, var(--pencil));
-  --mix-accent: 86%;
+  /* The plate tints and the tab stock strengths now live in tokens.css, which this file links.
+     They were prototyped here and moved once they were measured. */
 }
 
 body {
@@ -359,7 +324,7 @@ h1.hand {
 .lede {
   margin: 0 0 var(--gap);
   font-family: var(--font-hand);
-  font-size: calc(1.12rem * var(--pt) * var(--font-scale-hand));
+  font-size: calc(var(--size-lede) * var(--pt));
   line-height: 1.45;
 }
 
@@ -395,7 +360,7 @@ h1.hand {
 
 .body {
   margin: 0 0 var(--gap);
-  font-size: calc(0.95rem * var(--pt) * var(--font-scale-body));
+  font-size: calc(var(--size-body) * var(--pt) * var(--font-scale-body));
 }
 
 /* The caveat, in the margin, bracketed. Not a footnote: this project puts the limit beside the
@@ -613,7 +578,7 @@ h1.hand {
     tabs separated by only about 28 units of RGB, which is not a colour difference anyone would
     call one. Per-tab, because one hue needs less of itself -- see the yellow below.
   */
-  --mix: var(--mix-stock);
+  --mix: var(--tab-stock);
   background: color-mix(in srgb, var(--paper) var(--mix), var(--tint));
   border: 1px solid color-mix(in srgb, var(--tint) 45%, var(--rule));
   border-left: none;
@@ -633,7 +598,7 @@ h1.hand {
 
 .tab:nth-child(2) {
   --tint: var(--rust);
-  --mix: var(--mix-accent);
+  --mix: var(--tab-accent);
 }
 
 .tab:nth-child(3) {
@@ -656,7 +621,7 @@ h1.hand {
 
 .tab:nth-child(6) {
   --tint: var(--rust-ink);
-  --mix: var(--mix-accent);
+  --mix: var(--tab-accent);
 }
 
 .tab:nth-child(7) {

@@ -1160,3 +1160,55 @@ test("the instrument marks stay legible as marks", async ({ page }) => {
   });
   expect(ratio, `instrument stroke is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_LARGE);
 });
+
+/**
+ * The book's own tokens, and the one property of them that is measured rather than chosen.
+ *
+ * `--plate-paper` is the stock a plate is taped onto, and its relationship to the page **inverts
+ * with the light**: by day a second sheet on cream paper is slightly darker, by night it must be
+ * lighter, because `--paper` and `--paper-sunken` are six units apart on the dark palette and a mix
+ * between them is invisible. ADR 0015 records that as a measurement; this is what stops a later
+ * simplification of the mix from quietly undoing it.
+ */
+for (const surface of ["day", "night"] as const) {
+  test(`the plate stock reads against the page on ${surface}`, async ({ page }) => {
+    await ready(page);
+    if (surface === "night") await surfaceIs(page, "Night");
+
+    const measured = await page.evaluate(() => {
+      const style = getComputedStyle(document.documentElement);
+      // Through a canvas, because `color-mix()` resolves to `color(srgb ...)` whose components are
+      // fractions -- parsing the string as 0-255 silently rounds every channel to 0 or 1.
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext("2d");
+      const channels = (css: string): number[] => {
+        if (!ctx) return [];
+        ctx.fillStyle = "#000";
+        ctx.fillStyle = css;
+        ctx.fillRect(0, 0, 1, 1);
+        return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3);
+      };
+      const brightness = (rgb: number[]) => (rgb[0]! + rgb[1]! + rgb[2]!) / 3;
+      const paper = channels(style.getPropertyValue("--paper").trim());
+      const plate = channels(style.getPropertyValue("--plate-paper").trim());
+      return {
+        gap: Math.round(Math.hypot(...plate.map((v, i) => v - paper[i]!))),
+        lighter: brightness(plate) > brightness(paper),
+        lede: style.getPropertyValue("--size-lede").trim(),
+      };
+    });
+
+    // Visible, and the first attempt at this managed two units per channel by day and six by night.
+    expect(measured.gap, `plate is only ${measured.gap} from the page`).toBeGreaterThan(10);
+    expect(
+      measured.lighter,
+      surface === "day"
+        ? "by day a sheet on the page should be darker than it"
+        : "by night a sheet on the page should be lighter than it",
+    ).toBe(surface === "night");
+    expect(measured.lede, "--size-lede does not resolve").toContain("rem");
+  });
+}
+
