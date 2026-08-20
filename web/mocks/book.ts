@@ -44,44 +44,53 @@ interface Finding {
  * is the amendment — it holds the mechanism dial, the forecast mask and the oxygen leverage, none
  * of which are ledger findings yet, so it borrows the attribution claim to have something to show.
  */
-const CHAPTERS: { title: string; kicker: string; keys: string[]; scrawl: string }[] = [
+/** `tab` is deliberately not `title`: a thumb tab carries a word, and the full title is the
+    heading on the page it opens. Seven full titles set vertically ran past the foot of the book. */
+const CHAPTERS: { title: string; tab: string; kicker: string; keys: string[]; scrawl: string }[] = [
   {
     title: "How to read this",
+    tab: "How to read",
     kicker: "introduction",
     keys: [],
     scrawl: "Every number here is recomputed from the data on every build. None of them are typed.",
   },
   {
     title: "What changed",
+    tab: "Changed",
     kicker: "chapter one",
     keys: ["autumn-advance", "composition-stable"],
     scrawl: "Two independent instruments, and the second one is why the first is written as a change.",
   },
   {
     title: "What did not",
+    tab: "Did not",
     kicker: "chapter two",
     keys: ["marine-null", "atlas-no-net-change", "displacement-flat"],
     scrawl: "A null is a result. Three of them are a pattern worth a chapter of its own.",
   },
   {
     title: "What we cannot see",
+    tab: "Cannot see",
     kicker: "chapter three",
     keys: ["coverage-bias", "transfer-fails"],
     scrawl: "The hatched ground on the plate is the honest part of this map.",
   },
   {
     title: "What can be predicted",
+    tab: "Predicted",
     kicker: "chapter four",
     keys: ["skill-sparse"],
     scrawl: "The site bet against itself in public and lost the bet. That page stays.",
   },
   {
     title: "Why it changed",
+    tab: "Why",
     kicker: "chapter five",
     keys: ["anthropogenic-share"],
     scrawl: "Turn the dial and the fit answers — inside the range it was fitted over, and nowhere else.",
   },
-  { title: "The world", kicker: "the back pocket", keys: [], scrawl: "Everything, at once, with the layers off until you ask." },
+  { title: "The world",
+    tab: "The world", kicker: "the back pocket", keys: [], scrawl: "Everything, at once, with the layers off until you ask." },
 ];
 
 let ledger: Finding[] = [];
@@ -155,7 +164,7 @@ function tabs(): void {
       const tab = document.createElement("button");
       tab.type = "button";
       tab.className = index === open ? "tab is-on" : "tab";
-      tab.textContent = chapter.title;
+      tab.textContent = chapter.tab;
       tab.addEventListener("click", () => void turnTo(index));
       return tab;
     }),
@@ -447,6 +456,7 @@ async function turnTo(index: number): Promise<void> {
   if (index === open) return;
   const forward = index > open;
   const face = leaf();
+  const cast = document.querySelector<HTMLElement>("[data-cast]");
   const recto = document.querySelector<HTMLElement>(".page--recto");
   const verso = document.querySelector<HTMLElement>(".page--verso");
 
@@ -458,34 +468,48 @@ async function turnTo(index: number): Promise<void> {
     return;
   }
 
-  // The leaf's front is the page you were reading; its back is what is on the other side of it.
-  // Turning backwards shows the verso leading, so the faces swap.
+  /*
+    Which sheet moves, and what is on each of its sides.
+
+    Going forward lifts the right page and lays it leftwards: its front is the recto you were
+    reading, and what appears on its back as it lands is the new left page. Going back lifts the
+    left page and lays it rightwards, so the two swap. Both reveal the correct thing underneath for
+    free, because the spread beneath is updated before the turn starts -- turning the right page
+    forward should expose the next recto, and that is exactly what is now there.
+  */
+  const lifted = forward ? recto : verso;
+  const arriving = forward ? verso : recto;
   const front = face.querySelector<HTMLElement>(".leaf__front");
   const back = face.querySelector<HTMLElement>(".leaf__back");
-  front?.replaceChildren(...[...(forward ? recto : verso).cloneNode(true).childNodes]);
+  front?.replaceChildren(...lifted.cloneNode(true).childNodes);
 
   open = index;
   fill(open);
   tabs();
   repaint();
-  back?.replaceChildren(...[...(forward ? verso : recto).cloneNode(true).childNodes]);
+  back?.replaceChildren(...arriving.cloneNode(true).childNodes);
 
-  face.classList.remove("is-turning");
-  // Reflow, so re-adding the class restarts the animation rather than being a no-op.
+  face.classList.remove("is-turning", "leaf--right", "leaf--left");
+  face.classList.add(forward ? "leaf--right" : "leaf--left");
+  cast?.classList.remove("is-sweeping");
+  cast?.classList.toggle("cast--back", !forward);
+  // Reflow, so re-adding the classes restarts the animations rather than being a no-op.
   void face.offsetWidth;
   face.classList.add("is-turning");
+  cast?.classList.add("is-sweeping");
 
   /*
     Cleared by whichever comes first, the event or the clock, and the clock is not paranoia.
     `animationend` does not arrive in a tab that is not compositing -- a background tab, a hidden
-    pane, a headless run -- and without a fallback the leaf stays parked over the right-hand page
-    for the rest of the session with no way back. Found exactly that way while verifying this.
+    pane, a headless run -- and without a fallback the leaf stays parked over half the spread for
+    the rest of the session with no way back. Found exactly that way while verifying this.
   */
   let done = false;
   const settle = () => {
     if (done) return;
     done = true;
     face.classList.remove("is-turning");
+    cast?.classList.remove("is-sweeping");
     front?.replaceChildren();
     back?.replaceChildren();
   };

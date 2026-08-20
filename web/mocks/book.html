@@ -40,8 +40,8 @@
       </label>
       <label>size
         <select id="scale">
-          <option value="1">100%</option>
-          <option value="1.15" selected>115%</option>
+          <option value="1" selected>100%</option>
+          <option value="1.15">115%</option>
           <option value="1.3">130%</option>
         </select>
       </label>
@@ -104,11 +104,15 @@
           </section>
         </div>
 
-        <!-- The page that turns. Front is the recto you were reading; back is what is coming. -->
-        <div class="leaf" data-leaf aria-hidden="true">
-          <div class="leaf__face leaf__front"><div class="page__grain"></div></div>
-          <div class="leaf__face leaf__back"><div class="page__grain"></div></div>
-          <div class="leaf__shade"></div>
+        <!--
+          The shadow the turning page throws, and the page itself. The shadow is a sibling of the
+          leaf rather than a child of it, because a child would rotate with the page casting it.
+          Both faces are filled by script from the real pages, grain and all.
+        -->
+        <div class="cast" data-cast aria-hidden="true"></div>
+        <div class="leaf leaf--right" data-leaf aria-hidden="true">
+          <div class="leaf__face leaf__front"></div>
+          <div class="leaf__face leaf__back"></div>
         </div>
 
         <nav class="tabs" data-tabs aria-label="chapters"></nav>

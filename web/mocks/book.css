@@ -18,8 +18,34 @@
 }
 
 :root {
-  --pt: 1.15;
+  --pt: 1;
   --fold: 2.5rem;
+
+  /*
+    The taped-in sheet, and it has to be a token of its own rather than a mix chosen once.
+
+    By day the page is #f3eddc and the sunken tone #e5dec9, so a sheet mixed between them reads as
+    a separate piece of paper laid on the page. By night those two are #0d131e and #070c14 -- both
+    near-black, 6 units apart -- so the same mix is invisible and the tape appears to hold nothing.
+    A real second sheet under a lamp is *lighter* than the page it sits on, not darker, so the dark
+    surfaces mix toward the pencil instead and the relationship inverts along with the light.
+
+    Written twice below for tokens.css's own reason: a media query cannot join a selector list.
+  */
+  --plate-paper: color-mix(in srgb, var(--paper) 55%, var(--paper-sunken));
+  --plate-tipped: color-mix(in srgb, var(--paper-sunken) 85%, var(--ink) 4%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-surface="day"]) {
+    --plate-paper: color-mix(in srgb, var(--paper) 86%, var(--pencil));
+    --plate-tipped: color-mix(in srgb, var(--paper) 78%, var(--pencil));
+  }
+}
+
+:root[data-surface="night"] {
+  --plate-paper: color-mix(in srgb, var(--paper) 86%, var(--pencil));
+  --plate-tipped: color-mix(in srgb, var(--paper) 78%, var(--pencil));
 }
 
 body {
@@ -351,7 +377,7 @@ h1.hand {
 
 /* Variant 1 — taped in. A separate sheet, a shade off the page, hung slightly crooked. */
 .book.is-taped .plate__paper {
-  background: color-mix(in srgb, var(--paper) 88%, var(--paper-sunken));
+  background: var(--plate-paper);
   transform: rotate(-1.1deg);
   box-shadow:
     0 1px 2px rgb(0 0 0 / 18%),
@@ -375,7 +401,7 @@ h1.hand {
 
 /* Variant 3 — a tipped-in plate: different stock, a fold along its inner edge, one paper clip. */
 .book.is-tipped .plate__paper {
-  background: color-mix(in srgb, var(--paper-sunken) 70%, var(--paper));
+  background: var(--plate-tipped);
   transform: rotate(0.5deg);
   box-shadow:
     0 1px 2px rgb(0 0 0 / 20%),
@@ -456,20 +482,33 @@ h1.hand {
 
 /* --- Thumb tabs, sticking out past the edge ----------------------------- */
 
+/* Full height and centred rather than pinned near the top: the column is as tall as its labels,
+   and at seven tabs a top-anchored stack ran 817px down a book 786px tall. */
 .tabs {
   position: absolute;
-  top: 8%;
+  top: 0;
+  bottom: 0;
   right: 0;
   z-index: 6;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 4px;
   transform: translateX(calc(100% - 3px));
 }
 
 .tab {
-  font-family: var(--font-hand);
-  font-size: calc(0.74rem * var(--pt));
+  /*
+    The body face, not the hand, and a fixed size that `--pt` does not scale.
+
+    tokens.css says why: Shantell Sans is "a marker face drawn for interfaces, so it survives 13px
+    where a looser hand turns into texture". A vertical tab is the smallest text on the page and
+    Virgil was illegible in it. The size is fixed because scaling it with the reading size broke
+    the tab column's geometry -- vertical text grows along the axis the column is stacked on, so at
+    130% the seven tabs ran past the foot of the book.
+  */
+  font-family: var(--font-body);
+  font-size: 0.74rem;
   writing-mode: vertical-rl;
   padding: 0.75em 0.42em;
   color: var(--ink-soft);
@@ -495,23 +534,53 @@ h1.hand {
 
 /* --- The page that turns ------------------------------------------------ */
 
+/*
+  Three things were wrong with the first attempt, all of them visible.
+
+  The cast shadow lived *inside* the leaf, so it rotated with the page instead of falling across the
+  spread underneath — a shadow that turns with the thing casting it is not a shadow.
+
+  The rotation stopped at 168 degrees, twelve short, so the page landed propped up at an angle and
+  then vanished.
+
+  And a backward turn animated the right-hand page, which is the wrong sheet: going back in a book
+  lifts the *left* page and lays it rightwards. One leaf now takes a side class, so each direction
+  turns the sheet that would actually move.
+*/
+
 .leaf {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: calc(50% + var(--fold) / 2);
-  right: 0;
   z-index: 5;
   transform-style: preserve-3d;
-  transform-origin: left center;
-  transform: rotateY(0deg);
   visibility: hidden;
   pointer-events: none;
+  will-change: transform;
 }
 
-.leaf.is-turning {
+/* Forward: the right page lifts and swings left about the spine. */
+.leaf--right {
+  left: calc(50% + var(--fold) / 2);
+  right: 0;
+  transform-origin: left center;
+}
+
+/* Backward: the left page lifts and swings right about the same spine. */
+.leaf--left {
+  left: 0;
+  right: calc(50% + var(--fold) / 2);
+  transform-origin: right center;
+}
+
+.leaf--right.is-turning {
   visibility: visible;
-  animation: turn var(--draw-slow) var(--ease-pen) forwards;
+  animation: turn-forward var(--draw-slow) var(--ease-pen) forwards;
+}
+
+.leaf--left.is-turning {
+  visibility: visible;
+  animation: turn-back var(--draw-slow) var(--ease-pen) forwards;
 }
 
 .leaf__face {
@@ -523,29 +592,57 @@ h1.hand {
   overflow: hidden;
 }
 
+/* The lifted sheet catches light along its free edge and darkens towards the spine, which is what
+   stops it reading as a flat rectangle mid-turn. */
+.leaf__face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to left, rgb(255 255 255 / 6%) 0 5%, transparent 20%),
+    linear-gradient(to right, rgb(0 0 0 / 16%), transparent 24%);
+}
+
 .leaf__back {
   transform: rotateY(180deg);
 }
 
-/* The shadow the turning page throws across the spread beneath it. */
-.leaf__shade {
+/* The shadow the turning page throws across the spread — on the spread, not on the leaf. */
+.cast {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to left, rgb(0 0 0 / 28%), transparent 55%);
+  z-index: 4;
   opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(to right, rgb(0 0 0 / 30%), transparent 52%);
 }
 
-.leaf.is-turning .leaf__shade {
+.cast.cast--back {
+  background: linear-gradient(to left, rgb(0 0 0 / 30%), transparent 52%);
+}
+
+.cast.is-sweeping {
   animation: sweep var(--draw-slow) var(--ease-pen) forwards;
 }
 
-@keyframes turn {
+@keyframes turn-forward {
   from {
     transform: rotateY(0deg);
   }
 
   to {
-    transform: rotateY(-168deg);
+    transform: rotateY(-180deg);
+  }
+}
+
+@keyframes turn-back {
+  from {
+    transform: rotateY(0deg);
+  }
+
+  to {
+    transform: rotateY(180deg);
   }
 }
 
@@ -554,7 +651,7 @@ h1.hand {
     opacity: 0;
   }
 
-  45% {
+  40% {
     opacity: 1;
   }
 
