@@ -617,7 +617,19 @@ document.getElementById("scale")?.addEventListener("change", (event) => {
   repaint();
 });
 
-addEventListener("resize", repaint);
+/*
+  After layout, and only once per frame.
+
+  `repaint` measures boxes to decide the map's draw scale and each mark's viewBox, so running it
+  straight off the resize event measures the *old* layout: the plate grew, the labels kept the scale
+  they were drawn at, and a 22px annotation rendered at 33px until something else forced a redraw.
+  A resize also fires many times per drag, and this collapses that to one draw per frame.
+*/
+let pending = 0;
+addEventListener("resize", () => {
+  cancelAnimationFrame(pending);
+  pending = requestAnimationFrame(repaint);
+});
 
 await load();
 tabs();

@@ -151,7 +151,8 @@ body {
   /* The subtraction is the picker plus the desk's own top padding, measured rather than guessed:
      44px of bar and 26px of padding, so 4.5rem covers it with a hair to spare. Overestimating it
      cost 50px of book height on a 720px screen. */
-  width: min(98vw, calc((100vh - 4.5rem) * var(--ratio)));
+  --book-h: min(calc(98vw / var(--ratio)), calc(100vh - 4.5rem));
+  width: calc(var(--book-h) * var(--ratio));
   aspect-ratio: var(--ratio);
   perspective: 2800px;
 }
@@ -554,7 +555,7 @@ h1.hand {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   transform: translateX(calc(100% - 3px));
 }
 
@@ -569,9 +570,21 @@ h1.hand {
     130% the seven tabs ran past the foot of the book.
   */
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  /*
+    Tied to the book's height, with a ceiling and a floor.
+
+    Seven vertical labels stack to **38 times** the font size -- measured, not guessed: 548px of
+    stack at 14.42px. At a fixed 0.95rem that stack was exactly the book height on a 620px-tall
+    window, with no margin at all, and overflowed on anything shorter while the book kept shrinking
+    around it. Dividing by 38 would pin it back to zero slack by construction, so this divides by 42
+    for about a tenth of the column in reserve. The ceiling is the size that was asked for; the floor
+    is where a label stops being worth reading at all.
+  */
+  font-size: clamp(0.7rem, calc(var(--book-h) / 42), 0.95rem);
   writing-mode: vertical-rl;
-  padding: 0.75em 0.42em;
+  /* Tight along the stacking axis: at 15.2px the seven labels want the whole book height, and the
+     padding is the only part of that not carrying text. */
+  padding: 0.42em 0.44em;
   color: var(--ink-soft);
   background: color-mix(in srgb, var(--paper) 84%, var(--paper-sunken));
   border: 1px solid var(--rule);
@@ -655,17 +668,15 @@ h1.hand {
   overflow: hidden;
 }
 
-/* The lifted sheet catches light along its free edge and darkens towards the spine, which is what
-   stops it reading as a flat rectangle mid-turn. */
-.leaf__face::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(to left, rgb(255 255 255 / 6%) 0 5%, transparent 20%),
-    linear-gradient(to right, rgb(0 0 0 / 16%), transparent 24%);
-}
+/*
+  No edge gradient of its own, deliberately.
+
+  The face used to carry one so the lifted sheet would not read as a flat rectangle. Since the face
+  now holds a clone of the whole page, the clone brings the page's own gradient with it -- so the
+  turning sheet was shaded twice, and dropping back to one layer when the leaf hid showed up as the
+  page brightening at the end of every turn. The clone's own shading is the correct amount, and it
+  travels with the sheet, which is what was wanted from this rule in the first place.
+*/
 
 /* The clone is a whole `.page`, so it needs to fill the face it was put in. */
 .leaf__face > .page {
