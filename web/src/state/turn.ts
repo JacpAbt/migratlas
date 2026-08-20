@@ -19,8 +19,11 @@ interface ViewTransitionCapable {
  * One block in `tokens.css` zeroes every duration, so asking CSS what it resolved to keeps every
  * animation in the project answering to the same switch. A second `matchMedia` call here would be
  * a second place that has to remember the rule.
+ *
+ * Exported for the book's own page turn, which is a CSS 3D rotation rather than a view transition
+ * and so cannot use `turnPage` -- but must answer the same switch, for exactly the reason above.
  */
-function still(): boolean {
+export function still(): boolean {
   const draw = getComputedStyle(document.documentElement).getPropertyValue("--draw").trim();
   return draw === "0ms" || draw === "0s";
 }

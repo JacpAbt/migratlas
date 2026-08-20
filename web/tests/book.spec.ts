@@ -1,0 +1,142 @@
+/**
+ * The book: the spread, the tabs, the turn, and the URL.
+ *
+ * Its own file because it is its own subsystem and because it boots no globe -- ADR 0013's shell
+ * replaces the arrival rather than sitting beside it, so none of these tests wait on WebGL. That is
+ * why they are fast, and it is also why they must not be folded into `shell.spec.ts`, which
+ * measures a page with a live map on it.
+ *
+ * The turn is asserted by driving the animation's own timeline rather than by watching it. That is
+ * not a workaround: a browser that is not compositing never fires `animationend`, so a test that
+ * waited for the motion would hang in exactly the environment CI runs in. Sampling the timeline
+ * measures the geometry, which is what the five defects in ADR 0015 decision 5 were about.
+ */
+
+import { expect, test, type Page } from "@playwright/test";
+
+/** Opens the book. The flag goes when the book becomes the default; so does this helper. */
+async function openBook(page: Page, hash = ""): Promise<void> {
+  await page.goto(`?book${hash}`);
+  await expect(page.locator(".book")).toBeVisible();
+}
+
+test("the book opens as a spread of two pages with a tab per chapter", async ({ page }) => {
+  await openBook(page);
+
+  await expect(page.locator(".page--verso")).toHaveCount(1);
+  await expect(page.locator(".page--recto")).toHaveCount(1);
+
+  const { CHAPTERS } = await import("../src/lib/story");
+  const tabs = await page.locator(".tab").allTextContents();
+  expect(tabs.map((t) => t.trim())).toEqual(CHAPTERS.map((c) => c.tab));
+
+  // The claims are the app's own, not prose written for the book.
+  await expect(page.locator(".page--verso")).toContainText("Whatever flies over the middle");
+});
+
+test("the default is still the arrival, so the book cannot ship by accident", async ({ page }) => {
+  await page.goto("");
+  await expect(page.locator(".shell")).toBeVisible();
+  await expect(page.locator(".book")).toHaveCount(0);
+});
+
+test("the chapter is in the URL, and a deep link opens it", async ({ page }) => {
+  await openBook(page);
+  await page.locator(".tab", { hasText: "Cannot see" }).click();
+  await expect(page).toHaveURL(/#ch=cannot-see/);
+  await expect(page.locator(".page--verso")).toContainText("What we cannot see");
+
+  // A chapter nobody can link to is a chapter nobody cites, which is `state/route.ts`'s own reason.
+  await openBook(page, "#ch=what-did-not");
+  await expect(page.locator(".page--verso")).toContainText("What did not");
+});
+
+test("the turning page is a page, hinged on the crease", async ({ page }) => {
+  await openBook(page);
+
+  const measured = await page.evaluate(async () => {
+    const creaseCentre = () => {
+      const box = document.querySelector(".gutter__line")!.getBoundingClientRect();
+      return box.left + box.width / 2;
+    };
+    const crease = creaseCentre();
+    const outgoing = document.querySelector(".spread > .page--verso")!.textContent ?? "";
+
+    // Forward, so the recto lifts and the verso is the page being covered.
+    const tabs = [...document.querySelectorAll<HTMLButtonElement>(".tab")];
+    tabs[4]!.click();
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+
+    const leaf = document.querySelector(".leaf");
+    const stale = document.querySelector(".stale");
+    if (!leaf || !stale) return { built: false };
+
+    /*
+      Every face holds a real `Page`, which is the whole of ADR 0015 decision 5. The mock cloned DOM
+      and the clone lost the class carrying its padding, the paper its grain needed, and its place
+      on the crease -- five defects with one cause.
+    */
+    const faces = [...leaf.querySelectorAll(".leaf__face > .page")].map((node) =>
+      node.className.includes("page--recto") ? "recto" : "verso",
+    );
+
+    const edges: { pct: number; onCrease: boolean; is3d: boolean }[] = [];
+    const animation = leaf.getAnimations()[0];
+    if (animation) {
+      animation.pause();
+      const duration = Number(animation.effect?.getTiming().duration ?? 0);
+      for (const pct of [0, 50, 100]) {
+        animation.currentTime = (duration * pct) / 100;
+        const box = leaf.getBoundingClientRect();
+        edges.push({
+          pct,
+          // One edge stays on the hinge for the whole turn. Measured against the crease's *centre*:
+          // comparing to its left edge is half a pixel out and fails for no reason.
+          onCrease:
+            Math.abs(box.left - crease) < 1.5 || Math.abs(box.right - crease) < 1.5,
+          is3d: getComputedStyle(leaf).transform.startsWith("matrix3d"),
+        });
+      }
+      animation.cancel();
+    }
+
+    return {
+      built: true,
+      faces,
+      // The covered half keeps the outgoing chapter until the leaf lands on it.
+      staleKeepsOutgoing: (stale.textContent ?? "").slice(0, 40) === outgoing.slice(0, 40),
+      staleSide: stale.className.includes("stale--verso"),
+      edges,
+    };
+  });
+
+  expect(measured.built, "no leaf was built for the turn").toBe(true);
+  expect(measured.faces, "a leaf face is not a Page").toEqual(["recto", "verso"]);
+  expect(measured.staleSide, "the outgoing page is parked on the wrong half").toBe(true);
+  expect(
+    measured.staleKeepsOutgoing,
+    "the covered page changed into the page about to cover it",
+  ).toBe(true);
+  for (const edge of measured.edges ?? []) {
+    expect(edge.onCrease, `at ${edge.pct}% the leaf has left the crease`).toBe(true);
+  }
+  // Flattened 3D was what turned the rotation into a horizontal squash; rotateY(0) is legitimately
+  // 2D, so only the sampled middle and end carry the assertion.
+  expect(
+    (measured.edges ?? []).filter((e) => e.pct > 0).every((e) => e.is3d),
+    "the turn is not a 3D rotation -- a filter on an ancestor flattens it",
+  ).toBe(true);
+});
+
+test("the turn clears itself even where the animation never fires", async ({ page }) => {
+  /*
+    `animationend` does not arrive in a tab that is not compositing, and without a fallback the leaf
+    stays parked over half the spread for the rest of the session with no way back. Found exactly
+    that way in the mock, so it is asserted rather than assumed.
+  */
+  await openBook(page);
+  await page.locator(".tab", { hasText: "Predicted" }).click();
+  await expect(page.locator(".leaf")).toHaveCount(0, { timeout: 4000 });
+  await expect(page.locator(".stale")).toHaveCount(0);
+  await expect(page.locator(".tab.is-on")).toHaveText("Predicted");
+});
