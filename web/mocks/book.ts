@@ -184,16 +184,34 @@ let outline: Outline | null = null;
 /** How many rings get a hachure fill. The rest are stroked: see the module docstring. */
 const HACHURED = 8;
 
+/** Longest ledger value that can be circled rather than underlined. Two of the nine exceed it. */
+const RINGABLE = 34;
+
 const svgEl = <K extends keyof SVGElementTagNameMap>(name: K): SVGElementTagNameMap[K] =>
   document.createElementNS("http://www.w3.org/2000/svg", name);
 
-/** Handwriting on the plate, in the page's own hand face. */
-function label(x: number, y: number, text: string, fill: string, size = 15, angle = 0): SVGTextElement {
+/**
+ * Handwriting on the plate, in the page's own hand face, sized in *rendered pixels*.
+ *
+ * `size` is what the reader gets on screen, not a number in viewBox units. The viewBox is 1000
+ * wide and the plate can be anywhere from 500 to 1200 CSS pixels depending on the window, so a
+ * fixed viewBox size drew at 8px on a laptop and 18px on a monitor. Divided by the draw scale, one
+ * number now means one apparent size everywhere.
+ */
+function label(
+  x: number,
+  y: number,
+  text: string,
+  fill: string,
+  size: number,
+  scale: number,
+  angle = 0,
+): SVGTextElement {
   const node = svgEl("text");
   node.setAttribute("x", String(x));
   node.setAttribute("y", String(y));
   node.setAttribute("fill", fill);
-  node.setAttribute("font-size", String(size));
+  node.setAttribute("font-size", String(size / scale));
   node.setAttribute("font-family", token("--font-hand") || "cursive");
   if (angle) node.setAttribute("transform", `rotate(${angle} ${x} ${y})`);
   node.textContent = text;
@@ -207,6 +225,12 @@ function drawMap(host: HTMLElement): void {
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   host.replaceChildren(svg);
+
+  /*
+    How many CSS pixels one viewBox unit becomes, so the annotations can be sized in pixels. Falls
+    back to 1 before first layout, when the host has no box yet.
+  */
+  const scale = host.getBoundingClientRect().width / W || 1;
 
   const rc = rough.svg(svg);
   const ink = token("--ink");
@@ -271,7 +295,7 @@ function drawMap(host: HTMLElement): void {
       seed: 5,
     }),
   );
-  svg.append(label(xOf(-103), yOf(53), "37–50°N, 78 stations", rust, 16, -2));
+  svg.append(label(xOf(-103), yOf(53), "37–50°N, 78 stations", rust, 15, scale, -2));
 
   /*
     ADR 0014 decision 2, drawn rather than described. The southern ocean and the interior of Africa
@@ -295,8 +319,12 @@ function drawMap(host: HTMLElement): void {
       seed: 61,
     }),
   );
-  svg.append(label(xOf(-24), yOf(-20), "no coverage, 1995–2025", pencil, 17, 1.5));
-  svg.append(label(xOf(-24), yOf(-27), "not surveyed the same way", pencil, 14, 1.5));
+  // `--ink-soft` rather than `--pencil`: the pencil is what the hatching is drawn in, and text in
+  // the same tone as the marks behind it was the part of this plate that could not be read at all.
+  svg.append(label(xOf(-24), yOf(-20), "no coverage, 1995–2025", token("--ink-soft"), 16, scale, 1.5));
+  svg.append(
+    label(xOf(-24), yOf(-27), "not surveyed the same way", token("--ink-soft"), 13, scale, 1.5),
+  );
 
   // A leader from the note to the band, because a surveyor points at what the note is about.
   svg.append(
@@ -325,7 +353,7 @@ function drawMap(host: HTMLElement): void {
       { stroke: ink, strokeWidth: 1.6, roughness: 1.3, seed: 22 },
     ),
   );
-  svg.append(label(nx - 5, ny + 50, "N", ink, 16));
+  svg.append(label(nx - 5, ny + 50, "N", ink, 15, scale));
 
   const sx = 44;
   const sy = H - 40;
@@ -335,10 +363,10 @@ function drawMap(host: HTMLElement): void {
   svg.append(
     rc.line(sx + sw, sy - 5, sx + sw, sy + 5, { stroke: ink, strokeWidth: 1.4, roughness: 1.2, seed: 33 }),
   );
-  svg.append(label(sx, sy - 12, "30° at the equator", ink, 14));
+  svg.append(label(sx, sy - 12, "30° at the equator", ink, 13, scale));
 
   // Signed and dated, the way a plate is.
-  svg.append(label(W - 210, H - 22, "traced from Natural Earth · 1:110m", moss, 14, -0.8));
+  svg.append(label(W - 230, H - 22, "traced from Natural Earth · 1:110m", moss, 13, scale, -0.8));
 }
 
 // --- Drawn marks --------------------------------------------------------
@@ -350,6 +378,9 @@ function marks(): void {
     const w = box.width;
     const h = box.height;
     node.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    // The viewBox is the measured box, so it must map to it exactly. Left to the default
+    // `xMidYMid meet` a mark drawn near an edge drifts inwards as the box changes shape.
+    node.setAttribute("preserveAspectRatio", "none");
     node.replaceChildren();
     const rc = rough.svg(node);
     const kind = node.dataset.rough;
@@ -367,17 +398,42 @@ function marks(): void {
         }),
       );
     } else if (kind === "ring") {
-      // An ellipse round the number, drawn twice, the way a pen goes round twice.
-      for (const pass of [0, 1]) {
-        node.append(
-          rc.ellipse(w / 2, h / 2, w - 4 - pass * 3, h - 4 - pass * 2, {
-            stroke: token("--rust-ink"),
-            strokeWidth: 1.5,
-            roughness: 2.2,
-            bowing: 1.8,
-            seed: seed + pass,
-          }),
-        );
+      /*
+        A ring round a figure, but only when the figure is short enough to be one.
+
+        Ledger values are not all numbers: `marine-null` publishes "median -0.011 °latitude per
+        decade across 2,240 species-survey pairs", which wraps to two lines, and an ellipse round
+        that is a lasso round a sentence. Long values get the underline a reader would actually
+        draw instead. The threshold is on the text, not on the box, so it does not move with the
+        window.
+      */
+      const figure = node.parentElement?.querySelector(".value")?.textContent ?? "";
+      const options = {
+        stroke: token("--rust-ink"),
+        strokeWidth: 1.5,
+        roughness: 2.2,
+        bowing: 1.8,
+      };
+      if (figure.length <= RINGABLE) {
+        // Drawn twice, the way a pen goes round twice.
+        for (const pass of [0, 1]) {
+          node.append(
+            rc.ellipse(w / 2, h / 2, w - 4 - pass * 3, h - 4 - pass * 2, {
+              ...options,
+              seed: seed + pass,
+            }),
+          );
+        }
+      } else {
+        for (const pass of [0, 1]) {
+          node.append(
+            rc.line(6, h - 5 + pass * 3, w - 8, h - 7 + pass * 3, {
+              ...options,
+              strokeWidth: 1.8,
+              seed: seed + pass * 7,
+            }),
+          );
+        }
       }
     } else if (kind === "bracket") {
       node.append(

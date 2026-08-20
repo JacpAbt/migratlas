@@ -20,6 +20,7 @@
 :root {
   --pt: 1;
   --fold: 2.5rem;
+  --pad: clamp(1.6rem, 3.2vw, 3.4rem);
 
   /*
     The taped-in sheet, and it has to be a token of its own rather than a mix chosen once.
@@ -121,7 +122,7 @@ body {
 .desk {
   display: grid;
   place-items: start center;
-  padding: var(--gap-wide) var(--gap) 0;
+  padding: var(--gap) var(--gap-tight) 0;
   background:
     radial-gradient(120% 80% at 30% 0%, rgb(255 255 255 / 5%), transparent 60%),
     radial-gradient(100% 90% at 75% 100%, rgb(0 0 0 / 7%), transparent 65%);
@@ -129,17 +130,30 @@ body {
 
 /* --- The book ----------------------------------------------------------- */
 
+/*
+  As large as the window allows, in both axes.
+
+  The old `min(97vw, 1560px)` capped the book at 1560px, which on a wide monitor left it filling
+  about three fifths of the page. The height term is what makes removing the cap safe: bound by
+  `(100vh - chrome) * ratio` as well as by width, so the book grows to fill whichever dimension
+  runs out first instead of running off the bottom.
+
+  **No `filter` here, and that is load-bearing rather than tidiness.** A filter on an ancestor
+  flattens 3D transforms -- `preserve-3d` below it is ignored -- so with a drop-shadow on this
+  element the leaf's `rotateY` rendered as a horizontal squash instead of a rotation, and the page
+  appeared to move off-centre and then snap into place at the end of the turn. The lift is now two
+  box-shadows on the sheets themselves, which composite the same and flatten nothing.
+*/
 .book {
   position: relative;
-  width: min(97vw, 1560px);
   /* Two pages of roughly 3:4 each, so the open spread is a touch wider than 3:2. */
-  aspect-ratio: 1.58;
-  perspective: 2600px;
-  /* The whole object lifts off the desk. A long soft shadow for the height, a tight dark one at the
-     contact edge, because a real book touches the surface somewhere. */
-  filter:
-    drop-shadow(0 22px 34px rgb(0 0 0 / 26%))
-    drop-shadow(0 3px 3px rgb(0 0 0 / 22%));
+  --ratio: 1.58;
+  /* The subtraction is the picker plus the desk's own top padding, measured rather than guessed:
+     44px of bar and 26px of padding, so 4.5rem covers it with a hair to spare. Overestimating it
+     cost 50px of book height on a 720px screen. */
+  width: min(98vw, calc((100vh - 4.5rem) * var(--ratio)));
+  aspect-ratio: var(--ratio);
+  perspective: 2800px;
 }
 
 /* The block of pages under this one: two slabs, offset and barely rotated, so the spread is a page
@@ -149,6 +163,7 @@ body {
   inset: 0;
   background: var(--paper);
   border: 1px solid color-mix(in srgb, var(--rule) 70%, var(--ink) 8%);
+  box-shadow: 0 14px 22px rgb(0 0 0 / 18%);
 }
 
 .block--under {
@@ -172,10 +187,24 @@ body {
 .spread {
   position: absolute;
   inset: 0;
+  /*
+    Two columns meeting exactly on the centre line, with the fold drawn *over* them.
+
+    It was three columns before -- page, fold, page -- which put the recto's left edge at
+    `50% + fold/2` while the crease was at `50%`. The turning page therefore pivoted about an axis
+    twenty pixels outside the visible spine, swung slightly off-centre, and appeared to snap back
+    into place when it settled. The fold is now an overlay, so the page edge and the crease are the
+    same line and the hinge is where the reader can see it.
+  */
   display: grid;
-  grid-template-columns: 1fr var(--fold) 1fr;
+  grid-template-columns: 1fr 1fr;
   background: var(--paper);
   border: 1px solid var(--rule);
+  /* A long soft shadow for the height off the desk, a tight dark one where a book actually touches
+     it. On the sheet rather than on the book, because a filter up there would flatten the turn. */
+  box-shadow:
+    0 22px 34px rgb(0 0 0 / 26%),
+    0 3px 3px rgb(0 0 0 / 22%);
 }
 
 .page {
@@ -186,9 +215,18 @@ body {
 .page__inner {
   position: relative;
   height: 100%;
-  padding: clamp(1.6rem, 3.2vw, 3.4rem);
+  padding: var(--pad);
   display: flex;
   flex-direction: column;
+}
+
+/* Extra room on the bound edge, which the fold column used to provide by taking up space. */
+.page--verso .page__inner {
+  padding-right: calc(var(--pad) + var(--fold) / 2);
+}
+
+.page--recto .page__inner {
+  padding-left: calc(var(--pad) + var(--fold) / 2);
 }
 
 .page__grain {
@@ -228,11 +266,21 @@ body {
 
 /* --- The fold, which the owner asked to be unmistakable ------------------ */
 
+/* Over the pages rather than between them, and below the turning leaf. */
 .gutter {
-  position: relative;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: var(--fold);
+  transform: translateX(-50%);
+  z-index: 3;
+  pointer-events: none;
+  /* 12% rather than 16%: the pages now meet under this instead of being separated by it, so their
+     own inner-edge gradients stack with it and the crease was compounding to about 27%. */
   background:
-    linear-gradient(to right, rgb(0 0 0 / 16%), rgb(0 0 0 / 3%) 42%),
-    linear-gradient(to left, rgb(0 0 0 / 16%), rgb(0 0 0 / 3%) 42%);
+    linear-gradient(to right, rgb(0 0 0 / 12%), rgb(0 0 0 / 2%) 42%),
+    linear-gradient(to left, rgb(0 0 0 / 12%), rgb(0 0 0 / 2%) 42%);
 }
 
 /* The crease itself: one hard line, darker than any rule on the page. */
@@ -304,11 +352,18 @@ h1.hand {
   padding: 0.35em 1.1em 0.35em 0.6em;
 }
 
+/*
+  Both dimensions pinned, because `height: auto` on an SVG does not mean "whatever the insets say".
+  An svg carrying a viewBox has an intrinsic aspect ratio, so the height was being derived from the
+  viewBox that `marks()` had just written from the measured box -- a loop that inflated a 49px-tall
+  figure into a 200px ellipse across half the page.
+*/
 .mark--ring {
   position: absolute;
-  inset: -0.3em -0.5em;
-  width: auto;
-  height: auto;
+  top: -0.3em;
+  left: -0.5em;
+  width: calc(100% + 1em);
+  height: calc(100% + 0.6em);
 }
 
 .value {
@@ -508,7 +563,7 @@ h1.hand {
     130% the seven tabs ran past the foot of the book.
   */
   font-family: var(--font-body);
-  font-size: 0.74rem;
+  font-size: 0.85rem;
   writing-mode: vertical-rl;
   padding: 0.75em 0.42em;
   color: var(--ink-soft);
@@ -548,6 +603,8 @@ h1.hand {
   turns the sheet that would actually move.
 */
 
+/* Positioned inside `.spread`, not `.book`: the spread carries a 1px border, so a leaf placed
+   against the book was a border-width off the page it was standing in for. */
 .leaf {
   position: absolute;
   top: 0;
@@ -561,7 +618,7 @@ h1.hand {
 
 /* Forward: the right page lifts and swings left about the spine. */
 .leaf--right {
-  left: calc(50% + var(--fold) / 2);
+  left: 50%;
   right: 0;
   transform-origin: left center;
 }
@@ -569,7 +626,7 @@ h1.hand {
 /* Backward: the left page lifts and swings right about the same spine. */
 .leaf--left {
   left: 0;
-  right: calc(50% + var(--fold) / 2);
+  right: 50%;
   transform-origin: right center;
 }
 

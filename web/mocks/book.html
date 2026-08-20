@@ -102,17 +102,19 @@
               <p class="scrawl" data-scrawl></p>
             </div>
           </section>
-        </div>
 
-        <!--
-          The shadow the turning page throws, and the page itself. The shadow is a sibling of the
-          leaf rather than a child of it, because a child would rotate with the page casting it.
-          Both faces are filled by script from the real pages, grain and all.
-        -->
-        <div class="cast" data-cast aria-hidden="true"></div>
-        <div class="leaf leaf--right" data-leaf aria-hidden="true">
-          <div class="leaf__face leaf__front"></div>
-          <div class="leaf__face leaf__back"></div>
+          <!--
+            The shadow the turning page throws, and the page itself. Inside the spread, so both share
+            the grid's own coordinates rather than sitting a border-width off the pages they stand in
+            for. The shadow is a sibling of the leaf and not a child: a child would rotate with the
+            page casting it, which is not what a shadow does. Both faces are filled by script from
+            the real pages, grain and all.
+          -->
+          <div class="cast" data-cast aria-hidden="true"></div>
+          <div class="leaf leaf--right" data-leaf aria-hidden="true">
+            <div class="leaf__face leaf__front"></div>
+            <div class="leaf__face leaf__back"></div>
+          </div>
         </div>
 
         <nav class="tabs" data-tabs aria-label="chapters"></nav>
