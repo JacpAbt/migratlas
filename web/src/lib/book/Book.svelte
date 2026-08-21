@@ -4,7 +4,7 @@
   import Page from "./Page.svelte";
   import { folio, openingOf, type Panel, type Spread } from "./pages";
   import { tabStyle } from "./tabs";
-  import { still } from "../../state/turn";
+  import { drawMs, still } from "../../state/turn";
   import type { Chapter } from "../story";
 
   let {
@@ -67,10 +67,7 @@
       pane, a headless run -- and without it the leaf stays parked over half the spread for the rest
       of the session with no way back. Found exactly that way in the mock.
     */
-    const ms = Number.parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue("--draw-slow"),
-    );
-    settling = setTimeout(() => (leaving = null), (Number.isFinite(ms) ? ms : 900) + 120);
+    settling = setTimeout(() => (leaving = null), drawMs("--draw-slow", 900) + 120);
   }
 
   /* The folio in each outer corner is the button that turns that way -- see `Page.svelte`. Arrow
