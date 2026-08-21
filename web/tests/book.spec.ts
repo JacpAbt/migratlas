@@ -226,15 +226,43 @@ test("the plate's geometry resamples by length and projects into its box", async
   const spread = Math.max(...gaps) / Math.min(...gaps);
   expect(spread, `resampled gaps vary by ${spread.toFixed(1)}x`).toBeLessThan(2);
 
-  const { x, y } = projection(1000, 500);
+  const { height, x, y } = projection(1000);
   expect(x(-180)).toBeCloseTo(0);
   expect(x(180)).toBeCloseTo(1000);
   expect(x(0)).toBeCloseTo(500);
   expect(y(TOP_LAT)).toBeCloseTo(0);
-  expect(y(BOTTOM_LAT)).toBeCloseTo(500);
+  expect(y(BOTTOM_LAT)).toBeCloseTo(height);
   // Clamped rather than sent to infinity, which is what Mercator does with a pole.
   expect(Number.isFinite(y(90))).toBe(true);
   expect(y(90)).toBeCloseTo(y(TOP_LAT));
+});
+
+test("the plate is conformal: one scale in both axes, at any size", async () => {
+  const { PLATE_RATIO, projection, TOP_LAT } = await import("../src/lib/book/plate");
+
+  /*
+    The assertion that would have caught the stretch, and it is a property rather than a number: a
+    degree of longitude at the equator and a degree of latitude at the equator must come out the same
+    length in pixels. They did not -- the sheet was `flex: 1`, so the map got the page column's
+    leftover height and every plate was 1.9 to 2.1 times too tall.
+  */
+  for (const width of [320, 531, 1000, 1783]) {
+    const { height, x, y } = projection(width);
+    expect(height).toBeCloseTo(width / PLATE_RATIO);
+    const perDegreeLon = x(1) - x(0);
+    const perDegreeLat = y(0) - y(1);
+    expect(
+      perDegreeLat / perDegreeLon,
+      `at width ${width} a degree of latitude is ${(perDegreeLat / perDegreeLon).toFixed(3)} of a degree of longitude`,
+    ).toBeCloseTo(1, 2);
+
+    // And the box is landscape, which is the shape 80°N to 58°S actually is.
+    expect(height).toBeLessThan(width);
+  }
+
+  // The ratio itself, so a change to the latitude band has to be a deliberate one.
+  expect(PLATE_RATIO).toBeCloseTo(1.705, 3);
+  expect(TOP_LAT).toBe(80);
 });
 
 test("the book opens on an introduction, carried across the spread", async ({ page }) => {

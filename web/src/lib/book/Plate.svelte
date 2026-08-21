@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { drawPlate, loadLand, type Ring } from "./plate";
+  import { drawPlate, loadLand, PLATE_RATIO, type Ring } from "./plate";
   import { viewFor } from "../story";
   import type { Finding } from "../ledger";
 
@@ -14,9 +14,17 @@
     base: string;
   } = $props();
 
-  // Measured, never stretched -- `notebook/ink.ts`'s rule, and the reason plate.ts takes the box.
+  /*
+    Width only, and the height follows from the projection.
+
+    `notebook/ink.ts`'s rule is that geometry is generated at the size it is drawn at; `PLATE_RATIO`
+    is the other half of it, which this component used to break. The sheet was `flex: 1` and got the
+    leftover height of the page column, so the map was scaled to a box the projection never agreed
+    to -- measured at ×1.9 to ×2.1 too tall on every plate. Now the paper is the shape of the map
+    rather than the map the shape of the paper.
+  */
   let width = $state(0);
-  let height = $state(0);
+  const height = $derived(width / PLATE_RATIO);
   let host = $state<SVGSVGElement | null>(null);
   let rings = $state<Ring[]>([]);
   let failed = $state<string | null>(null);
@@ -30,7 +38,7 @@
   const view = $derived(viewFor(finding));
 
   $effect(() => {
-    if (!host || width <= 0 || height <= 0 || rings.length === 0) return;
+    if (!host || width <= 0 || rings.length === 0) return;
     // Read at draw time, so a surface change redraws in the new palette rather than restyling --
     // rough.js draws each stroke twice and there is no single path to recolour.
     const style = getComputedStyle(document.documentElement);
@@ -39,7 +47,6 @@
       host,
       rings,
       width,
-      height,
       {
         ink: token("--ink"),
         pencil: token("--pencil"),
@@ -64,7 +71,7 @@
     child. `Sheet.svelte` binds a flow element for the same reason and works; binding the absolute
     child here reported clientWidth 531 to the DOM and 0 to the component, so nothing ever drew.
   -->
-  <div class="plate__sheet" bind:clientWidth={width} bind:clientHeight={height}>
+  <div class="plate__sheet" style="aspect-ratio: {PLATE_RATIO}" bind:clientWidth={width}>
     {#if failed}
       <p class="plate__failure" role="status">The basemap did not load: {failed}</p>
     {:else}
@@ -90,8 +97,10 @@
 
   .plate__sheet {
     position: relative;
-    flex: 1;
-    min-height: 0;
+    /* Its height is its width over `PLATE_RATIO`, set inline because the number belongs to the
+       projection. Not `flex: 1`: that is what gave the map the page's leftover height. */
+    flex: 0 0 auto;
+    width: 100%;
     background: var(--plate-paper);
     transform: rotate(-1.1deg);
     box-shadow:

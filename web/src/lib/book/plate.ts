@@ -128,12 +128,36 @@ export function loadLand(base: string): Promise<Ring[]> {
   return cached;
 }
 
-/** Web Mercator into the measured box. Returned as functions so nothing else needs the algebra. */
-export function projection(width: number, height: number) {
-  const mercator = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+const mercator = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+
+/**
+ * Width over height the plate must have, at any size.
+ *
+ * **Mercator keeps its shapes only if both axes share one scale**, and this is the one number that
+ * says so. Longitude spans 2π radians across the width; latitude spans `mercator(TOP) -
+ * mercator(BOTTOM)` of the same units down the height. Give the projection a box of any other shape
+ * and it is no longer Mercator -- it is Mercator times a constant in one axis, which is a
+ * projection nobody chose and which has no name.
+ *
+ * This was learned the expensive way. `projection` used to take a width *and* a height and scale
+ * each axis into whatever it was handed, and `.plate__sheet` was `flex: 1` -- so every plate took
+ * the leftover height of its page column. Measured on the shipped book: 531x630 and 472x513 against
+ * the 0.587 this ratio demands, a **vertical stretch of ×1.9 to ×2.1** on every plate in the
+ * ledger, which is why North America looked tall and Greenland looked wrong. The height parameter
+ * is gone rather than corrected: a stretched plate is now unspeakable rather than merely wrong.
+ */
+export const PLATE_RATIO = (2 * Math.PI) / (mercator(TOP_LAT) - mercator(BOTTOM_LAT));
+
+/**
+ * Web Mercator into a box of the one shape it can have. Returned as functions so nothing else needs
+ * the algebra, and the height is returned rather than accepted.
+ */
+export function projection(width: number) {
+  const height = width / PLATE_RATIO;
   const top = mercator(TOP_LAT);
   const bottom = mercator(BOTTOM_LAT);
   return {
+    height,
     x: (lon: number) => ((lon + 180) / 360) * width,
     y: (lat: number) =>
       ((top - mercator(Math.max(BOTTOM_LAT, Math.min(TOP_LAT, lat)))) / (top - bottom)) * height,
@@ -157,13 +181,12 @@ export function drawPlate(
   host: SVGSVGElement,
   rings: Ring[],
   width: number,
-  height: number,
   colours: PlateInk,
   at: { center: [number, number]; label: string } | null,
 ): void {
   host.replaceChildren();
-  if (width <= 0 || height <= 0) return;
-  const { x, y } = projection(width, height);
+  if (width <= 0) return;
+  const { height, x, y } = projection(width);
   const rc = pen(host);
 
   // Graticule first, beneath the land: a reference line belongs under the thing it refers to, which
