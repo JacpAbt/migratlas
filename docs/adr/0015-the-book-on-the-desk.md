@@ -71,6 +71,39 @@ Five of them shared one cause, which is the most useful thing in this document.
 7. **No `filter` on any ancestor of the turn.** A filter flattens 3D transforms, so a drop-shadow on
    the book turned `rotateY` into a horizontal squash. The lift is box-shadows on the sheets.
 
+8. **Added 2026-08-21: a phone is a second container, not this one squeezed.** Every measurement
+   above was chosen against a shape 375px does not have. Two pages side by side on a phone are two
+   195px columns; the crease has nothing to divide, the tab stack is taller than the book, and the
+   plate is drawn at a size no longer worth drawing. So below `62rem` the reader mounts
+   `lib/book/Leaves.svelte` instead of `Book.svelte` and the spread does not render at all.
+
+   The three things that make it the same book rather than a second version of it:
+
+   - **One authored set of pages.** `Reader` declares the page snippet once and hands it to
+     whichever container the window gets, so a phone's pages and a monitor's cannot drift apart.
+   - **The swipe is the page turn.** A `rotateY` needs somewhere for the page to go and a
+     single-page screen has nowhere; horizontal scroll-snap makes the gesture and the turn one
+     movement. The next leaf's edge shows past the current one, because otherwise nothing on screen
+     says there is another page. Decision 5 still holds and costs nothing here — a leaf is a `Page`.
+   - **Chapters are the fore-edge of a closed notebook**, in the bottom corner a thumb rests in, and
+     they fan out on a tap. Seven tabs at once is 40% of a phone screen; one tab plus the others
+     edge-on behind it is what a tabbed notebook looks like closed. The tints moved out of
+     `Book.svelte`'s `nth-child` rules into `lib/book/tabs.ts` so both containers read one
+     assignment, including its two measured exceptions.
+
+   Two measurements this cost: a `requestAnimationFrame` throttle on the scroll handler **latched
+   permanently** in a pane that does not composite, because the only code that cleared the gate was
+   the frame that never came — the same trap this document already records for `animationend`, and
+   scroll events are frame-aligned anyway, so the throttle bought nothing. And `--page-pad` was
+   declared on `.book`, so the first leaf mounted outside it resolved `padding: var(--page-pad)`
+   to an invalid declaration the browser drops: a page whose lede ran off both edges. A container
+   that shows pages owes them their measurements, and a test now asks a leaf whether it got them.
+
+   Not settled, and named so it is not mistaken for settled: the world chapter puts its controls on
+   one leaf and its map on the next, so on a phone you cannot see the map while you move the clock.
+   Uniform `(chapter, side)` leaves are what make the two containers one book, and breaking that for
+   one chapter needs its own decision.
+
 ## Consequences
 
 `tokens.css` gains a book reading scale and the two plate tints, which are the only new visual

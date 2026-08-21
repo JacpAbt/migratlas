@@ -2,6 +2,7 @@
   import Book from "./Book.svelte";
   import Figure from "./Figure.svelte";
   import Introduction from "./Introduction.svelte";
+  import Leaves from "./Leaves.svelte";
   import World from "./World.svelte";
   import Claim from "../claim/Claim.svelte";
   import Response from "../sandbox/Response.svelte";
@@ -64,6 +65,24 @@
 
   const CHAPTER_PARAM = "ch";
 
+  /*
+    The width below which a spread is not a spread.
+
+    62rem is the same figure as `Page.svelte`'s narrow block, and it is the one number in the book
+    written twice: a media query cannot read a custom property, so CSS and this cannot share it.
+    Getting them out of step is loud rather than silent -- it shows as a two-page spread squeezed
+    onto a phone -- which is why this is a comment and not machinery.
+  */
+  const NARROW = "(width < 62rem)";
+
+  let narrow = $state(matchMedia(NARROW).matches);
+  $effect(() => {
+    const query = matchMedia(NARROW);
+    const watch = () => (narrow = query.matches);
+    query.addEventListener("change", watch);
+    return () => query.removeEventListener("change", watch);
+  });
+
   /** The chapter in the URL, defaulting to the first one that carries a claim. */
   function fromUrl(): string {
     const slug = new URLSearchParams(location.hash.slice(1)).get(CHAPTER_PARAM);
@@ -101,10 +120,10 @@
 <!--
   The book, reading the ledger.
 
-  What goes on a page is one snippet handed to `Book`, which calls it for the open chapter and again
-  for the outgoing one during a turn. That is the whole of ADR 0015 decision 5: the turning leaf is
-  another call with different arguments rather than a copy of the DOM, so none of the five defects
-  that decision lists can occur.
+  What goes on a page is one snippet handed to the container, which calls it for the open chapter and
+  again for the outgoing one during a turn. That is the whole of ADR 0015 decision 5: the turning
+  leaf is another call with different arguments rather than a copy of the DOM, so none of the five
+  defects that decision lists can occur.
 
   The claims are rendered by the app's own `Claim` component, unchanged. ADR 0013 said the rebuild
   is structural and not stylistic, and frontend prose is authored in Python and rendered verbatim --
@@ -112,38 +131,48 @@
 
   Two chapters carry no claim of their own, and each gets a page of its own kind rather than an
   empty one: the introduction opens the book, and the world is the live map in the back pocket.
+
+  One snippet, two containers, and exactly one of them mounted. A phone gets `Leaves` -- the same
+  pages, swiped rather than turned -- because the spread's every measurement was chosen against a
+  shape a 390px screen does not have. Declaring the pages here and passing them as a prop is what
+  keeps that a choice of *container* rather than a second authored version of the book: there is
+  nowhere for the two to drift apart, because there is only one of them.
 -->
-<Book chapters={CHAPTERS} {open} onopen={show}>
-  {#snippet page(chapter: Chapter, side: "verso" | "recto")}
-    {@const claims = held(chapter)}
-    {#if chapter.slug === OPENING_SLUG}
-      <Introduction document_={opening} {side} />
-    {:else if chapter.slug === WORLD_SLUG}
-      <World {base} {side} />
-    {:else if side === "verso"}
-      <p class="chapter">{chapter.title}</p>
-      {#if claims.length}
-        <!-- Every claim the chapter carries, not just the first: "What did not" holds three, and a
-             page showing one of them would drop two results on the floor. The argument is the left
-             page and the plate is the right one. -->
-        {#each claims as finding (finding.key)}
-          <Claim {finding} />
-          <Sandbox doc={safeguards} claim={finding.key} />
-        {/each}
-      {/if}
-    {:else if claims[0]}
-      <!--
-        The facing page: the claim's own figure where it has one, and the drawn plate where it does
-        not. The dial follows on the chapter whose claim has one, after the figure, in the order
-        `Evidence` fixed -- how much to trust the number, then what a different world would do to it.
-      -->
-      <Figure finding={claims[0]} number={CHAPTERS.indexOf(chapter)} {base} />
-      <Response doc={dial} claim={claims[0].key} />
-    {:else}
-      <p class="aside aside--quiet">No plate: this chapter is the way out, not a claim.</p>
+{#snippet leaf(chapter: Chapter, side: "verso" | "recto")}
+  {@const claims = held(chapter)}
+  {#if chapter.slug === OPENING_SLUG}
+    <Introduction document_={opening} {side} />
+  {:else if chapter.slug === WORLD_SLUG}
+    <World {base} {side} />
+  {:else if side === "verso"}
+    <p class="chapter">{chapter.title}</p>
+    {#if claims.length}
+      <!-- Every claim the chapter carries, not just the first: "What did not" holds three, and a
+           page showing one of them would drop two results on the floor. The argument is the left
+           page and the plate is the right one. -->
+      {#each claims as finding (finding.key)}
+        <Claim {finding} />
+        <Sandbox doc={safeguards} claim={finding.key} />
+      {/each}
     {/if}
-  {/snippet}
-</Book>
+  {:else if claims[0]}
+    <!--
+      The facing page: the claim's own figure where it has one, and the drawn plate where it does
+      not. The dial follows on the chapter whose claim has one, after the figure, in the order
+      `Evidence` fixed -- how much to trust the number, then what a different world would do to it.
+    -->
+    <Figure finding={claims[0]} number={CHAPTERS.indexOf(chapter)} {base} />
+    <Response doc={dial} claim={claims[0].key} />
+  {:else}
+    <p class="aside aside--quiet">No plate: this chapter is the way out, not a claim.</p>
+  {/if}
+{/snippet}
+
+{#if narrow}
+  <Leaves chapters={CHAPTERS} {open} onopen={show} page={leaf} />
+{:else}
+  <Book chapters={CHAPTERS} {open} onopen={show} page={leaf} />
+{/if}
 
 <style>
   .chapter {

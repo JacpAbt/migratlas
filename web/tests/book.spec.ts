@@ -386,3 +386,226 @@ test("no chapter but the world boots a map", async ({ page }) => {
   await expect(page.locator(".page--recto .plate")).toHaveCount(1);
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
 });
+
+test("a monitor gets the spread and only the spread", async ({ page }) => {
+  // The two containers are a choice, not a fallback: mounting both would run the world chapter's
+  // map twice and put two of every page in the accessibility tree.
+  await openBook(page);
+  await expect(page.locator(".leaves")).toHaveCount(0);
+});
+
+/*
+  The phone, which is a different object rather than the spread squeezed. ADR 0015's measurements --
+  the crease, the tab stack, the page padding -- were chosen against a shape 375px does not have, so
+  `Reader` mounts `Leaves` instead and the swipe is the page turn.
+
+  Nothing here opens the world chapter, and that is deliberate rather than incidental: the mounted
+  window reaches one leaf either side, so a test that landed on the world's verso would boot a
+  MapLibre context in the one spec file whose header promises it does not. The file's reason still
+  holds -- a fourth globe-booting file is a fourth context on a machine that drives two.
+*/
+test.describe("on a phone", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  /** Opens the book at phone width. */
+  async function openLeaves(page: Page, hash = ""): Promise<void> {
+    await page.goto(`?book${hash}`);
+    await expect(page.locator(".leaves")).toBeVisible();
+  }
+
+  /** Where the leaves are, and what is written on them. */
+  function survey(page: Page) {
+    return page.evaluate(() => {
+      const rail = document.querySelector<HTMLElement>(".rail")!;
+      const sheets = [...rail.querySelectorAll<HTMLElement>("[data-leaf]")];
+      return {
+        scrollLeft: rail.scrollLeft,
+        railWidth: rail.clientWidth,
+        leafWidth: sheets[0]!.getBoundingClientRect().width,
+        offsets: sheets.map((sheet) => sheet.offsetLeft),
+        leaves: sheets.map((sheet) => `${sheet.dataset.chapter}:${sheet.dataset.side}`),
+        /* Which leaves hold anything. The window is the rule that keeps a live map from running two
+           chapters away, so it is asserted by what is on the paper rather than by a variable. */
+        written: sheets.flatMap((sheet, index) =>
+          sheet.querySelector(".page__inner")!.childElementCount > 0 ? [index] : [],
+        ),
+      };
+    });
+  }
+
+  /**
+   * Puts a leaf at the rail's left edge.
+   *
+   * The gesture is the browser's and not ours: what this exercises is the handler that reads where
+   * the rail came to rest, which is the whole of what this component does with a swipe.
+   */
+  async function swipeTo(page: Page, index: number): Promise<void> {
+    await page.evaluate((leaf) => {
+      const rail = document.querySelector<HTMLElement>(".rail")!;
+      const sheets = rail.querySelectorAll<HTMLElement>("[data-leaf]");
+      rail.scrollLeft = sheets[leaf]!.offsetLeft;
+    }, index);
+  }
+
+  test("a phone gets leaves it can swipe, not a spread it cannot read", async ({ page }) => {
+    await openLeaves(page);
+
+    await expect(page.locator(".book")).toHaveCount(0);
+
+    const { CHAPTERS } = await import("../src/lib/story");
+    const state = await survey(page);
+    expect(state.leaves).toHaveLength(CHAPTERS.length * 2);
+    expect(state.leaves[0]).toBe(`${CHAPTERS[0]!.slug}:verso`);
+
+    // The next leaf's edge shows past this one, because otherwise nothing on screen says there is
+    // another page. It is the one affordance a swipe container has.
+    expect(state.leafWidth).toBeLessThan(state.railWidth);
+    expect(state.railWidth - state.leafWidth).toBeGreaterThan(8);
+  });
+
+  test("a leaf got the measurements a page needs", async ({ page }) => {
+    /*
+      `Page` reads `--page-pad` from whatever it is mounted in, and `Book` is where that used to be
+      declared -- so the first leaf outside the book resolved `padding: var(--page-pad)` to an
+      invalid declaration the browser drops, and a hand-written lede ran off both edges. Nothing in
+      tsc or the build can see that. This can.
+    */
+    await openLeaves(page, "#ch=what-changed");
+    const pad = await page.locator(".leaf .page__inner").first().evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        left: Number.parseFloat(style.paddingLeft),
+        right: Number.parseFloat(style.paddingRight),
+        bottom: Number.parseFloat(style.paddingBottom),
+      };
+    });
+    expect(pad.left).toBeGreaterThan(12);
+    expect(pad.right).toBeGreaterThan(12);
+
+    // And the foot clears the fore-edge tab, because text under it is text nobody can read.
+    const thumb = await page.locator(".thumb").evaluate((node) => node.getBoundingClientRect().height);
+    expect(pad.bottom).toBeGreaterThan(thumb);
+  });
+
+  test("the swipe is the page turn, and where it stops goes in the URL", async ({ page }) => {
+    await openLeaves(page);
+    await expect(page.locator(".thumb__word")).toHaveText("Changed");
+
+    await swipeTo(page, 6);
+    await expect(page).toHaveURL(/[#&]ch=cannot-see/);
+    await expect(page.locator(".thumb__word")).toHaveText("Cannot see");
+
+    // Back is the reading and not the gesture: the rail follows the chapter out of the history.
+    await page.goBack();
+    await expect(page.locator(".thumb__word")).toHaveText("Changed");
+    const state = await survey(page);
+    expect(state.scrollLeft).toBe(state.offsets[2]);
+  });
+
+  test("a flick through chapters leaves one history entry per stop", async ({ page }) => {
+    await openLeaves(page);
+    const before = await page.evaluate(() => history.length);
+
+    /*
+      Three leaves crossed inside the settle window, with real gaps so each one is a scroll event the
+      browser actually dispatches. Reported per leaf this would push three entries and make the back
+      button a rewind of the gesture; the URL waits for the rail to stop instead.
+    */
+    await page.evaluate(async () => {
+      const rail = document.querySelector<HTMLElement>(".rail")!;
+      const sheets = rail.querySelectorAll<HTMLElement>("[data-leaf]");
+      for (const leaf of [4, 6, 8]) {
+        rail.scrollLeft = sheets[leaf]!.offsetLeft;
+        await new Promise((settle) => setTimeout(settle, 40));
+      }
+    });
+
+    await expect(page).toHaveURL(/[#&]ch=can-be-predicted/);
+    expect(await page.evaluate(() => history.length)).toBe(before + 1);
+
+    // And the paper kept up with the flick, which is the other cadence: mounted at once, so a fling
+    // never lands on blank paper.
+    expect((await survey(page)).written).toEqual([7, 8, 9]);
+  });
+
+  test("only the leaf in view and its neighbours carry anything", async ({ page }) => {
+    await openLeaves(page, "#ch=what-changed");
+    const state = await survey(page);
+
+    expect(state.written).toEqual([1, 2, 3]);
+    // Named rather than counted, because this is the assertion that keeps a phone from running a
+    // MapLibre context five chapters away from the reader.
+    expect(state.leaves.slice(12)).toEqual(["the-world:verso", "the-world:recto"]);
+    expect(state.written).not.toContain(12);
+    expect(state.written).not.toContain(13);
+  });
+
+  test("a deep link opens on its chapter rather than scrolling to it", async ({ page }) => {
+    await openLeaves(page, "#ch=what-did-not");
+    const state = await survey(page);
+    expect(state.scrollLeft).toBe(state.offsets[4]);
+    expect(state.written).toEqual([3, 4, 5]);
+  });
+
+  test("the last leaf can be reached, flush", async ({ page }) => {
+    await openLeaves(page);
+    // The peek costs the last leaf its snap point unless the rail carries a peek's worth of stop
+    // after it. Off by that much and the final page can never be read.
+    await page.evaluate(() => {
+      const rail = document.querySelector<HTMLElement>(".rail")!;
+      rail.scrollLeft = rail.scrollWidth;
+    });
+    const state = await survey(page);
+    expect(state.scrollLeft).toBe(state.offsets[state.offsets.length - 1]);
+  });
+
+  test("the fore-edge fans out into the seven tabs, and takes you to one", async ({ page }) => {
+    await openLeaves(page);
+    const { CHAPTERS } = await import("../src/lib/story");
+
+    const thumb = page.locator(".thumb");
+    await expect(thumb).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator(".fan")).toHaveCount(0);
+
+    await thumb.click();
+    await expect(thumb).toHaveAttribute("aria-expanded", "true");
+    const tabs = page.locator(".fan__tab");
+    expect((await tabs.allTextContents()).map((label) => label.trim())).toEqual(
+      CHAPTERS.map((chapter) => chapter.tab),
+    );
+
+    /*
+      A thumb, not a cursor. 44px is the smallest thing one hits reliably and these seven are the
+      whole of this container's navigation -- the first pass came out at 38.
+    */
+    for (const box of await tabs.evaluateAll((nodes) =>
+      nodes.map((node) => node.getBoundingClientRect().height),
+    )) {
+      expect(box).toBeGreaterThanOrEqual(44);
+    }
+    expect(
+      await thumb.evaluate((node) => node.getBoundingClientRect().height),
+    ).toBeGreaterThanOrEqual(44);
+
+    await tabs.filter({ hasText: "Did not" }).click();
+    await expect(page).toHaveURL(/[#&]ch=what-did-not/);
+    await expect(page.locator(".fan")).toHaveCount(0);
+    const state = await survey(page);
+    expect(state.scrollLeft).toBe(state.offsets[4]);
+  });
+
+  test("the fan shuts without picking anything", async ({ page }) => {
+    await openLeaves(page);
+    await page.locator(".thumb").click();
+    await expect(page.locator(".fan")).toHaveCount(1);
+
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".fan")).toHaveCount(0);
+    await expect(page).not.toHaveURL(/[#&]ch=/);
+
+    // And the shade over the leaves, which is the tap most readers will use to dismiss it.
+    await page.locator(".thumb").click();
+    await page.locator(".shade").click();
+    await expect(page.locator(".fan")).toHaveCount(0);
+  });
+});

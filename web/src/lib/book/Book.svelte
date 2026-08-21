@@ -2,6 +2,7 @@
   import type { Snippet } from "svelte";
 
   import Page from "./Page.svelte";
+  import { tabStyle } from "./tabs";
   import { still } from "../../state/turn";
   import type { Chapter } from "../story";
 
@@ -116,7 +117,8 @@
       {#each chapters as chapter, position (chapter.slug)}
         <button
           type="button"
-          class="tab tab--{position + 1}"
+          class="tab"
+          style={tabStyle(position)}
           class:is-on={chapter.slug === current.slug}
           aria-current={chapter.slug === current.slug ? "page" : undefined}
           onclick={() => go(chapter.slug)}
@@ -359,48 +361,15 @@
     padding: 0.42em 0.72em;
     color: var(--ink);
     /* Coloured stock from the palette's own hues, mixed into the page's paper so it inverts with the
-       surface for free. Assigned per tab below, ordered so no two neighbours share a hue. */
-    --tint: var(--pencil);
-    --mix: var(--tab-stock);
+       surface for free. Which hue and how much of it are `tabs.ts`, because the mobile leaves carry
+       the same seven tabs and a second copy of that assignment goes stale the first time a chapter
+       is added. */
     background: color-mix(in srgb, var(--paper) var(--mix), var(--tint));
     border: 1px solid color-mix(in srgb, var(--tint) 45%, var(--rule));
     border-left: none;
     border-radius: 0 7px 7px 0;
     cursor: pointer;
     box-shadow: 2px 2px 3px rgb(0 0 0 / 12%);
-  }
-
-  .tab--1 {
-    --tint: var(--pencil);
-  }
-
-  .tab--2 {
-    --tint: var(--rust);
-    --mix: var(--tab-accent);
-  }
-
-  .tab--3 {
-    --tint: var(--line-counterfactual);
-  }
-
-  /* The one hue lighter than the page in both surfaces, so less of it: at the common strength the
-     ink on it measured 3.74:1 against this project's 4.5 floor. */
-  .tab--4 {
-    --tint: var(--detect-short);
-    --mix: 84%;
-  }
-
-  .tab--5 {
-    --tint: var(--moss);
-  }
-
-  .tab--6 {
-    --tint: var(--rust-ink);
-    --mix: var(--tab-accent);
-  }
-
-  .tab--7 {
-    --tint: var(--ink-soft);
   }
 
   .tab:hover {
@@ -423,40 +392,4 @@
     }
   }
 
-  /* --- Narrow screens: one page at a time -------------------------------- */
-
-  @media (width < 62rem) {
-    .book {
-      aspect-ratio: 0.78;
-      --book-h: auto;
-      width: min(98vw, 34rem);
-    }
-
-    .spread {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto auto;
-    }
-
-    .gutter,
-    .leaf,
-    .cast,
-    .stale {
-      display: none;
-    }
-
-    .tabs {
-      position: static;
-      flex-direction: row;
-      flex-wrap: wrap;
-      transform: none;
-      padding: var(--gap-tight);
-    }
-
-    .tab {
-      writing-mode: horizontal-tb;
-      border-left: 1px solid var(--rule);
-      border-radius: var(--radius);
-      font-size: 0.85rem;
-    }
-  }
 </style>
