@@ -20,7 +20,35 @@
  * measures the geometry, which is what the five defects in ADR 0015 decision 5 were about.
  */
 
+import { readFileSync } from "node:fs";
+
 import { expect, test, type Page } from "@playwright/test";
+
+import type { Panel, Spread } from "../src/lib/book/pages";
+
+/**
+ * The book's own pagination, computed in the test from the same module and the same documents.
+ *
+ * Hard-coded page numbers would have to be re-typed every time a claim gains a knob, and the first
+ * one that was missed would pass while pointing at the wrong page. This asks `pages.ts` instead.
+ */
+async function layout(): Promise<readonly Spread[]> {
+  const { spreadsOf } = await import("../src/lib/book/pages");
+  const read = (name: string) => JSON.parse(readFileSync(`public/${name}`, "utf8"));
+  return spreadsOf({
+    findings: read("findings.json").findings,
+    introduction: read("introduction.json"),
+    safeguards: read("sandbox.json"),
+    dial: read("response.json"),
+  });
+}
+
+/** The address of the first spread carrying a panel that matches. */
+function addressOf(spreads: readonly Spread[], match: (panel: Panel) => boolean): string {
+  const spread = spreads.find((one) => match(one.verso) || match(one.recto));
+  if (!spread) throw new Error("no spread carries that panel");
+  return `#ch=${spread.chapter.slug}&p=${spread.at}`;
+}
 
 /** Opens the book. The flag goes when the book becomes the default; so does this helper. */
 async function openBook(page: Page, hash = ""): Promise<void> {
@@ -58,11 +86,16 @@ test("the chapter is in the URL, and a deep link opens it", async ({ page }) => 
     assertion anchored to `#ch=` was demanding an ordering nothing promises.
   */
   await expect(page).toHaveURL(/[#&]ch=cannot-see/);
-  await expect(page.locator(".page--verso")).toContainText("What we cannot see");
+  /*
+    The spread's own left page, not any page. Mid-turn the leaf and the parked page are `Page`
+    instances too -- which is ADR 0015 decision 5 working as designed -- so a bare `.page--verso`
+    matches three elements and the assertion is ambiguous rather than false.
+  */
+  await expect(page.locator(".spread > .page--verso")).toContainText("What we cannot see");
 
   // A chapter nobody can link to is a chapter nobody cites, which is `state/route.ts`'s own reason.
   await openBook(page, "#ch=what-did-not");
-  await expect(page.locator(".page--verso")).toContainText("What did not");
+  await expect(page.locator(".spread > .page--verso")).toContainText("What did not");
 });
 
 test("the turning page is a page, hinged on the crease", async ({ page }) => {
@@ -275,11 +308,34 @@ test("the book opens on an introduction, carried across the spread", async ({ pa
     "a record of what this project has actually measured",
   );
 
-  // Both pages, not one page and a blank: a book's opening spread uses both.
-  const versoHeadings = await page.locator(".page--verso .intro__passage h2").count();
-  const rectoHeadings = await page.locator(".page--recto .intro__passage h2").count();
-  expect(versoHeadings, "the verso carries no passage").toBeGreaterThan(0);
-  expect(rectoHeadings, "the facing page is blank").toBeGreaterThan(0);
+  /*
+    The opening leaf is the standfirst and the counted line, and the passages start on the facing
+    page. That is not the arrangement it had before pagination, and it is the arrangement a book
+    has: a chapter opening is not a page of body text with a title on it.
+  */
+  await expect(page.locator(".page--verso .intro__passage")).toHaveCount(0);
+  expect(
+    await page.locator(".page--recto .intro__passage h2").count(),
+    "the facing page carries no passage",
+  ).toBeGreaterThan(0);
+
+  // And every passage is on some page: the chapter runs across as many spreads as it needs, and a
+  // fifth passage added upstream must not fall off the end.
+  const doc = JSON.parse(readFileSync("public/introduction.json", "utf8")) as {
+    passages: { heading: string }[];
+  };
+  const carried = (await layout())
+    .filter((one) => one.chapter.slug === "how-to-read")
+    .flatMap((one) => [one.verso, one.recto])
+    .filter((panel) => panel.kind === "intro");
+  const covered = new Set(
+    carried.flatMap((panel) =>
+      Array.from({ length: panel.to - panel.from }, (_, step) => panel.from + step),
+    ),
+  );
+  for (const [index, passage] of doc.passages.entries()) {
+    expect(covered.has(index), `"${passage.heading}" is on no page`).toBe(true);
+  }
 
   // The opening chapter has no plate, because it makes no claim.
   await expect(page.locator(".plate")).toHaveCount(0);
@@ -329,8 +385,9 @@ test("each chapter's facing page carries the figure its claim actually has", asy
   */
   await openBook(page, "#ch=why-it-changed");
   await expect(page.locator(".page--recto .figure h2")).toHaveText("The world without us");
-  await expect(page.locator(".page--recto .response")).toHaveCount(1);
   await expect(page.locator(".page--recto .plate")).toHaveCount(0);
+  // One page, one thing: the dial is several leaves on, not stacked under the chart.
+  await expect(page.locator(".page--recto .response")).toHaveCount(0);
 
   await openBook(page, "#ch=cannot-see");
   await expect(page.locator(".page--recto .figure h2")).toHaveText(
@@ -344,6 +401,31 @@ test("each chapter's facing page carries the figure its claim actually has", asy
   await expect(page.locator(".page--recto .response")).toHaveCount(0);
 });
 
+test("a figure that needs more than a page gets more, and its document agrees", async ({
+  page,
+}) => {
+  /*
+    `figures.ts` declares the page count because the ribbon's own document is fetched lazily by the
+    component that draws it -- so the pagination cannot count its charts, and a count that arrives
+    late is a folio that renumbers itself under the reader. The declaration is therefore a claim
+    about a file, and this is what keeps it true: a third reconstruction added upstream fails here
+    rather than falling off the end of the book.
+  */
+  const { RIBBON_CHARTS } = await import("../src/lib/book/figures");
+  const doc = JSON.parse(readFileSync("public/counterfactual.json", "utf8")) as { ribbons: unknown[] };
+  expect(doc.ribbons).toHaveLength(RIBBON_CHARTS);
+
+  const pages = (await layout())
+    .flatMap((one) => [one.verso, one.recto])
+    .filter((panel) => panel.kind === "figure" && panel.key === "anthropogenic-share");
+  expect(pages, "the ribbon's declared pages are not all allocated").toHaveLength(4);
+
+  // And a chart page draws one chart, which is what made them fit: two came to 1,362px on an 826px
+  // page.
+  await openBook(page, "#ch=why-it-changed");
+  await expect(page.locator(".page--recto .pair__set li")).toHaveCount(1);
+});
+
 test("the safeguards sit beside the claim they qualify", async ({ page }) => {
   /*
     The gap this closes: the book showed each claim's headline, number and caveat and none of its
@@ -352,11 +434,18 @@ test("the safeguards sit beside the claim they qualify", async ({ page }) => {
     `Evidence` fixes that order and the reason carries over: the safeguards say how much to trust
     the number, and only then is it worth asking what a different world would do to it.
   */
-  await openBook(page, "#ch=what-changed");
-  await expect(page.locator(".page--verso .knob").first()).toBeVisible();
-
-  await openBook(page, "#ch=what-did-not");
-  await expect(page.locator(".page--verso .knob").first()).toBeVisible();
+  const spreads = await layout();
+  for (const key of ["autumn-advance", "marine-null"]) {
+    const address = addressOf(
+      spreads,
+      (panel) => panel.kind === "panel" && panel.doc === "safeguards" && panel.key === key,
+    );
+    await openBook(page, address);
+    await expect(page.locator(".knob").first(), `no knob at ${address}`).toBeVisible();
+    // One to a page, which is what three of them at about 435px each on an 826px page forced.
+    // Counted over the spread, because whether a knob lands left or right is `pages.ts`'s business.
+    await expect(page.locator(".spread .knob")).toHaveCount(1);
+  }
 });
 
 test("a 460 KB assessment is not fetched by a chapter that does not show it", async ({ page }) => {
@@ -391,8 +480,12 @@ test("turning the dial changes what the fit says", async ({ page }) => {
     `response.json`, so this asserts the control is wired to the published numbers rather than that
     any particular number is right.
   */
-  await openBook(page, "#ch=why-it-changed");
-  const knob = page.locator(".page--recto .knob").first();
+  const spreads = await layout();
+  await openBook(
+    page,
+    addressOf(spreads, (panel) => panel.kind === "panel" && panel.doc === "dial"),
+  );
+  const knob = page.locator(".knob").first();
   await expect(knob).toBeVisible();
 
   const before = await knob.locator(".knob__value").textContent();
@@ -401,7 +494,7 @@ test("turning the dial changes what the fit says", async ({ page }) => {
   await expect(knob.locator(".knob__value")).not.toHaveText(before ?? "");
 
   // And it still says what it is: a reading off a fit, not a forecast.
-  await expect(page.locator(".page--recto")).toContainText("not predictions");
+  await expect(page.locator(".spread")).toContainText("not predictions");
 });
 
 test("no chapter but the world boots a map", async ({ page }) => {
@@ -414,6 +507,94 @@ test("no chapter but the world boots a map", async ({ page }) => {
   await expect(page.locator(".page--recto .plate")).toHaveCount(1);
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
 });
+
+/*
+  The guard that makes declared panels worth declaring.
+
+  Before pagination `.page__inner` scrolled, so every chapter fitted by definition and no test could
+  tell: measured at 1600x900, "What did not" put 6,855px on an 826px page. Every split in `pages.ts`
+  and every divisor in `Book.svelte`'s reading scale was chosen against this walk, and without it the
+  next paragraph added to a claim silently puts the scrollbar back.
+
+  It walks the whole book by the corner rather than by URL, so it also asserts the two things a book
+  has to do: every page is reachable by turning, and the folios run without a gap.
+*/
+for (const [width, height] of [
+  [1600, 900],
+  [1280, 800],
+] as const) {
+  test(`no page in the book overflows itself at ${width}x${height}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await openBook(page, "#ch=how-to-read&p=0");
+
+    const spreads = (await layout()).length;
+    const over: string[] = [];
+    const folios: number[] = [];
+    let turned = 0;
+
+    for (;;) {
+      const spread = await page.evaluate(() => {
+        // The direct child of the spread, so the turn's own leaf and parked page are not measured.
+        const read = (side: string) => {
+          const inner = document.querySelector(`.spread > .page--${side} .page__inner`);
+          if (!inner) return null;
+          const folio = document
+            .querySelector(`.spread > .page--${side} .page__folio`)
+            ?.textContent?.trim()
+            .split(" ")[0];
+          return {
+            over: inner.scrollHeight - inner.clientHeight,
+            folio: folio ? Number.parseInt(folio, 10) : null,
+            head: (inner.textContent ?? "").trim().slice(0, 40).replace(/\s+/g, " "),
+          };
+        };
+        return {
+          verso: read("verso"),
+          recto: read("recto"),
+          more: Boolean(document.querySelector('.spread > .page--recto [data-turn="on"]')),
+        };
+      });
+
+      for (const [side, cell] of [
+        ["verso", spread.verso],
+        ["recto", spread.recto],
+      ] as const) {
+        if (!cell) continue;
+        // Two pixels of slack for sub-pixel layout, and no more: this is a budget, not a target.
+        if (cell.over > 2) over.push(`${cell.folio} (${side}) by ${cell.over}px: ${cell.head}`);
+        if (cell.folio !== null) folios.push(cell.folio);
+      }
+
+      if (!spread.more) break;
+      const was = spread.recto?.folio ?? spread.verso?.folio ?? null;
+      await page.locator('.spread > .page--recto [data-turn="on"]').click();
+      turned += 1;
+      if (turned > spreads + 2) throw new Error("the corner never stopped offering a next page");
+      /*
+        Waiting for the folio to change rather than for an element to appear. During the turn the
+        leaf and the parked page are `Page` instances too -- which is ADR 0015 decision 5 working --
+        so `.page--recto` matches three elements mid-flight and a visibility assertion on it is
+        ambiguous rather than wrong. The folio on the *settled* recto is unambiguous.
+      */
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const text = document
+              .querySelector(".spread > .page--recto .page__folio")
+              ?.textContent?.trim()
+              .split(" ")[0];
+            return text ? Number.parseInt(text, 10) : null;
+          }),
+        )
+        .not.toBe(was);
+    }
+
+    expect(over, `${over.length} of ${folios.length + 1} pages overflow`).toEqual([]);
+    expect(turned + 1, "the corner did not reach every spread").toBe(spreads);
+    // Folios in order and with no gap, which is the whole reason to print one.
+    expect(folios).toEqual(Array.from({ length: folios.length }, (_, step) => step + 1));
+  });
+}
 
 test("a monitor gets the spread and only the spread", async ({ page }) => {
   // The two containers are a choice, not a fallback: mounting both would run the world chapter's
@@ -482,7 +663,8 @@ test.describe("on a phone", () => {
 
     const { CHAPTERS } = await import("../src/lib/story");
     const state = await survey(page);
-    expect(state.leaves).toHaveLength(CHAPTERS.length * 2);
+    // Two leaves per spread, which is the whole of this container: the same pages, one at a time.
+    expect(state.leaves).toHaveLength((await layout()).length * 2);
     expect(state.leaves[0]).toBe(`${CHAPTERS[0]!.slug}:verso`);
 
     // The next leaf's edge shows past this one, because otherwise nothing on screen says there is
@@ -519,7 +701,11 @@ test.describe("on a phone", () => {
     await openLeaves(page);
     await expect(page.locator(".thumb__word")).toHaveText("Changed");
 
-    await swipeTo(page, 6);
+    // The first leaf of "What we cannot see", found from the pagination rather than counted by hand.
+    const spreads = await layout();
+    const target = spreads.findIndex((one) => one.chapter.slug === "cannot-see") * 2;
+
+    await swipeTo(page, target);
     await expect(page).toHaveURL(/[#&]ch=cannot-see/);
     await expect(page.locator(".thumb__word")).toHaveText("Cannot see");
 
@@ -527,7 +713,8 @@ test.describe("on a phone", () => {
     await page.goBack();
     await expect(page.locator(".thumb__word")).toHaveText("Changed");
     const state = await survey(page);
-    expect(state.scrollLeft).toBe(state.offsets[2]);
+    const opened = spreads.findIndex((one) => one.chapter.slug === "what-changed") * 2;
+    expect(state.scrollLeft).toBe(state.offsets[opened]);
   });
 
   test("a flick through chapters leaves one history entry per stop", async ({ page }) => {
@@ -539,40 +726,61 @@ test.describe("on a phone", () => {
       browser actually dispatches. Reported per leaf this would push three entries and make the back
       button a rewind of the gesture; the URL waits for the rail to stop instead.
     */
-    await page.evaluate(async () => {
+    const spreads = await layout();
+    const crossed = ["what-changed", "what-did-not", "cannot-see"].map(
+      (slug) => spreads.findIndex((one) => one.chapter.slug === slug) * 2,
+    );
+    await page.evaluate(async (leaves) => {
       const rail = document.querySelector<HTMLElement>(".rail")!;
       const sheets = rail.querySelectorAll<HTMLElement>("[data-leaf]");
-      for (const leaf of [4, 6, 8]) {
+      for (const leaf of leaves) {
         rail.scrollLeft = sheets[leaf]!.offsetLeft;
         await new Promise((settle) => setTimeout(settle, 40));
       }
-    });
+    }, crossed);
 
-    await expect(page).toHaveURL(/[#&]ch=can-be-predicted/);
+    await expect(page).toHaveURL(/[#&]ch=cannot-see/);
     expect(await page.evaluate(() => history.length)).toBe(before + 1);
 
     // And the paper kept up with the flick, which is the other cadence: mounted at once, so a fling
     // never lands on blank paper.
-    expect((await survey(page)).written).toEqual([7, 8, 9]);
+    const landed = crossed[crossed.length - 1]!;
+    expect((await survey(page)).written).toEqual([landed - 1, landed, landed + 1]);
   });
 
   test("only the leaf in view and its neighbours carry anything", async ({ page }) => {
     await openLeaves(page, "#ch=what-changed");
     const state = await survey(page);
+    const spreads = await layout();
+    const opened = spreads.findIndex((one) => one.chapter.slug === "what-changed") * 2;
 
-    expect(state.written).toEqual([1, 2, 3]);
+    expect(state.written).toEqual([opened - 1, opened, opened + 1]);
     // Named rather than counted, because this is the assertion that keeps a phone from running a
-    // MapLibre context five chapters away from the reader.
-    expect(state.leaves.slice(12)).toEqual(["the-world:verso", "the-world:recto"]);
-    expect(state.written).not.toContain(12);
-    expect(state.written).not.toContain(13);
+    // MapLibre context most of a book away from the reader.
+    expect(state.leaves.slice(-2)).toEqual(["the-world:verso", "the-world:recto"]);
+    for (const leaf of [state.leaves.length - 2, state.leaves.length - 1]) {
+      expect(state.written).not.toContain(leaf);
+    }
   });
 
   test("a deep link opens on its chapter rather than scrolling to it", async ({ page }) => {
     await openLeaves(page, "#ch=what-did-not");
     const state = await survey(page);
-    expect(state.scrollLeft).toBe(state.offsets[4]);
-    expect(state.written).toEqual([3, 4, 5]);
+    const opened = (await layout()).findIndex((one) => one.chapter.slug === "what-did-not") * 2;
+    expect(state.scrollLeft).toBe(state.offsets[opened]);
+    expect(state.written).toEqual([opened - 1, opened, opened + 1]);
+  });
+
+  test("a phone prints the same folio the spread does", async ({ page }) => {
+    // A page number that moved when you turned the device would not be a page number.
+    await openLeaves(page, "#ch=what-did-not");
+    const opened = (await layout()).findIndex((one) => one.chapter.slug === "what-did-not") * 2;
+    const shown = await page
+      .locator("[data-leaf]")
+      .nth(opened)
+      .locator(".page__folio")
+      .textContent();
+    expect(shown?.trim()).toBe(`${String(opened).padStart(3, "0")} · migratlas`);
   });
 
   test("the last leaf can be reached, flush", async ({ page }) => {
@@ -619,7 +827,8 @@ test.describe("on a phone", () => {
     await expect(page).toHaveURL(/[#&]ch=what-did-not/);
     await expect(page.locator(".fan")).toHaveCount(0);
     const state = await survey(page);
-    expect(state.scrollLeft).toBe(state.offsets[4]);
+    const opened = (await layout()).findIndex((one) => one.chapter.slug === "what-did-not") * 2;
+    expect(state.scrollLeft).toBe(state.offsets[opened]);
   });
 
   test("the fan shuts without picking anything", async ({ page }) => {

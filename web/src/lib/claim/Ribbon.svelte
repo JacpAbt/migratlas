@@ -2,7 +2,21 @@
   import RibbonChart from "./RibbonChart.svelte";
   import { frameOf, loadRibbon, type Comparison } from "./ribbon";
 
-  let { base }: { base: string } = $props();
+  let {
+    base,
+    part = "all",
+    at = 0,
+  }: {
+    base: string;
+    /**
+     * Which slice. Measured at 1600x900 the whole figure overflowed an 826px page by 1,406 and its
+     * charts alone still by 536, so it splits at the seams it already had: one chart, then the
+     * reading of the pair, then what they survived. `book/figures.ts` declares the order.
+     */
+    part?: "all" | "chart" | "reading" | "notes";
+    /** Which chart, when there is one per page. */
+    at?: number;
+  } = $props();
 
   let doc = $state<Comparison | null>(null);
   let failure = $state<string | null>(null);
@@ -39,14 +53,17 @@
   {#if failure}
     <p class="pair__failure">The counterfactual is unavailable. {failure}</p>
   {:else if doc && frame}
+    {#if part === "all" || part === "chart"}
     <ol class="pair__set">
-      {#each doc.ribbons as ribbon (ribbon.key)}
+      {#each part === "chart" ? doc.ribbons.slice(at, at + 1) : doc.ribbons as ribbon (ribbon.key)}
         <li>
           <RibbonChart {ribbon} {frame} {drawn} />
         </li>
       {/each}
     </ol>
+    {/if}
 
+    {#if part === "all" || part === "reading"}
     <section class="pair__gap" aria-labelledby="ribbon-disagreement">
       <h4 id="ribbon-disagreement">
         {doc.ribbons.length > 1 ? "Why the two answers differ" : "Why there is only one answer"}
@@ -61,8 +78,9 @@
     </section>
 
     <p class="pair__caveat">{doc.shared_caveat}</p>
+    {/if}
 
-    {#if doc.supporting.length > 0}
+    {#if (part === "all" || part === "notes") && doc.supporting.length > 0}
       <ul class="pair__supporting">
         {#each doc.supporting as line (line)}
           <li>{line}</li>

@@ -2,35 +2,38 @@
   import type { Snippet } from "svelte";
 
   import Page from "./Page.svelte";
+  import { folio, openingOf, type Panel, type Spread } from "./pages";
   import { tabStyle } from "./tabs";
   import { still } from "../../state/turn";
   import type { Chapter } from "../story";
 
   let {
     chapters,
+    spreads,
     open,
     onopen,
     page,
   }: {
     chapters: readonly Chapter[];
-    /** Slug of the open chapter. */
-    open: string;
-    onopen: (slug: string) => void;
+    spreads: readonly Spread[];
+    /** Index of the open spread. */
+    open: number;
+    onopen: (at: number) => void;
     /**
-     * What goes on a page, given the chapter and which side it is.
+     * What goes on a page, given the panel and which side it is.
      *
-     * A snippet rather than two slots, because the turn has to render the *outgoing* chapter as
-     * well as the open one. With slots that means cloning DOM, which is where every defect ADR 0015
+     * A snippet rather than two slots, because the turn has to render the *outgoing* pages as well
+     * as the open ones. With slots that means cloning DOM, which is where every defect ADR 0015
      * lists came from; with a snippet the leaf is another call with different arguments.
      */
-    page: Snippet<[Chapter, "verso" | "recto"]>;
+    page: Snippet<[Panel, "verso" | "recto"]>;
   } = $props();
 
-  const index = $derived(Math.max(0, chapters.findIndex((c) => c.slug === open)));
-  const current = $derived(chapters[index] ?? chapters[0]!);
+  const index = $derived(Math.min(Math.max(open, 0), Math.max(spreads.length - 1, 0)));
+  const current = $derived(spreads[index] ?? spreads[0]);
 
-  /** The chapter being turned away from, and which way. Null when nothing is turning. */
-  let leaving = $state<{ chapter: Chapter; forward: boolean } | null>(null);
+  /** The spread being turned away from, and which way. Null when nothing is turning. */
+  let leaving = $state<{ spread: Spread; forward: boolean } | null>(null);
   let settling: ReturnType<typeof setTimeout> | undefined;
 
   /*
@@ -44,21 +47,19 @@
   const lifted = $derived<"verso" | "recto">(leaving?.forward ? "recto" : "verso");
   const arriving = $derived<"verso" | "recto">(leaving?.forward ? "verso" : "recto");
 
-  function go(slug: string): void {
-    if (slug === open) return;
-    const to = chapters.findIndex((c) => c.slug === slug);
-    if (to < 0) return;
+  function go(to: number): void {
+    if (to === index || to < 0 || to >= spreads.length) return;
 
     if (still()) {
       // Reduced motion is a full path and not a faster one: the new spread is simply there, which
       // is the animation's correct end state rather than a degraded version of it.
-      onopen(slug);
+      onopen(to);
       return;
     }
 
     clearTimeout(settling);
-    leaving = { chapter: current, forward: to > index };
-    onopen(slug);
+    leaving = { spread: current!, forward: to > index };
+    onopen(to);
 
     /*
       Cleared by whichever comes first, the event or the clock, and the clock is not paranoia:
@@ -71,6 +72,21 @@
     );
     settling = setTimeout(() => (leaving = null), (Number.isFinite(ms) ? ms : 900) + 120);
   }
+
+  /* The folio in each outer corner is the button that turns that way -- see `Page.svelte`. Arrow
+     keys do the same, because a reader on a keyboard should not have to find a corner. */
+  const numbers = $derived(folio(index));
+
+  function keys(event: KeyboardEvent): void {
+    if (event.target !== document.body) return;
+    if (event.key === "ArrowRight") go(index + 1);
+    else if (event.key === "ArrowLeft") go(index - 1);
+  }
+
+  $effect(() => {
+    addEventListener("keydown", keys);
+    return () => removeEventListener("keydown", keys);
+  });
 </script>
 
 <!--
@@ -90,38 +106,54 @@
     <div class="block block--edge" aria-hidden="true"></div>
 
     <div class="spread">
-      <Page side="verso">{@render page(current, "verso")}</Page>
-      <Page side="recto">{@render page(current, "recto")}</Page>
+      {#if current}
+        <Page
+          side="verso"
+          folio={numbers[0]}
+          onturn={index > 0 ? () => go(index - 1) : undefined}
+        >
+          {@render page(current.verso, "verso")}
+        </Page>
+        <Page
+          side="recto"
+          folio={numbers[1]}
+          onturn={index < spreads.length - 1 ? () => go(index + 1) : undefined}
+        >
+          {@render page(current.recto, "recto")}
+        </Page>
+      {/if}
 
-      {#if leaving}
+      {#if leaving && current}
         <!-- The outgoing page, held on the half the leaf is about to land on. -->
         <div class="stale stale--{arriving}" aria-hidden="true">
-          <Page side={arriving} fill>{@render page(leaving.chapter, arriving)}</Page>
+          <Page side={arriving} fill>{@render page(leaving.spread[arriving], arriving)}</Page>
         </div>
         <!-- The shadow the turning page throws: a sibling, because a child would rotate with it. -->
         <div class="cast cast--{lifted}" aria-hidden="true"></div>
         <div class="leaf leaf--{lifted}" aria-hidden="true">
           <div class="leaf__face leaf__front">
-            <Page side={lifted} fill>{@render page(leaving.chapter, lifted)}</Page>
+            <Page side={lifted} fill>{@render page(leaving.spread[lifted], lifted)}</Page>
           </div>
           <div class="leaf__face leaf__back">
-            <Page side={arriving} fill>{@render page(current, arriving)}</Page>
+            <Page side={arriving} fill>{@render page(current[arriving], arriving)}</Page>
           </div>
         </div>
       {/if}
 
       <div class="gutter" aria-hidden="true"><span class="gutter__line"></span></div>
+
     </div>
 
     <nav class="tabs" aria-label="chapters">
       {#each chapters as chapter, position (chapter.slug)}
+        {@const here = current?.chapter.slug === chapter.slug}
         <button
           type="button"
           class="tab"
           style={tabStyle(position)}
-          class:is-on={chapter.slug === current.slug}
-          aria-current={chapter.slug === current.slug ? "page" : undefined}
-          onclick={() => go(chapter.slug)}
+          class:is-on={here}
+          aria-current={here ? "page" : undefined}
+          onclick={() => go(openingOf(spreads, chapter.slug))}
         >
           {chapter.tab}
         </button>
@@ -145,10 +177,42 @@
   .book {
     --ratio: 1.58;
     --book-fold: 2.5rem;
-    --page-pad: clamp(1.6rem, 3.2vw, 3.4rem);
+    /* Trimmed from `clamp(1.6rem, 3.2vw, 3.4rem)`: on a short window the margin was taking 82px
+       of an 728px page while five panels overflowed by less than that. */
+    --page-pad: clamp(1.2rem, 2.5vw, 3rem);
+
+    /*
+      Reading sizes measured against the page, which is what pagination made necessary.
+
+      `tokens.css` records that the book needed no reading *scale* -- and that was right about the
+      thing it was about, a reader's 100/115/130% preference. This is a different quantity. A page
+      that scrolls fits any content at any size by definition; a page that does not fit has to hold
+      the same panel at 1600x900 and at 1280x800, where it is 826px and 726px tall. With the type
+      fixed, twenty-three of twenty-eight spreads overflowed at the smaller size and nine at the
+      larger, and every fix would have been a split that was wrong at the other size.
+
+      So the type is a fraction of the book's own height and the spread is a scaled copy of itself at
+      every window: the aspect is fixed, so the width scales with the height and the text reflows
+      identically. The divisors are the current sizes at `--book-h: 828`, which is 1600x900 -- the
+      size every panel in `pages.ts` was measured at. The clamps are floors and ceilings rather than
+      preferences: below the floor the book stops shrinking its type and the guard test in
+      `tests/book.spec.ts` fails instead, which is the honest failure.
+
+      CSS cannot divide a length by a length, so this is `--book-h / n` rather than a ratio applied
+      to the token. That is also why each line repeats the hand factor it needs.
+    */
+    --size-claim: clamp(1.08rem, calc(var(--book-h) / 26.9 * var(--font-scale-hand)), 2.6rem);
+    --size-lede: clamp(0.86rem, calc(var(--book-h) / 50.2 * var(--font-scale-hand)), 1.5rem);
+    --size-body: clamp(0.73rem, calc(var(--book-h) / 59.5), 1.15rem);
+    --size-value: clamp(0.98rem, calc(var(--book-h) / 41.8), 1.7rem);
+    --size-margin: clamp(0.56rem, calc(var(--book-h) / 85.6), 0.82rem);
+    --size-label: clamp(0.53rem, calc(var(--book-h) / 91.2), 0.76rem);
     /* As large as the window allows in both axes, so it fills a wide monitor and still cannot run
        off the bottom of a short one. The subtraction is the chrome above it. */
-    --book-h: min(calc(98vw / var(--ratio)), calc(100vh - 4.5rem));
+    /* The subtraction is the chrome above it, measured rather than reserved: `.desk` puts 14px of
+       padding over the book and the lift shadow needs a few more. 4.5rem was a guess that cost 40px
+       of page on exactly the short windows where the pages were tightest. */
+    --book-h: min(calc(98vw / var(--ratio)), calc(100vh - 2.6rem));
 
     position: relative;
     width: calc(var(--book-h) * var(--ratio));

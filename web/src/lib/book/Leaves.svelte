@@ -2,40 +2,54 @@
   import type { Snippet } from "svelte";
 
   import Page from "./Page.svelte";
+  import { folio, openingOf, type Panel, type Spread } from "./pages";
   import { tabStyle } from "./tabs";
   import type { Chapter } from "../story";
 
   let {
     chapters,
+    spreads,
     open,
     onopen,
     page,
   }: {
     chapters: readonly Chapter[];
-    /** Slug of the open chapter. */
-    open: string;
-    onopen: (slug: string) => void;
+    spreads: readonly Spread[];
+    /** Index of the open spread. */
+    open: number;
+    onopen: (at: number) => void;
     /**
-     * What goes on a page, given the chapter and which side it is.
+     * What goes on a page, given the panel and which side it is.
      *
      * The same signature `Book` takes, and deliberately so: `Reader` hands one snippet to whichever
      * container the window gets, so a phone and a monitor show the same pages rather than two
      * authored versions of them.
      */
-    page: Snippet<[Chapter, "verso" | "recto"]>;
+    page: Snippet<[Panel, "verso" | "recto"]>;
   } = $props();
 
   /** How long the rail has to be still before the chapter goes in the URL. */
   const SETTLE_MS = 140;
 
-  /** Every leaf, in reading order: each chapter's argument page, then its facing page. */
+  /**
+   * Every leaf, in reading order.
+   *
+   * One page per leaf, so a spread becomes two of them -- which is the whole of why a phone gets its
+   * own container: the same pages, one at a time. The folio comes from `pages.ts` so the number on a
+   * phone is the number on a monitor; a book whose page 17 moved when you rotated the device would
+   * not be a book.
+   */
   const leaves = $derived(
-    chapters.flatMap((chapter) =>
-      (["verso", "recto"] as const).map((side) => ({ chapter, side })),
-    ),
+    spreads.flatMap((spread, at) => {
+      const numbers = folio(at);
+      return [
+        { spread, at, side: "verso" as const, panel: spread.verso, folio: numbers[0] },
+        { spread, at, side: "recto" as const, panel: spread.recto, folio: numbers[1] },
+      ];
+    }),
   );
 
-  const here = $derived(chapters.find((chapter) => chapter.slug === open) ?? chapters[0]!);
+  const here = $derived(spreads[open]?.chapter ?? chapters[0]!);
 
   let rail = $state<HTMLDivElement | null>(null);
   let fanned = $state(false);
@@ -47,9 +61,10 @@
    * The last slug this component reported, so the answer coming back does not undo the swipe.
    *
    * A plain `let` and not `$state`: the effect below must re-run when `open` changes and never
-   * because of this, which is the whole of how the two directions stay apart.
+   * because of this, which is the whole of how the two directions stay apart. It starts at -1, which
+   * is no spread, so the first run aligns the rail with whatever the URL asked for.
    */
-  let reported = "";
+  let reported = -1;
   let quiet: ReturnType<typeof setTimeout> | undefined;
 
   function sheets(el: HTMLElement): HTMLElement[] {
@@ -78,10 +93,10 @@
     paper. The motion in this container belongs to the swipe; a tab means "be there", and the fan
     closing is the transition.
   */
-  function goTo(slug: string): void {
+  function goTo(at: number): void {
     const el = rail;
     if (!el) return;
-    const first = leaves.findIndex((leaf) => leaf.chapter.slug === slug);
+    const first = leaves.findIndex((leaf) => leaf.at === at);
     const sheet = sheets(el)[first];
     if (!sheet) return;
     // Said, not inferred. `at` decides which leaves hold content, and waiting for the scroll event
@@ -112,15 +127,15 @@
     clearTimeout(quiet);
     quiet = setTimeout(() => {
       at = nearest(el);
-      const slug = leaves[at]?.chapter.slug;
-      if (!slug || slug === open) return;
-      reported = slug;
-      onopen(slug);
+      const spread = leaves[at]?.at;
+      if (spread === undefined || spread === open) return;
+      reported = spread;
+      onopen(spread);
     }, SETTLE_MS);
   }
 
   $effect(() => {
-    if (!rail || open === reported) return;
+    if (!rail || open === reported || leaves.length === 0) return;
     reported = open;
     goTo(open);
   });
@@ -138,10 +153,11 @@
 
   function pick(slug: string): void {
     fanned = false;
-    // Tapping the chapter you are already in means "back to its first page", which no change to
-    // `open` can express -- so this one goes straight to the rail.
-    if (slug === open) goTo(slug);
-    else onopen(slug);
+    const at = openingOf(spreads, slug);
+    // Tapping the chapter you are already reading means "back to its first page", which no change to
+    // `open` can express when you are already on it -- so that one goes straight to the rail.
+    if (at === open) goTo(at);
+    else onopen(at);
   }
 </script>
 
@@ -166,9 +182,14 @@
 -->
 <div class="leaves">
   <div class="rail" bind:this={rail} {onscroll}>
-    {#each leaves as leaf, index (leaf.chapter.slug + leaf.side)}
-      <article class="leaf" data-leaf data-chapter={leaf.chapter.slug} data-side={leaf.side}>
-        <Page side={leaf.side} fill>
+    {#each leaves as leaf, index (`${leaf.at}-${leaf.side}`)}
+      <article
+        class="leaf"
+        data-leaf
+        data-chapter={leaf.spread.chapter.slug}
+        data-side={leaf.side}
+      >
+        <Page side={leaf.side} fill folio={leaf.folio}>
           <!--
             The leaf you can see and the one either side of it. A rule about leaves and not about
             chapters, because it is a swipe that has to land on something: the world's map is a live
@@ -176,7 +197,7 @@
             be running already when the leaf before it is on screen.
           -->
           {#if Math.abs(index - at) <= 1}
-            {@render page(leaf.chapter, leaf.side)}
+            {@render page(leaf.panel, leaf.side)}
           {/if}
         </Page>
       </article>

@@ -104,6 +104,68 @@ Five of them shared one cause, which is the most useful thing in this document.
    Uniform `(chapter, side)` leaves are what make the two containers one book, and breaking that for
    one chapter needs its own decision.
 
+9. **Added 2026-08-21: a page that scrolls is not a page.** The owner's note was that scrolling the
+   left page "kinda takes away the sketchbook feel", and the measurement was worse than the note:
+   at 1600x900, against a page whose budget is 826px, the left page of *What did not* held
+   **6,855px** — eight and a third screens on one leaf, with the sentence at the fold cut in half.
+   Every chapter overflowed, two rectos included. A page with a scrollbar is a document wearing a
+   book's clothes.
+
+   **A book's answer to "this does not fit" is another page.** So the unit of the book is a *panel*:
+   one page's worth of one thing, declared in `lib/book/pages.ts`. A claim is a run of panels —
+   the finding in plain language, its figure, the record, the risk of bias, what it survived, then
+   one safeguard knob or one dial to a page — folded into spreads two at a time, ending on blank
+   paper rather than sharing a leaf with the next claim. The book went from 7 scrolling chapters to
+   **35 spreads, 70 pages**, and the folio in the corner became a real page number instead of
+   decoration.
+
+   Panels are **declared, not measured**, and every split is at a seam the material already had.
+   Which seams was decided by measuring, and the numbers are in the module: the bias table and what
+   a claim survived were put on one page and overflowed by 231 and 304 on the two longest audits, so
+   they are two pages facing each other; the counterfactual ribbon overflowed by 1,406 whole and 536
+   with its charts alone, so it is one chart to a page and then the reading of them; the coverage
+   assessment separates what could be measured from what is held back. Nothing was shortened to fit
+   — `reports/findings.py` refuses to publish a claim without its caveat, and a layout that dropped
+   one to save a page would do by omission what that refusal exists to prevent.
+
+   Three things this cost, all worth recording:
+
+   - **Reading sizes are now a fraction of the page**, which reverses a note in `tokens.css`. That
+     note was right about the thing it was about — a reader's 100/115/130% preference, which the
+     mock offered and the owner set to 100%. This is a different quantity. A page that scrolls fits
+     any content at any window by definition; a page that does not has to hold the same panel at
+     826px and at 726px. With the type fixed, 23 of 28 spreads overflowed at 1280x800 against 9 at
+     1600x900, and every fix would have been a split that was wrong at the other size. Now the
+     spread is a scaled copy of itself at every window and both sizes fit.
+   - **The book's documents load before the first frame.** How many passages the introduction has,
+     and which claims carry an audit or a dial, decide how many pages there are — so a folio printed
+     before they arrive renumbers itself under the reader and a link to a page opens a different
+     page. A book cannot count its own pages later. The four documents together are 56 KB; the
+     460 KB assessment behind one figure is still lazy, because it changes nothing about where the
+     pages fall.
+   - **`figures.ts` declares page counts and a test asserts the documents agree.** The ribbon's own
+     document is fetched by the component that draws it, so the pagination cannot count its charts.
+     The declaration is therefore a claim about a file, and the test is what keeps it true.
+
+   **The guard is the point.** `tests/book.spec.ts` walks all 70 pages by the corner at both
+   supported sizes and asserts no page exceeds itself, that every page is reachable by turning, and
+   that the folios run without a gap. Before pagination `.page__inner` scrolled, so every chapter
+   fitted *by definition* and no test could see the 6,855px page. Without the guard the next
+   paragraph added to a claim puts the scrollbar back in silence.
+
+   Rejected, with a reason: CSS multi-column fragmentation. Flowing each chapter into page-sized
+   columns needs no packing logic and would serve the phone and the spread with one mechanism, which
+   is genuinely attractive. It cannot carry a `rotateY` turn — and that turn is what decision 5's
+   five defects bought.
+
+   Three defects the tests found while this was built, each of which would have shipped: the dial's
+   two refusals got no pages at all, because `refusalsFor` keys the *safeguards'* one refusal to
+   `marine-null` while the dial's travel with its dials — one pair of selectors for two documents
+   made half a panel unreachable in a book that prints everything. The introduction was allocated a
+   page for passages four to six of a document that has four. And the record page printed
+   `finding.scope`, which the facing plate's caption already carried — the same sentence twice, two
+   leaves apart, and up to 144px of the overflow.
+
 ## Consequences
 
 `tokens.css` gains a book reading scale and the two plate tints, which are the only new visual

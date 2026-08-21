@@ -4,7 +4,23 @@
   import { BRACKET_WIDTH, bracket } from "../notebook/ink";
   import type { Finding } from "../ledger";
 
-  let { finding }: { finding: Finding } = $props();
+  let {
+    finding,
+    part = "all",
+  }: {
+    finding: Finding;
+    /**
+     * "all" is the whole margin beside a claim, which is what the old shell mounts and what this
+     * component was. "bias" is the book's page of it: the same audit, minus the specimen line.
+     *
+     * The specimen line left because it is `realm · taxon_scope · evidence_type` -- which is exactly
+     * the legend a figure needs, so the plate says it in words instead of in field values in a
+     * margin. "How it could be wrong" and "what it survived" are one question asked from both sides
+     * and were put on one page for that reason; measured, the pair overflowed an 826px page by 231
+     * and 304 on the two claims with the longest audits, so they are two pages that face each other.
+     */
+    part?: "all" | "bias" | "survived";
+  } = $props();
 
   // Measured for the same reason the rule is: stretched, a 3px hook on a 400px column becomes an
   // 8px flag, and the spine's wobble smears into a curve.
@@ -42,6 +58,7 @@
   </svg>
 
   <div class="margin__body">
+    {#if part !== "survived"}
     <section>
       <h3>Risk of bias</h3>
       <dl class="bias">
@@ -54,8 +71,9 @@
         {/each}
       </dl>
     </section>
+    {/if}
 
-    {#if finding.supporting.length > 0}
+    {#if part !== "bias" && finding.supporting.length > 0}
       <section>
         <h3>Survived</h3>
         <Rule seed={`${finding.key}-survived`} tone="rule" />
@@ -67,12 +85,16 @@
       </section>
     {/if}
 
-    <section class="specimen">
-      <h3>Specimen</h3>
-      <p>
-        {finding.realm} · {finding.taxon_scope} · {finding.evidence_type.replace(/_/g, " ")}
-      </p>
-    </section>
+    <!-- Only where the whole margin is shown. On a page of its own this line is the figure's
+         legend, and `book/Figure.svelte` renders it there in words. -->
+    {#if part === "all"}
+      <section class="specimen">
+        <h3>Specimen</h3>
+        <p>
+          {finding.realm} · {finding.taxon_scope} · {finding.evidence_type.replace(/_/g, " ")}
+        </p>
+      </section>
+    {/if}
   </div>
 </aside>
 

@@ -3,6 +3,7 @@
   import Coverage from "../claim/Coverage.svelte";
   import Ribbon from "../claim/Ribbon.svelte";
   import Rule from "../notebook/Rule.svelte";
+  import { FIGURES, figurePages } from "./figures";
   import { loadDetectability, type DetectabilityDocument } from "../../layers/detectability";
   import type { Finding } from "../ledger";
 
@@ -10,26 +11,23 @@
     finding,
     number,
     base,
+    at = 0,
   }: {
     finding: Finding;
     number: number;
     base: string;
+    /** Which of the figure's declared pages. A plate has only the one. */
+    at?: number;
   } = $props();
 
-  /**
-   * Which claims have a figure of their own, and what it is.
-   *
-   * Lifted from `claim/Evidence.svelte` rather than reinvented, including its reasoning: only two
-   * claims have a figure that adds something the sentence does not. A chart per claim would be
-   * decoration — the marine null and the composition control are both "indistinguishable from
-   * zero", and a flat line drawn three times teaches nothing the value already said.
-   *
-   * Everything else gets the drawn plate, which answers a different question: where on Earth.
-   */
-  const FIGURES: Record<string, { kind: "ribbon" | "coverage"; title: string }> = {
-    "anthropogenic-share": { kind: "ribbon", title: "The world without us" },
-    "coverage-bias": { kind: "coverage", title: "Where change could be measured" },
-  };
+  const leaf = $derived(figurePages(finding.key)[at] ?? figurePages(finding.key)[0]!);
+
+  /** Which chart, counting only the chart pages before this one. */
+  const chart = $derived(
+    figurePages(finding.key)
+      .slice(0, at)
+      .filter((page) => page.part === "chart").length,
+  );
 
   const figure = $derived(FIGURES[finding.key]);
 
@@ -59,12 +57,12 @@
 -->
 {#if figure}
   <section class="figure">
-    <h2>{figure.title}</h2>
+    <h2>{leaf.title}</h2>
     <Rule seed={`${finding.key}-figure`} tone="pencil" />
     {#if figure.kind === "ribbon"}
-      <Ribbon {base} />
+      <Ribbon {base} part={leaf.part} at={chart} />
     {:else if assessment}
-      <Coverage doc={assessment} />
+      <Coverage doc={assessment} part={leaf.part} />
     {:else if failed}
       <p class="figure__failure" role="status">The coverage assessment did not load.</p>
     {:else}

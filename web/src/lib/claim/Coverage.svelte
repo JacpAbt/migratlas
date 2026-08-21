@@ -1,7 +1,17 @@
 <script lang="ts">
   import { legendRows, type DetectabilityDocument } from "../../layers/detectability";
 
-  let { doc }: { doc: DetectabilityDocument | null } = $props();
+  let {
+    doc,
+    part = "all",
+  }: {
+    doc: DetectabilityDocument | null;
+    /**
+     * Which half. The assessment overflowed an 826px page by 459, and it had a seam already: the
+     * cells that could carry a trend, and then the sources held back from the map entirely.
+     */
+    part?: "all" | "measured" | "held";
+  } = $props();
 
   const rows = $derived(doc ? legendRows(doc) : []);
   const detectable = $derived(rows.find((row) => row.status === "detectable")?.share ?? 0);
@@ -16,6 +26,7 @@
 -->
 {#if doc}
   <section class="coverage" aria-label="Where change could be measured">
+    {#if part !== "held"}
     <p class="coverage__lead">
       <strong>{detectable.toFixed(1)}%</strong> of the cells this lake covers could support a trend.
       Switch the layer on to see where.
@@ -46,15 +57,20 @@
         {/each}
       </tbody>
     </table>
+    {/if}
 
-    {#if doc.withheld.length > 0}
+    {#if part !== "measured" && doc.withheld.length > 0}
       <!--
         Named, not omitted. A map that silently skipped these would read as a map with no wolves in
         it, which is the opposite of true: the lake holds them and will not draw one fix. Listing
         them is also the only way a reader can tell a refusal from a gap in coverage.
       -->
-      <section class="held" aria-labelledby="coverage-held">
-        <h4 id="coverage-held">Held, and never drawn</h4>
+      <!-- The heading only where this rides under a claim. On its own page `book/figures.ts`
+           carries the title, and printing it twice is what the first pass did. -->
+      <section class="held" aria-labelledby={part === "all" ? "coverage-held" : undefined}>
+        {#if part === "all"}
+          <h4 id="coverage-held">Held, and never drawn</h4>
+        {/if}
         <p class="held__lead">
           {doc.withheld.length} source{doc.withheld.length === 1 ? "" : "s"} in this lake
           {doc.withheld.length === 1 ? "is" : "are"} classified as high sensitivity. Individual
@@ -81,7 +97,9 @@
       </section>
     {/if}
 
-    <p class="coverage__caveat">{doc.caveat}</p>
+    {#if part !== "held"}
+      <p class="coverage__caveat">{doc.caveat}</p>
+    {/if}
   </section>
 {/if}
 

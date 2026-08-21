@@ -5,65 +5,60 @@
   import Leaves from "./Leaves.svelte";
   import World from "./World.svelte";
   import Claim from "../claim/Claim.svelte";
+  import Margin from "../claim/Margin.svelte";
   import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
-  import { loadIntroduction, type IntroductionDocument } from "./introduction";
-  import { loadResponse, type ResponseDocument } from "../sandbox/response";
-  import { loadSandbox, type SandboxDocument } from "../sandbox/sandbox";
-  import { CHAPTERS, chapterAt, type Chapter } from "../story";
+  import { openingOf, spreadsOf, type Panel } from "./pages";
+  import type { IntroductionDocument } from "./introduction";
+  import type { ResponseDocument } from "../sandbox/response";
+  import type { SandboxDocument } from "../sandbox/sandbox";
+  import { CHAPTERS, chapterAt, chapterOf } from "../story";
   import type { Finding } from "../ledger";
 
-  let { findings, base }: { findings: Finding[]; base: string } = $props();
+  let {
+    findings,
+    base,
+    opening,
+    safeguards,
+    dial,
+  }: {
+    findings: Finding[];
+    base: string;
+    /*
+      The three documents the pagination is computed from, loaded in `main.ts` before this mounts.
 
-  /*
-    Fetched here rather than in `main.ts`, so the book opens on a claim chapter without waiting for
-    a document only the introduction needs. A failure leaves `opening` null and the component says
-    so, which is the same treatment `Plate` gives a basemap that will not load.
-  */
-  let opening = $state<IntroductionDocument | null>(null);
-  $effect(() => {
-    loadIntroduction(base)
-      .then((loaded) => (opening = loaded))
-      .catch(() => (opening = null));
-  });
+      They used to be fetched here, on the argument that the book should open on a claim without
+      waiting for a document only the introduction needs. That argument died with pagination: the
+      number of pages depends on how many passages the introduction has and on which claims carry an
+      audit or a dial, so a folio printed before they arrive is a folio that changes under the
+      reader, and a deep link to a page lands somewhere else. A book cannot count its own pages
+      later. All three together are 18 KB.
+    */
+    opening: IntroductionDocument | null;
+    safeguards: SandboxDocument | null;
+    dial: ResponseDocument | null;
+  } = $props();
 
-  /*
-    The dial, on the one chapter it answers.
+  const spreads = $derived(
+    spreadsOf({ findings, introduction: opening, safeguards, dial }, CHAPTERS),
+  );
 
-    `response.json` keys its dials to `anthropogenic-share`, which is the claim "Why it changed"
-    carries -- so the chapter that asks why is the chapter that gets to turn the input and see what
-    the fit says. Loaded here beside the introduction, and a failure leaves it null so the panel
-    renders nothing rather than a broken control.
-  */
-  let dial = $state<ResponseDocument | null>(null);
-  $effect(() => {
-    loadResponse(base)
-      .then((loaded) => (dial = loaded))
-      .catch(() => (dial = null));
-  });
+  const of = (key: string): Finding | undefined => findings.find((f) => f.key === key);
 
-  /*
-    The safeguards, which belong beside the claim rather than beside the figure.
-
-    `claim/Evidence.svelte` orders these deliberately and the order carries over: the sandbox says
-    how much to trust the number, and only then is it worth asking what a different world would do
-    to it. So the sandbox sits under the claim on the argument page, and the dial sits on the facing
-    page with the figures.
-  */
-  let safeguards = $state<SandboxDocument | null>(null);
-  $effect(() => {
-    loadSandbox(base)
-      .then((loaded) => (safeguards = loaded))
-      .catch(() => (safeguards = null));
-  });
-
-  /** The chapter that opens the book, which is the only one the introduction belongs on. */
-  const OPENING_SLUG = CHAPTERS[0]!.slug;
-
-  /** The chapter in the back pocket, which is the only one that gets a live map. */
-  const WORLD_SLUG = CHAPTERS[CHAPTERS.length - 1]!.slug;
+  /**
+   * Plate numbers, counted in reading order over the whole book.
+   *
+   * "Plate 3" has to be the third plate a reader passes or the caption cannot be cited, which the
+   * old number could not promise -- it was the chapter's index, so two claims in one chapter shared
+   * a number and a chapter with no plate consumed one.
+   */
+  const PLATES: readonly string[] = CHAPTERS.flatMap((chapter) => chapter.keys);
+  const figureNumber = (key: string): number => PLATES.indexOf(key) + 1;
 
   const CHAPTER_PARAM = "ch";
+
+  /** Which spread within the chapter, so a page has an address and not just a chapter. */
+  const PAGE_PARAM = "p";
 
   /*
     The width below which a spread is not a spread.
@@ -83,25 +78,58 @@
     return () => query.removeEventListener("change", watch);
   });
 
-  /** The chapter in the URL, defaulting to the first one that carries a claim. */
-  function fromUrl(): string {
-    const slug = new URLSearchParams(location.hash.slice(1)).get(CHAPTER_PARAM);
-    return chapterAt(slug)?.slug ?? CHAPTERS[1]!.slug;
+  /**
+   * The spread in the URL: a chapter, and how far into it.
+   *
+   * `ch` is kept and `p` is added rather than replacing both with one page id, because a chapter is
+   * the durable address -- it survives a claim being added ahead of it, where an absolute page number
+   * would silently point at a different page. `p` defaults to 0, so every link written before
+   * pagination existed still opens the chapter it named.
+   */
+  function fromUrl(): number {
+    const params = new URLSearchParams(location.hash.slice(1));
+    const slug = chapterAt(params.get(CHAPTER_PARAM))?.slug ?? CHAPTERS[1]!.slug;
+    const first = openingOf(spreads, slug);
+    const into = Number.parseInt(params.get(PAGE_PARAM) ?? "0", 10);
+    if (!Number.isFinite(into) || into <= 0) return first;
+    // Clamped to the chapter it names, so `p=9` on a two-spread chapter lands on its last page
+    // rather than in the middle of the next chapter.
+    const last = spreads.findLastIndex((spread) => spread.chapter.slug === slug);
+    return Math.min(first + into, last < 0 ? first : last);
   }
 
-  let open = $state(fromUrl());
+  let open = $state(0);
 
   /*
-    The chapter goes in the URL for the reason `state/route.ts` gives about claims: a chapter you
-    cannot link to is a chapter nobody cites. `pushState` rather than `replaceState`, because going
-    back to the chapter you were reading is exactly what a reader means by back -- the same split
-    that module already makes between the clock and the claim.
+    Set once the spreads exist, and once only.
+
+    The page count depends on the documents, so on the very first run `spreads` may be a shorter book
+    than the one the reader asked for -- and re-deriving `open` on every change would drag a reader
+    who had turned three pages back to wherever the URL still said. `settled` is a plain let for the
+    same reason `Leaves` keeps one: it must not make this effect re-run.
   */
-  function show(slug: string): void {
-    open = slug;
+  let settled = false;
+  $effect(() => {
+    if (settled || spreads.length === 0) return;
+    settled = true;
+    open = fromUrl();
+  });
+
+  /*
+    The page goes in the URL for the reason `state/route.ts` gives about claims: a page you cannot
+    link to is a page nobody cites. `pushState` rather than `replaceState`, because going back to the
+    page you were reading is exactly what a reader means by back -- the same split that module
+    already makes between the clock and the claim.
+  */
+  function show(at: number): void {
+    open = at;
+    const spread = spreads[at];
+    if (!spread) return;
     const params = new URLSearchParams(location.hash.slice(1));
-    if (params.get(CHAPTER_PARAM) === slug) return;
-    params.set(CHAPTER_PARAM, slug);
+    const into = String(at - openingOf(spreads, spread.chapter.slug));
+    if (params.get(CHAPTER_PARAM) === spread.chapter.slug && params.get(PAGE_PARAM) === into) return;
+    params.set(CHAPTER_PARAM, spread.chapter.slug);
+    params.set(PAGE_PARAM, into);
     history.pushState(null, "", `#${params.toString()}`);
   }
 
@@ -110,11 +138,6 @@
     addEventListener("popstate", back);
     return () => removeEventListener("popstate", back);
   });
-
-  const held = (chapter: Chapter): Finding[] =>
-    chapter.keys
-      .map((key) => findings.find((finding) => finding.key === key))
-      .filter((finding): finding is Finding => Boolean(finding));
 </script>
 
 <!--
@@ -125,12 +148,14 @@
   leaf is another call with different arguments rather than a copy of the DOM, so none of the five
   defects that decision lists can occur.
 
-  The claims are rendered by the app's own `Claim` component, unchanged. ADR 0013 said the rebuild
-  is structural and not stylistic, and frontend prose is authored in Python and rendered verbatim --
-  a book that re-wrote the claims would be presenting sentences the build cannot produce.
+  The claims are rendered by the app's own `Claim` component. ADR 0013 said the rebuild is structural
+  and not stylistic, and frontend prose is authored in Python and rendered verbatim -- a book that
+  re-wrote the claims would be presenting sentences the build cannot produce. What the book *does*
+  decide is which register goes on which page, which is `part` and not new prose.
 
-  Two chapters carry no claim of their own, and each gets a page of its own kind rather than an
-  empty one: the introduction opens the book, and the world is the live map in the back pocket.
+  One page carries one thing, and which things there are is `pages.ts`. The order across a claim is
+  the order the owner asked for: what we found in plain language, then the figure, then the number
+  with its scope and its caveat, then how it could be wrong.
 
   One snippet, two containers, and exactly one of them mounted. A phone gets `Leaves` -- the same
   pages, swiped rather than turned -- because the spread's every measurement was chosen against a
@@ -138,40 +163,52 @@
   keeps that a choice of *container* rather than a second authored version of the book: there is
   nowhere for the two to drift apart, because there is only one of them.
 -->
-{#snippet leaf(chapter: Chapter, side: "verso" | "recto")}
-  {@const claims = held(chapter)}
-  {#if chapter.slug === OPENING_SLUG}
-    <Introduction document_={opening} {side} />
-  {:else if chapter.slug === WORLD_SLUG}
-    <World {base} {side} />
-  {:else if side === "verso"}
-    <p class="chapter">{chapter.title}</p>
-    {#if claims.length}
-      <!-- Every claim the chapter carries, not just the first: "What did not" holds three, and a
-           page showing one of them would drop two results on the floor. The argument is the left
-           page and the plate is the right one. -->
-      {#each claims as finding (finding.key)}
-        <Claim {finding} />
-        <Sandbox doc={safeguards} claim={finding.key} />
-      {/each}
-    {/if}
-  {:else if claims[0]}
-    <!--
-      The facing page: the claim's own figure where it has one, and the drawn plate where it does
-      not. The dial follows on the chapter whose claim has one, after the figure, in the order
-      `Evidence` fixed -- how much to trust the number, then what a different world would do to it.
-    -->
-    <Figure finding={claims[0]} number={CHAPTERS.indexOf(chapter)} {base} />
-    <Response doc={dial} claim={claims[0].key} />
+{#snippet leaf(panel: Panel, _side: "verso" | "recto")}
+  {#if panel.kind === "opening"}
+    <Introduction document_={opening} opening />
+  {:else if panel.kind === "intro"}
+    <Introduction document_={opening} from={panel.from} to={panel.to} />
+  {:else if panel.kind === "world"}
+    <World {base} side={panel.part === "map" ? "recto" : "verso"} />
+  {:else if panel.kind === "blank"}
+    <p class="aside aside--quiet">Nothing is recorded on this leaf.</p>
   {:else}
-    <p class="aside aside--quiet">No plate: this chapter is the way out, not a claim.</p>
+    {@const finding = of(panel.key)}
+    {#if !finding}
+      <p class="aside aside--quiet">This claim is not in the ledger.</p>
+    {:else if panel.kind === "finding"}
+      <p class="chapter">{chapterOf(panel.key)?.title ?? ""}</p>
+      <Claim {finding} part="finding" />
+    {:else if panel.kind === "figure"}
+      <Figure {finding} number={figureNumber(panel.key)} {base} at={panel.at} />
+    {:else if panel.kind === "record"}
+      <Claim {finding} part="record" />
+    {:else if panel.kind === "bias"}
+      <Margin {finding} part="bias" />
+    {:else if panel.kind === "survived"}
+      <Margin {finding} part="survived" />
+    {:else if panel.kind === "panel" && panel.doc === "safeguards"}
+      <Sandbox
+        doc={safeguards}
+        claim={panel.key}
+        part={panel.part}
+        slice={{ kind: panel.part === "knobs" ? "knob" : "refusal", at: panel.at }}
+      />
+    {:else if panel.kind === "panel"}
+      <Response
+        doc={dial}
+        claim={panel.key}
+        part={panel.part}
+        slice={{ kind: panel.part === "knobs" ? "knob" : "refusal", at: panel.at }}
+      />
+    {/if}
   {/if}
 {/snippet}
 
 {#if narrow}
-  <Leaves chapters={CHAPTERS} {open} onopen={show} page={leaf} />
+  <Leaves chapters={CHAPTERS} {spreads} {open} onopen={show} page={leaf} />
 {:else}
-  <Book chapters={CHAPTERS} {open} onopen={show} page={leaf} />
+  <Book chapters={CHAPTERS} {spreads} {open} onopen={show} page={leaf} />
 {/if}
 
 <style>

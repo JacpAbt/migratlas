@@ -7,10 +7,25 @@
   let {
     finding,
     draw = true,
+    part = "all",
     onspecimen,
   }: {
     finding: Finding;
     draw?: boolean;
+    /**
+     * Which register this carries.
+     *
+     * The component's own comment below already names the split -- "two registers, and which one is
+     * the heading is the decision" -- and the book needed that line to become a seam. "finding" is
+     * the plain register a reader with no statistics can read; "record" is the scientific one, the
+     * value, the scope and the caveat. "all" is both with the margin beside them, which is what the
+     * old shell mounts and is unchanged by this.
+     *
+     * The seam is where it is because that is where the measurements fell: against an 826px page the
+     * plain register runs 526 to 680px and the record 274 to 821px, while the two together run 1,421
+     * to 2,564px. Nothing was shortened to make either fit.
+     */
+    part?: "all" | "finding" | "record";
     onspecimen?: (key: number) => void;
   } = $props();
 
@@ -25,7 +40,7 @@
   body to 230px and wrapped the hand heading over nine lines.
 -->
 <div class="claim-frame">
-<article class="claim claim--{finding.direction}">
+<article class="claim claim--{finding.direction}" class:claim--part={part !== "all"}>
   <!--
     The claim and the margin are two cells of a single-row grid, not two columns of a six-row one.
     Spanning the margin across named rows let its height -- which is several times the claim's --
@@ -33,10 +48,12 @@
     prose. A grid row is as tall as its tallest member, and the margin is always the tallest member.
   -->
   <div class="claim__body">
-    <header class="claim__head">
-      <Instrument kind={instrument} />
-      <p class="claim__banner">{DIRECTION_LABEL[finding.direction]}</p>
-    </header>
+    {#if part !== "record"}
+      <header class="claim__head">
+        <Instrument kind={instrument} />
+        <p class="claim__banner">{DIRECTION_LABEL[finding.direction]}</p>
+      </header>
+    {/if}
 
     <!--
       Two registers, and which one is the heading is the decision. The plain sentence carries the
@@ -45,32 +62,53 @@
       what the science says, and nothing here shortens anything -- a second register was added
       above the first.
     -->
-    <h2 class="claim__title">{finding.plain}</h2>
-    <Rule seed={finding.key} {draw} />
+    {#if part !== "record"}
+      <h2 class="claim__title">{finding.plain}</h2>
+      <Rule seed={finding.key} {draw} />
 
-    <p class="claim__matters">{finding.matters}</p>
+      <p class="claim__matters">{finding.matters}</p>
+    {/if}
 
     <!--
       The value is mono in every context, no exceptions. ADR 0007: the hand face has no tabular
       figures, so a measurement set in it stops reading as a measurement -- and it never animates
       to its value, because a counting number reads as a score rather than as an interval.
     -->
-    <p class="claim__value">{finding.value}</p>
-    <p class="claim__short-caveat">{finding.plain_caveat}</p>
+    {#if part !== "finding"}
+      <p class="claim__value">{finding.value}</p>
+    {/if}
 
-    <div class="claim__prose">
-      <p class="claim__precise">
-        <span class="claim__register">Precisely</span>
-        {finding.claim}
-      </p>
-      <p class="claim__scope">{finding.scope}</p>
-      <p class="claim__caveat">{finding.caveat}</p>
-    </div>
+    <!-- Gated one element at a time rather than in two blocks, so `part="all"` emits the same
+         children in the same order it always did. The old shell mounts this component too. -->
+    {#if part !== "record"}
+      <p class="claim__short-caveat">{finding.plain_caveat}</p>
+    {/if}
 
-    <a class="claim__method" href={`${REPOSITORY}${finding.method}`} rel="noopener" target="_blank">
-      Method and pre-registration
-    </a>
-    {#if finding.specimen_key !== null && finding.specimen && onspecimen}
+    {#if part !== "finding"}
+      <div class="claim__prose">
+        <p class="claim__precise">
+          <span class="claim__register">Precisely</span>
+          {finding.claim}
+        </p>
+        <!-- Not on the record page in the book: `Plate` prints `finding.scope` in its own caption,
+             so a spread showed the same sentence twice, two leaves apart, and the record page
+             overflowed by up to 144px carrying the copy. -->
+        {#if part === "all"}
+          <p class="claim__scope">{finding.scope}</p>
+        {/if}
+        <p class="claim__caveat">{finding.caveat}</p>
+      </div>
+
+      <a
+        class="claim__method"
+        href={`${REPOSITORY}${finding.method}`}
+        rel="noopener"
+        target="_blank"
+      >
+        Method and pre-registration
+      </a>
+    {/if}
+    {#if part !== "finding" && finding.specimen_key !== null && finding.specimen && onspecimen}
       <!-- The claim's argument on one animal, reachable at last: computed in the reports layer
            with the same threshold the species cards use for "moved", so the invitation and the
            card it opens cannot disagree about what counts as moving. -->
@@ -84,7 +122,14 @@
     {/if}
   </div>
 
-  <Margin {finding} />
+  <!--
+    Beside the claim where the whole claim is shown, and on a page of its own in the book: the bias
+    table alone measured 433 to 1,092px against an 826px page, so it cannot ride along. "Survived"
+    stays with the record it qualifies, which is where a reader asks the question it answers.
+  -->
+  {#if part === "all"}
+    <Margin {finding} />
+  {/if}
 </article>
 </div>
 
@@ -252,6 +297,13 @@
   /* Below the width two columns need, the margin goes under the claim -- still always visible,
      still not behind a control. Only its position changes. A container query rather than a media
      query, so it responds to the sheet it is in and not to the size of the screen. */
+  /* One column when only one register is on the page. The two-column grid reserves 15rem for a
+     margin, and on a wide page -- 795px at 1920x1080, which is past the 46rem the container query
+     stacks at -- that reservation squeezed a body with nothing to sit beside it. */
+  .claim--part {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   @container (max-width: 46rem) {
     .claim {
       grid-template-columns: minmax(0, 1fr);
