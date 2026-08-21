@@ -276,3 +276,40 @@ test("the introduction's figures are the ledger's, in the rendered page", async 
   await expect(page.locator(".intro__counted")).toHaveText(published.counted);
 });
 
+test("the chapter that asks why gets a dial, and the others get plates", async ({ page }) => {
+  /*
+    `response.json` keys its dials to `anthropogenic-share`, and that is the claim "Why it changed"
+    carries -- so the chapter asking why is the one whose facing page a reader can turn. A plate
+    answers *where*, and this chapter's geography is settled two chapters earlier on the same radar
+    band. Asserted per chapter, because the routing that decides this is one condition and a
+    condition with no test is a condition that flips.
+  */
+  await openBook(page, "#ch=why-it-changed");
+  await expect(page.locator(".page--recto .response")).toHaveCount(1);
+  await expect(page.locator(".page--recto .plate")).toHaveCount(0);
+
+  await openBook(page, "#ch=what-changed");
+  await expect(page.locator(".page--recto .plate")).toHaveCount(1);
+  await expect(page.locator(".page--recto .response")).toHaveCount(0);
+});
+
+test("turning the dial changes what the fit says", async ({ page }) => {
+  /*
+    The owner's founding ask, and the thing that makes this a mechanism panel rather than a figure:
+    change an input and see what the response function answers. Every reading comes from
+    `response.json`, so this asserts the control is wired to the published numbers rather than that
+    any particular number is right.
+  */
+  await openBook(page, "#ch=why-it-changed");
+  const knob = page.locator(".page--recto .knob").first();
+  await expect(knob).toBeVisible();
+
+  const before = await knob.locator(".knob__value").textContent();
+  // The setting that is not currently chosen, so the click is a real change.
+  await knob.locator(".option:not(.option--on) input[type=radio]").first().click();
+  await expect(knob.locator(".knob__value")).not.toHaveText(before ?? "");
+
+  // And it still says what it is: a reading off a fit, not a forecast.
+  await expect(page.locator(".page--recto")).toContainText("not predictions");
+});
+

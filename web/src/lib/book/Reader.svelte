@@ -3,7 +3,9 @@
   import Introduction from "./Introduction.svelte";
   import Plate from "./Plate.svelte";
   import Claim from "../claim/Claim.svelte";
+  import Response from "../sandbox/Response.svelte";
   import { loadIntroduction, type IntroductionDocument } from "./introduction";
+  import { loadResponse, type ResponseDocument } from "../sandbox/response";
   import { CHAPTERS, chapterAt, type Chapter } from "../story";
   import type { Finding } from "../ledger";
 
@@ -21,8 +23,32 @@
       .catch(() => (opening = null));
   });
 
+  /*
+    The dial, on the one chapter it answers.
+
+    `response.json` keys its dials to `anthropogenic-share`, which is the claim "Why it changed"
+    carries -- so the chapter that asks why is the chapter that gets to turn the input and see what
+    the fit says. Loaded here beside the introduction, and a failure leaves it null so the panel
+    renders nothing rather than a broken control.
+  */
+  let dial = $state<ResponseDocument | null>(null);
+  $effect(() => {
+    loadResponse(base)
+      .then((loaded) => (dial = loaded))
+      .catch(() => (dial = null));
+  });
+
   /** The chapter that opens the book, which is the only one the introduction belongs on. */
   const OPENING_SLUG = CHAPTERS[0]!.slug;
+
+  /*
+    The chapter whose facing page is the dial rather than a plate.
+
+    A plate answers *where*, and this chapter's geography is already established two chapters
+    earlier -- the same radar band, the same stations. What it has to answer is *what if*, so the
+    facing page is the thing a reader can turn.
+  */
+  const DIAL_SLUG = "why-it-changed";
 
   const CHAPTER_PARAM = "ch";
 
@@ -94,6 +120,9 @@
           The world, with every layer off until you ask for it. This chapter lands next.
         </p>
       {/if}
+    {:else if chapter.slug === DIAL_SLUG && claims[0]}
+      <p class="chapter">Turn the input</p>
+      <Response doc={dial} claim={claims[0].key} />
     {:else if claims[0]}
       <!-- The plate is a figure: where on Earth this chapter's first claim is. The map itself is
            the world chapter, per ADR 0013, which is why a still is right here. -->
