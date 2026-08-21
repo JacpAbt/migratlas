@@ -28,7 +28,7 @@ const AA_LARGE = 3;
  * ships than against a page built to make them convenient.
  */
 async function ready(page: Page): Promise<void> {
-  await page.goto("?debug=1");
+  await page.goto("?shell&debug=1");
   await page.getByRole("button", { name: /show me how you know/i }).click();
   await expect(page.locator(".claim").first()).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
@@ -418,7 +418,13 @@ test("the globe follows the paper it is read on", async ({ page }) => {
   expect(byDay, "no ocean colour to read").toBeTruthy();
 
   await surfaceIs(page, "Night");
-  await expect.poll(ocean).not.toBe(byDay);
+  /*
+    An explicit deadline, because the default is five seconds and nobody chose it. See the note on
+    the darts' rotation poll for the flake that made the point.
+  */
+  await expect
+    .poll(ocean, { message: "the surface changed and the ocean did not", timeout: 30_000 })
+    .not.toBe(byDay);
 });
 
 test("an addressed status is legible too, and is not the only signal", async ({ page }) => {
@@ -748,7 +754,7 @@ test("the drawn edge stays put while the claim scrolls under it", async ({ page 
 });
 
 test("a control is drawn, not bordered", async ({ page }) => {
-  await page.goto("?debug=1");
+  await page.goto("?shell&debug=1");
   await expect(page.locator(".arrival__card")).toBeVisible();
 
   for (const selector of [".way--primary", ".way:not(.way--primary)"]) {
@@ -802,7 +808,7 @@ test("nothing on the page is still a bordered control", async ({ page }) => {
 });
 
 test("switching a layer on draws a tick rather than filling a box", async ({ page }) => {
-  await page.goto("?debug=1");
+  await page.goto("?shell&debug=1");
   await page.getByRole("button", { name: /just let me explore/i }).click();
   await expect(page.locator(".explore")).toBeVisible();
 
@@ -951,7 +957,7 @@ test("nothing on the page is still set in a type face that came with a glyph", a
 });
 
 test("the tools are on the same paper as the claims", async ({ page }) => {
-  await page.goto("?debug=1");
+  await page.goto("?shell&debug=1");
   await page.getByRole("button", { name: /just let me explore/i }).click();
   await expect(page.locator(".explore")).toBeVisible();
 
@@ -970,7 +976,7 @@ test("the tools are on the same paper as the claims", async ({ page }) => {
 });
 
 test("a slider is a ruled scale, not a platform control", async ({ page }) => {
-  await page.goto("?debug=1");
+  await page.goto("?shell&debug=1");
   await page.getByRole("button", { name: /just let me explore/i }).click();
   const slider = page.locator('.explore input[type="range"]').first();
   await expect(slider).toBeVisible();
@@ -1112,7 +1118,16 @@ test("the furniture follows the paper it is drawn on", async ({ page }) => {
   const day = await read();
   await surfaceIs(page, "Night");
   await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
-  await expect.poll(async () => (await read())[0]).not.toBe(day[0]);
+  /*
+    An explicit deadline, because the default is five seconds and nobody chose it. See the note on
+    the darts' rotation poll for the flake that made the point.
+  */
+  await expect
+    .poll(async () => (await read())[0], {
+      message: "the surface changed and the drawn marks did not",
+      timeout: 30_000,
+    })
+    .not.toBe(day[0]);
 
   const night = await read();
   for (const [index, drawing] of night.entries()) {

@@ -3,6 +3,7 @@
   import Figure from "./Figure.svelte";
   import Introduction from "./Introduction.svelte";
   import Leaves from "./Leaves.svelte";
+  import Settings from "./Settings.svelte";
   import World from "./World.svelte";
   import Claim from "../claim/Claim.svelte";
   import Margin from "../claim/Margin.svelte";
@@ -204,6 +205,10 @@
     {/if}
   {/if}
 {/snippet}
+
+<!-- On the desk rather than in the book: a book does not carry a switch for what paper it is
+     printed on. Inherited from the shell it replaced, along with the repaint they drive. -->
+<Settings />
 
 {#if narrow}
   <Leaves chapters={CHAPTERS} {spreads} {open} onopen={show} page={leaf} />

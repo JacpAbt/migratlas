@@ -75,6 +75,13 @@ export default defineConfig({
   },
   // Preview, not dev: the failure that shipped was a bundling one, and `vite dev` served the
   // broken asset correctly.
+  /*
+    **Do not run `npm run build` while a local run is in flight.** `reuseExistingServer` is on
+    locally, so the suite serves whatever is in `dist/` -- and a manual build swaps the application
+    under a suite that already read its test files off disk. That produced one run on 2026-08-21
+    where a passing test began failing at number 45 with no code change to blame: the old tests were
+    driving a newer app. The failure looks like a regression and is an artefact of the harness.
+  */
   webServer: {
     command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
     url: `${ORIGIN}${BASE}`,

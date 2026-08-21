@@ -50,9 +50,9 @@ function addressOf(spreads: readonly Spread[], match: (panel: Panel) => boolean)
   return `#ch=${spread.chapter.slug}&p=${spread.at}`;
 }
 
-/** Opens the book. The flag goes when the book becomes the default; so does this helper. */
+/** Opens the book, which is now simply the site. */
 async function openBook(page: Page, hash = ""): Promise<void> {
-  await page.goto(`?book${hash}`);
+  await page.goto(hash || "?");
   await expect(page.locator(".book")).toBeVisible();
 }
 
@@ -70,10 +70,20 @@ test("the book opens as a spread of two pages with a tab per chapter", async ({ 
   await expect(page.locator(".page--verso")).toContainText("Whatever flies over the middle");
 });
 
-test("the default is still the arrival, so the book cannot ship by accident", async ({ page }) => {
+test("the book is the front door, and the shell is the one behind a flag now", async ({ page }) => {
+  /*
+    Inverted on 2026-08-21. This test used to assert the opposite -- that the default was the
+    arrival, so an unfinished book could not ship by accident -- and it earned its place then. The
+    book now carries the introduction, the plates, the evidence, the world and a container of its
+    own for phones, so the guard it provided is spent and the assertion is the other way round.
+  */
   await page.goto("");
-  await expect(page.locator(".shell")).toBeVisible();
-  await expect(page.locator(".book")).toHaveCount(0);
+  await expect(page.locator(".book")).toBeVisible();
+  await expect(page.locator(".shell")).toHaveCount(0);
+
+  // And the settings the shell used to carry came with it, rather than being lost in the move.
+  await expect(page.locator(".settings .surface")).toBeVisible();
+  await expect(page.locator(".settings .type")).toBeVisible();
 });
 
 test("the chapter is in the URL, and a deep link opens it", async ({ page }) => {
@@ -618,7 +628,7 @@ test.describe("on a phone", () => {
 
   /** Opens the book at phone width. */
   async function openLeaves(page: Page, hash = ""): Promise<void> {
-    await page.goto(`?book${hash}`);
+    await page.goto(hash || "?");
     await expect(page.locator(".leaves")).toBeVisible();
   }
 

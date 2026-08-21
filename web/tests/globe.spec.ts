@@ -48,7 +48,9 @@ interface ReadyReport {
  * has loaded, and the arrival card is interactive well before the 50,000-feature assessment lands.
  */
 async function ready(page: Page): Promise<ReadyReport> {
-  await page.goto("?debug=1");
+  // `?shell`, for the same reason `shell.spec.ts` says at length: the book is the default now and
+  // these tests drive the arrival that came before it. The two book tests below carry no flag.
+  await page.goto("?shell&debug=1");
   await expect
     .poll(
       () => page.evaluate(() => (window as unknown as Hook).migratlas?.loaded?.length ?? 0),
@@ -271,7 +273,13 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
   // now, and driving it the way a visitor does tests the wiring as well as the filter.
   await page.locator(".explore .time input").fill("250");
 
-  await expect.poll(weekIndex).toBe("35");
+  /*
+    An explicit deadline, because the default is five seconds and nobody chose it. See the note on
+    the darts' rotation poll for the flake that made the point.
+  */
+  await expect
+    .poll(weekIndex, { message: "the clock moved and the layer did not", timeout: 30_000 })
+    .toBe("35");
   expect(before).not.toBe("35");
   await expectDrawn(page, id);
   expect(fetches, "a week change must not refetch the layer").toBe(0);
@@ -312,11 +320,26 @@ test("the passage layer wears its measured direction, and the clock turns it", a
   expect(before.rotate).toContain("dw");
   expect(before.alignment, "a bearing is geographic, not a screen decoration").toBe("map");
   await expect
-    .poll(async () => (await state()).drawn, { message: "no darts rendered" })
+    .poll(async () => (await state()).drawn, { message: "no darts rendered", timeout: 30_000 })
     .toBeGreaterThan(0);
 
   await page.locator(".explore .time input").fill("250");
-  await expect.poll(async () => (await state()).rotate).toContain("dw35");
+  /*
+    An explicit deadline, because the default one is five seconds and nobody chose it.
+
+    This poll waits for a layout property to name a different week. Nothing on this line asserts
+    speed -- the test's budget is its own `setTimeout(90_000)` above -- so five seconds here is a
+    hang detector wearing a budget's clothes, which is the distinction `playwright.config.ts` already
+    draws. It flaked exactly that way on 2026-08-21: run 32480987897 passed the whole suite in
+    21m30s and run 32482794530 failed on this line in 24m17s, on the same commit and the same tests,
+    the second one sharing a runner with a second WebGL context.
+  */
+  await expect
+    .poll(async () => (await state()).rotate, {
+      message: "the clock moved and the darts did not re-aim",
+      timeout: 30_000,
+    })
+    .toContain("dw35");
 });
 
 test("a station popup states the caveat with the number", async ({ page }) => {
@@ -1062,8 +1085,15 @@ test("the panel and the map never disagree about what is drawn", async ({ page }
   for (let index = 0; index < (await rows.count()); index += 1) {
     await rows.nth(index).locator("input").click();
   }
+  /*
+    An explicit deadline, because the default is five seconds and nobody chose it. See the note on
+    the darts' rotation poll for the flake that made the point.
+  */
   await expect
-    .poll(async () => (await compare()).filter((layer) => layer.drawn !== layer.ticked).length)
+    .poll(async () => (await compare()).filter((layer) => layer.drawn !== layer.ticked).length, {
+      message: "a ticked layer is not drawn",
+      timeout: 60_000,
+    })
     .toBe(0);
 
   // Every one of them actually moved, or the loop above proved nothing.
@@ -1161,7 +1191,7 @@ test("the atlas surface draws its losses and its gains apart", async ({ page }) 
   which takes 3.6 minutes on its own, timed out at ten.
 */
 async function openChapter(page: Page, slug: string): Promise<void> {
-  await page.goto(`?book#ch=${slug}`);
+  await page.goto(`?debug=1#ch=${slug}`);
   await expect(page.locator(".book")).toBeVisible();
 }
 
@@ -1180,7 +1210,7 @@ test("the world chapter carries a live map, its controls, and the clock in its U
     Verified here rather than by hand because MapLibre fires `load` after its first render, so in a
     browser that is not compositing the layer step never finishes and the controls never appear.
   */
-  await page.goto("?book#ch=the-world");
+  await page.goto("?debug=1#ch=the-world");
   await expect(page.locator(".book")).toBeVisible();
 
   // The map is the facing page.

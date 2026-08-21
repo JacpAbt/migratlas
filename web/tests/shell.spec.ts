@@ -19,10 +19,17 @@ import { expect, test, type Page } from "@playwright/test";
 const SETTLE_MS = 15_000;
 
 async function arrive(page: Page): Promise<void> {
-  // Relative, and with ?debug so the map is readable. A leading slash would replace the whole
-  // path of baseURL and land on the origin root rather than the project subpath -- the trap the
-  // globe suite already documents.
-  await page.goto("shell.html?debug=1");
+  /*
+    `?shell`, because the book is the default now and this suite is about the arrival that came
+    before it. The flag and these navigations go together, when this suite's tests have moved to the
+    book or been deleted with it.
+
+    It used to say `shell.html?debug=1`, and there is no `shell.html`: `vite preview` rewrites an
+    unknown path to `index.html`, so the wrong URL was served the right page and nothing said so.
+    Relative either way -- a leading slash replaces the whole path of baseURL and lands on the
+    origin root rather than the project subpath, which is the trap the globe suite documents.
+  */
+  await page.goto("?shell&debug=1");
   await expect(page.locator(".arrival__card")).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator(".globe canvas")).toBeVisible();
@@ -185,7 +192,7 @@ test("a claim has its own address, and the back button honours it", async ({ pag
 test("a link to a claim opens the claim, not the arrival card", async ({ page }) => {
   // Someone following a link to a specific finding has already been told what it is. The card
   // would be an interstitial between them and the thing they clicked for.
-  await page.goto("?debug=1#c=anthropogenic-share");
+  await page.goto("?shell&debug=1#c=anthropogenic-share");
   await expect(page.locator(".claim__title")).toBeVisible();
   await expect(page.locator(".arrival__card")).toHaveCount(0);
   await expect(page.locator(".claim__precise")).toHaveText(/human forcing/i);
@@ -829,7 +836,7 @@ test("the refusal is on the claim it refutes, and its wrong answer takes a click
  * two phases this project spent earning the right to refuse one.
  */
 
-const DIAL_CLAIM = "?debug=1#c=anthropogenic-share";
+const DIAL_CLAIM = "?shell&debug=1#c=anthropogenic-share";
 
 test("the dial sits on the attribution claim, at the sensitivity the fit published", async ({
   page,

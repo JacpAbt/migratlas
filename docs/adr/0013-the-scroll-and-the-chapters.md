@@ -23,6 +23,24 @@ This is the build-time ADR that ADR 0012 promised: the backend it waited for is 
 findings, thirty-one sources, five phase-3 method notes with every prediction graded — so the
 presentation arc now has a complete story to present.
 
+**The build order below is finished, and the book is the front door as of 2026-08-21.** Spike, then
+shell, then chapters, then the world: all four, plus two the order did not anticipate — a container
+of its own for phones ([ADR 0015](0015-the-book-on-the-desk.md) decision 8) and pagination, because
+a page that scrolls is not a page (decision 9). `main.ts` mounts the book by default and the `?book`
+flag is gone.
+
+What the book *inherited* rather than rebuilt is the more useful half of that list, and it is why
+ADR 0007's decisions outlived the shell that implemented them: the claim component and both of its
+registers, the safeguards and the dial, the search and the layer tools, the drawn furniture, and the
+two settings a reader makes about how the page reaches them. ADR 0013 said the rebuild was
+structural and not stylistic; the measure of that is that the arrival could be deleted without any
+of the above being written twice.
+
+The arrival itself is behind `?shell` for as long as its tests take to move — 32 in `shell.spec.ts`
+and 36 in `notebook.spec.ts`, most of which assert things about the design language that are true of
+the book too and simply need to open it instead. Deleting them with the component would throw away
+the guards; leaving them pointed at a page nobody visits would be worse.
+
 ## Context
 
 Two owner inputs since ADR 0012. The first (2026-08-18): *"maybe the globe is strange with the
