@@ -155,17 +155,43 @@ export function legendRows(
 
 export type { Coverage, DetectabilityDocument };
 
+/**
+ * The assessment on its own, with no map.
+ *
+ * Split out of `addDetectability` for the book, which shows the coverage figure on a page with no
+ * globe on it. One place owns the fetch and the schema check, so the two callers cannot disagree
+ * about which schema they accept.
+ *
+ * Worth knowing at the call site: this document is around 460 KB, nearly all of it the fifty
+ * thousand grid cells the map wash needs. A page that wants only the legend shares should fetch it
+ * when that page opens rather than at boot.
+ */
+let assessment: Promise<DetectabilityDocument> | undefined;
+
+export async function loadDetectability(base: string): Promise<DetectabilityDocument> {
+  /*
+    Fetched once per session and shared, as `book/plate.ts` does with the basemap.
+
+    Not a micro-optimisation at this size: turning a page mounts the outgoing chapter's figure
+    alongside the incoming one, so a turn on and off the coverage chapter asked for 460 KB twice.
+  */
+  assessment ??= (async () => {
+    const response = await fetch(`${base}detectability.json`);
+    if (!response.ok) throw new Error(`detectability.json: ${response.status}`);
+    const document_ = (await response.json()) as DetectabilityDocument;
+    if (document_.schema_version !== SUPPORTED_SCHEMA) {
+      throw new Error(`detectability.json schema ${document_.schema_version}`);
+    }
+    return document_;
+  })();
+  return assessment;
+}
+
 export async function addDetectability(
   map: MapLibreMap,
   base: string,
 ): Promise<[LoadedLayer, DetectabilityDocument]> {
-  const response = await fetch(`${base}detectability.json`);
-  if (!response.ok) throw new Error(`detectability.json: ${response.status}`);
-  const document_ = (await response.json()) as DetectabilityDocument;
-  if (document_.schema_version !== SUPPORTED_SCHEMA) {
-    throw new Error(`detectability.json schema ${document_.schema_version}`);
-  }
-
+  const document_ = await loadDetectability(base);
   const data = gridToFeatures(document_.grid);
   map.addSource(LAYER_ID, {
     type: "geojson",

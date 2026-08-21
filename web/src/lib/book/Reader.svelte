@@ -1,11 +1,13 @@
 <script lang="ts">
   import Book from "./Book.svelte";
+  import Figure from "./Figure.svelte";
   import Introduction from "./Introduction.svelte";
-  import Plate from "./Plate.svelte";
   import Claim from "../claim/Claim.svelte";
   import Response from "../sandbox/Response.svelte";
+  import Sandbox from "../sandbox/Sandbox.svelte";
   import { loadIntroduction, type IntroductionDocument } from "./introduction";
   import { loadResponse, type ResponseDocument } from "../sandbox/response";
+  import { loadSandbox, type SandboxDocument } from "../sandbox/sandbox";
   import { CHAPTERS, chapterAt, type Chapter } from "../story";
   import type { Finding } from "../ledger";
 
@@ -38,17 +40,23 @@
       .catch(() => (dial = null));
   });
 
+  /*
+    The safeguards, which belong beside the claim rather than beside the figure.
+
+    `claim/Evidence.svelte` orders these deliberately and the order carries over: the sandbox says
+    how much to trust the number, and only then is it worth asking what a different world would do
+    to it. So the sandbox sits under the claim on the argument page, and the dial sits on the facing
+    page with the figures.
+  */
+  let safeguards = $state<SandboxDocument | null>(null);
+  $effect(() => {
+    loadSandbox(base)
+      .then((loaded) => (safeguards = loaded))
+      .catch(() => (safeguards = null));
+  });
+
   /** The chapter that opens the book, which is the only one the introduction belongs on. */
   const OPENING_SLUG = CHAPTERS[0]!.slug;
-
-  /*
-    The chapter whose facing page is the dial rather than a plate.
-
-    A plate answers *where*, and this chapter's geography is already established two chapters
-    earlier -- the same radar band, the same stations. What it has to answer is *what if*, so the
-    facing page is the thing a reader can turn.
-  */
-  const DIAL_SLUG = "why-it-changed";
 
   const CHAPTER_PARAM = "ch";
 
@@ -114,19 +122,21 @@
              page and the plate is the right one. -->
         {#each claims as finding (finding.key)}
           <Claim {finding} />
+          <Sandbox doc={safeguards} claim={finding.key} />
         {/each}
       {:else}
         <p class="aside">
           The world, with every layer off until you ask for it. This chapter lands next.
         </p>
       {/if}
-    {:else if chapter.slug === DIAL_SLUG && claims[0]}
-      <p class="chapter">Turn the input</p>
-      <Response doc={dial} claim={claims[0].key} />
     {:else if claims[0]}
-      <!-- The plate is a figure: where on Earth this chapter's first claim is. The map itself is
-           the world chapter, per ADR 0013, which is why a still is right here. -->
-      <Plate finding={claims[0]} number={CHAPTERS.indexOf(chapter)} {base} />
+      <!--
+        The facing page: the claim's own figure where it has one, and the drawn plate where it does
+        not. The dial follows on the chapter whose claim has one, after the figure, in the order
+        `Evidence` fixed -- how much to trust the number, then what a different world would do to it.
+      -->
+      <Figure finding={claims[0]} number={CHAPTERS.indexOf(chapter)} {base} />
+      <Response doc={dial} claim={claims[0].key} />
     {:else}
       <p class="aside aside--quiet">No plate: this chapter is the way out, not a claim.</p>
     {/if}

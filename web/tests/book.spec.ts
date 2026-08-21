@@ -276,21 +276,70 @@ test("the introduction's figures are the ledger's, in the rendered page", async 
   await expect(page.locator(".intro__counted")).toHaveText(published.counted);
 });
 
-test("the chapter that asks why gets a dial, and the others get plates", async ({ page }) => {
+test("each chapter's facing page carries the figure its claim actually has", async ({ page }) => {
   /*
-    `response.json` keys its dials to `anthropogenic-share`, and that is the claim "Why it changed"
-    carries -- so the chapter asking why is the one whose facing page a reader can turn. A plate
-    answers *where*, and this chapter's geography is settled two chapters earlier on the same radar
-    band. Asserted per chapter, because the routing that decides this is one condition and a
-    condition with no test is a condition that flips.
+    The routing that decides this is a handful of conditions, and a condition with no test is a
+    condition that flips. Two claims have a figure of their own -- the counterfactual ribbon and the
+    coverage assessment -- and `claim/Evidence.svelte` explains why only two: a chart per claim
+    would be decoration, since the nulls are all "indistinguishable from zero" and a flat line drawn
+    three times teaches nothing the value already said. Everything else gets the drawn plate, which
+    answers a different question.
   */
   await openBook(page, "#ch=why-it-changed");
+  await expect(page.locator(".page--recto .figure h2")).toHaveText("The world without us");
   await expect(page.locator(".page--recto .response")).toHaveCount(1);
+  await expect(page.locator(".page--recto .plate")).toHaveCount(0);
+
+  await openBook(page, "#ch=cannot-see");
+  await expect(page.locator(".page--recto .figure h2")).toHaveText(
+    "Where change could be measured",
+  );
   await expect(page.locator(".page--recto .plate")).toHaveCount(0);
 
   await openBook(page, "#ch=what-changed");
   await expect(page.locator(".page--recto .plate")).toHaveCount(1);
+  await expect(page.locator(".page--recto .figure")).toHaveCount(0);
   await expect(page.locator(".page--recto .response")).toHaveCount(0);
+});
+
+test("the safeguards sit beside the claim they qualify", async ({ page }) => {
+  /*
+    The gap this closes: the book showed each claim's headline, number and caveat and none of its
+    evidence, while the old shell showed both. `sandbox.json` carries knobs for two claims, and they
+    belong on the argument page under the claim rather than on the facing page with the figures --
+    `Evidence` fixes that order and the reason carries over: the safeguards say how much to trust
+    the number, and only then is it worth asking what a different world would do to it.
+  */
+  await openBook(page, "#ch=what-changed");
+  await expect(page.locator(".page--verso .knob").first()).toBeVisible();
+
+  await openBook(page, "#ch=what-did-not");
+  await expect(page.locator(".page--verso .knob").first()).toBeVisible();
+});
+
+test("a 460 KB assessment is not fetched by a chapter that does not show it", async ({ page }) => {
+  /*
+    `detectability.json` is about 460 KB, nearly all of it the fifty thousand grid cells the map
+    wash draws, and the coverage figure wants four percentages out of it. Loading it at boot would
+    be paying that on every chapter mostly for nothing, so the figure fetches it and the figure only
+    exists while its own chapter is open.
+  */
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith(".json")) asked.push(request.url().split("/").pop() ?? "");
+  });
+
+  await openBook(page, "#ch=what-changed");
+  await expect(page.locator(".page--recto .plate")).toHaveCount(1);
+  expect(asked, "the assessment was fetched by a chapter that does not show it").not.toContain(
+    "detectability.json",
+  );
+
+  await page.locator(".tab", { hasText: "Cannot see" }).click();
+  await expect(page.locator(".page--recto .figure h2")).toHaveText(
+    "Where change could be measured",
+  );
+  expect(asked, "the chapter that shows it never asked for it").toContain("detectability.json");
 });
 
 test("turning the dial changes what the fit says", async ({ page }) => {
@@ -312,4 +361,3 @@ test("turning the dial changes what the fit says", async ({ page }) => {
   // And it still says what it is: a reading off a fit, not a forecast.
   await expect(page.locator(".page--recto")).toContainText("not predictions");
 });
-
