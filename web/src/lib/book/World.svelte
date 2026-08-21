@@ -10,16 +10,31 @@
   const surfaces = $derived(new SpeciesSurfaces(base));
 
   /**
-   * Every published layer and no argument on top of it, which is what this chapter is for.
+   * What this chapter draws, which is every published layer that says it should be drawn.
    *
-   * `meta.name`, and the difference is not cosmetic: a `LoadedLayer` keeps its name on `meta`, so
-   * `layer.name` was `undefined` for every one of them. `exploreView` was handed a list of
-   * undefineds, `Globe` asked `view.layers.includes(layer.meta.name)` of it and got false every
-   * time, and the chapter whose whole purpose is to show every published layer drew none of them --
-   * a globe with nothing on it, and no error anywhere. Found by a test moved off the old shell,
-   * which asked what the map had actually drawn rather than whether it had booted.
+   * Two mistakes in one line, and the second was already solved in the shell this replaced.
+   *
+   * `meta.name`: a `LoadedLayer` keeps its name there, so `layer.name` was `undefined` for every one
+   * of them. `exploreView` was handed a list of undefineds, `Globe` asked
+   * `view.layers.includes(layer.meta.name)` of it and got false every time, and the chapter whose
+   * whole purpose is to show every published layer drew none of them -- a sphere with nothing on it,
+   * and no error anywhere.
+   *
+   * And the filter, which `Shell.svelte` had and this did not inherit: the detectability wash
+   * *declares itself off*. Fifty thousand cells over the whole sphere, and it is the layer about
+   * where change cannot be measured, so switching it on unasked gives a reader a surface they did
+   * not ask for over everything else -- with its own checkbox saying it is not there, because the
+   * panel goes on reading the declared value. Filtered here rather than in `story.ts`, because "off
+   * until somebody asks for it" is a property of the layer and a view is only a list of names.
+   *
+   * Both halves were found by tests moved off the old shell, which ask what the map actually drew
+   * and whether the panel agrees with it.
    */
-  const view = $derived(exploreView(world.layers.map((layer) => layer.meta.name)));
+  const view = $derived(
+    exploreView(
+      world.layers.filter((layer) => layer.visible ?? true).map((layer) => layer.meta.name),
+    ),
+  );
 </script>
 
 <!--

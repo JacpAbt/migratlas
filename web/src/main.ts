@@ -48,13 +48,36 @@ if (new URLSearchParams(location.search).has("shell")) {
   */
   const soft = <T,>(work: Promise<T>): Promise<T | null> => work.catch(() => null);
   const [ledger, opening, safeguards, dial] = await Promise.all([
-    loadLedger(base),
+    loadLedger(base).catch((error: unknown) => error as Error),
     soft(introduction.loadIntroduction(base)),
     soft(sandbox.loadSandbox(base)),
     soft(response.loadResponse(base)),
   ]);
-  mount(Reader, {
-    target,
-    props: { findings: ledger.findings, base, opening, safeguards, dial },
-  });
+
+  /*
+    The ledger is the one document there is no book without, and saying so is the point.
+
+    The shell it replaced degraded to a globe with a broken panel, because layers were its subject.
+    Here the claims are, so there is nothing to carry on with -- and the honest failure is to state
+    what happened rather than to reject unhandled and leave a blank page, which is a mode that is
+    invisible until it happens in production. `globe.spec.ts` asserts it with a 404 for that reason.
+
+    Written into the DOM rather than mounted as a component: whatever is wrong, this has to work.
+  */
+  if (ledger instanceof Error) {
+    const notice = document.createElement("p");
+    notice.className = "boot-failure";
+    notice.setAttribute("role", "status");
+    notice.textContent = "The findings did not load, so there is nothing to set. ";
+    const detail = document.createElement("span");
+    detail.className = "boot-failure__detail";
+    detail.textContent = ledger.message;
+    notice.append(detail);
+    target.replaceChildren(notice);
+  } else {
+    mount(Reader, {
+      target,
+      props: { findings: ledger.findings, base, opening, safeguards, dial },
+    });
+  }
 }
