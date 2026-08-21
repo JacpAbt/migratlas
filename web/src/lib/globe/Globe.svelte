@@ -253,7 +253,8 @@
   }
 
   /*
-    Moved here from `shell/Shell.svelte` on 2026-08-21, and it was a regression while it was there.
+    Moved here from `shell/Shell.svelte` on 2026-08-21, which is why that file no longer exists to
+    look at -- and it was a regression for as long as it lived there.
 
     Every rule below was scoped to `.shell`, so the moment the book became the front door the map in
     the world chapter lost all of it -- MapLibre's own white rounded boxes, grey drop shadows and

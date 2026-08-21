@@ -64,7 +64,7 @@
 <!--
   The two settings a reader makes about how the page reaches them, on the desk beside the book.
 
-  Inherited from `shell/Shell.svelte` when the book became the front door. They are not part of the
+  Inherited from `shell/Shell.svelte`, since deleted, when the book became the front door. They are not part of the
   book: a book does not carry a switch for what paper it is printed on, so they sit on the desk in
   the corner a pencil tray would be, out of the way of the thumb tabs on the fore-edge and the
   folios in the outer corners.

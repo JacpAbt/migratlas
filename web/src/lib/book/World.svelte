@@ -20,7 +20,7 @@
    * whole purpose is to show every published layer drew none of them -- a sphere with nothing on it,
    * and no error anywhere.
    *
-   * And the filter, which `Shell.svelte` had and this did not inherit: the detectability wash
+   * And the filter, which the deleted `Shell.svelte` had and this did not inherit: the detectability wash
    * *declares itself off*. Fifty thousand cells over the whole sphere, and it is the layer about
    * where change cannot be measured, so switching it on unasked gives a reader a surface they did
    * not ask for over everything else -- with its own checkbox saying it is not there, because the

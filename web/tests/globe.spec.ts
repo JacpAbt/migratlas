@@ -2,8 +2,11 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { readFile } from "node:fs/promises";
 
+import type { Map as MapLibreMap } from "maplibre-gl";
+
 import { JITTER, MIN_EXTENT, drawnCoast } from "../src/globe/coastline";
 import { graticuleSource } from "../src/globe/graticule";
+import type { LoadedLayer } from "../src/layers/types";
 
 /**
  * What this suite is for.
@@ -18,15 +21,18 @@ import { graticuleSource } from "../src/globe/graticule";
  * basemap is bundled, so a run cannot be reddened by someone else's CDN.
  */
 
-interface LoadedLayer {
-  meta: { name: string; value_kind: string };
-  cells: number;
-  center: [number, number];
-}
+/*
+  The app's own types, imported rather than restated.
 
+  This file used to declare its own `LoadedLayer` with three of its fields, and that shadow had
+  drifted: no `zoom`, no `visible`. `report.zooms?.[name]` was therefore an error nobody saw, because
+  `tests/` was not in `tsconfig.json`'s `include` -- so 4,200 lines of TypeScript were only ever
+  checked by being run. A misspelled field there would have silently sent every layer to the default
+  camera, which is the failure this suite exists to catch in the app.
+*/
 interface Hook {
   migratlas: {
-    map: maplibregl.Map;
+    map: MapLibreMap;
     loaded: LoadedLayer[];
   };
 }
@@ -35,6 +41,8 @@ interface ReadyReport {
   layers: string[];
   cells: Record<string, number>;
   centers: Record<string, [number, number]>;
+  /** Each layer's own camera hint, where it declares one. */
+  zooms: Record<string, number | undefined>;
 }
 
 /**
@@ -123,7 +131,9 @@ async function diagnose(page: Page, layer: string): Promise<string> {
       centre: [Number(centre.lng.toFixed(2)), Number(centre.lat.toFixed(2))],
       zoom: Number(map.getZoom().toFixed(2)),
       visibility: spec?.layout?.visibility ?? "visible",
-      filter: JSON.stringify(spec?.filter),
+      // Narrowed rather than cast: `LayerSpecification` is a union and a background layer has no
+      // filter at all, which the hand-written type this file used to carry could not express.
+      filter: JSON.stringify(spec && "filter" in spec ? spec.filter : undefined),
       sourceLoaded: map.isSourceLoaded(id),
       allLayers: map.queryRenderedFeatures().length,
     });
@@ -157,8 +167,8 @@ const mapLayerFor = (page: Page, name: string): Promise<string> =>
     (layer) =>
       (window as unknown as Hook).migratlas.map
         .getStyle()
-        .layers.map((l) => l.id)
-        .find((candidate) => candidate.endsWith(layer)) ?? "",
+        .layers.map((l: { id: string }) => l.id)
+        .find((candidate: string) => candidate.endsWith(layer)) ?? "",
     name,
   );
 
@@ -552,7 +562,7 @@ test("no ribbon is drawn past its own frame, and each shades where its evidence 
   const readChart = () =>
     page.locator(".chart__svg").evaluateAll((nodes) =>
       nodes.map((node) => {
-      const box = node.viewBox.baseVal;
+      const box = (node as unknown as SVGSVGElement).viewBox.baseVal;
       const labels = [...node.querySelectorAll<SVGTextElement>(".chart__label, .chart__rate")];
       return {
         overflowing: labels
@@ -864,7 +874,10 @@ test("the land is hatched, and the hatch tile meets its own edge", async ({ page
   // one has an outlier there, and that is the whole test.
   const seam = await page.evaluate(() => {
     const image = (window as unknown as Hook).migratlas.map.getImage("land-hatch");
-    const { width, height, data } = image!.data as ImageData;
+    // MapLibre's own `RGBAImage`, which is `ImageData`'s shape without a colour space. Through
+    // `unknown`, because the two do not overlap enough for a direct assertion and pretending they do
+    // is how a real mismatch would slip through later.
+    const { width, height, data } = image!.data as unknown as ImageData;
     const at = (x: number, y: number) => data[(y * width + x) * 4]!;
     const between = (left: number, right: number) => {
       let total = 0;
@@ -889,7 +902,7 @@ test("the land is hatched, and the hatch tile meets its own edge", async ({ page
   // what they take back.
   const tone = await page.evaluate(() => {
     const { map } = (window as unknown as Hook).migratlas;
-    const { data } = map.getImage("land-hatch")!.data as ImageData;
+    const { data } = map.getImage("land-hatch")!.data as unknown as ImageData;
     const total = [0, 0, 0];
     for (let index = 0; index < data.length; index += 4) {
       total[0]! += data[index]!;
@@ -920,7 +933,7 @@ test("the graticule is ruled by hand, bounded, and gone before it could mislead"
   const grid = await page.evaluate(() => {
     const { map } = (window as unknown as Hook).migratlas;
     return {
-      order: map.getStyle().layers.map((layer) => layer.id),
+      order: map.getStyle().layers.map((layer: { id: string }) => layer.id),
       opacity: map.getPaintProperty("graticule", "line-opacity"),
     };
   });
@@ -972,7 +985,7 @@ test("the drawn coastline is bounded, and hands over to the surveyed one", async
 
   const coast = await page.evaluate(() => {
     const { map } = (window as unknown as Hook).migratlas;
-    const ids = map.getStyle().layers.map((layer) => layer.id);
+    const ids = map.getStyle().layers.map((layer: { id: string }) => layer.id);
     const opacityAt = (layer: string, zoom: number) => {
       const stops = map.getPaintProperty(layer, "line-opacity") as unknown[];
       // The ramp is `interpolate linear zoom z0 v0 z1 v1 ...`; read the pairs off the tail.
@@ -1147,8 +1160,8 @@ test("the panel and the map never disagree about what is drawn", async ({ page }
         const id =
           map
             .getStyle()
-            .layers.map((entry) => entry.id)
-            .find((entry) => entry === layer.meta.name || entry.endsWith(`-${layer.meta.name}`)) ??
+            .layers.map((entry: { id: string }) => entry.id)
+            .find((entry: string) => entry === layer.meta.name || entry.endsWith(`-${layer.meta.name}`)) ??
           "";
         return {
           name: layer.meta.name,

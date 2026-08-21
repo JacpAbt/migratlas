@@ -52,7 +52,8 @@ export interface LoadedLayer {
    *
    * The *declared initial* value, and deliberately never written to afterwards -- `setVisible` does
    * not update it. Two things read it and both need it to mean the same thing: the tools panel
-   * initialises its checkboxes from it, and `Shell.svelte` builds explore mode's layer list from it.
+   * initialises its checkboxes from it, and `book/World.svelte` builds the world chapter's layer list
+   * from it -- which it did not, for one commit after the shell was retired, and the wash came back.
    * Having `setVisible` write back here would make the second of those a function of the first, and
    * the view effect re-applies visibility whenever the view changes -- which is a loop.
    *
