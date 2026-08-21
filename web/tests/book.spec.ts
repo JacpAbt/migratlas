@@ -6,6 +6,14 @@
  * why they are fast, and it is also why they must not be folded into `shell.spec.ts`, which
  * measures a page with a live map on it.
  *
+ * Two tests that belong to the book live in `globe.spec.ts` instead: the ones that open the world
+ * chapter and therefore boot a map. `playwright.config.ts` records that this machine drives two
+ * WebGL contexts and no more, and files run in parallel while tests inside one file do not -- so a
+ * fourth globe-booting *file* is a fourth context competing for the same GPU. Adding one here pushed
+ * globe.spec.ts's layer-draw test, which takes 3.6 minutes alone, past the ten-minute hang detector.
+ * Keeping the count at three files is the cheap fix; raising a timeout would have been the other
+ * kind.
+ *
  * The turn is asserted by driving the animation's own timeline rather than by watching it. That is
  * not a workaround: a browser that is not compositing never fires `animationend`, so a test that
  * waited for the motion would hang in exactly the environment CI runs in. Sampling the timeline
@@ -43,7 +51,13 @@ test("the default is still the arrival, so the book cannot ship by accident", as
 test("the chapter is in the URL, and a deep link opens it", async ({ page }) => {
   await openBook(page);
   await page.locator(".tab", { hasText: "Cannot see" }).click();
-  await expect(page).toHaveURL(/#ch=cannot-see/);
+  /*
+    The parameter, not its position. Once the world chapter mounts a `Clock` the hash also carries
+    `d` and `t`, and `state/route.ts` says why that is right: the clock and the chapter share the
+    hash and each reads the existing parameters before writing, so neither can evict the other. An
+    assertion anchored to `#ch=` was demanding an ordering nothing promises.
+  */
+  await expect(page).toHaveURL(/[#&]ch=cannot-see/);
   await expect(page.locator(".page--verso")).toContainText("What we cannot see");
 
   // A chapter nobody can link to is a chapter nobody cites, which is `state/route.ts`'s own reason.
@@ -360,4 +374,15 @@ test("turning the dial changes what the fit says", async ({ page }) => {
 
   // And it still says what it is: a reading off a fit, not a forecast.
   await expect(page.locator(".page--recto")).toContainText("not predictions");
+});
+
+test("no chapter but the world boots a map", async ({ page }) => {
+  /*
+    A globe is the most expensive thing this site can mount, and the plates exist so the claim
+    chapters do not need one. If a map turns up on a claim chapter it means the drawn plate has been
+    replaced by the thing it was drawn to avoid.
+  */
+  await openBook(page, "#ch=what-changed");
+  await expect(page.locator(".page--recto .plate")).toHaveCount(1);
+  await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
 });

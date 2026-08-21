@@ -34,8 +34,21 @@ export default defineConfig({
     Raising a ceiling to absorb contention costs the thing the number was for. Two contexts is what
     this machine actually drives, and the wall clock barely moves -- the suite was already
     saturated, so the third worker was mostly waiting.
+
+    **One worker locally, since 2026-08-21, and the same argument one step further.** The suite has
+    grown since the paragraph above was written: the layer-draw test took 66s alone then and takes
+    3.4 minutes now, after eight commits added the green wave, the ice, the herds, the fox journeys
+    and southern Africa. At two workers that test intermittently exceeded its own ten-minute hang
+    detector, and the interaction budget -- calibrated at 132-228ms here -- read 310ms and 338ms in
+    the same runs while passing every time it ran alone. Two instruments going marginal at once is
+    the saturation this comment already describes, arriving at the next worker down.
+
+    So local runs are serial. That keeps both numbers sharp, which is the whole point of having
+    them, and costs wall clock that was mostly spent waiting anyway. CI keeps two, because its own
+    budgets are deliberately looser -- 2000ms and 90s against 300ms and 30s -- so contention there
+    cannot make a calibrated number lie.
   */
-  workers: 2,
+  workers: process.env.CI ? 2 : 1,
   /*
     A per-test timeout is a hang detector, not a budget.
 

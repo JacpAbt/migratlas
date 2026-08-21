@@ -2,6 +2,7 @@
   import Book from "./Book.svelte";
   import Figure from "./Figure.svelte";
   import Introduction from "./Introduction.svelte";
+  import World from "./World.svelte";
   import Claim from "../claim/Claim.svelte";
   import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
@@ -58,6 +59,9 @@
   /** The chapter that opens the book, which is the only one the introduction belongs on. */
   const OPENING_SLUG = CHAPTERS[0]!.slug;
 
+  /** The chapter in the back pocket, which is the only one that gets a live map. */
+  const WORLD_SLUG = CHAPTERS[CHAPTERS.length - 1]!.slug;
+
   const CHAPTER_PARAM = "ch";
 
   /** The chapter in the URL, defaulting to the first one that carries a claim. */
@@ -106,14 +110,16 @@
   is structural and not stylistic, and frontend prose is authored in Python and rendered verbatim --
   a book that re-wrote the claims would be presenting sentences the build cannot produce.
 
-  Two chapters carry no claim of their own: the way in and the way out. They get their own line
-  rather than an empty page, and the introduction and the world both land in later changes.
+  Two chapters carry no claim of their own, and each gets a page of its own kind rather than an
+  empty one: the introduction opens the book, and the world is the live map in the back pocket.
 -->
 <Book chapters={CHAPTERS} {open} onopen={show}>
   {#snippet page(chapter: Chapter, side: "verso" | "recto")}
     {@const claims = held(chapter)}
     {#if chapter.slug === OPENING_SLUG}
       <Introduction document_={opening} {side} />
+    {:else if chapter.slug === WORLD_SLUG}
+      <World {base} {side} />
     {:else if side === "verso"}
       <p class="chapter">{chapter.title}</p>
       {#if claims.length}
@@ -124,10 +130,6 @@
           <Claim {finding} />
           <Sandbox doc={safeguards} claim={finding.key} />
         {/each}
-      {:else}
-        <p class="aside">
-          The world, with every layer off until you ask for it. This chapter lands next.
-        </p>
       {/if}
     {:else if claims[0]}
       <!--

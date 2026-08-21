@@ -1151,3 +1151,67 @@ test("the atlas surface draws its losses and its gains apart", async ({ page }) 
   expect(JSON.stringify(drawn.stroke), "losses are not ringed, so direction rests on hue alone")
     .toContain("case");
 });
+
+/*
+  The book's world chapter, tested here rather than in `book.spec.ts`.
+
+  Those two tests open the one chapter that mounts a map, and this file already boots one. Files run
+  in parallel while tests inside a file do not, so putting a globe in a fourth file put a fourth
+  WebGL context on a machine `playwright.config.ts` measured at two -- and the layer-draw test above,
+  which takes 3.6 minutes on its own, timed out at ten.
+*/
+async function openChapter(page: Page, slug: string): Promise<void> {
+  await page.goto(`?book#ch=${slug}`);
+  await expect(page.locator(".book")).toBeVisible();
+}
+
+test("the world chapter carries a live map, its controls, and the clock in its URL", async ({
+  page,
+}) => {
+  /*
+    One test and one globe, deliberately.
+
+    This began as two -- the map and its controls, then the clock sharing the hash -- and each booted
+    its own map. Two extra WebGL contexts in a suite `playwright.config.ts` measured at two was
+    enough to push the layer-draw test above into its hang detector. Folding them into one page load
+    removes the work rather than loosening the detector, which is the order those two fixes belong
+    in.
+
+    Verified here rather than by hand because MapLibre fires `load` after its first render, so in a
+    browser that is not compositing the layer step never finishes and the controls never appear.
+  */
+  await page.goto("?book#ch=the-world");
+  await expect(page.locator(".book")).toBeVisible();
+
+  // The map is the facing page.
+  await expect(page.locator(".page--recto .maplibregl-canvas")).toBeVisible();
+
+  /*
+    And the controls are the argument page, reading the *same* state. `Book` renders its page snippet
+    once per side, so `World` exists twice over -- the map reports its layers from the facing page and
+    the controls read them from the other one. Two component instances cannot see each other's state,
+    which is why that state is module level, and this is the assertion that catches it if it stops
+    being: the controls stay on "bringing the map up" forever while the map is already up.
+  */
+  await expect(page.locator(".page--verso input[type=checkbox]").first()).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.locator(".world__waiting")).toHaveCount(0);
+
+  // Switching a layer on is the thing this chapter is for.
+  const first = page.locator(".page--verso input[type=checkbox]").first();
+  const before = await first.isChecked();
+  await first.click();
+  expect(await first.isChecked(), "a layer toggle did nothing").toBe(!before);
+
+  /*
+    The clock is running now, and it writes `d` and `t` into the hash the chapter lives in.
+    `state/route.ts` fixes the rule they both follow -- read the existing parameters before writing --
+    so neither can evict the other, and this asserts the rule rather than an ordering.
+  */
+  await expect(page).toHaveURL(/[#&]d=/);
+  await page.locator(".tab", { hasText: "Changed" }).click();
+  await expect(page).toHaveURL(/[#&]ch=what-changed/);
+  await expect(page).toHaveURL(/[#&]d=/);
+  await expect(page.locator(".page--verso")).toContainText("What changed");
+});
