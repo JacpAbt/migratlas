@@ -16,8 +16,8 @@ from typing import Any
 
 import pytest
 
-from migratlas.reports import counterfactual, sandbox
-from migratlas.reports.phase2a_timing import CLAIM_BAND
+from migratlas.constants import CLAIM_BAND
+from migratlas.reports import counterfactual
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -40,8 +40,13 @@ def test_the_document_declares_its_schema_version() -> None:
 
 
 def test_the_claim_band_is_the_one_the_attribution_publishes_in() -> None:
-    """The ribbon takes the band from the sandbox; this pins that copy to the source of truth."""
-    assert sandbox.CLAIM_BAND == CLAIM_BAND
+    """The ribbon and the attribution must select the same stations.
+
+    One literal now, in `migratlas.constants`, so this states the requirement rather than policing
+    a duplicate: the ribbon reads the band from the constant the attribution is published for.
+    """
+    # If this fails the band was moved, and every attribution number moves with it.
+    assert CLAIM_BAND == (37, 50)
 
 
 # --- The published document ----------------------------------------------------

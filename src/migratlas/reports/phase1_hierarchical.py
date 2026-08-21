@@ -14,6 +14,7 @@ from typing import Final
 
 import polars as pl
 
+from migratlas.constants import MIN_COVERAGE, MIN_NIGHTS
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.metrics.phenology import passage_quantiles
 from migratlas.models.trends import NotEnoughDataError, TrendFit, fit_passage_trend
@@ -40,8 +41,8 @@ def panel(nights: pl.DataFrame, *, max_year: int) -> pl.DataFrame:
         spec_for(EvidenceType.FLUX),
         seasons=[phase1.SPRING, phase1.AUTUMN],
         quantiles=phase1.QUANTILES,
-        min_coverage=phase1.MIN_COVERAGE,
-        min_observations=phase1.MIN_NIGHTS,
+        min_coverage=MIN_COVERAGE,
+        min_observations=MIN_NIGHTS,
     )
     sites = nights.group_by("station_id").agg(pl.col("station_latitude").first())
     return quantiles.join(sites, on="station_id")
@@ -150,8 +151,8 @@ def render() -> str:
         "=" * 70,
         "Model: q50_doy ~ decade * latitude (+ instrument break), station random intercept",
         "       and random slope. One fit per season; seasons are not pooled.",
-        f"Filters as the replication: coverage >= {phase1.MIN_COVERAGE}, "
-        f">= {phase1.MIN_NIGHTS} nights/season-year.",
+        f"Filters as the replication: coverage >= {MIN_COVERAGE}, "
+        f">= {MIN_NIGHTS} nights/season-year.",
         "Latitude centred at 40N, so 'days per decade' is the trend at mid-CONUS.",
     ]
 

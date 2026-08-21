@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Final
 import polars as pl
 from scipy import stats
 
+from migratlas.constants import EARTH_KM  # one radius for one journey
 from migratlas.evidence import EvidenceType
 from migratlas.lake.reader import scan
 from migratlas.metrics.correlation import spearman
@@ -28,7 +29,6 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-EARTH_KM: Final = 6371.0088
 
 # Note §2. Fixed calendar blocks inside the settled part of each season, so an animal that shifted
 # *when* it moved is invisible here -- which is the trade the note makes, because when-it-moved is

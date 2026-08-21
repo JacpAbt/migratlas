@@ -21,11 +21,12 @@ from typing import Final
 import numpy as np
 import polars as pl
 
+from migratlas.constants import MIN_COVERAGE, MIN_NIGHTS
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan_dataset
 from migratlas.metrics.phenology import passage_quantiles
 from migratlas.models.skill import Skill, hindcast
-from migratlas.reports.phase1 import AUTUMN, MIN_COVERAGE, MIN_NIGHTS, SPRING, load_conus_nights
+from migratlas.reports.phase1 import AUTUMN, SPRING, load_conus_nights
 
 log = logging.getLogger(__name__)
 

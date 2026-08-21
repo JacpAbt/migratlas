@@ -118,3 +118,11 @@ simple warming — measured either by the water the fish were in or by the satel
 does not explain who moves. Whatever sorts the movers from the stayers, it is not the
 thermometer alone. That is a finding-shaped result, and whether it enters the public ledger is
 the next decision, not an automatic step.
+
+**Decision, 2026-08-19 (owner).** The heterogeneity result is recorded here and in TASKS as an
+established, citable outcome — but it does **not** enter the public findings ledger yet. The
+frontend is being reworked, and a tenth finding will land there as part of that rework rather
+than beside it. When it does, this section is its source of truth: the claim is "the seas
+differ, and the thermometer alone does not sort the movers from the stayers", with Q 235.7
+against 27.6 across 18 units as the number, and prediction 3's null as its inseparable other
+half.

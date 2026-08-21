@@ -29,13 +29,12 @@ from typing import Final, NamedTuple
 import numpy as np
 import polars as pl
 
+from migratlas.constants import CLAIM_BAND, PRE_SEASON
 from migratlas.drivers import attrici, era5
 from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.lake.reader import scan_dataset
 from migratlas.reports.phase1 import MIN_YEARS, load_conus_nights
 from migratlas.reports.phase2a_timing import (
-    CLAIM_BAND,
-    PRE_SEASON,
     TEMPERATURE,
     sensitivities,
 )

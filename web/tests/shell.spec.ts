@@ -373,6 +373,50 @@ test("every published claim has a view, and every view names a real layer", asyn
   expect(problems.keys, "the arrival claim is not in the ledger").toContain(ARRIVAL_KEY);
 });
 
+test("every published claim has exactly one chapter, and every chapter is real", async ({ page }) => {
+  /*
+    ADR 0013 asked for this guard by name: the chapters are the argument, so a claim with no chapter
+    is a result the book has nowhere to put. Two failures it has to catch, and they fail differently
+    -- an unplaced claim disappears from the book silently, while a claim placed twice appears twice
+    and reads as two findings.
+  */
+  await arrive(page);
+  const keys = await page.evaluate(async () => {
+    const ledger = (await fetch("findings.json").then((r) => r.json())) as {
+      findings: { key: string }[];
+    };
+    return ledger.findings.map((f) => f.key);
+  });
+
+  const { CHAPTERS, chapterOf } = await import("../src/lib/story");
+
+  for (const key of keys) {
+    const chapter = chapterOf(key);
+    expect(chapter, `no chapter carries the claim "${key}"`).toBeTruthy();
+    const homes = CHAPTERS.filter((c) => c.keys.includes(key)).map((c) => c.slug);
+    expect(homes, `"${key}" is in more than one chapter`).toHaveLength(1);
+  }
+
+  // And nothing is promised that the ledger does not publish: a key here with no finding behind it
+  // would render a chapter with a hole in it rather than fail.
+  for (const chapter of CHAPTERS) {
+    for (const key of chapter.keys) {
+      expect(keys, `chapter "${chapter.slug}" names a claim "${key}" that is not published`).toContain(
+        key,
+      );
+    }
+    expect(chapter.title, `chapter "${chapter.slug}" has no title`).toBeTruthy();
+    expect(chapter.tab, `chapter "${chapter.slug}" has no tab label`).toBeTruthy();
+    // The tab is the word on the thumb; the mock found seven full titles ran past the foot of the
+    // book, so this holds the shorthand to something a tab can actually carry.
+    expect(chapter.tab.length, `chapter "${chapter.slug}" has a tab label too long to set`)
+      .toBeLessThanOrEqual(12);
+  }
+
+  const slugs = CHAPTERS.map((c) => c.slug);
+  expect(new Set(slugs).size, "two chapters share a slug").toBe(slugs.length);
+});
+
 /**
  * Small screens.
  *
@@ -774,3 +818,91 @@ test("the refusal is on the claim it refutes, and its wrong answer takes a click
   // And the verdict is present whether or not the figure was revealed.
   await expect(refusal.locator(".refusal__verdict")).toContainText(/not runnable/i);
 });
+
+/**
+ * The response dial.
+ *
+ * A different object from the sandbox and the difference is the whole point, so it is asserted from
+ * the reader's side. The sandbox asks what the published number owes to a correction; the dial asks
+ * what a different world would do to it. The failure mode being guarded is not a wrong number -- the
+ * Python pins those against the fit -- it is a panel that reads as a forecast, which would undo the
+ * two phases this project spent earning the right to refuse one.
+ */
+
+const DIAL_CLAIM = "?debug=1#c=anthropogenic-share";
+
+test("the dial sits on the attribution claim, at the sensitivity the fit published", async ({
+  page,
+}) => {
+  await page.goto(DIAL_CLAIM);
+
+  const dial = page.locator(".response .knob").filter({ hasText: /June-July before migration/i });
+  await expect(dial).toBeVisible();
+
+  // The published position is the fitted sensitivity itself: a degree warmer, 0.66 days earlier.
+  await expect(dial.locator(".option--on em")).toHaveText("published");
+  await expect(dial.locator(".knob__value")).toContainText("−0.66 days");
+  await expect(dial.locator(".knob__delta--published")).toBeVisible();
+});
+
+test("asking for nothing implies nothing, and warmer implies earlier", async ({ page }) => {
+  await page.goto(DIAL_CLAIM);
+  const dial = page.locator(".response .knob").filter({ hasText: /June-July before migration/i });
+
+  await dial.locator(".option", { hasText: "as it was" }).click();
+  const unchanged = await dial.locator(".knob__value").textContent();
+  expect(Number.parseFloat(unchanged!.replace("−", "-"))).toBe(0);
+
+  // Sign is the claim here. Warmer must move passage earlier, which is a negative number of days,
+  // and a dial that got this backwards would still render a plausible-looking figure.
+  await dial.locator(".option", { hasText: "1.5 °C warmer" }).click();
+  const warmer = await dial.locator(".knob__value").textContent();
+  expect(Number.parseFloat(warmer!.replace("−", "-"))).toBeLessThan(-0.9);
+
+  await dial.locator(".option", { hasText: "1.5 °C cooler" }).click();
+  const cooler = await dial.locator(".knob__value").textContent();
+  expect(Number.parseFloat(cooler!.replace("−", "-"))).toBeGreaterThan(0.9);
+});
+
+test("the dial stops where the fit stops, and offers no position past it", async ({ page }) => {
+  await page.goto(DIAL_CLAIM);
+  const dial = page.locator(".response .knob").filter({ hasText: /June-July before migration/i });
+
+  // Ninety per cent of the record's within-station departures lie inside roughly ±1.8 °C, so ±1.5
+  // is offered and ±2 is not. A dial that offered it would be extrapolating in the reader's hand.
+  await expect(dial.locator(".option", { hasText: "1.5 °C warmer" })).toBeVisible();
+  await expect(dial.locator(".option", { hasText: "2 °C warmer" })).toHaveCount(0);
+});
+
+test("the flat driver is published as flat rather than left out", async ({ page }) => {
+  await page.goto(DIAL_CLAIM);
+
+  // Wind support is the obvious mechanism and it measures nothing: −0.24 ± 0.39 days per m/s, an
+  // interval straddling zero. Publishing it is the point -- a panel carrying only the drivers that
+  // worked would be selecting for its own story -- so its absence is the failure to catch.
+  const wind = page.locator(".response .knob").filter({ hasText: /winds were more favourable/i });
+  await expect(wind).toBeVisible();
+  await expect(wind.locator(".knob__value")).toContainText("−0.24 days");
+  await expect(page.locator(".response__lead")).toContainText(/published because it is flat/i);
+});
+
+test("the dial refuses to be read as a forecast, and refuses to leave its own range", async ({
+  page,
+}) => {
+  await page.goto(DIAL_CLAIM);
+
+  const beyond = page.locator(".response .refusal").filter({ hasText: /2 °C warmer than usual/i });
+  await expect(beyond.locator(".refusal__verdict")).toContainText(/Withheld/);
+  // The bound is the band and not the extreme, and the reason is in the verdict rather than implied.
+  await expect(beyond.locator(".refusal__verdict")).toContainText(/single observation|one observation/i);
+
+  const forecast = page.locator(".response .refusal").filter({ hasText: /this coming autumn/i });
+  await expect(forecast.locator(".refusal__verdict")).toContainText(/did not beat chance/i);
+
+  // The evidence is behind a click, as everywhere else in this panel: a number we say is
+  // unsupported does not get printed at full size beside the ones we stand behind.
+  await expect(forecast.locator(".refusal__rows")).toHaveCount(0);
+  await forecast.getByRole("button", { name: /show me the wrong answer/i }).click();
+  await expect(forecast.locator(".refusal__rows")).toContainText("20 of 143");
+});
+

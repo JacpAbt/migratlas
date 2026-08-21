@@ -19,7 +19,6 @@ from migratlas.evidence import SPECS, spec_for
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from migratlas.evidence import EvidenceType
     from migratlas.lake.spec import TableSpec
 
 
@@ -62,11 +61,6 @@ def check_dataset(spec: TableSpec, root: Path | None = None) -> list[Drift]:
         if missing or unexpected:
             drifts.append(Drift(path=str(path), missing=missing, unexpected=unexpected))
     return drifts
-
-
-def check_evidence_type(evidence_type: EvidenceType, root: Path | None = None) -> list[Drift]:
-    """Drift check for one evidence type. A thin wrapper over :func:`check_dataset`."""
-    return check_dataset(spec_for(evidence_type), root)
 
 
 def check_all(root: Path | None = None) -> dict[str, list[Drift]]:

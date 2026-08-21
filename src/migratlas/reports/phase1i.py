@@ -25,6 +25,8 @@ import numpy as np
 import polars as pl
 from scipy import stats
 
+from migratlas.constants import CLAIM_BAND
+
 if TYPE_CHECKING:
     from datetime import datetime
 
@@ -144,7 +146,7 @@ def marine() -> Leg:
     )
 
     rows = []
-    for (survey,), group in temperature.group_by(["survey"]):
+    for (survey,), group in temperature.sort("survey").group_by(["survey"], maintain_order=True):
         if group.height < MIN_HAULS or group["year"].n_unique() < MIN_SURVEY_YEARS:
             continue
         latitude = group["latitude"].to_numpy()
@@ -276,7 +278,7 @@ def aerial() -> Leg:
         )
         .collect()
     )
-    low, high = phase2a_timing.CLAIM_BAND
+    low, high = CLAIM_BAND
     band = [s for s in phase2a_timing.sensitivities() if low <= s.latitude <= high]
     log.info("aerial: %d stations in the claim band", len(band))
     return Leg(AERIAL, np.array(_aerial_ratios(monthly, band, AUTUMN_MONTHS)))
@@ -340,7 +342,7 @@ def aerial_window_spread() -> float:
         )
         .collect()
     )
-    low, high = phase2a_timing.CLAIM_BAND
+    low, high = CLAIM_BAND
     band = [s for s in phase2a_timing.sensitivities() if low <= s.latitude <= high]
     medians = [
         float(np.median(_aerial_ratios(monthly, band, window)))

@@ -17,6 +17,7 @@ import numpy as np
 import polars as pl
 
 from migratlas.catalog import loader as catalog
+from migratlas.constants import CHANGE_VARIABLE  # writer and reader share the column
 from migratlas.drivers.schema import DRIVER_SAMPLES, DriverKind
 from migratlas.lake.identifiers import cell_site_id
 from migratlas.lake.writer import WriteResult, write_table
@@ -49,7 +50,6 @@ MIN_USABLE_SHARE: Final = 0.5
 TILE_DEG: Final = 10
 PIXEL_DEG: Final = 0.00025
 
-CHANGE_VARIABLE: Final = "surface_water_change_km2"
 OCCURRENCE_VARIABLE: Final = "surface_water_extent_km2"
 
 # The product's own epochs, from the INSPIRE metadata beside the tiles. Recorded in `derived_from`

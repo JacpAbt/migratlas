@@ -13,6 +13,7 @@ import polars as pl
 
 from migratlas.catalog import loader as catalog
 from migratlas.config import get_settings
+from migratlas.constants import MIN_COVERAGE  # the map must draw the nights the claim uses
 from migratlas.evidence import EvidenceType, Realm, TaxonScope, spec_for
 from migratlas.lake.reader import scan
 from migratlas.metrics.phenology import NORTHERN_AUTUMN, passage_quantiles, passage_trends
@@ -39,7 +40,6 @@ MAX_FEATURES: Final = 100_000
 
 # A night the radar only watched part of is not comparable to a full one, and a weekly median
 # built from a mix of both is biased toward whenever coverage happened to be good.
-MIN_COVERAGE: Final = 0.9
 
 # The published thresholds from docs/methods/phase1-phenology.md. A layer must not quietly
 # apply looser ones than the report it derives from.

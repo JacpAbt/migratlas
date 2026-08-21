@@ -35,6 +35,8 @@ import polars as pl
 if TYPE_CHECKING:
     from pathlib import Path
 
+from migratlas.constants import CLAIM_BAND, MIN_COVERAGE, MIN_NIGHTS
+
 log = logging.getLogger(__name__)
 
 SCHEMA_VERSION: Final = 3
@@ -126,13 +128,7 @@ def observed_series(max_year: int = 2025) -> list[YearPoint]:
     """Mean passage date per year across the stations the claim is made from."""
     from migratlas.evidence import EvidenceType, spec_for  # noqa: PLC0415
     from migratlas.metrics.phenology import passage_quantiles  # noqa: PLC0415
-    from migratlas.reports.phase1 import (  # noqa: PLC0415
-        AUTUMN,
-        MIN_COVERAGE,
-        MIN_NIGHTS,
-        load_conus_nights,
-    )
-    from migratlas.reports.sandbox import CLAIM_BAND  # noqa: PLC0415
+    from migratlas.reports.phase1 import AUTUMN, load_conus_nights  # noqa: PLC0415
 
     nights = load_conus_nights(quantity="reflectivity_traffic")
     quantiles = passage_quantiles(

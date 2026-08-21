@@ -13,9 +13,18 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Every job carries a deadline, because on 2026-08-19 two runs in a row -- the `develop` push and
+# the `main` merge behind it -- were cancelled at GitHub's own six-hour job limit. Neither failed:
+# `playwright install --with-deps` stalled inside `apt-get update` against the Azure Ubuntu mirror
+# and never returned, while runs on either side of them finished in 21 and 42 minutes. With no
+# deadline a stalled mirror is indistinguishable from a slow suite for six hours, twice, and the
+# merge it was gating waited on both. The numbers below are the observed durations with room, not
+# guesses: a gate that cannot report is a gate that lies.
 jobs:
   python:
     runs-on: ubuntu-latest
+    # Runs in about a minute.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
@@ -39,6 +48,8 @@ jobs:
 
   web:
     runs-on: ubuntu-latest
+    # The Playwright suite is the long pole and takes 21 to 42 minutes here at two workers.
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: web
@@ -57,7 +68,10 @@ jobs:
       # emitted. Both typecheck and build passed while the globe rendered nothing at all.
       - run: npm run build
 
+      # `--with-deps` is an `apt-get` behind a browser download, which is the step that hung. Its own
+      # deadline so the failure names the cause instead of arriving as "the job ran out of time".
       - run: npx playwright install --with-deps chromium
+        timeout-minutes: 12
       # The only check that asks the map what it actually drew. Everything above passed during
       # the release that rendered an empty canvas.
       - run: npm test

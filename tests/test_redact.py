@@ -22,6 +22,7 @@ from migratlas.redact import (
     admit_taxon_for_ingest,
     clear_for_publication,
     is_within_delay,
+    names_a_human_taxon,
     policy_for,
     snap_to_grid,
 )
@@ -263,10 +264,17 @@ def test_ingest_admits_a_fully_described_source() -> None:
         (None, "  Homo   sapiens  "),
         (None, "Homo"),
         (2436436, "Homo sapiens"),
+        # The three spellings that walked straight past the floor until 2026-08-19, found by
+        # asking it rather than by reading it. The first is a valid GBIF subspecies with a usage
+        # key of its own; the second is the authored form GBIF's own species-match API returns;
+        # the third is a different species in the same genus.
+        (None, "Homo sapiens sapiens"),
+        (None, "Homo sapiens Linnaeus, 1758"),
+        (None, "Homo neanderthalensis"),
     ],
 )
 def test_humans_never_enter_the_lake(key: int | None, name: str | None) -> None:
-    """By key, by name, at species and at genus, however the source spells it."""
+    """By key, by name, at species, subspecies and genus, however the source spells it."""
     with pytest.raises(IngestRefusedError, match="never enters this lake"):
         admit_taxon_for_ingest("movebank", taxon_key=key, scientific_name=name)
 
@@ -277,6 +285,10 @@ def test_humans_never_enter_the_lake(key: int | None, name: str | None) -> None:
         (2440944, "Rangifer tarandus"),
         (5219243, "Canis lupus"),
         (None, "Homo sapiens tracking study"),
+        # Prose that mentions the genus and is not a name. Three bare lowercase words after the
+        # genus cannot be a scientific name, which is exactly what lets the floor widen to the
+        # genus without refusing a caribou study for its title.
+        (None, "Homo sapiens impacts on Rangifer"),
     ],
 )
 def test_the_floor_refuses_only_what_it_names(key: int | None, name: str | None) -> None:
@@ -440,3 +452,30 @@ def test_a_driver_layer_is_still_gated_on_its_licence() -> None:
             taxon_key=None,
             redistribution_allowed=False,
         )
+
+
+@pytest.mark.parametrize(
+    ("name", "is_taxon"),
+    [
+        ("Homo", True),
+        ("Homo sapiens", True),
+        ("Homo sapiens sapiens", True),
+        ("Homo sapiens Linnaeus, 1758", True),
+        ("Homo erectus", True),
+        ("Homo sapiens impacts on Rangifer", False),
+        ("Homo sapiens tracking study", False),
+        ("Rangifer tarandus", False),
+        ("", False),
+    ],
+)
+def test_it_tells_a_name_in_the_genus_from_prose_mentioning_one(
+    name: str, *, is_taxon: bool
+) -> None:
+    """The distinction the widened floor rests on, tested directly rather than through the gate.
+
+    A name is a genus plus at most two more name-parts, where a part is a lowercase epithet or
+    authorship. Prose is anything with three or more bare lowercase words trailing the genus. Both
+    halves matter: refusing too little puts human locations in the lake, and refusing too much gets
+    the gate switched off by whoever it inconveniences.
+    """
+    assert names_a_human_taxon(name) is is_taxon

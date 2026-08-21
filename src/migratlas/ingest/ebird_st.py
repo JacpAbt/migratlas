@@ -27,6 +27,7 @@ import pyarrow as pa
 
 from migratlas.catalog import loader as catalog
 from migratlas.config import Settings, get_settings
+from migratlas.constants import CONUS_LAT, CONUS_LON  # the same box the radar analysis uses
 from migratlas.evidence import EvidenceType, Realm, TaxonScope, spec_for
 from migratlas.ingest.http import RemoteFile, fetch
 from migratlas.lake.writer import WriteResult, write_evidence
@@ -58,8 +59,8 @@ TARGET_CELL_DEG: Final = 1.0
 # Contiguous US, matching reports.phase1's radar footprint. Restricting at ingest is a scoping
 # decision, not data loss: the comparison is CONUS-only by construction, and the full continental
 # extent would be 40x the rows for cells no radar ever saw.
-CONUS_LON: Final = (-125.0, -66.0)
-CONUS_LAT: Final = (24.0, 50.0)
+# The same box the radar analysis uses; this ingest exists to cross-check that analysis over the
+# same ground, so the two cannot be allowed to drift apart.
 
 
 @dataclass(frozen=True, slots=True)

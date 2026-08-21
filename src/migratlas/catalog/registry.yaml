@@ -1220,3 +1220,202 @@ sources:
       exist (phase3e-marine-oisst.md §3), and that judgement lives there rather than here. The
       file updates monthly and carries no checksum; the raw copy is the fetch date's snapshot.
     added: 2026-08-19
+
+  # The 32nd source, and the one the addendum had to defer for want of an account. It exists
+  # because WOA23 -- the free route to ocean oxygen -- publishes a climatology and nothing else:
+  # cell_methods reads "time: mean within years time: mean over years" and every decadal path
+  # returns 404, so it cannot carry a trend at any depth. Licensed by phase3g-oxygen.md, which
+  # was written before this entry and before any request.
+  - id: cmems_bgc
+    title: Copernicus Marine global biogeochemistry hindcast — monthly dissolved oxygen, 1993–present
+    realm: marine
+    landing_page: https://data.marine.copernicus.eu/product/GLOBAL_MULTIYEAR_BGC_001_029/description
+    download_uri: https://stac.marine.copernicus.eu/metadata/GLOBAL_MULTIYEAR_BGC_001_029/cmems_mod_glo_bgc_my_0.25deg_P1M-m_202406/dataset.stac.json
+    credential: cmems_username
+    # Licence clause 2.2, read from the current terms page on 2026-08-19 rather than remembered:
+    # a worldwide, non-exclusive, royalty-free, perpetual licence to "(b) modify, adapt, develop,
+    # create and distribute Value Added Products or Derivative Work from Copernicus Marine Service
+    # Products for any purpose" and "(c) redistribute, disseminate any Copernicus Marine Service
+    # Product in their original form via any media". Clause 2.1: granted free of charge. So unlike
+    # eBird, and unlike the CPR's UK mirror, nothing here restricts a derived tile.
+    licence: Copernicus Marine Service licence (free of charge, derived works permitted for any purpose)
+    licence_url: https://marine.copernicus.eu/user-corner/service-commitments-and-licence
+    citation: >-
+      Copernicus Marine Service (2024). Global Ocean Biogeochemistry Hindcast,
+      GLOBAL_MULTIYEAR_BGC_001_029, dataset cmems_mod_glo_bgc_my_0.25deg_P1M-m. E.U. Copernicus
+      Marine Service Information. doi 10.48670/moi-00019.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        Clause 2.2(b) permits derived and value-added products for any purpose and 2.2(c) permits
+        redistribution of the product in original form; clause 2.3 carries the attribution duty
+        under Regulation (EU) 1159/2013. Credit the Copernicus Marine Service and cite the product
+        doi, which the provenance document does from this entry.
+    # A modelled field of dissolved gas. There is no animal in it, so there is nothing to protect.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      A reanalysis, and a biogeochemical one, which is a weaker thing than a physical reanalysis
+      and must not be read as a measurement. There is no Argo-scale oxygen observing network, so
+      this field is largely ocean dynamics plus parameterised biology rather than assimilated
+      oxygen observations, and a trend in it partly reflects how its own observing system changed
+      across 1993–present. Spatially it is 0.25 degrees on 75 depth levels: the level nearest a
+      trawl's median haul depth over a shelf is not the water that trawl fished, which is the same
+      distinction OISST carries and further from the animal rather than closer. This project holds
+      no oxygen observations to validate it against, so phase3g-oxygen.md §3 gates it on physics
+      instead — warming and oxygen must correlate negatively across units, because solubility
+      requires it — and §6 refuses the word "measured" for any number derived from it. The
+      product is updated and reissued, so the raw copy is the fetch date's snapshot.
+    added: 2026-08-19
+
+  # The 33rd source, and the one Forecast A exists or does not exist because of. Its own id rather
+  # than a second variable under `cmip6_damip`, and that is a correctness requirement rather than
+  # tidiness: the lake replaces the partitions a write touches, so scenarios landing beside the
+  # DAMIP rows would delete the `historical` and `hist-nat` series the attribution rests on.
+  # Licensed by forecast-a.md, written before this entry and before any store was opened.
+  - id: cmip6_scenariomip
+    title: CMIP6 ScenarioMIP — near-surface air temperature under four SSPs, 2015–2100
+    realm: aerial
+    landing_page: https://pcmdi.llnl.gov/CMIP6/
+    download_uri: https://storage.googleapis.com/cmip6/pangeo-cmip6.csv
+    # Same terms as the DAMIP entry, which is the same archive under a different activity. CMIP6
+    # output is released for unrestricted research use with a citation and acknowledgement duty;
+    # the Pangeo mirror on Google Cloud is a redistribution of it and needs no account.
+    licence: CMIP6 terms of use (unrestricted research use, citation and acknowledgement required)
+    licence_url: https://pcmdi.llnl.gov/CMIP6/TermsOfUse/TermsOfUse6-1.html
+    citation: >-
+      Eyring, V., Bony, S., Meehl, G. A., Senior, C. A., Stevens, B., Stouffer, R. J. & Taylor,
+      K. E. (2016). Overview of the Coupled Model Intercomparison Project Phase 6 (CMIP6)
+      experimental design and organization. Geoscientific Model Development 9, 1937-1958.
+      Scenario design: O'Neill, B. C. et al. (2016). The Scenario Model Intercomparison Project
+      (ScenarioMIP) for CMIP6. Geoscientific Model Development 9, 3461-3482. Accessed through the
+      Pangeo CMIP6 cloud catalogue.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        Unrestricted research use with the modelling groups credited and the CMIP6 terms
+        acknowledged; the contributing model and member travel in derived_from on every row, so a
+        derived number can always be traced to the simulation that produced it.
+    # Simulated air temperature. There is no animal in it.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      A model's projection, not an observation, and four of them are scenarios rather than
+      forecasts — an SSP is a coherent story about emissions, not a probability. Read only as each
+      model's own anomaly against its own 1995–2014 baseline, because absolute model temperatures
+      carry biases of degrees and the anomaly is what cancels them; forecast-a.md fixes that rule
+      and the two masks that bound it. Thirteen of the fifteen models this project holds a paired
+      historical run for carry all four SSPs — GFDL-CM4 lacks ssp126 and ssp370, HadGEM3-GC31-LL
+      lacks ssp370 — so a per-scenario ensemble is not the same ensemble across scenarios, and any
+      cross-scenario comparison inherits that. Members are capped at three per model and averaged
+      within model before anything crosses models, because CanESM5 and MIROC6 publish fifty each
+      and an uncapped mean would be a statement about two models. Monthly `Amon` output only: a
+      degree-day or extreme-day form of this driver needs the `day` table, which is a different and
+      much larger commitment and is excluded in forecast-a.md §2.
+    added: 2026-08-19
+
+  - id: ukbms_phenology
+    title: UK Butterfly Monitoring Scheme — flight-period phenology, 1976–2021
+    realm: terrestrial
+    evidence_type: survey_index
+    taxon_scope: exact
+    landing_page: https://catalogue.ceh.ac.uk/documents/0c59eb20-26e3-4066-86f5-418afae18769
+    # Version DOI for the 2021 release, not a floating concept DOI, for darkecology's reason: a
+    # published figure has to stay reproducible when the scheme issues next year's file.
+    doi: 10.5285/0c59eb20-26e3-4066-86f5-418afae18769
+    # The bare /data/<uuid> path answers with a one-link "your data is ready" page rather than
+    # the archive, and httpx follows no link, so a fetch of it lands 1,196 bytes of HTML named
+    # .zip. The archive is that path plus the extension. No form, no checkbox, nothing to accept.
+    download_uri: https://data-package.ceh.ac.uk/data/0c59eb20-26e3-4066-86f5-418afae18769.zip
+    licence: Open Government Licence
+    licence_url: http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+    citation: >-
+      Botham, M.; Middlebrook, I.; Harrower, C.; Roy, D.B. (2022). United Kingdom Butterfly
+      Monitoring Scheme: phenology 2021. NERC EDS Environmental Information Data Centre.
+      https://doi.org/10.5285/0c59eb20-26e3-4066-86f5-418afae18769. Scheme organised and funded by
+      Butterfly Conservation, the UK Centre for Ecology & Hydrology, the British Trust for
+      Ornithology and the Joint Nature Conservation Committee.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        The Open Government Licence permits copying, adapting and commercial reuse with attribution.
+        The dataset's own conditions are that the citation including the DOI appears in full in the
+        reference list of anything describing research that used the data, and that this exact
+        statement travels with any derived information or image: "Contains UK Butterfly Monitoring
+        Scheme (UKBMS) data © copyright and database right Butterfly Conservation, the Centre for
+        Ecology & Hydrology, British Trust for Ornithology, and the Joint Nature Conservation
+        Committee." Both are satisfied by the citation above and by PROVENANCE.md, and the
+        attribution line has to reach any published figure as well.
+    # Site-level summaries over a fixed-route protocol pooled across recorders: no individual, no
+    # nest, no coordinate finer than the transect the scheme itself publishes. `low` rather than
+    # `not_sensitive` on sabap1's reasoning -- the rows are safe, and the gate should not minute a
+    # judgement that every taxon in a national scheme is.
+    default_sensitivity: low
+    caveats: >-
+      Landed 2026-08-20: 627,752 rows, 3,144 sites, 59 taxa. **The span is 1973-2021, not the
+      1976-2021 the catalogue and the supporting document both state** -- 91 rows sit in three
+      earlier years. **Both CSVs are Windows-1252**, proved by a single curly apostrophe 81.7 MB in,
+      and polars reports only `invalid utf-8 sequence` without saying where. **The day columns count
+      from 1 April, not from 1 January** — the archive's own documentation
+      says so, with "20 = 20th April" as its example, and reading them as a day of year puts every
+      date about ninety days early while looking entirely plausible. A derived product, not counts.
+      Phenology is computed only from the weekly standard transects, so the Wider Countryside squares
+      and targeted surveys in the site table contribute none of it. Thirteen species carry split
+      flight periods — eleven multivoltine plus Brimstone and Peacock, which overwinter as adults —
+      and for those the pooled `BROOD = 0` row is an average across generations that no animal
+      experienced. The scheme's visit-level transect data is not openly published,
+      so the flight-period summary has to be taken as issued — which means this source carries a
+      **mean** flight date while the radar response carries a **median** passage date. Any use
+      comparing the two must use a ratio of trends, where a constant mean-against-median offset
+      cancels, and must check for a trend in the flight curve's shape, which would not; the
+      published duration and standard deviation are what make that checkable and
+      phase1j-fourth-leg.md §3a registers it as a stop condition. "Mean flight date" also names two
+      different biologies — emergence for a resident, arrival plus residence for a migrant — and
+      eleven multi-voltine species carry separate generations that must stay separate, because a
+      species-level mean across broods is an average of two peaks and a trough and is not a date any
+      animal experienced. Positions come from the scheme's separate site-location dataset and the
+      publisher withholds the sensitive ones; because SURVEY_INDEX requires a position, those sites
+      cannot enter this lake at all, which is the publisher's sensitivity decision enforced by the
+      schema rather than by code here. Effort is fixed by design — a Pollard walk is a fixed route
+      walked weekly under stated weather criteria — but not by personnel: sites and recorders turn
+      over, and a site whose recorder changed mid-series may carry a step nothing here looks for.
+      One island's climate, so this is a national scheme rather than a realm.
+    added: 2026-08-20
+
+  - id: ukbms_sites
+    title: UK Butterfly Monitoring Scheme — transect site locations, 2021 v2
+    realm: terrestrial
+    # Neither evidence nor a driver: the positions every ukbms_phenology row needs to satisfy a
+    # non-null coordinate. Registered anyway, for the reason the Source model gives about drivers --
+    # the registry is where a licence is recorded and PROVENANCE.md is generated from, so anything
+    # fetched and left out would be a source whose terms nothing states.
+    # v2, which supersedes the first 2021 release. The superseded one is 1cb8f31e-5c09-473c-96e6-
+    # ea4047d324a2 and its /data/ path 404s, which is how this was noticed rather than inherited.
+    landing_page: https://catalogue.ceh.ac.uk/documents/1cfdcd20-afb8-4b58-9ab2-604b90f5242d
+    doi: 10.5285/1cfdcd20-afb8-4b58-9ab2-604b90f5242d
+    download_uri: https://data-package.ceh.ac.uk/data/1cfdcd20-afb8-4b58-9ab2-604b90f5242d.zip
+    licence: Open Government Licence
+    licence_url: http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+    citation: >-
+      Botham, M.S.; Middlebrook, I.; Harris, S.; Harrower, C.; Lowe, M.; Roy, D.B. (2023). United
+      Kingdom Butterfly Monitoring Scheme: site location data 2021 v2. NERC EDS Environmental
+      Information Data Centre. https://doi.org/10.5285/1cfdcd20-afb8-4b58-9ab2-604b90f5242d.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+    # Transect positions, with the sensitive ones already removed by the publisher. Nothing here is
+    # an animal record.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      **The publisher excludes the locations of sites it classes as sensitive**, with a request
+      route for the rest that this project is not taking; see docs/ETHICS.md and task #50. So the
+      join against ukbms_phenology is deliberately incomplete and its rate is a graded prediction in
+      phase1j-fourth-leg.md rather than an assumption. Covers standard UKBMS transects, Wider
+      Countryside Butterfly Survey squares and targeted single-species surveys together, which are
+      three different protocols sharing one site table.
+    added: 2026-08-20

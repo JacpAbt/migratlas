@@ -2,9 +2,11 @@
   import Coverage from "./Coverage.svelte";
   import Ribbon from "./Ribbon.svelte";
   import Rule from "../notebook/Rule.svelte";
+  import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
   import type { DetectabilityDocument } from "../../layers/detectability";
   import type { Finding } from "../ledger";
+  import type { ResponseDocument } from "../sandbox/response";
   import type { SandboxDocument } from "../sandbox/sandbox";
 
   let {
@@ -12,11 +14,13 @@
     base,
     detectability,
     sandbox,
+    response,
   }: {
     finding: Finding;
     base: string;
     detectability: DetectabilityDocument | null;
     sandbox: SandboxDocument | null;
+    response: ResponseDocument | null;
   } = $props();
 
   /**
@@ -56,6 +60,10 @@
 <!-- Outside the figure block: a claim can have knobs without having a chart, and the two claims with
      the most knobs are exactly the two without one. -->
 <Sandbox doc={sandbox} claim={finding.key} />
+
+<!-- After the sandbox, in that order for a reason: the safeguards say how much to trust the number,
+     and only then is it worth asking what a different world would do to it. -->
+<Response doc={response} claim={finding.key} />
 
 <style>
   .evidence {

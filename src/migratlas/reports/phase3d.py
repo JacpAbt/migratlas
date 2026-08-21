@@ -16,11 +16,12 @@ from typing import Final
 import numpy as np
 import polars as pl
 
+from migratlas.constants import MIN_COVERAGE, MIN_NIGHTS, TARGET_YEARS
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan_dataset
 from migratlas.metrics.phenology import passage_quantiles
 from migratlas.models.skill import LAMBDAS, _loo_error, fit_ridge
-from migratlas.reports.phase1 import AUTUMN, MIN_COVERAGE, MIN_NIGHTS, SPRING, load_conus_nights
+from migratlas.reports.phase1 import AUTUMN, SPRING, load_conus_nights
 from migratlas.reports.phase3a import (
     PRE_SEASON_MONTHS,
     SEASON_MONTHS,
@@ -32,7 +33,6 @@ from migratlas.reports.phase3a import (
 log = logging.getLogger(__name__)
 
 SEED: Final = 20260819
-TARGET_YEARS: Final = tuple(range(2017, 2025))
 MIN_TRAIN_YEARS: Final = 10
 REPAIRINGS: Final = 1000
 MIN_CORRELATION_POINTS: Final = 2

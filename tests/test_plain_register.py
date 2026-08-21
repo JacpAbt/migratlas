@@ -1,6 +1,6 @@
-"""The plain register on the three documents that are not the ledger.
+"""The plain register on the documents that are not the ledger.
 
-`findings.json` got a second register in schema 3 and these three did not, so the site explained
+`findings.json` got a second register in schema 3 and these did not, so the site explained
 itself plainly right up to the moment a reader clicked into the evidence. The same rules apply here
 and are asserted here: a plain sentence may drop precision, may never add reach, and never replaces
 the paragraph it heads.
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from migratlas.reports import counterfactual, detectability, findings, sandbox
+from migratlas.reports import counterfactual, detectability, findings, response, sandbox
 
 REPO = Path(__file__).resolve().parents[1]
 PUBLIC = REPO / "web" / "public"
@@ -21,6 +21,7 @@ PUBLIC = REPO / "web" / "public"
 RIBBON = PUBLIC / "counterfactual.json"
 COVERAGE = PUBLIC / "detectability.json"
 KNOBS = PUBLIC / "sandbox.json"
+DIALS = PUBLIC / "response.json"
 
 # Ceiling and interval markers borrowed from the ledger rather than restated: three documents with
 # three ideas of what "plain" means would be no rule at all.
@@ -29,7 +30,11 @@ INTERVALS = ("±", "+/-")
 
 
 def _plain_lines() -> list[tuple[str, str]]:
-    """Every plain sentence in the three documents, labelled by where it came from."""
+    """Every plain sentence in these documents, labelled by where it came from.
+
+    `response.json` joined them when the dial shipped: a dial whose lesson nobody understands is a
+    toy, which is the same argument that put a plain line on every knob.
+    """
     out: list[tuple[str, str]] = []
     if RIBBON.is_file():
         out.append(
@@ -41,6 +46,9 @@ def _plain_lines() -> list[tuple[str, str]]:
     if KNOBS.is_file():
         for knob in json.loads(KNOBS.read_text(encoding="utf-8"))["knobs"]:
             out.append((f"knob {knob['key']}", knob["plain_why"]))
+    if DIALS.is_file():
+        for dial in json.loads(DIALS.read_text(encoding="utf-8"))["knobs"]:
+            out.append((f"dial {dial['key']}", dial["plain_why"]))
     return out
 
 
@@ -50,6 +58,7 @@ def test_every_document_declares_the_version_the_frontend_expects() -> None:
     assert counterfactual.SCHEMA_VERSION == 3
     assert detectability.SCHEMA_VERSION == 3
     assert sandbox.SCHEMA_VERSION == 2
+    assert response.SCHEMA_VERSION == 1
 
 
 def test_a_withheld_source_without_a_plain_reason_stops_the_build() -> None:

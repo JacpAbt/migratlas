@@ -1,0 +1,875 @@
+/**
+ * The book, on a desk. Layout, texture and shadow only — no colour is declared here.
+ *
+ * Everything visual comes from `/src/styles/tokens.css`. Where this file needs a shade that is not
+ * a token it composes one from `color-mix()` against a token, so switching surface still moves it:
+ * a hardcoded rgba would be a light-mode decision baked into a dark page. The one exception is
+ * neutral black and white inside shadow and highlight gradients, which are light rather than paint.
+ *
+ * `--pt` is a local reading-size multiplier, wired to the picker. The owner's note was that the
+ * first pass was too small to read; if a size here is chosen, `tokens.css` gains a book scale and
+ * this variable goes away.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --pt: 1;
+  --fold: 2.5rem;
+  --pad: clamp(1.6rem, 3.2vw, 3.4rem);
+
+  /* The plate tints and the tab stock strengths now live in tokens.css, which this file links.
+     They were prototyped here and moved once they were measured. */
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--paper-sunken);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+}
+
+/* --- Picker: scaffolding, and it looks like it ---------------------------- */
+
+.picker {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-tight);
+  align-items: center;
+  padding: var(--gap-tight) var(--gap);
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+
+.picker__what,
+.picker label {
+  font-size: var(--size-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.picker__sep {
+  flex: 1;
+}
+
+.picker button,
+.picker select {
+  font-family: var(--font-body);
+  font-size: var(--size-margin);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.3em 0.7em;
+  cursor: pointer;
+}
+
+.picker button.is-on {
+  border-color: var(--rust);
+  color: var(--rust);
+}
+
+.footnote {
+  max-width: 52rem;
+  margin: var(--gap-wide) auto var(--gap-wide);
+  padding: 0 var(--gap);
+  font-size: var(--size-margin);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* --- The desk ------------------------------------------------------------ */
+
+/*
+  Darker than the page and slightly uneven, so the book has something to cast onto. Two very soft
+  radial washes rather than a flat fill: a flat ground under a shadowed object reads as a rectangle
+  floating on a colour, which is what the first pass did.
+*/
+.desk {
+  display: grid;
+  place-items: start center;
+  padding: var(--gap) var(--gap-tight) 0;
+  background:
+    radial-gradient(120% 80% at 30% 0%, rgb(255 255 255 / 5%), transparent 60%),
+    radial-gradient(100% 90% at 75% 100%, rgb(0 0 0 / 7%), transparent 65%);
+}
+
+/* --- The book ----------------------------------------------------------- */
+
+/*
+  As large as the window allows, in both axes.
+
+  The old `min(97vw, 1560px)` capped the book at 1560px, which on a wide monitor left it filling
+  about three fifths of the page. The height term is what makes removing the cap safe: bound by
+  `(100vh - chrome) * ratio` as well as by width, so the book grows to fill whichever dimension
+  runs out first instead of running off the bottom.
+
+  **No `filter` here, and that is load-bearing rather than tidiness.** A filter on an ancestor
+  flattens 3D transforms -- `preserve-3d` below it is ignored -- so with a drop-shadow on this
+  element the leaf's `rotateY` rendered as a horizontal squash instead of a rotation, and the page
+  appeared to move off-centre and then snap into place at the end of the turn. The lift is now two
+  box-shadows on the sheets themselves, which composite the same and flatten nothing.
+*/
+.book {
+  position: relative;
+  /* Two pages of roughly 3:4 each, so the open spread is a touch wider than 3:2. */
+  --ratio: 1.58;
+  /* The subtraction is the picker plus the desk's own top padding, measured rather than guessed:
+     44px of bar and 26px of padding, so 4.5rem covers it with a hair to spare. Overestimating it
+     cost 50px of book height on a 720px screen. */
+  --book-h: min(calc(98vw / var(--ratio)), calc(100vh - 4.5rem));
+  width: calc(var(--book-h) * var(--ratio));
+  aspect-ratio: var(--ratio);
+  perspective: 2800px;
+}
+
+/* The block of pages under this one: two slabs, offset and barely rotated, so the spread is a page
+   in a book rather than a sheet on a table. */
+.block {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  border: 1px solid color-mix(in srgb, var(--rule) 70%, var(--ink) 8%);
+  box-shadow: 0 14px 22px rgb(0 0 0 / 18%);
+}
+
+.block--under {
+  transform: rotate(-0.45deg) translate(-5px, 6px);
+}
+
+.block--edge {
+  transform: rotate(0.3deg) translate(4px, 3px);
+  /* Page edges seen almost end-on: a stack of fine lines rather than a solid tone. */
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 3px,
+      color-mix(in srgb, var(--rule) 55%, transparent) 3px 4px
+    ),
+    var(--paper);
+}
+
+/* --- The spread --------------------------------------------------------- */
+
+.spread {
+  position: absolute;
+  inset: 0;
+  /*
+    Two columns meeting exactly on the centre line, with the fold drawn *over* them.
+
+    It was three columns before -- page, fold, page -- which put the recto's left edge at
+    `50% + fold/2` while the crease was at `50%`. The turning page therefore pivoted about an axis
+    twenty pixels outside the visible spine, swung slightly off-centre, and appeared to snap back
+    into place when it settled. The fold is now an overlay, so the page edge and the crease are the
+    same line and the hinge is where the reader can see it.
+  */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  /* A long soft shadow for the height off the desk, a tight dark one where a book actually touches
+     it. On the sheet rather than on the book, because a filter up there would flatten the turn. */
+  box-shadow:
+    0 22px 34px rgb(0 0 0 / 26%),
+    0 3px 3px rgb(0 0 0 / 22%);
+}
+
+.page {
+  position: relative;
+  overflow: hidden;
+}
+
+.page__inner {
+  position: relative;
+  height: 100%;
+  padding: var(--pad);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Extra room on the bound edge, which the fold column used to provide by taking up space. */
+.page--verso .page__inner {
+  padding-right: calc(var(--pad) + var(--fold) / 2);
+}
+
+.page--recto .page__inner {
+  padding-left: calc(var(--pad) + var(--fold) / 2);
+}
+
+.page__grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--grain);
+  background-size: var(--grain-size);
+  mix-blend-mode: var(--grain-blend);
+  opacity: 0.9;
+}
+
+/*
+  The curl. Paper does not lie flat next to a binding, so both inner edges darken towards the fold
+  and both outer edges catch a little light. Purely gradients: no extra element, and it survives a
+  surface change because it is light and not paint.
+*/
+.page--verso::after,
+.page--recto::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.page--verso::after {
+  background:
+    linear-gradient(to right, rgb(255 255 255 / 5%) 0 6%, transparent 22%),
+    linear-gradient(to left, rgb(0 0 0 / 13%), transparent 16%);
+}
+
+.page--recto::after {
+  background:
+    linear-gradient(to left, rgb(255 255 255 / 5%) 0 6%, transparent 22%),
+    linear-gradient(to right, rgb(0 0 0 / 13%), transparent 16%);
+}
+
+/* --- The fold, which the owner asked to be unmistakable ------------------ */
+
+/*
+  Above the turning leaf, not below it, and that is geometry rather than taste: the crease *is* the
+  axis the page rotates about, so a page can never pass in front of it -- at the hinge it has zero
+  width. Under the leaf it was hidden for the length of the turn and reappeared when the leaf hid,
+  which read as the middle line being added at the end of the animation instead of being there all
+  along.
+*/
+.gutter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: var(--fold);
+  transform: translateX(-50%);
+  z-index: 7;
+  pointer-events: none;
+  /* 12% rather than 16%: the pages now meet under this instead of being separated by it, so their
+     own inner-edge gradients stack with it and the crease was compounding to about 27%. */
+  background:
+    linear-gradient(to right, rgb(0 0 0 / 12%), rgb(0 0 0 / 2%) 42%),
+    linear-gradient(to left, rgb(0 0 0 / 12%), rgb(0 0 0 / 2%) 42%);
+}
+
+/* The crease itself: one hard line, darker than any rule on the page. */
+.gutter__line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-0.5px);
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--ink) 55%, transparent) 4%,
+    color-mix(in srgb, var(--ink) 55%, transparent) 96%,
+    transparent
+  );
+}
+
+/* --- Type on the page --------------------------------------------------- */
+
+.folio {
+  margin: 0 0 var(--gap);
+  font-family: var(--font-mono);
+  font-size: calc(0.7rem * var(--pt));
+  color: var(--pencil);
+  letter-spacing: var(--tracking-label);
+}
+
+.kicker {
+  margin: 0 0 var(--gap-hair);
+  font-size: calc(var(--size-label) * var(--pt));
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--moss);
+}
+
+h1.hand {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: calc(clamp(1.5rem, 2.5vw, 2.5rem) * var(--font-scale-hand));
+  line-height: var(--leading-hand);
+  font-weight: 400;
+}
+
+.mark {
+  display: block;
+  pointer-events: none;
+}
+
+.mark--rule {
+  width: min(20rem, 62%);
+  height: 14px;
+  margin: 0.1rem 0 var(--gap);
+}
+
+.lede {
+  margin: 0 0 var(--gap);
+  font-family: var(--font-hand);
+  font-size: calc(var(--size-lede) * var(--pt));
+  line-height: 1.45;
+}
+
+/* The headline number, ringed by hand the way somebody circles the thing that matters. */
+.figure-value {
+  position: relative;
+  align-self: start;
+  margin: var(--gap-tight) 0 var(--gap);
+  padding: 0.35em 1.1em 0.35em 0.6em;
+}
+
+/*
+  Both dimensions pinned, because `height: auto` on an SVG does not mean "whatever the insets say".
+  An svg carrying a viewBox has an intrinsic aspect ratio, so the height was being derived from the
+  viewBox that `marks()` had just written from the measured box -- a loop that inflated a 49px-tall
+  figure into a 200px ellipse across half the page.
+*/
+.mark--ring {
+  position: absolute;
+  top: -0.3em;
+  left: -0.5em;
+  width: calc(100% + 1em);
+  height: calc(100% + 0.6em);
+}
+
+.value {
+  position: relative;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: calc(1.32rem * var(--pt));
+  color: var(--rust);
+}
+
+.body {
+  margin: 0 0 var(--gap);
+  font-size: calc(var(--size-body) * var(--pt) * var(--font-scale-body));
+}
+
+/* The caveat, in the margin, bracketed. Not a footnote: this project puts the limit beside the
+   number, so on a page it belongs alongside and not underneath. */
+.marginalia {
+  position: relative;
+  margin-top: auto;
+  padding-left: 1.6rem;
+}
+
+.mark--bracket {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.1rem;
+  height: 100%;
+}
+
+.marginalia__text {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: calc(0.86rem * var(--pt) * var(--font-scale-hand));
+  line-height: 1.4;
+  color: var(--ink-soft);
+  transform: rotate(-0.5deg);
+}
+
+/* --- The plate --------------------------------------------------------- */
+
+.plate {
+  position: relative;
+  flex: 1;
+  display: grid;
+  place-items: stretch;
+  min-height: 0;
+}
+
+.plate__paper {
+  position: relative;
+  min-height: 0;
+}
+
+.plate__map {
+  position: absolute;
+  inset: 0;
+}
+
+.plate__map svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Variant 1 — taped in. A separate sheet, a shade off the page, hung slightly crooked. */
+.book.is-taped .plate__paper {
+  background: var(--plate-paper);
+  transform: rotate(-1.1deg);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 18%),
+    0 6px 14px rgb(0 0 0 / 12%);
+}
+
+.book.is-taped .tape {
+  display: block;
+}
+
+/* Variant 2 — drawn straight onto the page. No sheet, no shadow, and the ink runs to the margin. */
+.book.is-inked .plate__paper {
+  background: transparent;
+  transform: none;
+  box-shadow: none;
+}
+
+.book.is-inked .plate {
+  margin: 0 calc(clamp(1.6rem, 3.2vw, 3.4rem) * -0.55);
+}
+
+/* Variant 3 — a tipped-in plate: different stock, a fold along its inner edge, one paper clip. */
+.book.is-tipped .plate__paper {
+  background: var(--plate-tipped);
+  transform: rotate(0.5deg);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 20%),
+    0 10px 18px rgb(0 0 0 / 14%);
+}
+
+/* The fold it was bound in on, along the left edge. */
+.book.is-tipped .plate__paper::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1.1rem;
+  background: linear-gradient(to right, rgb(0 0 0 / 20%), transparent);
+}
+
+.book.is-tipped .clip {
+  display: block;
+}
+
+.tape,
+.clip {
+  display: none;
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.tape {
+  width: 5.4rem;
+  height: 1.7rem;
+}
+
+.tape svg,
+.clip svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tape--tl {
+  top: -0.7rem;
+  left: -1.1rem;
+  transform: rotate(-26deg);
+}
+
+.tape--br {
+  right: -1.2rem;
+  bottom: -0.6rem;
+  transform: rotate(-21deg);
+}
+
+.clip {
+  top: -0.9rem;
+  right: 12%;
+  width: 2.1rem;
+  height: 3.4rem;
+}
+
+.figcap {
+  margin: var(--gap) 0 0;
+  font-size: calc(var(--size-margin) * var(--pt));
+  color: var(--ink-soft);
+}
+
+/* A note added afterwards, in a hurry, at an angle. */
+.scrawl {
+  margin: var(--gap-tight) 0 0;
+  align-self: end;
+  max-width: 22rem;
+  font-family: var(--font-hand);
+  font-size: calc(0.84rem * var(--pt) * var(--font-scale-hand));
+  line-height: 1.35;
+  color: var(--moss);
+  transform: rotate(-1.4deg);
+}
+
+/* --- Thumb tabs, sticking out past the edge ----------------------------- */
+
+/* Full height and centred rather than pinned near the top: the column is as tall as its labels,
+   and at seven tabs a top-anchored stack ran 817px down a book 786px tall. */
+.tabs {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  transform: translateX(calc(100% - 3px));
+}
+
+.tab {
+  /*
+    The body face, not the hand, and a fixed size that `--pt` does not scale.
+
+    tokens.css says why: Shantell Sans is "a marker face drawn for interfaces, so it survives 13px
+    where a looser hand turns into texture". A vertical tab is the smallest text on the page and
+    Virgil was illegible in it. The size is fixed because scaling it with the reading size broke
+    the tab column's geometry -- vertical text grows along the axis the column is stacked on, so at
+    130% the seven tabs ran past the foot of the book.
+  */
+  font-family: var(--font-body);
+  /*
+    Tied to the book's height, with a ceiling and a floor.
+
+    Seven vertical labels stack to **38 times** the font size -- measured, not guessed: 548px of
+    stack at 14.42px. A fixed size therefore overflowed on a short window while the book kept
+    shrinking around it. Dividing by 38 would pin it to zero slack by construction, so this divides
+    by 42 for about a tenth of the column in reserve. The ceiling is what binds on a large monitor,
+    which is where the labels still read small, so raising it is the part that was actually asked
+    for; the floor is where a label stops being worth reading at all.
+  */
+  font-size: clamp(0.7rem, calc(var(--book-h) / 42), 1.05rem);
+  writing-mode: vertical-rl;
+  /* Tight along the stacking axis, because that is the axis that runs out; generous across it, so
+     the tab reaches further out of the book and reads as a tab rather than a sliver. */
+  padding: 0.42em 0.72em;
+  color: var(--ink);
+  /*
+    Coloured stock, from the palette's own hues and nothing else.
+
+    Real index tabs are different colours, and `--tint` is set per tab below out of tokens that
+    already exist -- mixed into the page's paper rather than used at full strength, which is what
+    keeps seven of them from shouting. Mixing against `--paper` also means they invert with the
+    surface for free: on the night page the same mix lands as a dark tinted stock rather than a
+    pastel one.
+  */
+  --tint: var(--pencil);
+  /*
+    How much paper is left in the stock. 68% rather than 76%: at the weaker mix the neighbouring
+    tabs separated by only about 28 units of RGB, which is not a colour difference anyone would
+    call one. Per-tab, because one hue needs less of itself -- see the yellow below.
+  */
+  --mix: var(--tab-stock);
+  background: color-mix(in srgb, var(--paper) var(--mix), var(--tint));
+  border: 1px solid color-mix(in srgb, var(--tint) 45%, var(--rule));
+  border-left: none;
+  border-radius: 0 7px 7px 0;
+  cursor: pointer;
+  box-shadow: 2px 2px 3px rgb(0 0 0 / 12%);
+}
+
+/*
+  Seven hues that the stylesheet already had. Ordered so no two neighbours share one: the greys sit
+  at the ends, where the introduction and the back pocket are, and the three saturated ones are
+  spread through the middle where the claims are.
+*/
+.tab:nth-child(1) {
+  --tint: var(--pencil);
+}
+
+.tab:nth-child(2) {
+  --tint: var(--rust);
+  --mix: var(--tab-accent);
+}
+
+.tab:nth-child(3) {
+  --tint: var(--line-counterfactual);
+}
+
+/*
+  The yellow is the one hue lighter than the page in both surfaces, so at the common mix it dragged
+  the stock towards the ink and `--ink` on it measured 4.33:1 -- under the 4.5 floor this project
+  holds text to. Less of it, and the contrast comes back without losing the hue.
+*/
+.tab:nth-child(4) {
+  --tint: var(--detect-short);
+  --mix: 84%;
+}
+
+.tab:nth-child(5) {
+  --tint: var(--moss);
+}
+
+.tab:nth-child(6) {
+  --tint: var(--rust-ink);
+  --mix: var(--tab-accent);
+}
+
+.tab:nth-child(7) {
+  --tint: var(--ink-soft);
+}
+
+.tab:hover {
+  background: color-mix(in srgb, var(--paper) calc(var(--mix) - 12%), var(--tint));
+}
+
+.tab.is-on {
+  /* Its own colour, at strength, rather than a different colour: an open tab is the same tab. */
+  background: color-mix(in srgb, var(--paper) calc(var(--mix) - 22%), var(--tint));
+  border-color: var(--tint);
+  /* The open tab sits proud of the others. */
+  transform: translateX(3px);
+  box-shadow: 3px 2px 5px rgb(0 0 0 / 16%);
+}
+
+/* --- The page that turns ------------------------------------------------ */
+
+/*
+  Three things were wrong with the first attempt, all of them visible.
+
+  The cast shadow lived *inside* the leaf, so it rotated with the page instead of falling across the
+  spread underneath — a shadow that turns with the thing casting it is not a shadow.
+
+  The rotation stopped at 168 degrees, twelve short, so the page landed propped up at an angle and
+  then vanished.
+
+  And a backward turn animated the right-hand page, which is the wrong sheet: going back in a book
+  lifts the *left* page and lays it rightwards. One leaf now takes a side class, so each direction
+  turns the sheet that would actually move.
+*/
+
+/* Positioned inside `.spread`, not `.book`: the spread carries a 1px border, so a leaf placed
+   against the book was a border-width off the page it was standing in for. */
+.leaf {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 5;
+  transform-style: preserve-3d;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Forward: the right page lifts and swings left about the spine. */
+.leaf--right {
+  left: 50%;
+  right: 0;
+  transform-origin: left center;
+}
+
+/* Backward: the left page lifts and swings right about the same spine. */
+.leaf--left {
+  left: 0;
+  right: 50%;
+  transform-origin: right center;
+}
+
+.leaf--right.is-turning {
+  visibility: visible;
+  animation: turn-forward var(--draw-slow) var(--ease-pen) forwards;
+}
+
+.leaf--left.is-turning {
+  visibility: visible;
+  animation: turn-back var(--draw-slow) var(--ease-pen) forwards;
+}
+
+.leaf__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
+
+/*
+  No edge gradient of its own, deliberately.
+
+  The face used to carry one so the lifted sheet would not read as a flat rectangle. Since the face
+  now holds a clone of the whole page, the clone brings the page's own gradient with it -- so the
+  turning sheet was shaded twice, and dropping back to one layer when the leaf hid showed up as the
+  page brightening at the end of every turn. The clone's own shading is the correct amount, and it
+  travels with the sheet, which is what was wanted from this rule in the first place.
+*/
+
+/* A clone is a whole `.page`, so it fills whatever it was put in. */
+.leaf__face > .page,
+.stale > .page {
+  position: absolute;
+  inset: 0;
+}
+
+/*
+  The outgoing page, held on the half the leaf is about to cover.
+
+  Turning forward lifts the right page and lays it over the left one, so the left page is *covered*
+  and must still show what it showed -- but the spread beneath is updated at the start of the turn so
+  the revealed right page is correct, which flipped the left one to the new chapter while the leaf
+  was still on its way to it. That read as the page underneath changing into the page about to land
+  on it. This holds the old one there until the leaf arrives, and is cleared when it does.
+
+  Below the cast shadow, because the shadow falls on it, and below the leaf.
+*/
+.stale {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+  /*
+    Paper of its own, for the same reason `.leaf__face` has some.
+
+    `.page` carries no background -- the real pages are transparent and the spread's paper shows
+    through them, which works because they share its stacking context and the grain multiplies
+    against it. `z-index` here makes a new stacking context, so a cloned page inside it had nothing
+    beneath for its grain to blend with and painted the raw texture instead: the covered page went
+    pale during every turn.
+  */
+  background: var(--paper);
+}
+
+.stale--left {
+  left: 0;
+  right: 50%;
+}
+
+.stale--right {
+  left: 50%;
+  right: 0;
+}
+
+.stale:empty {
+  display: none;
+}
+
+.leaf__back {
+  transform: rotateY(180deg);
+}
+
+/* The shadow the turning page throws across the spread — on the spread, not on the leaf. */
+.cast {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(to right, rgb(0 0 0 / 30%), transparent 52%);
+}
+
+.cast.cast--back {
+  background: linear-gradient(to left, rgb(0 0 0 / 30%), transparent 52%);
+}
+
+.cast.is-sweeping {
+  animation: sweep var(--draw-slow) var(--ease-pen) forwards;
+}
+
+@keyframes turn-forward {
+  from {
+    transform: rotateY(0deg);
+  }
+
+  to {
+    transform: rotateY(-180deg);
+  }
+}
+
+@keyframes turn-back {
+  from {
+    transform: rotateY(0deg);
+  }
+
+  to {
+    transform: rotateY(180deg);
+  }
+}
+
+@keyframes sweep {
+  0% {
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/*
+  Reduced motion is a full path and not a faster one, which is tokens.css's own rule: every duration
+  there goes to zero, so the animation lands on its final frame immediately. The turn is then simply
+  not shown, and `book.ts` skips it rather than running a zero-length animation.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .leaf.is-turning {
+    animation: none;
+    visibility: hidden;
+  }
+}
+
+/* --- Narrow screens: one page at a time --------------------------------- */
+
+@media (width < 62rem) {
+  .book {
+    aspect-ratio: 0.78;
+  }
+
+  .spread {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .gutter,
+  .leaf {
+    display: none;
+  }
+
+  .page--recto {
+    border-top: 1px solid var(--rule);
+  }
+
+  .tabs {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    transform: none;
+    padding: var(--gap-tight);
+  }
+
+  .tab {
+    writing-mode: horizontal-tb;
+    border-left: 1px solid var(--rule);
+    border-radius: var(--radius);
+  }
+}
+
+/* A chapter with no claim of its own: no figure to ring, no limit to bracket. */
+.page--verso.has-no-claim .figure-value,
+.page--verso.has-no-claim .marginalia {
+  display: none;
+}

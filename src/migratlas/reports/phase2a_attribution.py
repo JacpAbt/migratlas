@@ -16,10 +16,11 @@ from typing import Final, NamedTuple
 import numpy as np
 import polars as pl
 
+from migratlas.constants import CLAIM_BAND
 from migratlas.drivers import cmip6
 from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.lake.reader import scan_dataset
-from migratlas.reports.phase2a_timing import CLAIM_BAND, sensitivities
+from migratlas.reports.phase2a_timing import sensitivities
 
 log = logging.getLogger(__name__)
 

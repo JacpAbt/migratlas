@@ -13,12 +13,8 @@ ground truth.
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import TYPE_CHECKING
 
 import polars as pl
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,13 +72,3 @@ def _longest_gap(present: set[date], low: date, high: date) -> tuple[date, int] 
     if start is not None and (best is None or run > best[1]):
         best = (start, run)
     return best
-
-
-def as_frame(outages: Iterable[Outage]) -> pl.DataFrame:
-    """Outages as a frame, for joining onto a per-site analysis."""
-    rows = [{"station_id": o.site, "break_date": o.start, "outage_days": o.days} for o in outages]
-    if not rows:
-        return pl.DataFrame(
-            schema={"station_id": pl.String, "break_date": pl.Date, "outage_days": pl.Int64}
-        )
-    return pl.DataFrame(rows)

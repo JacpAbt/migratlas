@@ -169,7 +169,62 @@ NEVER_INGESTED_NAMES: Final[frozenset[str]] = frozenset({"homo sapiens", "homo"}
 
 Two routes to one answer rather than a preference between them: Movebank supplies names, the lake
 stores keys, and a check that only understood one of those would be satisfiable by accident.
+
+Kept as the exact-match core, with :func:`names_a_human_taxon` widening it to the genus.
 """
+
+NEVER_INGESTED_GENUS: Final = "homo"
+"""The genus no row may name, however the source spells the rest of it."""
+
+# A scientific name is a genus, optionally an epithet, optionally a subspecific epithet, optionally
+# followed by authorship. Three name-parts is the ceiling, so anything past the third token has to
+# look like authorship -- capitalised, or a year -- for the string to be a name at all.
+_MAX_NAME_PARTS: Final = 3
+_YEAR_DIGITS: Final = 4
+
+
+def names_a_human_taxon(scientific_name: str) -> bool:
+    """Whether a name string names something in genus *Homo*, as opposed to mentioning one.
+
+    The floor used to compare against two exact strings, and three real spellings walked past it:
+    ``Homo sapiens sapiens`` -- a valid GBIF subspecies with a usage key of its own -- and
+    ``Homo sapiens Linnaeus, 1758``, which is the authored form GBIF's own species-match API
+    returns, and ``Homo neanderthalensis``. Measured, not imagined.
+
+    Widening it to "starts with Homo" alone would break something deliberate. A caribou study whose
+    taxon field carries the title *Homo sapiens impacts on Rangifer* has to be admitted, because a
+    gate that refuses the wrong things is a gate somebody switches off. So this distinguishes a name
+    from prose the only way the strings allow:
+
+    - the genus must be the first word, and
+    - what follows must be at most two more *name* parts, where a name part is either a lowercase
+      epithet or authorship (a capitalised word, or a year).
+
+    ``Homo sapiens impacts on Rangifer`` fails that -- three trailing words, two of them lowercase
+    and neither an epithet position -- and is admitted, exactly as before. Any binomial, trinomial
+    or authored form in genus Homo is refused.
+    """
+    parts = scientific_name.lower().split()
+    if not parts or parts[0] != NEVER_INGESTED_GENUS:
+        return False
+    trailing = scientific_name.split()[1:]
+    if len(trailing) < _MAX_NAME_PARTS - 1:
+        # "Homo", or "Homo sapiens": a genus alone or a binomial. Nothing to disambiguate.
+        return True
+    epithets = [
+        word for word in trailing if word.islower() and word.isalpha() and not word.isdigit()
+    ]
+
+    def is_authorship(word: str) -> bool:
+        """A capitalised author, or a bare four-digit year. Punctuation stripped either way."""
+        bare = word.strip(",.()")
+        return word[:1].isupper() or (bare.isdigit() and len(bare) == _YEAR_DIGITS)
+
+    authorship = [word for word in trailing if is_authorship(word)]
+    # Counted from the genus, a binomial has one trailing epithet and a trinomial has two; an
+    # authored name has its epithets plus authorship and nothing else. Three or more bare lowercase
+    # words after the genus is a sentence, not a name.
+    return len(epithets) <= _MAX_NAME_PARTS - 1 and len(epithets) + len(authorship) == len(trailing)
 
 
 def admit_taxon_for_ingest(
@@ -213,7 +268,8 @@ def admit_taxon_for_ingest(
             f"the per-taxon sensitivity rules. Identify the rows or drop them at the ingest."
         )
         raise IngestRefusedError(msg)
-    if taxon_key in NEVER_INGESTED_KEYS or (normalised in NEVER_INGESTED_NAMES):
+    refused_by_name = bool(scientific_name) and names_a_human_taxon(scientific_name or "")
+    if taxon_key in NEVER_INGESTED_KEYS or normalised in NEVER_INGESTED_NAMES or refused_by_name:
         subject = scientific_name or f"taxon key {taxon_key}"
         msg = (
             f"Source {source_id!r} carries rows for {subject}, which never enters this lake. "

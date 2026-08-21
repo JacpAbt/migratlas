@@ -81,13 +81,22 @@ export function refusalsFor(doc: SandboxDocument | null, claim: string): Refusal
 }
 
 /**
- * Enough digits to see the knob move, and no more.
+ * Units that count things rather than measure them.
  *
- * Years are integers: the percentile of a first-recorded year printed as "1985.00 year", which reads
- * as a measurement to two decimal places of something that is counted.
+ * A count printed to two decimal places reads as a measurement of something that was counted. The
+ * rule started as `unit === "year"`, for a first-recorded-year percentile rendering "1985.00 year",
+ * and the same trap arrived a second time the moment the response dial's refusals were rendered
+ * through this component: a station count came out "20.00 of 143" and a year count "8.00 years",
+ * both of which the equality check missed. A pattern rather than a list of exact strings, because
+ * the next counted unit will be spelled differently again.
+ */
+const COUNTED = /^(years?|of\s|stations?|rows?|cells?)/;
+
+/**
+ * Enough digits to see the knob move, and no more.
  */
 export function format(value: number, unit: string): string {
-  if (unit === "year") return `${value.toFixed(0)} ${unit}`;
+  if (COUNTED.test(unit)) return `${value.toFixed(0)} ${unit}`;
   const digits = Math.abs(value) < 0.1 ? 3 : 2;
   return `${value.toFixed(digits).replace("-", "−")} ${unit}`;
 }

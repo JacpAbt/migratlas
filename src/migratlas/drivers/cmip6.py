@@ -21,6 +21,7 @@ import numpy as np
 import polars as pl
 
 from migratlas.catalog import loader as catalog
+from migratlas.constants import PRE_SEASON  # fetch and fit must share this window
 from migratlas.drivers.schema import DRIVER_SAMPLES, DriverKind
 from migratlas.lake.writer import WriteResult, write_table
 
@@ -45,8 +46,17 @@ KELVIN: Final = 273.15
 # `historical` lives under CMIP, the counterfactual under DAMIP.
 EXPERIMENTS: Final[dict[str, str]] = {"historical": "CMIP", "hist-nat": "DAMIP"}
 
+# Forecast A's experiment list, under its own source id. A shared one would be fatal rather than
+# untidy: the lake replaces the partitions a write touches, so landing scenarios beside the DAMIP
+# rows would delete the `historical` and `hist-nat` series the attribution rests on.
+SCENARIO_SOURCE_ID: Final = "cmip6_scenariomip"
+SCENARIOS: Final[dict[str, str]] = dict.fromkeys(
+    ("ssp126", "ssp245", "ssp370", "ssp585"), "ScenarioMIP"
+)
+SCENARIO_END: Final = 2099
+"""Scenario runs reach 2100; 2099 is the last complete year every one of them shares."""
+
 # June and July, matching the pre-season window the response function was fitted on.
-PRE_SEASON: Final[tuple[int, ...]] = (6, 7)
 
 # `historical` ends in 2014, so that is the last year both experiments cover. The window problem
 # and why a ratio survives it are in the method note.
@@ -82,7 +92,12 @@ def catalogue() -> pl.DataFrame:
     return pl.read_csv(path, schema_overrides={"dcpp_init_year": pl.Float64})
 
 
-def stores(frame: pl.DataFrame) -> list[Store]:
+def stores(
+    frame: pl.DataFrame,
+    experiments: dict[str, str] | None = None,
+    *,
+    require_paired: bool = True,
+) -> list[Store]:
     """Every usable model-member-experiment, capped and paired.
 
     A model is included only if it has *both* experiments: a counterfactual needs its own control,
@@ -93,8 +108,9 @@ def stores(frame: pl.DataFrame) -> list[Store]:
     construction -- they differ only in initial condition -- so any three are as good as any other
     three, and a lexicographic sort is reproducible without needing to parse a member id.
     """
+    experiments = experiments if experiments is not None else EXPERIMENTS
     selected: dict[str, pl.DataFrame] = {}
-    for experiment, activity in EXPERIMENTS.items():
+    for experiment, activity in experiments.items():
         selected[experiment] = frame.filter(
             pl.col("activity_id") == activity,
             pl.col("experiment_id") == experiment,
@@ -102,14 +118,23 @@ def stores(frame: pl.DataFrame) -> list[Store]:
             pl.col("variable_id") == VARIABLE,
         )
 
-    paired = set.intersection(
-        *(set(subset["source_id"].unique().to_list()) for subset in selected.values())
+    families = [set(subset["source_id"].unique().to_list()) for subset in selected.values()]
+    # Paired for the attribution, because a counterfactual needs its own control and a model with
+    # one and not the other cannot contribute a fraction. Not paired for the scenarios: each SSP is
+    # its own question, the baseline they are differenced against is already in the lake from the
+    # DAMIP run, and intersecting all four would drop a model from ssp245 for lacking ssp370.
+    paired = set.intersection(*families) if require_paired else set.union(*families)
+    log.info(
+        "%d models carry %s",
+        len(paired),
+        "both experiments" if require_paired else "at least one of the requested experiments",
     )
-    log.info("%d models carry both experiments", len(paired))
 
     out: list[Store] = []
     for experiment, subset in selected.items():
         for model in sorted(paired):
+            if subset.filter(pl.col("source_id") == model).is_empty():
+                continue
             members = (
                 subset.filter(pl.col("source_id") == model)
                 .sort("member_id")
@@ -181,10 +206,10 @@ def pre_season(store: Store, points: list[Point], end: int = COMMON_END) -> pl.D
     return pl.concat(rows)
 
 
-def to_samples(frame: pl.DataFrame) -> pa.Table:
+def to_samples(frame: pl.DataFrame, source_id: str = SOURCE_ID) -> pa.Table:
     """Driver rows, marked simulated and carrying which simulation they came from."""
     out = frame.select(
-        source_id=pl.lit(SOURCE_ID),
+        source_id=pl.lit(source_id),
         site_id=pl.col("site_id"),
         # July of the year, as a stand-in for the June-July window. The window is in the variable
         # name so the date is only ever used as a year.
@@ -214,18 +239,33 @@ def to_samples(frame: pl.DataFrame) -> pa.Table:
     return out.select(schema.names).to_arrow().cast(schema)
 
 
-def ingest(points: list[Point], *, root: Path | None = None) -> WriteResult:
-    """Fetch, reshape and land the pre-season temperature under both experiments."""
+def ingest(  # noqa: PLR0913 -- each names one dimension of the request, and hiding them in a
+    # config object would make it unreadable which run a caller asked for.
+    points: list[Point],
+    *,
+    experiments: dict[str, str] | None = None,
+    end: int = COMMON_END,
+    source_id: str = SOURCE_ID,
+    require_paired: bool = True,
+    root: Path | None = None,
+) -> WriteResult:
+    """Fetch, reshape and land the pre-season temperature under a list of experiments.
+
+    Defaults are the DAMIP attribution's, unchanged: `historical` and `hist-nat`, paired, to 2014.
+    Forecast A passes the four SSPs, unpaired, to 2099, under its own source id -- and that last
+    part is not a preference. The lake replaces the partitions a write touches, so a scenario write
+    sharing `cmip6_damip` would delete the counterfactual the attribution rests on.
+    """
     from concurrent.futures import ThreadPoolExecutor  # noqa: PLC0415 -- only this needs it
 
-    catalog.admit(SOURCE_ID)
-    wanted = stores(catalogue())
+    catalog.admit(source_id)
+    wanted = stores(catalogue(), experiments, require_paired=require_paired)
     models = len({store.model for store in wanted})
     log.info("%d stores to read (%d models, cap %d members)", len(wanted), models, MAX_MEMBERS)
 
     def read(store: Store) -> pl.DataFrame | None:
         try:
-            return pre_season(store, points)
+            return pre_season(store, points, end)
         # One model must not lose the ensemble: a store can be missing a year, use a calendar
         # xarray cannot decode, or simply be unreadable.
         except Exception as error:
@@ -268,6 +308,6 @@ def ingest(points: list[Point], *, root: Path | None = None) -> WriteResult:
     for row in got.iter_rows(named=True):
         log.info("%s: %d models", row["experiment"], row["models"])
 
-    table = to_samples(combined)
+    table = to_samples(combined, source_id)
     log.info("%d driver samples", table.num_rows)
-    return write_table(table, DRIVER_SAMPLES, source_id=SOURCE_ID, root=root)
+    return write_table(table, DRIVER_SAMPLES, source_id=source_id, root=root)

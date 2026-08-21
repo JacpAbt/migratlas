@@ -159,6 +159,27 @@ def ingest_sabap2() -> None:
     print(f"run {result.run_id}")
 
 
+@ingest_app.command("sabap2-request")
+def ingest_sabap2_request(
+    *,
+    notify: Annotated[bool, typer.Option(help="Email when the archive is ready.")] = False,
+) -> None:
+    """Mint a fresh GBIF download key for SABAP2, and print it with what to do next.
+
+    Not part of an ingest run: `ingest sabap2` reads the pinned `DOWNLOAD_KEY`, because a result
+    cites the exact records it was computed on rather than "SABAP2 as of whenever". This exists
+    because that pin expires -- GBIF keeps a prepared download for six months -- and the function
+    that replaces it had no command, so the documented remedy was reachable only by calling Python
+    by hand. That is the class of gap TASKS #37 was opened for.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    key = sabap2.request_download(notify=notify)
+    print(f"download key: {key}")
+    print(f"status: {sabap2.API}/occurrence/download/{key}")
+    print("When it reports SUCCEEDED, put the key in sabap2.DOWNLOAD_KEY with its new DOI and")
+    print("row count, and keep the superseded one documented beside it.")
+
+
 @ingest_app.command("sabap1")
 def ingest_sabap1() -> None:
     """Land the first Southern African Bird Atlas (SURVEY_INDEX, terrestrial).
@@ -237,6 +258,21 @@ def ingest_jrc_gsw() -> None:
     result = jrc_gsw.ingest(root, cells, phase1e.CELL_DEG)
     print(f"{result.rows:,} rows over {cells.height} cells -> {result.path}")
     print(f"run {result.run_id}")
+
+
+@app.command("ingest-ukbms")
+def ingest_ukbms() -> None:
+    """Land UK butterfly flight-period phenology (SURVEY_INDEX): the first insect series here.
+
+    Registered in phase1j-fourth-leg.md before the fetch, as the fourth leg of the transfer test --
+    a timing record that is phenological like the radar and is not radar. Needs the geo extra for
+    the British National Grid transform, and drops any site whose position the scheme withholds.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.ingest import ukbms  # noqa: PLC0415 -- one command needs it
+
+    result = ukbms.ingest()
+    print(f"{result.rows} flight periods -> {result.path}")
 
 
 @app.command("ingest-cpr")
@@ -509,6 +545,46 @@ def build_sandbox(
     print(f"sandbox -> {out} ({size / 1024:.1f} KiB)")
 
 
+@app.command("build-introduction")
+def build_introduction() -> None:
+    """Publish the book's introduction -> web/public/introduction.json.
+
+    The prose is authored in `reports/introduction.py` and rendered verbatim, per the rule that
+    covers all frontend prose. The three counts in it are read from the published ledger and the
+    registry rather than typed, so the introduction cannot claim a size the project does not have.
+
+    The one command here that needs no lake: it measures nothing.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import introduction  # noqa: PLC0415 -- one command needs it
+
+    published, realms, sources = introduction.counts()
+    path = introduction.write()
+    print(f"{published} findings, {realms} realms, {sources} sources -> {path}")
+
+
+@app.command("build-response")
+def build_response(
+    out: Annotated[Path, typer.Option(help="Where to write the response document.")] = Path(
+        "web/public/response.json"
+    ),
+) -> None:
+    """Publish the fitted response as a dial, with its envelope and its two refusals.
+
+    Reads the fit `anthropogenic-share` already rests on; estimates nothing new. The envelope is
+    measured from within-station anomalies, and a dial position outside it is refused rather than
+    extrapolated.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import response  # noqa: PLC0415 -- reads the lake, only this command
+
+    computed = response.collect()
+    size = response.write(out, computed)
+    dials = ", ".join(knob.key for knob in computed.knobs)
+    print(f"{len(computed.knobs)} dial(s) ({dials}), {len(computed.refusals)} refusal(s)")
+    print(f"response -> {out} ({size / 1024:.1f} KiB)")
+
+
 @app.command("build-findings")
 def build_findings(
     out: Annotated[Path, typer.Option(help="Where to write the findings document.")] = Path(
@@ -612,6 +688,51 @@ def report_phase3e() -> None:
     print(phase3e.render())
 
 
+@report_app.command("response-floor")
+def report_response_floor() -> None:
+    """How much of the passage-date wobble any driver could ever explain, per station and pooled."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import response_floor  # noqa: PLC0415 -- heavy, and only this command
+
+    print(response_floor.render())
+
+
+@report_app.command("forecast-a")
+def report_forecast_a() -> None:
+    """The fitted response under scenario warming, and where it stops being sayable."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import forecast_a  # noqa: PLC0415 -- heavy, and only this command
+
+    print(forecast_a.render())
+
+
+@report_app.command("phase3g")
+def report_phase3g() -> None:
+    """Does the water's oxygen sort the movers from the stayers, where its temperature did not?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3g  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3g.render())
+
+
+@report_app.command("phase3f")
+def report_phase3f() -> None:
+    """The response-model ladder: pooling, the wind, its form, and the model class."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3f  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3f.render())
+
+
+@report_app.command("phase3h")
+def report_phase3h() -> None:
+    """The pooled-response ladder: does predicting a region beat predicting a station?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3h  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3h.render())
+
+
 @report_app.command("phase3d")
 def report_phase3d() -> None:
     """The dress rehearsal: the full two-stage pipeline graded on 2017-2024, run once."""
@@ -633,6 +754,43 @@ def ingest_oisst() -> None:
     from migratlas.drivers import oisst  # noqa: PLC0415 -- geo extra, only this command
 
     result = oisst.ingest()
+    print(f"{result.rows} footprint-months -> {result.path}")
+
+
+@app.command("ingest-scenariomip")
+def ingest_scenariomip() -> None:
+    """Land June-July scenario temperature at the radar stations (driver samples, simulated).
+
+    Forecast A's driver: four SSPs, monthly `Amon tas`, each model's own anomaly territory. Under
+    its own source id -- sharing `cmip6_damip`'s would delete the counterfactual the attribution
+    rests on, because a lake write replaces the partitions it touches.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    # The same station set the DAMIP run used, built the same way, so the scenario anomalies and
+    # the counterfactual are read at identical points.
+    points = narr.stations_from(phase1.load_conus_nights())
+    result = cmip6.ingest(
+        points,
+        experiments=cmip6.SCENARIOS,
+        end=cmip6.SCENARIO_END,
+        source_id=cmip6.SCENARIO_SOURCE_ID,
+        require_paired=False,
+    )
+    print(f"{result.rows} scenario samples -> {result.path}")
+
+
+@app.command("ingest-cmems")
+def ingest_cmems() -> None:
+    """Land footprint-mean dissolved oxygen per survey unit (driver samples, gridded).
+
+    Phase 3g's non-thermal driver, read at the depth level nearest each survey's own median haul
+    depth. The store is a public ARCO zarr, so this needs no credential despite the registry
+    recording one -- and a 403 from it means the zarr format, not the account.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.drivers import cmems  # noqa: PLC0415 -- geo extra, only this command
+
+    result = cmems.ingest()
     print(f"{result.rows} footprint-months -> {result.path}")
 
 

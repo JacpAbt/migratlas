@@ -10,10 +10,11 @@ import json
 import re
 from pathlib import Path
 
+import polars as pl
 import pytest
 
+from migratlas.constants import CLAIM_BAND
 from migratlas.reports import sandbox
-from migratlas.reports.phase2a_timing import CLAIM_BAND
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -37,9 +38,30 @@ def test_the_effort_thresholds_include_no_correction_at_all() -> None:
     assert tuple(sorted(sandbox.FOOTPRINTS)) == sandbox.FOOTPRINTS
 
 
-def test_the_claim_band_matches_the_one_the_ledger_publishes_in() -> None:
-    """Two copies of a filter are two things that can drift, so this pins them together."""
-    assert sandbox.CLAIM_BAND == CLAIM_BAND
+def _slopes(*latitudes: float) -> pl.DataFrame:
+    """A minimal per-station slope frame, one row per latitude, all otherwise identical."""
+    return pl.DataFrame(
+        {
+            "season": ["autumn"] * len(latitudes),
+            "quantile": ["q50_doy"] * len(latitudes),
+            "latitude": list(latitudes),
+            "days_per_decade": [-1.0] * len(latitudes),
+        }
+    )
+
+
+def test_the_sandbox_filters_to_the_band_the_ledger_publishes_in() -> None:
+    """The band the sandbox filters on has to be the band the attribution publishes.
+
+    This used to pin two copies of the literal against each other; there is one copy now, in
+    `migratlas.constants`, so that comparison would compare a value with itself. It asserts the
+    *filter* instead -- a station below the band and one above it are both dropped, and the
+    boundary is closed on the left as the published claim is. A future edit reintroducing a local
+    band fails here rather than quietly reporting a different set of stations.
+    """
+    low, high = CLAIM_BAND
+    kept = sandbox._band(_slopes(low - 1.0, low, high - 1.0, high, high + 1.0))
+    assert len(kept) == 2, "only the two stations inside [low, high) may survive"
 
 
 # --- The published document ---------------------------------------------------

@@ -19,13 +19,13 @@ import numpy as np
 import polars as pl
 from scipy import stats
 
+from migratlas.constants import CHANGE_VARIABLE  # writer and reader share the column
 from migratlas.lake.reader import scan_dataset
 from migratlas.reports import phase1e, phase1f
 
 log = logging.getLogger(__name__)
 
 SOURCE_ID: Final = "jrc_gsw"
-CHANGE_VARIABLE: Final = "surface_water_change_km2"
 EXTENT_VARIABLE: Final = "surface_water_extent_km2"
 
 DRAWS: Final = 999

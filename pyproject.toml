@@ -30,6 +30,17 @@ geo = [
     # than guessing. Skipping those stores silently drops nine of fifteen models from the DAMIP
     # ensemble along a line drawn by which centre picked which calendar.
     "cftime>=1.6",
+    # Copernicus Marine's own client, and the only supported way to read its stores. Added
+    # 2026-08-19 after measuring what anonymous access actually gets: the ARCO store serves
+    # `.zmetadata` and every coordinate array to an unauthenticated request, so a probe that reads
+    # the axes concludes the data is public -- and then the first `o2` chunk answers 403. Metadata
+    # open, chunks closed. The client exchanges the account for the temporary S3 credentials the
+    # chunks need; doing that by hand is unsupported and would break without warning.
+    #
+    # It satisfies the wheel-only rule, which was checked before it was added rather than after:
+    # `copernicusmarine` publishes `py3-none-any`, and its new transitive arrivals -- click,
+    # requests, tqdm, dask, boto3, semver, pystac, arcosparse -- are all pure Python too.
+    "copernicusmarine>=2.4",
     "fsspec>=2024.9",
     # Reading the Pangeo CMIP6 zarr mirror on Google Cloud, anonymously.
     "gcsfs>=2024.9",
@@ -158,6 +169,7 @@ enable_error_code = ["redundant-expr", "truthy-bool", "ignore-without-code"]
 # global ignore_missing_imports, so that a genuinely mistyped import still fails.
 [[tool.mypy.overrides]]
 module = [
+    "copernicusmarine.*",
     "duckdb.*",
     "pmtiles.*",
     "pyarrow.*",

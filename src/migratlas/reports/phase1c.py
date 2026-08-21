@@ -16,6 +16,7 @@ from typing import Final, NamedTuple
 import numpy as np
 import polars as pl
 
+from migratlas.constants import MIN_COVERAGE, MIN_NIGHTS
 from migratlas.drivers import era5, narr
 from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.evidence import EvidenceType, spec_for
@@ -24,8 +25,6 @@ from migratlas.metrics.phenology import Season, passage_quantiles
 from migratlas.reports.phase1 import (
     AUTUMN,
     LATITUDE_BANDS,
-    MIN_COVERAGE,
-    MIN_NIGHTS,
     MIN_YEARS,
     SPRING,
     load_conus_nights,
@@ -278,7 +277,9 @@ def speed_drift(*, max_year: int = 2025) -> list[str]:
             ("gap", "night minus day"),
         ):
             slopes = []
-            for (_station,), group in paired.group_by(["station_id"]):
+            for (_station,), group in paired.sort("station_id").group_by(
+                ["station_id"], maintain_order=True
+            ):
                 if group.height < MIN_YEARS:
                     continue
                 fit = _fit_break(
@@ -377,7 +378,9 @@ def screening(*, max_year: int = 2025) -> list[str]:
         seasonal = quantiles.filter(
             pl.col("season") == season.name, pl.col("q50_doy").is_not_null()
         )
-        for (station,), group in seasonal.group_by(["station_id"]):
+        for (station,), group in seasonal.sort("station_id").group_by(
+            ["station_id"], maintain_order=True
+        ):
             if group.height < MIN_YEARS:
                 continue
             phenology = _fit_break(
@@ -523,7 +526,9 @@ def _per_station_year(nights: pl.DataFrame, season: Season) -> pl.DataFrame:
 def _speed_trend(per_station_year: pl.DataFrame, column: str) -> SpeedTrend | None:
     """Mean per-decade slope across stations, each fitted with a break at the fleet midpoint."""
     slopes = []
-    for (_station,), group in per_station_year.group_by(["station_id"]):
+    for (_station,), group in per_station_year.sort("station_id").group_by(
+        ["station_id"], maintain_order=True
+    ):
         if group.height < MIN_YEARS:
             continue
         fit = _fit_break(
@@ -736,7 +741,9 @@ def weather_or_instrument(*, max_year: int = 2025) -> list[str]:
         paired = screening_series.join(weather, on=("station_id", "year"), how="inner")
 
         rows = []
-        for (station,), group in paired.group_by(["station_id"]):
+        for (station,), group in paired.sort("station_id").group_by(
+            ["station_id"], maintain_order=True
+        ):
             if group.height < MIN_YEARS:
                 continue
             ordered = group.sort("year")

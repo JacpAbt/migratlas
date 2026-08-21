@@ -221,11 +221,3 @@ export function palette(): Palette {
   return active;
 }
 
-// Kept as the day names the existing layer modules import, so the surface swap did not have to
-// touch every call site in the same change.
-export const OCEAN_COLOUR = DAY.ocean;
-export const LAND = DAY.land;
-export const COAST = DAY.coast;
-export const BORDER = DAY.border;
-export const WARM_RAMP = DAY.warm;
-export const COOL_RAMP = DAY.cool;

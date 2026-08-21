@@ -1,9 +1,27 @@
 # ADR 0013 — The scroll and the chapters
 
 **Status:** accepted as direction · 2026-08-19, with one question deliberately left open behind a
-measurement. This is the build-time ADR that ADR 0012 promised: the backend it waited for is
-finished — nine findings, thirty-one sources, five phase-3 method notes with every prediction
-graded — so the presentation arc now has a complete story to present.
+measurement. **Decision 1's register is superseded by
+[ADR 0014](0014-the-field-sketchbook-not-the-chart.md)** (2026-08-20): a field sketchbook rather
+than an old chart, and ignorance drawn as a surveyor's record rather than as an invented creature.
+The decision text below is left as written -- decisions 2 to 5 stand, and a superseded one is
+recorded rather than edited away.
+
+**Decision 2's spike is half answered, 2026-08-20.** Its arithmetic half is measured and recorded in
+`lib/book/World.svelte`: Mercator is conformal, so it does not distort these layers' *shape* -- the
+Svalbard herd's aspect is 0.86 on the sphere and 0.86 on the sheet, which is not what this ADR
+feared. What it distorts is area, by 1/cos squared, and measured per vertex the herd takes **23
+times** its fair share of a flat sheet while the ice edge reaches **42 times** at its poleward
+extremes, against 1.7 for the radar band. That misleads only where both are on screen together,
+which is exactly what a whole-world view is -- so of the three outcomes named below, the arithmetic
+argues against plain "Mercator with honest high-latitude framing" for *this* chapter and says
+nothing against it for the per-claim plates, which are framed on one region each. The globe stays
+the default in the world chapter until somebody looks at the alternative; MapLibre's own control
+switches it. The look remains outstanding and remains the owner's.
+
+This is the build-time ADR that ADR 0012 promised: the backend it waited for is finished — nine
+findings, thirty-one sources, five phase-3 method notes with every prediction graded — so the
+presentation arc now has a complete story to present.
 
 ## Context
 

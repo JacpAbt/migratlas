@@ -1,0 +1,24 @@
+{
+  "counted": "9 findings across 3 realms, from 35 registered sources. Every number is recomputed from the data on every build, so none of them can quietly go stale.",
+  "passages": [
+    {
+      "body": "A number here always arrives with what it covers and what it does not. The autumn timing result is about 78 radar stations between 37 and 50 degrees north, and it says so; it is not a statement about a continent, or about birds, because the radar cannot tell a bird from a bat. Where the scope is narrow the page says so rather than rounding it up.",
+      "heading": "Every claim carries its own scope"
+    },
+    {
+      "body": "3 of the findings report no change and 3 report a limit on what this work can see \u2014 a chapter of each. They are not filed as failures. A ledger showing only the positive results would be lying by selection, and the strongest thing in here is a marine record where the surveys disagree even about which way fish are moving.",
+      "heading": "The results that found nothing are here too"
+    },
+    {
+      "body": "Beside each number is a line saying what would have to be true for it to mislead you. Read it as part of the result rather than as hedging: it is there because the alternative is a reader who trusts the figure further than the evidence goes. Where a prediction was made and graded, the grade stands whichever way it went.",
+      "heading": "A caveat is not an apology"
+    },
+    {
+      "body": "The chapters are the argument, in order: what changed, what did not, what cannot be seen, what can be predicted, and why. Or take the tabs in any order \u2014 each chapter stands alone. Or go straight to the world in the back pocket and look at the layers yourself, with nothing argued over the top.",
+      "heading": "Three ways in"
+    }
+  ],
+  "schema_version": 1,
+  "standfirst": "This is a notebook about where animals go and what is changing it. Not a summary of the field \u2014 a record of what this project has actually measured, including the parts that did not work.",
+  "title": "How to read this"
+}

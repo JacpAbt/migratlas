@@ -20,6 +20,18 @@
  * within about two pixels of the true one, which is what a pen does to a line anyway. By zoom 2.6
  * the same 0.55 degrees would be six pixels, and by then it is gone.
  *
+ * **And the excursion is the same size in both directions, which took a measurement to get
+ * right.** A degree of longitude is `cos(latitude)` times shorter than a degree of latitude, so
+ * the same degree amplitude on both axes does not draw a round wobble -- it draws one stretched
+ * north-south, by 1/cos(latitude). Measured on the geometry this repository ships, before the
+ * fix: the north-south excursion sat near 24 km at every latitude while the east-west collapsed
+ * from 23.5 km at the equator to 3.7 km above 80 degrees, a ratio of 5.1 across the Svalbard
+ * bands and 7.0 above them. On any locally conformal projection -- the globe as much as
+ * Mercator -- that is vertical smearing rather than a pen, and it was worst exactly where this
+ * project's own high-latitude layers live. The latitude term is scaled by `cos(latitude)`,
+ * making the wobble round in ground distance, constant in Mercator screen space, and strictly
+ * inside the old bound everywhere.
+ *
  * **Small islands are not jittered at all.** A ring half a degree across displaced by half a degree
  * is not a sketch of an island, it is a different island. Anything under `MIN_EXTENT` is drawn from
  * its own true geometry, once.
@@ -72,10 +84,14 @@ function pass(ring: number[][], seed: number, amplitude: number): [number, numbe
 
   return ring.map(([lon, lat], index) => {
     const t = spans[index]! / total;
+    // Scaled by cos(latitude) so a degree north-south costs the ground distance a degree
+    // east-west costs here. Without it the wobble came out 1/cos(latitude) taller than it is wide
+    // -- five times over Svalbard -- which reads as smearing rather than as a drawn line.
+    const squash = Math.cos((lat! * Math.PI) / 180);
     return [
       lon! + wander(t, seed, amplitude),
       // Clamped, so a shore near the pole cannot be pushed over it.
-      Math.max(-89.9, Math.min(89.9, lat! + wander(t, seed + 31, amplitude))),
+      Math.max(-89.9, Math.min(89.9, lat! + wander(t, seed + 31, amplitude) * squash)),
     ];
   });
 }

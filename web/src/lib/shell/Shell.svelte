@@ -11,6 +11,7 @@
   import { loadLedger, type Finding, type Ledger } from "../ledger";
   import { arrivalOf, exploreView, viewFor, type View } from "../story";
   import { loadSandbox, type SandboxDocument } from "../sandbox/sandbox";
+  import { loadResponse, type ResponseDocument } from "../sandbox/response";
   import type { DetectabilityDocument } from "../../layers/detectability";
   import type { LoadedLayer } from "../../layers/types";
   import type { SpeciesSelection } from "../../layers/selection";
@@ -142,6 +143,7 @@
   let layers = $state<LoadedLayer[]>([]);
   let detectability = $state<DetectabilityDocument | null>(null);
   let sandbox = $state<SandboxDocument | null>(null);
+  let response = $state<ResponseDocument | null>(null);
   let selection = $state<SpeciesSelection | null>(null);
   /** A taxon the next explore view should choose, set by a claim's specimen button and consumed
       once by the search -- the same code path a visitor's own click takes. */
@@ -173,6 +175,15 @@
       // Not fatal. The claims are the page; the sandbox is a way to interrogate them, and losing it
       // should cost the knobs rather than the argument.
       .catch(() => (sandbox = null));
+  });
+
+  // Same bargain as the sandbox, and the same size. Losing the dial costs the reader a way to ask
+  // "what if" and costs the argument nothing -- which is the right way round, because the dial's own
+  // refusals are what stop it being read as a forecast, and half a panel would be worse than none.
+  $effect(() => {
+    loadResponse(base)
+      .then((loaded) => (response = loaded))
+      .catch(() => (response = null));
   });
 
   $effect(() => {
@@ -279,7 +290,7 @@
                 />
                 <!-- The figure belongs to the claim, not to a panel of its own: for the attribution
                      it IS the argument, and for the coverage limit it is the number. -->
-                <Evidence finding={current} {base} {detectability} {sandbox} />
+                <Evidence finding={current} {base} {detectability} {sandbox} {response} />
               {/key}
             </div>
           </Sheet>

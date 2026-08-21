@@ -11,6 +11,12 @@ from typing import TYPE_CHECKING, Final
 import numpy as np
 import polars as pl
 
+from migratlas.constants import (  # re-exported: many modules read these off phase1
+    CONUS_LAT,
+    CONUS_LON,
+    MIN_COVERAGE,
+    MIN_NIGHTS,
+)
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan
 from migratlas.metrics.phenology import Season, passage_quantiles, passage_trends
@@ -24,10 +30,9 @@ log = logging.getLogger(__name__)
 SPRING: Final = Season("spring", 60, 181)
 AUTUMN: Final = Season("autumn", 213, 334)
 
-# Contiguous US only. The paper used 143 CONUS stations; Alaska, Hawaii, Puerto Rico and
-# Guam are in the source data but have no counterpart in the published result.
-CONUS_LAT: Final = (24.0, 50.0)
-CONUS_LON: Final = (-125.0, -66.0)
+# The CONUS box and the usability floors are imported rather than defined: the eBird cross-check
+# and the published layer have to agree with this module about them, so they live in
+# `migratlas.constants` with the reason written down there.
 
 # Longitude bands read off their Fig. 1a station map. Approximate, and flagged as such
 # wherever the flyway breakdown is reported.
@@ -45,8 +50,6 @@ SOURCE_ID: Final = "darkecology_daily"
 # fit inside the same bands and be read against this one.
 LATITUDE_BANDS: Final[tuple[tuple[int, int], ...]] = ((24, 32), (32, 37), (37, 42), (42, 50))
 
-MIN_COVERAGE: Final = 0.9
-MIN_NIGHTS: Final = 40
 MIN_YEARS: Final = 15
 QUANTILES: Final = (0.1, 0.5, 0.9)
 

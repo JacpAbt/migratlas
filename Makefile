@@ -94,6 +94,14 @@ detectability:  ## Where change could ever be measured -> web/public/detectabili
 sandbox:  ## Recompute the analysis with each safeguard off -> web/public/sandbox.json
 	$(RUN) migratlas build-sandbox
 
+.PHONY: introduction
+introduction:  ## Publish the book's introduction -> web/public/introduction.json
+	$(RUN) migratlas build-introduction
+
+.PHONY: response
+response:  ## Publish the fitted response as a dial with its envelope -> web/public/response.json
+	$(RUN) migratlas build-response
+
 .PHONY: provenance
 provenance:  ## Regenerate docs/data/PROVENANCE.md from the source registry
 	$(RUN) migratlas catalog provenance
@@ -201,9 +209,37 @@ phase1b-report:  ## Marine distribution shift from FISHGLOB trawl surveys
 phase1c-report:  ## Speed-weighting control and precipitation-screening test
 	$(RUN) migratlas report phase1c
 
-.PHONY: gpu-check
-gpu-check:  ## Confirm a CUDA device is visible from inside the venv
-	$(RUN) python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+.PHONY: ingest-scenariomip
+ingest-scenariomip:  ## CMIP6 ScenarioMIP pre-season temperature -> lake (Forecast A's driver)
+	$(RUN) migratlas ingest-scenariomip
+
+.PHONY: ingest-cmems
+ingest-cmems:  ## CMEMS oxygen at each survey's fishing depth -> lake (driver samples, gridded)
+	$(RUN) migratlas ingest-cmems
+
+.PHONY: report-response-floor
+report-response-floor:  ## What any driver could reach: per-station bound and pooled reliability
+	$(RUN) migratlas report response-floor
+
+.PHONY: report-forecast-a
+report-forecast-a:  ## The response under scenario warming, and the novelty mask that bounds it
+	$(RUN) migratlas report forecast-a
+
+.PHONY: report-phase3g
+report-phase3g:  ## Oxygen against poleward movement, gated by two calibrations
+	$(RUN) migratlas report phase3g
+
+.PHONY: report-phase3f
+report-phase3f:  ## The response-model ladder: pooling, the wind, its form, the model class
+	$(RUN) migratlas report phase3f
+
+.PHONY: ingest-ukbms
+ingest-ukbms:  ## UK butterfly flight-period phenology: the fourth leg's response
+	$(RUN) migratlas ingest-ukbms
+
+.PHONY: report-phase3h
+report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
+	$(RUN) migratlas report phase3h
 
 # ---------------------------------------------------------------------------
 # Frontend (runs on Windows -- node lives there)
@@ -248,6 +284,10 @@ ingest-sabap2:  ## SABAP2 atlas cards -> SURVEY_INDEX (terrestrial, southern hem
 .PHONY: ingest-bbs
 ingest-bbs:  ## Breeding Bird Survey route counts -> SURVEY_INDEX (terrestrial, 1966-2025)
 	$(RUN) migratlas ingest bbs
+
+.PHONY: ingest-sabap2-request
+ingest-sabap2-request:  ## Mint a fresh GBIF download key for SABAP2 (the pinned one expires)
+	$(RUN) migratlas ingest sabap2-request
 
 .PHONY: ingest-sabap1
 ingest-sabap1:  ## SABAP1 atlas cards -> SURVEY_INDEX (terrestrial, southern hemisphere)

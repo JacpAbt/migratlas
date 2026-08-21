@@ -13,6 +13,7 @@ from typing import Final
 import numpy as np
 import polars as pl
 
+from migratlas.constants import MIN_COVERAGE, MIN_NIGHTS
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan, scan_dataset
 from migratlas.metrics.phenology import passage_quantiles
@@ -153,8 +154,6 @@ def spring_passage() -> dict[int, float]:
     """The band's median spring passage day per year, through Phase 1's own machinery."""
     from migratlas.reports.phase1 import (  # noqa: PLC0415 -- heavy, report sibling
         AUTUMN,
-        MIN_COVERAGE,
-        MIN_NIGHTS,
         SPRING,
         load_conus_nights,
     )

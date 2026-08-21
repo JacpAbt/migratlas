@@ -32,6 +32,7 @@ import polars as pl
 
 from migratlas.catalog import loader as catalog
 from migratlas.config import get_settings
+from migratlas.constants import EARTH_KM  # one radius for one journey
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.ingest.http import USER_AGENT
 from migratlas.lake.writer import write_evidence
@@ -377,7 +378,6 @@ def parse(body: str) -> pl.DataFrame:
     return frame
 
 
-EARTH_KM: Final = 6371.0088
 """Mean Earth radius. A sphere is right to well under the precision this filter needs."""
 
 
