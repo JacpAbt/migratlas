@@ -9,8 +9,17 @@
 
   const surfaces = $derived(new SpeciesSurfaces(base));
 
-  /** Every published layer and no argument on top of it, which is what this chapter is for. */
-  const view = $derived(exploreView(world.layers.map((layer) => layer.name)));
+  /**
+   * Every published layer and no argument on top of it, which is what this chapter is for.
+   *
+   * `meta.name`, and the difference is not cosmetic: a `LoadedLayer` keeps its name on `meta`, so
+   * `layer.name` was `undefined` for every one of them. `exploreView` was handed a list of
+   * undefineds, `Globe` asked `view.layers.includes(layer.meta.name)` of it and got false every
+   * time, and the chapter whose whole purpose is to show every published layer drew none of them --
+   * a globe with nothing on it, and no error anywhere. Found by a test moved off the old shell,
+   * which asked what the map had actually drawn rather than whether it had booted.
+   */
+  const view = $derived(exploreView(world.layers.map((layer) => layer.meta.name)));
 </script>
 
 <!--
@@ -61,6 +70,8 @@
       selection={world.selection}
       {surfaces}
       detectability={world.detectability}
+      preselect={world.preselect}
+      onpreselected={() => (world.preselect = null)}
       onfocus={(at) => world.map?.flyTo({ center: at, zoom: 3, essential: true })}
     />
   {:else}

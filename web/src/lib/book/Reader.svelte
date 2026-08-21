@@ -10,6 +10,7 @@
   import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
   import { openingOf, spreadsOf, type Panel } from "./pages";
+  import { world as pocket } from "./pocket.svelte";
   import type { IntroductionDocument } from "./introduction";
   import type { ResponseDocument } from "../sandbox/response";
   import type { SandboxDocument } from "../sandbox/sandbox";
@@ -61,6 +62,27 @@
   /** Which spread within the chapter, so a page has an address and not just a chapter. */
   const PAGE_PARAM = "p";
 
+  /**
+   * The old shell's claim address, still understood.
+   *
+   * `#c=marine-null` is what `state/route.ts` wrote and what `species/Study.svelte` still links to
+   * from every study page -- "read the claim this evidence feeds". It is also the address the
+   * deployed site has been handing out, so those links exist outside this repository. Ignoring it
+   * would have landed all of them on whatever chapter happens to be the default.
+   *
+   * Read rather than rewritten, and resolved to the claim's own first page.
+   */
+  const CLAIM_PARAM = "c";
+
+  /** The spread carrying a claim's plain register, which is where a link to that claim should land. */
+  function pageOf(key: string): number {
+    return spreads.findIndex((spread) =>
+      [spread.verso, spread.recto].some(
+        (panel) => panel.kind === "finding" && panel.key === key,
+      ),
+    );
+  }
+
   /*
     The width below which a spread is not a spread.
 
@@ -89,6 +111,15 @@
    */
   function fromUrl(): number {
     const params = new URLSearchParams(location.hash.slice(1));
+
+    // A claim address wins where there is no chapter one, because it is more specific: it names a
+    // page rather than a chapter, and nothing that writes it also writes `ch`.
+    const claim = params.get(CLAIM_PARAM);
+    if (claim && !params.get(CHAPTER_PARAM)) {
+      const at = pageOf(claim);
+      if (at >= 0) return at;
+    }
+
     const slug = chapterAt(params.get(CHAPTER_PARAM))?.slug ?? CHAPTERS[1]!.slug;
     const first = openingOf(spreads, slug);
     const into = Number.parseInt(params.get(PAGE_PARAM) ?? "0", 10);
@@ -131,7 +162,23 @@
     if (params.get(CHAPTER_PARAM) === spread.chapter.slug && params.get(PAGE_PARAM) === into) return;
     params.set(CHAPTER_PARAM, spread.chapter.slug);
     params.set(PAGE_PARAM, into);
+    // Dropped once the page is written in the address it is written in: leaving `c` behind would
+    // make it win over `ch` on the next read and pin the reader to one claim.
+    params.delete(CLAIM_PARAM);
     history.pushState(null, "", `#${params.toString()}`);
+  }
+
+  /**
+   * The other half of the road: a claim's own specimen, in the world chapter.
+   *
+   * `Claim` renders the invitation only when it is given somewhere to go, so without this the
+   * button did not exist -- which is how the road went missing when the book replaced the shell
+   * rather than being reported as broken. The species waits in `pocket.svelte.ts` because the panel
+   * that shows it is on a page this one is about to turn to.
+   */
+  function toSpecimen(key: number): void {
+    pocket.preselect = key;
+    show(openingOf(spreads, CHAPTERS[CHAPTERS.length - 1]!.slug));
   }
 
   $effect(() => {
@@ -183,7 +230,7 @@
     {:else if panel.kind === "figure"}
       <Figure {finding} number={figureNumber(panel.key)} {base} at={panel.at} />
     {:else if panel.kind === "record"}
-      <Claim {finding} part="record" />
+      <Claim {finding} part="record" onspecimen={toSpecimen} />
     {:else if panel.kind === "bias"}
       <Margin {finding} part="bias" />
     {:else if panel.kind === "survived"}

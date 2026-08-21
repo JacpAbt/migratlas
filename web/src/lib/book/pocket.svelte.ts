@@ -40,6 +40,15 @@ export const world = $state({
   detectability: null as DetectabilityDocument | null,
   selection: null as SpeciesSelection | null,
   map: undefined as MapLibreMap | undefined,
+  /*
+    A species the reader arrived for, waiting for the panel to be ready to show it.
+
+    The road from a claim to the one animal that carries its argument was built deliberately in the
+    old shell and died silently when the book became the front door: `Reader` passed no `onspecimen`,
+    so `Claim` rendered no invitation at all. It goes through this module for the same reason the
+    map does -- the record page and the world chapter are never mounted by the same parent.
+  */
+  preselect: null as number | null,
 });
 
 /**
