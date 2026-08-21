@@ -545,6 +545,24 @@ def build_sandbox(
     print(f"sandbox -> {out} ({size / 1024:.1f} KiB)")
 
 
+@app.command("build-introduction")
+def build_introduction() -> None:
+    """Publish the book's introduction -> web/public/introduction.json.
+
+    The prose is authored in `reports/introduction.py` and rendered verbatim, per the rule that
+    covers all frontend prose. The three counts in it are read from the published ledger and the
+    registry rather than typed, so the introduction cannot claim a size the project does not have.
+
+    The one command here that needs no lake: it measures nothing.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import introduction  # noqa: PLC0415 -- one command needs it
+
+    published, realms, sources = introduction.counts()
+    path = introduction.write()
+    print(f"{published} findings, {realms} realms, {sources} sources -> {path}")
+
+
 @app.command("build-response")
 def build_response(
     out: Annotated[Path, typer.Option(help="Where to write the response document.")] = Path(

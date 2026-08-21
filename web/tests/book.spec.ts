@@ -223,3 +223,56 @@ test("the plate's geometry resamples by length and projects into its box", async
   expect(y(90)).toBeCloseTo(y(TOP_LAT));
 });
 
+test("the book opens on an introduction, carried across the spread", async ({ page }) => {
+  await openBook(page, "#ch=how-to-read");
+
+  await expect(page.locator(".intro__kicker")).toHaveText("How to read this");
+  // Quoted, because frontend prose is authored in Python and rendered verbatim -- changing this
+  // sentence means editing `reports/introduction.py` and then editing this line.
+  await expect(page.locator(".intro__standfirst")).toContainText(
+    "a record of what this project has actually measured",
+  );
+
+  // Both pages, not one page and a blank: a book's opening spread uses both.
+  const versoHeadings = await page.locator(".page--verso .intro__passage h2").count();
+  const rectoHeadings = await page.locator(".page--recto .intro__passage h2").count();
+  expect(versoHeadings, "the verso carries no passage").toBeGreaterThan(0);
+  expect(rectoHeadings, "the facing page is blank").toBeGreaterThan(0);
+
+  // The opening chapter has no plate, because it makes no claim.
+  await expect(page.locator(".plate")).toHaveCount(0);
+});
+
+test("the introduction's figures are the ledger's, in the rendered page", async ({ page }) => {
+  /*
+    The sentence a visitor reads first is the one most worth holding to the data. `reports/` counts
+    the ledger and this asserts the count survived the trip: the rendered text, the published
+    document and `findings.json` all have to agree, so a stale rebuild shows up here rather than in
+    a screenshot somebody notices months later.
+  */
+  await openBook(page, "#ch=how-to-read");
+
+  const published = await page.evaluate(async () => {
+    const [ledger, intro] = await Promise.all([
+      fetch("findings.json").then((r) => r.json() as Promise<{ findings: { direction: string }[] }>),
+      fetch("introduction.json").then(
+        (r) => r.json() as Promise<{ counted: string; passages: { body: string }[] }>,
+      ),
+    ]);
+    return {
+      findings: ledger.findings.length,
+      nulls: ledger.findings.filter((f) => f.direction === "null").length,
+      limits: ledger.findings.filter((f) => f.direction === "limit").length,
+      counted: intro.counted,
+      nullsPassage: intro.passages.find((p) => p.body.includes("no change"))?.body ?? "",
+    };
+  });
+
+  expect(published.counted).toContain(`${published.findings} findings`);
+  expect(published.nullsPassage).toContain(`${published.nulls} of the findings report no change`);
+  expect(published.nullsPassage).toContain(`${published.limits} report a limit`);
+
+  // And the page is showing that document rather than a copy of it.
+  await expect(page.locator(".intro__counted")).toHaveText(published.counted);
+});
+

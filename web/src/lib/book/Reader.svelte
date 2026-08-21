@@ -1,11 +1,28 @@
 <script lang="ts">
   import Book from "./Book.svelte";
+  import Introduction from "./Introduction.svelte";
   import Plate from "./Plate.svelte";
   import Claim from "../claim/Claim.svelte";
+  import { loadIntroduction, type IntroductionDocument } from "./introduction";
   import { CHAPTERS, chapterAt, type Chapter } from "../story";
   import type { Finding } from "../ledger";
 
   let { findings, base }: { findings: Finding[]; base: string } = $props();
+
+  /*
+    Fetched here rather than in `main.ts`, so the book opens on a claim chapter without waiting for
+    a document only the introduction needs. A failure leaves `opening` null and the component says
+    so, which is the same treatment `Plate` gives a basemap that will not load.
+  */
+  let opening = $state<IntroductionDocument | null>(null);
+  $effect(() => {
+    loadIntroduction(base)
+      .then((loaded) => (opening = loaded))
+      .catch(() => (opening = null));
+  });
+
+  /** The chapter that opens the book, which is the only one the introduction belongs on. */
+  const OPENING_SLUG = CHAPTERS[0]!.slug;
 
   const CHAPTER_PARAM = "ch";
 
@@ -61,7 +78,9 @@
 <Book chapters={CHAPTERS} {open} onopen={show}>
   {#snippet page(chapter: Chapter, side: "verso" | "recto")}
     {@const claims = held(chapter)}
-    {#if side === "verso"}
+    {#if chapter.slug === OPENING_SLUG}
+      <Introduction document_={opening} {side} />
+    {:else if side === "verso"}
       <p class="chapter">{chapter.title}</p>
       {#if claims.length}
         <!-- Every claim the chapter carries, not just the first: "What did not" holds three, and a
@@ -72,7 +91,7 @@
         {/each}
       {:else}
         <p class="aside">
-          No claim of its own. This chapter says how to read the ones that follow.
+          The world, with every layer off until you ask for it. This chapter lands next.
         </p>
       {/if}
     {:else if claims[0]}
@@ -80,9 +99,7 @@
            the world chapter, per ADR 0013, which is why a still is right here. -->
       <Plate finding={claims[0]} number={CHAPTERS.indexOf(chapter)} {base} />
     {:else}
-      <p class="aside aside--quiet">
-        No plate: this chapter is the way in, or the way out.
-      </p>
+      <p class="aside aside--quiet">No plate: this chapter is the way out, not a claim.</p>
     {/if}
   {/snippet}
 </Book>
