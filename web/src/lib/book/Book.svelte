@@ -165,8 +165,12 @@
 <style>
   .desk {
     display: grid;
-    place-items: start center;
-    padding: var(--gap) var(--gap-tight) 0;
+    /* Centred rather than top-aligned, so the height the cap gives back appears above the book as
+       well as below it -- top-aligned, every pixel of it would have gone to the foot. The book can
+       never be taller than the window, because `--book-h` is bounded by it, so centring cannot clip. */
+    height: 100%;
+    place-items: center;
+    padding: var(--gap) var(--gap-tight);
     /* Two faint washes rather than a flat fill: a flat ground under a shadowed object reads as a
        rectangle floating on a colour. */
     background:
@@ -209,10 +213,22 @@
     --size-label: clamp(0.53rem, calc(var(--book-h) / 91.2), 0.76rem);
     /* As large as the window allows in both axes, so it fills a wide monitor and still cannot run
        off the bottom of a short one. The subtraction is the chrome above it. */
-    /* The subtraction is the chrome above it, measured rather than reserved: `.desk` puts 14px of
-       padding over the book and the lift shadow needs a few more. 4.5rem was a guess that cost 40px
-       of page on exactly the short windows where the pages were tightest. */
-    --book-h: min(calc(98vw / var(--ratio)), calc(100vh - 2.6rem));
+    /*
+      As large as the window allows in both axes, minus the chrome, and then capped.
+
+      The subtraction is measured rather than reserved: `.desk` puts 14px of padding over the book
+      and the lift shadow needs a few more. 4.5rem was a guess that cost 40px of page on exactly the
+      short windows where the pages were tightest.
+
+      The cap is the owner's note that the book was "a bit too tall" on a tall window, and it is a cap
+      rather than a translation: at 1920x1080 the book ran the full 1,038px and now stops at 886, so
+      it is 14% shorter and the desk shows above and below it. `max(54rem, 82vh)` and not a bare
+      `82vh`, because a page must never get *smaller* than the size its panels were measured at --
+      82vh of an 800px window is 656px against the 758 that window gives, and shrinking the page is
+      how the overflow guard would start failing. As written, nothing below about a 1,050px-tall
+      window changes at all.
+    */
+    --book-h: min(calc(98vw / var(--ratio)), calc(100vh - 2.6rem), max(54rem, 82vh));
 
     position: relative;
     width: calc(var(--book-h) * var(--ratio));
