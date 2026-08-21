@@ -36,10 +36,37 @@ two settings a reader makes about how the page reaches them. ADR 0013 said the r
 structural and not stylistic; the measure of that is that the arrival could be deleted without any
 of the above being written twice.
 
-The arrival itself is behind `?shell` for as long as its tests take to move — 32 in `shell.spec.ts`
-and 36 in `notebook.spec.ts`, most of which assert things about the design language that are true of
-the book too and simply need to open it instead. Deleting them with the component would throw away
-the guards; leaving them pointed at a page nobody visits would be worse.
+**The arrival is deleted, 2026-08-21.** `Shell.svelte`, `Arrival.svelte`, `Index.svelte`,
+`claim/Evidence.svelte`, `state/route.ts`, the `?shell` flag and `web/mocks/` are gone. `Explore`
+and `Search` are not: they are the world chapter's tools, so they moved to `lib/world/` — a
+directory called `shell` holding only the book's furniture is a signpost to a demolished building.
+
+**Every test moved rather than being deleted with the component**, on the owner's instruction, and
+that instruction paid for itself four times over. The moves found:
+
+- a page turn that worked in dev and broke in the built application, because the minifier writes
+  `900ms` as `.9s` and `Number.parseFloat` read that as 0.9 — the leaf was destroyed 121ms into a
+  900ms rotation;
+- two hundred and thirty-six lines of MapLibre restyling scoped to `.shell`, so from the day the
+  book became the front door its map wore MapLibre's own white rounded boxes on paper;
+- a world chapter drawing **no layers at all**, because a `LoadedLayer` keeps its name on `meta` and
+  the view was built from a list of `undefined`s — and then, once fixed, drawing the detectability
+  wash that declares itself off, which the shell had filtered and this had not inherited;
+- a missing ledger leaving a blank page rather than saying so, which the test that caught it had
+  predicted in a comment: "invisible until it happens in production".
+
+None of the four was visible to `tsc`, `vite build` or `check-build`. All four were caught by tests
+that ask what was actually drawn rather than whether something mounted, which is the reason
+`globe.spec.ts` exists at all, applied to the book.
+
+Three suites also carried assumptions that held only while the map filled the window. It is one page
+of a spread now, and the arithmetic differs: the manifest's camera hints pull in two directions at
+once, `map.project` and `getBoundingClientRect` stop agreeing, and the licence notice is large
+enough to intercept a click. Each is fixed and explained where it lives, in `globe.spec.ts`.
+
+One consequence worth carrying forward rather than fixing: that notice is a legal obligation and is
+now a real share of the map, which is an argument about how much of the spread the world chapter
+should get — the arrangement decision 8 already leaves open.
 
 ## Context
 

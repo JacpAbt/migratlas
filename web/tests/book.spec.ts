@@ -214,7 +214,7 @@ test("the plate is drawn, and its marks are named", async ({ page }) => {
 
 test("the plate's pen is the same weight at any window size", async ({ page }) => {
   /*
-    The rule `notebook/ink.ts` states and the mock in `web/mocks/` breaks: geometry generated in a
+    The rule `notebook/ink.ts` states and the deleted mock broke: geometry generated in a
     fixed viewBox and scaled to fit keeps its coordinates in user units while the stroke is applied
     in screen units, so the same 1.3px pen renders at 0.6px on a laptop and 1.7px on a monitor. The
     plate takes the measured box instead, so this asserts the weights do not move when the box does.

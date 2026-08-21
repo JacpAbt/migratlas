@@ -1,6 +1,6 @@
 <script lang="ts">
   import Globe from "../globe/Globe.svelte";
-  import Explore from "../shell/Explore.svelte";
+  import Explore from "../world/Explore.svelte";
   import { clock, instantOf, world } from "./pocket.svelte";
   import { SpeciesSurfaces } from "../../search/taxon";
   import { exploreView } from "../story";
@@ -39,7 +39,7 @@
 
 <!--
   The world, in the back pocket. ADR 0013 decision 4 gives this chapter the scroll, the layers, the
-  clock and the search -- and `shell/Explore.svelte` already *is* those four, so it is mounted here
+  clock and the search -- and `world/Explore.svelte` already *is* those four, so it is mounted here
   rather than rebuilt. The rebuild is structural, not stylistic.
 
   The map is on the facing page and the apparatus on the argument page, which is the arrangement

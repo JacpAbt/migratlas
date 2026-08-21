@@ -6,10 +6,11 @@
  * limitation of one.
  *
  * **Everything is generated at the measured pixel size.** `notebook/ink.ts` says why at length and
- * the mock in `web/mocks/` is the counter-example: it drew into a 1000-unit viewBox scaled down to
- * whatever the plate happened to be, so a 1.5px pen rendered at 0.6px on a laptop and 1.7px on a
- * monitor, and the hachure gaps moved with the window. Sizing the *labels* in rendered pixels fixed
- * the labels and left the strokes wrong. Here the projection takes the box.
+ * the mock this was designed in was the counter-example, and is worth recording now that it is
+ * deleted: it drew into a 1000-unit viewBox scaled down to whatever the plate happened to be, so a
+ * 1.5px pen rendered at 0.6px on a laptop and 1.7px on a monitor, and the hachure gaps moved with
+ * the window. Sizing the *labels* in rendered pixels fixed the labels and left the strokes wrong.
+ * Here the projection takes the width and returns everything else.
  *
  * **The hand is rough.js, not a second wobble.** `globe/coastline.ts` jitters its geometry because
  * MapLibre draws WebGL and cannot be handed a rough.js path. An SVG plate can, and rough.js already
