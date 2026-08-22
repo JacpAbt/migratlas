@@ -180,12 +180,14 @@
   }
 
   @media (width < 62rem) {
-    /* One page at a time, so neither edge is bound. The foot is the container's to set, because
-       what sits over the bottom of the page is the container's furniture: `Leaves` puts a thumb tab
-       in that corner, and text running under it is text nobody can read. */
+    /* One page at a time, so neither edge is bound. The head and the foot are the container's to
+       set, because what sits over the top and bottom of the page is the container's furniture:
+       `Leaves` puts a thumb tab in the bottom corner and the type controls are fixed over the top,
+       and text running under either is text nobody can read. */
     .page--verso .page__inner,
     .page--recto .page__inner {
-      padding: var(--page-pad) var(--page-pad) var(--page-foot, var(--page-pad));
+      padding: var(--page-head, var(--page-pad)) var(--page-pad)
+        var(--page-foot, var(--page-pad));
     }
 
     .page__curl {

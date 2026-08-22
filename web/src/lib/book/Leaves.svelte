@@ -273,8 +273,14 @@
 
       The foot clears the fore-edge tab in the bottom corner. Measured at 51px, so this is that plus
       room to see the last line is the last line.
+
+      The head clears the type controls, which are `position: fixed` in the top-left corner. On a
+      spread they float over the desk's own margin; a phone has no margin, so they sat on the page's
+      first line -- the chapter kicker was printed under "HAND CLEAR DYSLEXIA" on every leaf of the
+      book. Measured: the bar's bottom edge is 35px, so this is that plus air.
     */
     --page-pad: clamp(1.1rem, 4.5vw, 2rem);
+    --page-head: 3.1rem;
     --page-foot: 4.25rem;
 
     position: relative;
@@ -290,10 +296,11 @@
     inset: auto 0 0;
     z-index: 4;
     display: flex;
-    justify-content: center;
-    /* Room for the fore-edge thumb, which owns this corner. Centred in what is left rather than in
-       the screen, so the two never share a pixel at any width. */
-    padding-right: 7rem;
+    /* Beside the fore-edge thumb rather than centred on the page's foot. Centred, it sat over the
+       folio in the opposite corner -- and the folio is the only thing on a phone that says which
+       page you are on. Right-aligned with room for the thumb clears both at any width. */
+    justify-content: flex-end;
+    padding-right: 7.2rem;
     --realm-size: 0.66rem;
   }
 

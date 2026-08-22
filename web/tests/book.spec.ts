@@ -941,6 +941,7 @@ test.describe("on a phone", () => {
       return {
         left: Number.parseFloat(style.paddingLeft),
         right: Number.parseFloat(style.paddingRight),
+        top: Number.parseFloat(style.paddingTop),
         bottom: Number.parseFloat(style.paddingBottom),
       };
     });
@@ -950,6 +951,19 @@ test.describe("on a phone", () => {
     // And the foot clears the fore-edge tab, because text under it is text nobody can read.
     const thumb = await page.locator(".thumb").evaluate((node) => node.getBoundingClientRect().height);
     expect(pad.bottom).toBeGreaterThan(thumb);
+
+    /*
+      And the head clears the type controls, for the same reason at the other edge.
+
+      They are `position: fixed` in the top-left corner. Over a spread they sit on the desk's own
+      margin; a phone has no margin, so every leaf in the book printed its chapter kicker underneath
+      "HAND CLEAR DYSLEXIA" -- on the claim pages, the introduction, all of them. Asserted against
+      the bar's measured box rather than against the number, so moving the bar fails here.
+    */
+    const bar = await page
+      .locator(".settings")
+      .evaluate((node) => node.getBoundingClientRect().bottom);
+    expect(pad.top, "the page's first line runs under the type controls").toBeGreaterThan(bar);
   });
 
   test("the swipe is the page turn, and where it stops goes in the URL", async ({ page }) => {
