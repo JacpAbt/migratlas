@@ -32,15 +32,20 @@ import type { Panel, Spread } from "../src/lib/book/pages";
  * Hard-coded page numbers would have to be re-typed every time a claim gains a knob, and the first
  * one that was missed would pass while pointing at the wrong page. This asks `pages.ts` instead.
  */
-async function layout(): Promise<readonly Spread[]> {
+async function layout(realm = ""): Promise<readonly Spread[]> {
   const { spreadsOf } = await import("../src/lib/book/pages");
+  const { CHAPTERS: chapters } = await import("../src/lib/story");
   const read = (name: string) => JSON.parse(readFileSync(`public/${name}`, "utf8"));
-  return spreadsOf({
-    findings: read("findings.json").findings,
-    introduction: read("introduction.json"),
-    safeguards: read("sandbox.json"),
-    dial: read("response.json"),
-  });
+  return spreadsOf(
+    {
+      findings: read("findings.json").findings,
+      introduction: read("introduction.json"),
+      safeguards: read("sandbox.json"),
+      dial: read("response.json"),
+    },
+    chapters,
+    realm,
+  );
 }
 
 /** The address of the first spread carrying a panel that matches. */
@@ -517,6 +522,123 @@ test("no chapter but the world boots a map", async ({ page }) => {
   await expect(page.locator(".page--recto .plate")).toHaveCount(1);
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
 });
+
+/*
+  The realm filter, which is the book's second level of index tabs.
+
+  Model first and browser after, because the two things most worth pinning are facts about the
+  pagination rather than about the DOM: which claims a realm holds, and what a chapter does when the
+  filter empties it.
+*/
+test("a cross-realm limit is in every realm, not in none of them", async () => {
+  /*
+    The one reading of `realm: "all"` that is false.
+
+    Two findings carry it -- the coverage bias and the failure to transfer -- and both are limits on
+    this whole project rather than on one realm. Filtered to the sea, a book that dropped them would
+    be telling a reader that nothing limits what is known about the sea, which is the opposite of
+    what those two findings say. So they appear under every tab, and this is the assertion that stops
+    a future `finding.realm === realm` from looking correct.
+  */
+  const keys = async (realm: string) =>
+    (await layout(realm))
+      .flatMap((spread) => [spread.verso, spread.recto])
+      .flatMap((panel) => (panel.kind === "finding" ? [panel.key] : []));
+
+  for (const realm of ["aerial", "marine", "terrestrial"]) {
+    expect(await keys(realm), `${realm} lost a cross-realm limit`).toEqual(
+      expect.arrayContaining(["coverage-bias", "transfer-fails"]),
+    );
+  }
+
+  // And the filter does filter: the marine book has the marine null and neither aerial claim.
+  const sea = await keys("marine");
+  expect(sea).toContain("marine-null");
+  expect(sea).not.toContain("autumn-advance");
+  expect(sea).not.toContain("atlas-no-net-change");
+});
+
+test("a chapter the filter empties says which silence it is", async () => {
+  /*
+    Two ways for a chapter to come out empty and they must not print the same page. Every chapter in
+    the ledger has claims, so under a filter the only silence available is "measured elsewhere" --
+    which is a fact about instruments and is worth a page of words. Blank paper is reserved for the
+    other case, where the ledger does not hold what the chapter names and there is nothing true to
+    say.
+  */
+  const empty = (await layout("marine")).find(
+    (spread) => spread.chapter.slug === "what-changed",
+  );
+  expect(empty?.verso).toEqual({ kind: "absent", realm: "marine", chapter: "What changed" });
+  expect(empty?.recto).toEqual({ kind: "blank" });
+
+  // Unfiltered, that chapter is five spreads of claims and no absence anywhere in the book.
+  const all = await layout();
+  expect(all.filter((spread) => spread.chapter.slug === "what-changed").length).toBeGreaterThan(1);
+  expect(all.flatMap((s) => [s.verso, s.recto]).filter((p) => p.kind === "absent")).toEqual([]);
+});
+
+test("turning a realm tab keeps the chapter, writes the URL, and back comes back", async ({
+  page,
+}) => {
+  await openBook(page, "#ch=what-changed");
+  await expect(page.locator(".page--verso .claim")).toHaveCount(1);
+
+  await page.locator(".realms").getByRole("button", { name: "Sea", exact: true }).click();
+
+  /*
+    The chapter survives and the position does not, which is the choice `Reader.filter` records: a
+    reader turning "Sea" is asking about the chapter they are in, and an offset carried across a
+    filter is an offset into a book that no longer has those pages.
+  */
+  await expect(page.locator(".absent")).toBeVisible();
+  await expect(page).toHaveURL(/ch=what-changed/);
+  await expect(page).toHaveURL(/r=marine/);
+
+  // Written with pushState, so the filter is a place a reader can leave and return to.
+  await page.goBack();
+  await expect(page.locator(".page--verso .claim")).toHaveCount(1);
+  await expect(page).not.toHaveURL(/r=marine/);
+});
+
+test("the realm in the URL is the realm on the tab, and an unknown one is all of them", async ({
+  page,
+}) => {
+  await openBook(page, "#ch=what-did-not&r=terrestrial");
+  await expect(page.locator(".realms .is-on")).toHaveText("Land");
+  // The claim on the page is the one that realm holds, so the filter applied before the first paint
+  // rather than after it -- which is why `Reader` reads the parameter synchronously.
+  await expect(page.locator(".page--verso .claim")).toHaveCount(1);
+  await expect(page.locator(".page--verso")).toContainText("Southern African");
+
+  await openBook(page, "#ch=what-did-not&r=nonsense");
+  await expect(page.locator(".realms .is-on")).toHaveText("All");
+});
+
+for (const [width, height] of [
+  [1600, 900],
+  [1280, 800],
+] as const) {
+  test(`the page a filter empties fits its leaf at ${width}x${height}`, async ({ page }) => {
+    /*
+      The one page shape the full walk below cannot reach.
+
+      Every other page in a filtered book is a page of the unfiltered one -- the filter drops claims,
+      it does not reflow them -- so the corner-walk already measures them. The absent leaf exists
+      only under a filter, and four realms times two widths times a forty-second walk to measure one
+      new panel is the kind of coverage that gets deleted for being slow.
+    */
+    await page.setViewportSize({ width, height });
+    await openBook(page, "#ch=what-changed&r=marine");
+    await expect(page.locator(".absent")).toBeVisible();
+
+    const over = await page.evaluate(() => {
+      const inner = document.querySelector(".spread > .page--verso .page__inner");
+      return inner ? inner.scrollHeight - inner.clientHeight : -1;
+    });
+    expect(over, "the absent page overflows its leaf").toBeLessThanOrEqual(2);
+  });
+}
 
 /*
   The guard that makes declared panels worth declaring.

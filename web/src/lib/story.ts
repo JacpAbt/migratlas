@@ -239,6 +239,55 @@ export function chapterOf(key: string): Chapter | undefined {
   return CHAPTERS.find((chapter) => chapter.keys.includes(key));
 }
 
+/**
+ * The realms, and the words the tabs show for them.
+ *
+ * **Why realm and not taxon.** `realm` is required on every source and every schema in this project
+ * -- it is the structural half of "this is not a bird project" -- so it is the one axis the book can
+ * filter on that every claim already answers. A taxon filter would promise what the evidence cannot
+ * deliver: the aerial record is reflectivity, it cannot tell a bird from a bat, and a "birds" tab
+ * over it would be a label the measurement does not support. Where an animal is -- air, sea, land --
+ * every source states, and states before it is admitted.
+ *
+ * The tabs carry the plain word rather than the field's. `aerial` is what the schema calls it and
+ * "Air" is what it means, and these are the smallest type in the book.
+ */
+export interface Realm {
+  /** The `realm` field's own value, and what goes in the URL. Empty for the unfiltered tab. */
+  slug: string;
+  /** The word on the tab. */
+  tab: string;
+  /** The same realm inside a sentence, for the page a filter empties: "nothing measured in the sea". */
+  the: string;
+}
+
+export const REALMS: readonly Realm[] = [
+  { slug: "", tab: "All", the: "any realm" },
+  { slug: "aerial", tab: "Air", the: "the air" },
+  { slug: "marine", tab: "Sea", the: "the sea" },
+  { slug: "terrestrial", tab: "Land", the: "the land" },
+];
+
+/** The realm a cross-realm finding carries, which is every realm rather than a fourth one. */
+export const EVERYWHERE = "all";
+
+/**
+ * Whether a finding belongs under a realm tab.
+ *
+ * A cross-realm finding appears under every one of them, because `realm: "all"` means the claim is
+ * true of each realm rather than of none. Both findings that carry it are limits on the whole
+ * project -- the coverage bias and the failure to transfer -- and filtering to the sea and being
+ * told that nothing limits what we know about the sea would be the one reading that is false.
+ */
+export function inRealm(finding: Finding, realm: string): boolean {
+  return realm === "" || finding.realm === realm || finding.realm === EVERYWHERE;
+}
+
+/** A realm by its slug, for reading one out of the URL. Anything unknown reads as unfiltered. */
+export function realmAt(slug: string | null): Realm {
+  return REALMS.find((realm) => realm.slug === slug) ?? REALMS[0]!;
+}
+
 /** A chapter by its slug, for reading one out of the URL. */
 export function chapterAt(slug: string | null): Chapter | undefined {
   return CHAPTERS.find((chapter) => chapter.slug === slug);

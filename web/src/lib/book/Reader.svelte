@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Absent from "./Absent.svelte";
   import Book from "./Book.svelte";
   import Figure from "./Figure.svelte";
   import Introduction from "./Introduction.svelte";
@@ -14,7 +15,7 @@
   import type { IntroductionDocument } from "./introduction";
   import type { ResponseDocument } from "../sandbox/response";
   import type { SandboxDocument } from "../sandbox/sandbox";
-  import { CHAPTERS, chapterAt, chapterOf } from "../story";
+  import { CHAPTERS, chapterAt, chapterOf, realmAt } from "../story";
   import type { Finding } from "../ledger";
 
   let {
@@ -42,7 +43,7 @@
   } = $props();
 
   const spreads = $derived(
-    spreadsOf({ findings, introduction: opening, safeguards, dial }, CHAPTERS),
+    spreadsOf({ findings, introduction: opening, safeguards, dial }, CHAPTERS, realm),
   );
 
   const of = (key: string): Finding | undefined => findings.find((f) => f.key === key);
@@ -58,6 +59,21 @@
   const figureNumber = (key: string): number => PLATES.indexOf(key) + 1;
 
   const CHAPTER_PARAM = "ch";
+
+  /** Which realm the book is read in, absent when it is all of them. */
+  const REALM_PARAM = "r";
+
+  /*
+    Read once, synchronously, before anything derives from it.
+
+    The page count depends on the filter -- a chapter with no claim in this realm is one spread where
+    unfiltered it is five -- so the filter has to be known before `spreads` is first computed.
+    Setting it inside the effect that resolves the URL would mean writing state the same effect has
+    already read through a derived, and would resolve the address against a book of the wrong length.
+  */
+  let realm = $state(
+    realmAt(new URLSearchParams(location.hash.slice(1)).get(REALM_PARAM)).slug,
+  );
 
   /** Which spread within the chapter, so a page has an address and not just a chapter. */
   const PAGE_PARAM = "p";
@@ -159,13 +175,40 @@
     if (!spread) return;
     const params = new URLSearchParams(location.hash.slice(1));
     const into = String(at - openingOf(spreads, spread.chapter.slug));
-    if (params.get(CHAPTER_PARAM) === spread.chapter.slug && params.get(PAGE_PARAM) === into) return;
+    // The realm is part of what makes this address the page it is: the same chapter and the same
+    // offset under two filters are two different pages, so a change of filter alone must still be
+    // written. Left out of the comparison, turning a tab wrote nothing and back went nowhere.
+    if (
+      params.get(CHAPTER_PARAM) === spread.chapter.slug &&
+      params.get(PAGE_PARAM) === into &&
+      (params.get(REALM_PARAM) ?? "") === realm
+    )
+      return;
     params.set(CHAPTER_PARAM, spread.chapter.slug);
     params.set(PAGE_PARAM, into);
+    if (realm) params.set(REALM_PARAM, realm);
+    else params.delete(REALM_PARAM);
     // Dropped once the page is written in the address it is written in: leaving `c` behind would
     // make it win over `ch` on the next read and pin the reader to one claim.
     params.delete(CLAIM_PARAM);
     history.pushState(null, "", `#${params.toString()}`);
+  }
+
+  /**
+   * Turning a realm tab, which repaginates the book under the reader.
+   *
+   * It lands on the same chapter's first page rather than on the same page number. A reader turning
+   * "Sea" is asking a question about the chapter they are in, and an offset carried across a filter
+   * is an offset into a book that no longer has those pages -- so the chapter is the thing kept and
+   * the position is not.
+   *
+   * `spreads` is read after the write because runes are computed on read: by the time `openingOf`
+   * sees it, it is the filtered pagination and not the one that was on screen a line ago.
+   */
+  function filter(slug: string): void {
+    const chapter = spreads[open]?.chapter.slug ?? CHAPTERS[1]!.slug;
+    realm = slug;
+    show(openingOf(spreads, chapter));
   }
 
   /**
@@ -182,7 +225,11 @@
   }
 
   $effect(() => {
-    const back = () => (open = fromUrl());
+    // The filter first, so the page is resolved against the pagination that address belongs to.
+    const back = () => {
+      realm = realmAt(new URLSearchParams(location.hash.slice(1)).get(REALM_PARAM)).slug;
+      open = fromUrl();
+    };
     addEventListener("popstate", back);
     return () => removeEventListener("popstate", back);
   });
@@ -218,8 +265,23 @@
     <Introduction document_={opening} from={panel.from} to={panel.to} />
   {:else if panel.kind === "world"}
     <World {base} side={panel.part === "map" ? "recto" : "verso"} />
+  {:else if panel.kind === "absent"}
+    <Absent chapter={panel.chapter} realm={panel.realm} />
   {:else if panel.kind === "blank"}
-    <p class="aside aside--quiet">Nothing is recorded on this leaf.</p>
+    <!--
+      Blank paper, and no words on it.
+
+      `pages.ts` says blank paper in a sketchbook is not a defect, and a notebook does not caption its
+      empty pages -- the folio already tells a reader the page is a page. The caption also read badly
+      beside the leaf the realm filter empties: "nothing measured in the sea" facing "nothing is
+      recorded on this leaf" is one spread saying nothing twice.
+
+      An element rather than nothing at all, because `book.spec.ts` asserts which leaves a phone has
+      hydrated by counting the children of each leaf -- the rule that keeps a live map from running
+      two chapters from the reader. A panel that renders no element is a panel that guard cannot see,
+      and taking the caption out silently blinded it to every blank leaf in the book.
+    -->
+    <div class="blank" aria-hidden="true"></div>
   {:else}
     {@const finding = of(panel.key)}
     {#if !finding}
@@ -258,9 +320,25 @@
 <Settings />
 
 {#if narrow}
-  <Leaves chapters={CHAPTERS} {spreads} {open} onopen={show} page={leaf} />
+  <Leaves
+    chapters={CHAPTERS}
+    {spreads}
+    {open}
+    {realm}
+    onopen={show}
+    onfilter={filter}
+    page={leaf}
+  />
 {:else}
-  <Book chapters={CHAPTERS} {spreads} {open} onopen={show} page={leaf} />
+  <Book
+    chapters={CHAPTERS}
+    {spreads}
+    {open}
+    {realm}
+    onopen={show}
+    onfilter={filter}
+    page={leaf}
+  />
 {/if}
 
 <style>

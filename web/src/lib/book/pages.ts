@@ -39,7 +39,7 @@ import type { SandboxDocument } from "../sandbox/sandbox";
 import { figurePages } from "./figures";
 import { dialRefusalsFor, dialsFor } from "../sandbox/response";
 import { knobsFor, refusalsFor } from "../sandbox/sandbox";
-import { CHAPTERS, type Chapter } from "../story";
+import { CHAPTERS, inRealm, type Chapter } from "../story";
 import type { Finding } from "../ledger";
 
 /** One page's worth of one thing. */
@@ -55,6 +55,13 @@ export type Panel =
   /** One knob or one refusal, from whichever of the two documents keys it to this claim. */
   | { kind: "panel"; doc: "safeguards" | "dial"; key: string; part: "knobs" | "refusals"; at: number }
   | { kind: "world"; part: "map" | "apparatus" }
+  /**
+   * A chapter the realm filter emptied, which is a different silence from a missing claim.
+   *
+   * Carries its own chapter, like `finding` carries its key. A panel is handed to the page snippet
+   * without the spread around it, so a panel that needs to name its chapter has to hold it.
+   */
+  | { kind: "absent"; realm: string; chapter: string }
   | { kind: "blank" };
 
 /** Two facing pages. */
@@ -170,6 +177,7 @@ function introSpreads(chapter: Chapter, doc: IntroductionDocument | null): Sprea
 export function spreadsOf(
   sources: Sources,
   chapters: readonly Chapter[] = CHAPTERS,
+  realm = "",
 ): readonly Spread[] {
   const opening = chapters[0];
   const world = chapters[chapters.length - 1];
@@ -184,16 +192,36 @@ export function spreadsOf(
       out.push(pair(chapter, 0, { kind: "world", part: "apparatus" }, { kind: "world", part: "map" }));
       continue;
     }
+    // Published first, then filtered, because the two reasons a chapter can come out empty need
+    // different pages and telling them apart needs both counts.
+    const published = chapter.keys.flatMap(
+      (key) => sources.findings.find((finding) => finding.key === key) ?? [],
+    );
+
     let at = 0;
-    for (const key of chapter.keys) {
-      if (!sources.findings.some((finding) => finding.key === key)) continue;
-      const spreads = claimSpreads(chapter, key, at, sources);
+    for (const finding of published) {
+      if (!inRealm(finding, realm)) continue;
+      const spreads = claimSpreads(chapter, finding.key, at, sources);
       out.push(...spreads);
       at += spreads.length;
     }
-    // A chapter whose claims are all missing from the ledger still gets a leaf, so the tab it is
-    // reachable by does not open onto the previous chapter.
-    if (at === 0) out.push(pair(chapter, 0, { kind: "blank" }, { kind: "blank" }));
+
+    /*
+      A chapter that came out empty still gets a leaf, so the tab it is reachable by does not open
+      onto the previous chapter -- and which leaf depends on why it is empty.
+
+      Filtered to nothing is the interesting case and it gets words: the claims exist and every one
+      of them was measured in another realm, which is a fact about where the instruments are. Empty
+      because the ledger does not hold them is blank paper, because there is nothing true to say
+      about a chapter whose claims never arrived.
+    */
+    if (at === 0) {
+      const empty: Panel =
+        realm !== "" && published.length > 0
+          ? { kind: "absent", realm, chapter: chapter.title }
+          : { kind: "blank" };
+      out.push(pair(chapter, 0, empty, { kind: "blank" }));
+    }
   }
 
   return out;

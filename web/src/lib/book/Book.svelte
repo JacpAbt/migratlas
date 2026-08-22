@@ -2,6 +2,7 @@
   import type { Snippet } from "svelte";
 
   import Page from "./Page.svelte";
+  import Realms from "./Realms.svelte";
   import { folio, openingOf, type Panel, type Spread } from "./pages";
   import { tabStyle } from "./tabs";
   import { drawMs, still } from "../../state/turn";
@@ -11,14 +12,19 @@
     chapters,
     spreads,
     open,
+    realm,
     onopen,
+    onfilter,
     page,
   }: {
     chapters: readonly Chapter[];
     spreads: readonly Spread[];
     /** Index of the open spread. */
     open: number;
+    /** Which realm the book is being read in. Empty for all of them. */
+    realm: string;
     onopen: (at: number) => void;
+    onfilter: (realm: string) => void;
     /**
      * What goes on a page, given the panel and which side it is.
      *
@@ -156,6 +162,18 @@
         </button>
       {/each}
     </nav>
+
+    <!--
+      The filter goes on the tail edge, not beside the chapters on the fore-edge.
+
+      Seven vertical labels already stack to 38 times the font size and ran past the foot of a short
+      window once; four more on the same edge is the same bug again. Two edges is also the honest
+      picture of what these are -- one index for the questions and one for the filter, which is what
+      a book with two sets of thumb tabs does.
+    -->
+    <div class="tail" style={tabStyle(chapters.indexOf(current.chapter))}>
+      <Realms open={realm} onpick={onfilter} />
+    </div>
   </div>
 </div>
 
@@ -167,7 +185,25 @@
        never be taller than the window, because `--book-h` is bounded by it, so centring cannot clip. */
     height: 100%;
     place-items: center;
-    padding: var(--gap) var(--gap-tight);
+    /*
+      The tail strip's room, out of the head margin rather than out of the book.
+
+      Subtracted from `--book-h` instead, it cost 27 pixels of book and put the dial's page 6 pixels
+      over its leaf at 1280x800 -- one page of seventy, and exactly the failure that height cap's own
+      comment promises, because every panel budget in `pages.ts` was measured against this book and a
+      shorter book has less of every margin. The strip is furniture; the pages are the book.
+
+      So the desk pays, and it pays half: the strip is 21px and this is 13, the rest coming out of
+      the 21px the centring already leaves under the book. A whole strip's worth would have left 7
+      pixels above the book at 1280x800, and the type controls float in that band.
+
+      Declared *here* and not on `.book`, which is where the first attempt put it: custom properties
+      inherit downwards, so a parent reading a child's property gets nothing -- and an unresolved
+      `var()` takes its whole declaration with it, so the desk lost its padding outright rather than
+      losing the addition.
+    */
+    --tail: 0.8rem;
+    padding: var(--gap) var(--gap-tight) calc(var(--gap) + var(--tail));
     /* Two faint washes rather than a flat fill: a flat ground under a shadowed object reads as a
        rectangle floating on a colour. */
     background:
@@ -409,6 +445,16 @@
     100% {
       opacity: 0;
     }
+  }
+
+  /* Inside the fore-edge rather than at the corner, so the two strips never touch: the chapter
+     tabs stand off the right edge and this stands off the bottom one. */
+  .tail {
+    position: absolute;
+    inset: auto 7% 0 auto;
+    z-index: 6;
+    --realm-size: clamp(0.58rem, calc(var(--book-h) / 64), 0.82rem);
+    transform: translateY(calc(100% - 3px));
   }
 
   /* --- Thumb tabs ------------------------------------------------------- */

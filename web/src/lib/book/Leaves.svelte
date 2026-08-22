@@ -2,6 +2,7 @@
   import type { Snippet } from "svelte";
 
   import Page from "./Page.svelte";
+  import Realms from "./Realms.svelte";
   import { folio, openingOf, type Panel, type Spread } from "./pages";
   import { tabStyle } from "./tabs";
   import type { Chapter } from "../story";
@@ -10,14 +11,19 @@
     chapters,
     spreads,
     open,
+    realm,
     onopen,
+    onfilter,
     page,
   }: {
     chapters: readonly Chapter[];
     spreads: readonly Spread[];
     /** Index of the open spread. */
     open: number;
+    /** Which realm the book is being read in. Empty for all of them. */
+    realm: string;
     onopen: (at: number) => void;
+    onfilter: (realm: string) => void;
     /**
      * What goes on a page, given the panel and which side it is.
      *
@@ -215,6 +221,11 @@
     ></button>
   {/if}
 
+  <!-- At the foot, which is both where a phone puts a filter and the same edge the spread uses. -->
+  <div class="tail">
+    <Realms open={realm} onpick={onfilter} foot />
+  </div>
+
   <div class="edge">
     {#if fanned}
       <nav class="fan" aria-label="Chapters">
@@ -269,6 +280,21 @@
     position: relative;
     height: 100%;
     overflow: hidden;
+  }
+
+  /* Over the rail rather than in a row with it: the leaves are a scroll-snap track and a sibling
+     in the same column would take a leaf's height off every page. Centred, because the fore-edge
+     thumb owns the right-hand side. */
+  .tail {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 4;
+    display: flex;
+    justify-content: center;
+    /* Room for the fore-edge thumb, which owns this corner. Centred in what is left rather than in
+       the screen, so the two never share a pixel at any width. */
+    padding-right: 7rem;
+    --realm-size: 0.66rem;
   }
 
   .rail {
