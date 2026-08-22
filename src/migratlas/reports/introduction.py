@@ -92,7 +92,7 @@ def build() -> Introduction:
     limits = pointing.get("limit", 0)
     return Introduction(
         schema_version=SCHEMA_VERSION,
-        title="How to read this",
+        title="What this is",
         standfirst=(
             "This is a notebook about where animals go and what is changing it. Not a summary of "
             "the field — a record of what this project has actually measured, including the parts "
@@ -104,6 +104,42 @@ def build() -> Introduction:
             "go stale."
         ),
         passages=(
+            Passage(
+                heading="What we are studying",
+                body=(
+                    "Migration is a journey on a schedule, and the question here is whether the "
+                    "schedule is coming apart. When animals leave, where they go, when they arrive "
+                    "— and whether the year they arrive into is still the year the journey was "
+                    "built for. Across the three realms the records reach: the air, the sea and "
+                    "the land. What each record can identify differs and every page says which — "
+                    "the aerial measurements see moving biomass in the night sky and cannot tell "
+                    "you what species it belongs to."
+                ),
+            ),
+            Passage(
+                heading="Why it is worth measuring",
+                body=(
+                    "A migration is a bet on timing. An animal leaves on one cue and arrives "
+                    "expecting food that was cued by something else; when the two drift apart the "
+                    "journey still happens and the meal is not there. That kind of failure is "
+                    "quiet — nothing visible dies, the counts simply thin — which is why the "
+                    "question worth the work is not whether things are changing but what is "
+                    "changing them. A cause can be acted on. A trend can only be watched."
+                ),
+            ),
+            Passage(
+                heading="How the work is done",
+                body=(
+                    "Nothing is measured that was not registered first: every source is written "
+                    "down with its licence, its known problems and what it may be used for, before "
+                    "anything is downloaded. Every question is written down beforehand too — the "
+                    "prediction, the rule for stopping, and what the answer could not settle "
+                    "either way — so that a hypothesis cannot be adjusted once the answer is "
+                    "visible. Every number on these pages is recomputed from the raw data each "
+                    "time the site is built. And nothing is drawn at a resolution that would put "
+                    "an animal at risk of being found."
+                ),
+            ),
             Passage(
                 heading="Every claim carries its own scope",
                 body=(
@@ -139,8 +175,10 @@ def build() -> Introduction:
                 body=(
                     "The chapters are the argument, in order: what changed, what did not, what "
                     "cannot be seen, what can be predicted, and why. Or take the tabs in any "
-                    "order — each chapter stands alone. Or go straight to the world in the back "
-                    "pocket and look at the layers yourself, with nothing argued over the top."
+                    "order — each chapter stands alone, and any of them can be read one realm at "
+                    "a time from the small tabs at the foot: the air, the sea or the land. Or go "
+                    "straight to the world in the back pocket and look at the layers yourself, "
+                    "with nothing argued over the top."
                 ),
             ),
         ),

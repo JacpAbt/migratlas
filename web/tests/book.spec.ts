@@ -316,12 +316,24 @@ test("the plate is conformal: one scale in both axes, at any size", async () => 
 test("the book opens on an introduction, carried across the spread", async ({ page }) => {
   await openBook(page, "#ch=how-to-read");
 
-  await expect(page.locator(".intro__kicker")).toHaveText("How to read this");
+  await expect(page.locator(".intro__kicker")).toHaveText("What this is");
   // Quoted, because frontend prose is authored in Python and rendered verbatim -- changing this
   // sentence means editing `reports/introduction.py` and then editing this line.
   await expect(page.locator(".intro__standfirst")).toContainText(
     "a record of what this project has actually measured",
   );
+
+  /*
+    The opening chapter answers what, why and how before it answers anything else, and it does so
+    with no result in it.
+
+    Quoted for the reason above, and asserted at all because the ordering is the decision: the four
+    passages that were here first are about how to read a claim, which is a question a reader only
+    has once they have been handed one. What is being studied and why it is worth measuring come
+    before that, and a future edit that files them behind the epistemics should fail here.
+  */
+  const headings = await page.locator(".page--recto .intro__passage h2").allInnerTexts();
+  expect(headings.slice(0, 2)).toEqual(["What we are studying", "Why it is worth measuring"]);
 
   /*
     The opening leaf is the standfirst and the counted line, and the passages start on the facing

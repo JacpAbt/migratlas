@@ -205,7 +205,22 @@ export interface Chapter {
 }
 
 export const CHAPTERS: readonly Chapter[] = [
-  { slug: "how-to-read", title: "How to read this", tab: "How to read", keys: [] },
+  /*
+    The front matter, and it answers a reader's first question before the epistemic ones.
+
+    `introduction.py` leads with what is being studied, why it is worth measuring and how the work
+    is done -- three passages with no result in them, which is the point: a reader who arrives at a
+    finding without knowing what a finding here is made of has been handed a number to trust.
+
+    The slug is unchanged. It is in every link this site has handed out, and renaming a chapter is
+    not a reason to break them.
+  */
+  {
+    slug: "how-to-read",
+    title: "What this is, and how to read it",
+    tab: "What this is",
+    keys: [],
+  },
   {
     slug: "what-changed",
     title: "What changed",
