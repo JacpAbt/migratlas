@@ -82,7 +82,29 @@
   </div>
   <figcaption>
     <b>Plate {number}.</b> {view.because}
+
+    <!--
+      A key, because a drawing without one is asking to be guessed at.
+
+      The owner's note was that the maps should say more about what they are showing, and the sharper
+      half of that was that the caption was saying it about something else: `because` was written as
+      the *layer's* description -- "ringed where the count fell, solid where it rose" -- and the plate
+      draws none of that. A reader was being sent looking for marks that are not on the paper.
+
+      So the caption is the ground and this is the marks, and there are exactly three because the
+      plate draws exactly three groups. `book.spec.ts` holds the two lists to the same length: a mark
+      with no entry is a mark nobody can read, and an entry with no mark is this file lying again.
+    -->
+    <ul class="plate__key">
+      <li><span class="key__mark key__mark--here"></span>The ground this claim is about</li>
+      <li><span class="key__mark key__mark--land"></span>Coastlines, drawn rather than plotted</li>
+      <li><span class="key__mark key__mark--grid"></span>The graticule, every 30 degrees</li>
+    </ul>
+
     <span class="plate__scope">{finding.scope}</span>
+    <!-- Where the measurement itself is, since this sheet carries none of it. The plates exist so a
+         claim chapter need not boot a globe, and that trade is only honest if the globe is named. -->
+    <span class="plate__elsewhere">The measured layers are in the world chapter.</span>
   </figcaption>
 </figure>
 
@@ -155,5 +177,61 @@
     display: block;
     margin-top: var(--gap-hair);
     color: var(--pencil);
+  }
+
+  .plate__elsewhere {
+    display: block;
+    margin-top: var(--gap-hair);
+    color: var(--pencil);
+  }
+
+  .plate__key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-hair) var(--gap);
+    margin: var(--gap-tight) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .plate__key li {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+  }
+
+  /* Each swatch is the mark it stands for, at the weight the plate draws it. A coloured square with
+     a label beside it would be a legend for a chart; these are the pen. */
+  .key__mark {
+    flex: 0 0 auto;
+    width: 1.15em;
+    height: 1.15em;
+  }
+
+  .key__mark--here {
+    border: 2px solid var(--rust);
+    border-radius: 50%;
+    /* Off-round, because the drawn ring is rough.js at roughness 2.2 and a perfect circle in the key
+       reads as a different mark from the one on the sheet. */
+    transform: rotate(-8deg) scale(1.02, 0.94);
+  }
+
+  .key__mark--land {
+    border: 1px solid var(--ink);
+    background: repeating-linear-gradient(
+      -38deg,
+      var(--pencil) 0 1px,
+      transparent 1px 4px
+    );
+  }
+
+  /* One weight up from the sheet's own. The graticule is drawn at `--rule-faint` because a reference
+     line belongs under the thing it refers to, and a 1px sample of it inside a 1.15em box was below
+     seeing -- a key entry nobody can see is not a key entry. The mark stays faint; the sample reads. */
+  .key__mark--grid {
+    border: 1px solid var(--rule);
+    background:
+      linear-gradient(var(--pencil) 0 0) no-repeat center / 100% 1px,
+      linear-gradient(var(--pencil) 0 0) no-repeat center / 1px 100%;
   }
 </style>

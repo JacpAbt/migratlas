@@ -27,6 +27,14 @@ export interface View {
    * Why the camera is here, in one line. Shown to the reader, because a globe that flies somewhere
    * without saying why is a slideshow -- and because writing it down is what caught two of these
    * pointing at the wrong hemisphere.
+   *
+   * **It has exactly one reader, and that reader is the plate's caption.** So it describes the
+   * *ground*: where in the world this claim is made, and nothing about how any measurement is
+   * marked. Four of these used to describe the `layers` beside them instead -- "ringed where the
+   * count fell, solid where it rose", "as weekly presence on the clock", "the two layers here" --
+   * which was true of the globe and false of the sheet it was printed under, and sent a reader
+   * looking for marks that are not on the paper. What the plate does draw is keyed in
+   * `Plate.svelte`; what the layers draw belongs beside the layers.
    */
   because: string;
 }
@@ -45,7 +53,9 @@ export const VIEWS: Record<string, View> = {
     center: [-96, 42],
     zoom: 3.1,
     layers: ["aerial-passage"],
-    because: "The 78 radar stations the claim is made from, between 37°N and 50°N.",
+    because:
+      "The band the claim is made in: the middle of the United States, between 37 and 50 degrees " +
+      "north, where the radar stations sit.",
   },
   "marine-null": {
     // The North Atlantic shelf. FISHGLOB's 29 surveys are North America and Europe by
@@ -53,19 +63,21 @@ export const VIEWS: Record<string, View> = {
     center: [-35, 50],
     zoom: 2.2,
     layers: ["marine-taxa-recorded"],
-    because: "The bottom-trawl surveys, on both sides of the North Atlantic.",
+    because:
+      "Both shores of the North Atlantic, which is where the bottom-trawl surveys are: North " +
+      "America and Europe, by construction.",
   },
   "composition-stable": {
     center: [-96, 42],
     zoom: 3.1,
     layers: ["aerial-passage"],
-    because: "The same stations, asked a different question: what was flying, not when.",
+    because: "The same band as the timing claim, asked what was flying rather than when.",
   },
   "anthropogenic-share": {
     center: [-96, 42],
     zoom: 2.6,
     layers: ["aerial-passage"],
-    because: "The claim band again, pulled back: the forcing behind it is global.",
+    because: "The same band, pulled back, because the forcing behind it is global.",
   },
   "atlas-no-net-change": {
     // Southern Africa, framed on the atlas footprint itself: South Africa, Lesotho and Eswatini.
@@ -79,8 +91,7 @@ export const VIEWS: Record<string, View> = {
     layers: ["atlas-taxa-change"],
     because:
       "The southern African atlas footprint: South Africa, Lesotho and Eswatini, and inside it " +
-      "only the cells atlassed twice. Each cell is the change in how many of the analysed taxa " +
-      "were recorded there — ringed where the count fell, solid where it rose.",
+      "the squares that were atlassed in both epochs.",
   },
   "transfer-fails": {
     // All three legs at once, which is only possible because they ring one ocean: the radar band
@@ -96,8 +107,8 @@ export const VIEWS: Record<string, View> = {
     zoom: 1.35,
     layers: ["aerial-passage", "marine-taxa-recorded", "atlas-taxa-change"],
     because:
-      "All three records at once. The two that turned out to agree are the two on opposite " +
-      "sides of the equator; the one that did not is the one measuring dates instead of places.",
+      "All three records at once, which is the point: the two that turned out to agree are the " +
+      "two on opposite sides of the equator.",
   },
   "skill-sparse": {
     // The same band as the headline claim, because the two are the same instrument asked
@@ -106,8 +117,8 @@ export const VIEWS: Record<string, View> = {
     zoom: 3.1,
     layers: ["aerial-passage"],
     because:
-      "The same stations as the headline claim, asked the opposite question: not whether " +
-      "timing drifted over decades, but whether any single year can be predicted. Mostly, no.",
+      "The same band as the headline claim, asked the opposite question: not whether timing " +
+      "drifted over decades, but whether any single year can be predicted.",
   },
   "displacement-flat": {
     // Both herds at once: Ya Ha Tinda in the Canadian Rockies and the Svalbard archipelago sit
@@ -117,9 +128,8 @@ export const VIEWS: Record<string, View> = {
     zoom: 2.0,
     layers: ["yahatinda-herd", "svalbard-herd"],
     because:
-      "The two herds the claim is measured from, as weekly presence on the clock: elk in the " +
-      "Canadian Rockies, reindeer on Svalbard. What does not appear is the point -- no trend in " +
-      "how far either herd moves.",
+      "The two herds the claim is measured from, a continent apart: elk in the Canadian " +
+      "Rockies, reindeer on Svalbard.",
   },
   "coverage-bias": {
     // Deliberately the southern hemisphere, and deliberately far out. This claim is about what the
@@ -127,9 +137,7 @@ export const VIEWS: Record<string, View> = {
     center: [20, -30],
     zoom: 1.5,
     layers: ["marine-space-use", "marine-taxa-recorded"],
-    because:
-      "The hemisphere this project has almost no measurable change in. The two layers here " +
-      "cover it and neither can support a trend.",
+    because: "The hemisphere this project can measure almost nothing in.",
   },
 };
 

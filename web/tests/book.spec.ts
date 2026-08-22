@@ -236,11 +236,25 @@ test("the plate is drawn, and its marks are named", async ({ page }) => {
 
   // Named, because `ink.ts` says an anonymous `<g>` of paths is useless to select and the suite has
   // to reach for these by name rather than by "the second path inside the third svg".
-  for (const name of ["ink-graticule", "ink-land", "ink-here"]) {
+  const marks = ["ink-graticule", "ink-land", "ink-here"];
+  for (const name of marks) {
     await expect(page.locator(`.plate__sheet svg .${name}`)).toHaveCount(1);
   }
   // The caption cites the camera line `story.ts` already records and a test already guards.
   await expect(page.locator("figcaption")).toContainText("bottom-trawl surveys");
+
+  /*
+    And every mark is in the key, which is the assertion the key exists for.
+
+    The caption used to describe the *layer* rather than the sheet -- "ringed where the count fell,
+    solid where it rose" printed under a drawing with no cells on it -- so a reader was hunting for
+    marks that were never there. The fix is only a fix while the two lists stay the same length: a
+    mark with no entry is a mark nobody can read, and an entry with no mark is the same lie again in
+    a new place.
+  */
+  await expect(page.locator(".plate__key li")).toHaveCount(marks.length);
+  // The measurement is not on this sheet, and the plate says where it is instead of implying it is.
+  await expect(page.locator(".plate__elsewhere")).toContainText("world chapter");
 });
 
 test("the plate's pen is the same weight at any window size", async ({ page }) => {
