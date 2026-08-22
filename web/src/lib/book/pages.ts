@@ -14,6 +14,7 @@
  * | panel | what it carries | measured | budget |
  * | --- | --- | --- | --- |
  * | `finding` | the banner, the plain sentence, why it matters, the plain caveat | 526-680 | 826 |
+ * | `how` | how it was measured, in plain words, and the pre-registration | 320-379 | 826 |
  * | `figure` | the plate or chart, with its legend | ~460 | 826 |
  * | `record` | "Precisely", the value, the scope, the caveat, the method, what it survived | 274-821 | 826 |
  * | `bias` | the risk-of-bias table, which is the margin's tall section | 433-1092 | 826 |
@@ -47,6 +48,8 @@ export type Panel =
   | { kind: "opening" }
   | { kind: "intro"; from: number; to: number }
   | { kind: "finding"; key: string }
+  /** How it was measured, in plain words: the page between the finding and its figure. */
+  | { kind: "how"; key: string }
   /** Which of the figure's declared pages, by index into `figures.ts`. */
   | { kind: "figure"; key: string; at: number }
   | { kind: "record"; key: string }
@@ -118,7 +121,16 @@ function fold(chapter: Chapter, pages: readonly Panel[], from: number): Spread[]
  * book where every chapter is the same length is a form rather than a book.
  */
 function claimSpreads(chapter: Chapter, key: string, at: number, sources: Sources): Spread[] {
-  const pages: Panel[] = [{ kind: "finding", key }];
+  /*
+    What we found, how we found it, the picture, then the numbers.
+
+    The owner's reading order, and the `how` page is the one that was missing: a claim went from a
+    plain sentence straight to a plate, with the procedure represented by a link to a filename. Its
+    own page rather than a paragraph added to the first one, because the finding panel measures 526
+    to 680 of its 826 and a plain method is another 150 -- the split is where the material already
+    had a seam, which is the rule every other split in this file follows.
+  */
+  const pages: Panel[] = [{ kind: "finding", key }, { kind: "how", key }];
   figurePages(key).forEach((_page, at) => pages.push({ kind: "figure", key, at }));
   pages.push({ kind: "record", key }, { kind: "bias", key }, { kind: "survived", key });
 

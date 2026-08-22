@@ -39,6 +39,25 @@ function addressOf(spreads: readonly Spread[], match: (panel: Panel) => boolean)
   return `#ch=${spread.chapter.slug}&p=${spread.at}`;
 }
 
+/**
+ * The spread carrying a panel, and which side of it the panel is on.
+ *
+ * Needed once a figure's two pages face each other: both halves of the coverage assessment render a
+ * `section.coverage`, so a selector that does not name a leaf resolves to two elements and Playwright
+ * refuses it -- correctly. Which side is `pages.ts`'s business, so it is asked rather than assumed.
+ */
+function pageAt(
+  spreads: readonly Spread[],
+  match: (panel: Panel) => boolean,
+): { at: string; side: "verso" | "recto" } {
+  for (const spread of spreads) {
+    for (const side of ["verso", "recto"] as const) {
+      if (match(spread[side])) return { at: `#ch=${spread.chapter.slug}&p=${spread.at}`, side };
+    }
+  }
+  throw new Error("no spread carries that panel");
+}
+
 /** One claim's plain-register page. */
 async function claimPage(page: Page, key: string): Promise<void> {
   const spreads = await layout();
@@ -46,6 +65,19 @@ async function claimPage(page: Page, key: string): Promise<void> {
 }
 
 /** One claim's record page, where the number and the specimen invitation are. */
+/**
+ * The page carrying a claim's figure -- its plate, its chart or its assessment.
+ *
+ * Its own helper because it is no longer the leaf facing the claim. The plain-method page sits
+ * between them, so the figure moved to the next spread and changed sides with it, and six tests here
+ * were reaching for `.page--recto .plate` on the spread the claim is on. Addressed by kind, like the
+ * claim and the record beside it, so the next page inserted anywhere moves nothing here.
+ */
+async function figurePage(page: Page, key: string): Promise<void> {
+  const spreads = await layout();
+  await open(page, addressOf(spreads, (panel) => panel.kind === "figure" && panel.key === key));
+}
+
 async function recordPage(page: Page, key: string): Promise<void> {
   const spreads = await layout();
   await open(page, addressOf(spreads, (panel) => panel.kind === "record" && panel.key === key));
@@ -249,8 +281,10 @@ test("a visitor lands on a claim, with its number and its caveat", async ({ page
     drawn plate per claim, and `story.ts`'s camera is what places the mark, so the assertion is that
     the figure is about *this* claim rather than a decoration.
   */
-  await claimPage(page, ARRIVAL_KEY);
-  await expect(page.locator(".page--recto .plate .ink-here")).toHaveCount(1);
+  await figurePage(page, ARRIVAL_KEY);
+  // Either leaf: which side a panel lands on is `pages.ts`'s business, and a direct child of the
+  // spread is what excludes the turning leaf's copy -- which was the only reason to name a side.
+  await expect(page.locator(".spread > .page .plate .ink-here")).toHaveCount(1);
 });
 
 test("asking how we know is a page turn, not a disclosure", async ({ page }) => {
@@ -317,16 +351,20 @@ test("turning to another claim swaps the evidence with it", async ({ page }) => 
 
   const markOf = () =>
     page
-      .locator(".page--recto .plate .ink-here")
+      .locator(".spread > .page .plate .ink-here")
       .first()
       .evaluate((node) => {
         const box = (node as unknown as SVGGElement).getBoundingClientRect();
         return [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)];
       });
+  // The register is on the claim's page and the plate is two leaves on, so each half of the swap is
+  // read where it lives rather than off one spread that used to hold both.
+  await figurePage(page, "marine-null");
   const marine = await markOf();
 
   await claimPage(page, "atlas-no-net-change");
   await expect(page.locator(".claim__title")).not.toHaveText(/fish/i);
+  await figurePage(page, "atlas-no-net-change");
   const southern = await markOf();
 
   const moved = Math.abs(marine[0]! - southern[0]!) + Math.abs(marine[1]! - southern[1]!);
@@ -802,18 +840,31 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
     ),
   ];
 
-  const readEach = async <T>(read: () => Promise<T>): Promise<T[]> => {
+  /*
+    Read a leaf at a time, not a spread at a time.
+
+    The ribbon's two chart pages face each other now that the plain-method page shifted the parity,
+    so a count taken over the spread returned one reading of four lines where the assertion wants two
+    readings of two. That would have passed as "four lines" while hiding the thing being checked:
+    that there are two charts and each carries its own pair.
+  */
+  const readEach = async <T>(read: (leaf: string) => Promise<T>): Promise<T[]> => {
     const out: T[] = [];
     for (const address of chartPages) {
       await open(page, address);
-      if ((await page.locator(".chart__svg").count()) === 0) continue;
-      out.push(await read());
+      for (const side of ["verso", "recto"] as const) {
+        const leaf = `.spread > .page--${side}`;
+        if ((await page.locator(`${leaf} .chart__svg`).count()) === 0) continue;
+        out.push(await read(leaf));
+      }
     }
     return out;
   };
 
-  const charts = page.locator(".chart__svg");
-  await expect(charts.first()).toBeVisible();
+  // On a chart page before asking to see a chart. The claim's own leaf carried one while the figure
+  // faced it; the plain-method page moved the figure to the next spread.
+  await open(page, chartPages[0]!);
+  await expect(page.locator(".chart__svg").first()).toBeVisible();
 
   /*
     Two charts, not one with four lines -- two of four lines would nearly coincide and two would sit
@@ -821,7 +872,7 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
     *pages* now: they came to 1,362px on an 826px page, so `figures.ts` gives each its own leaf. Both
     still exist and each still carries its own pair of lines, which is what this counted.
   */
-  const lines = await readEach(() => page.locator(".chart__line").count());
+  const lines = await readEach((leaf) => page.locator(`${leaf} .chart__line`).count());
   expect(lines, "not two charts, one per page").toHaveLength(2);
   expect(lines.reduce((sum, n) => sum + n, 0), "not four lines across the pair").toBe(4);
   expect(new Set(lines).size, "the two charts do not carry the same number of lines").toBe(1);
@@ -830,10 +881,13 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   // own extents would make a 0.89-day gap and a 0.29-day gap look the same size, and would stretch
   // the shorter window's slope. Compared on the rendered geometry rather than the source numbers,
   // because it is the pixels that would lie.
-  const geometry = await readEach(() =>
-    charts.first().evaluate((node) =>
-      [...node.querySelectorAll(".chart__tick")].map((t) => t.textContent?.trim()).join("|"),
-    ),
+  const geometry = await readEach((leaf) =>
+    page
+      .locator(`${leaf} .chart__svg`)
+      .first()
+      .evaluate((node) =>
+        [...node.querySelectorAll(".chart__tick")].map((t) => t.textContent?.trim()).join("|"),
+      ),
   );
   expect(geometry.length, "fewer than two charts in the book").toBe(2);
   expect(new Set(geometry).size, "the two charts do not share one frame").toBe(1);
@@ -853,7 +907,7 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   // different things, because ATTRICI's counterfactual series ran out where DAMIP's share is a ratio
   // carried past the window that fitted it. globe.spec.ts checks the geometry; this checks the words.
   const limits = (
-    await readEach(() => page.locator(".chart__beyond-label").allTextContents())
+    await readEach((leaf) => page.locator(`${leaf} .chart__beyond-label`).allTextContents())
   ).flat();
   expect(limits).toHaveLength(2);
   expect(limits.join(" ")).toMatch(/no counterfactual after 2019/);
@@ -861,7 +915,9 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
 
   // Each size stated in words, which is what stops a chart being "improved" into a diverging wedge.
   // Read across the pair, because each chart states its own.
-  const sizes = (await readEach(() => page.locator(".chart__size").allTextContents())).flat();
+  const sizes = (
+    await readEach((leaf) => page.locator(`${leaf} .chart__size`).allTextContents())
+  ).flat();
   expect(sizes.length, "no chart states its size in words").toBeGreaterThan(0);
   expect(sizes.join(" ")).toMatch(/part by \d+\.\d+ days/);
 
@@ -895,9 +951,20 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
 
 test("the detectability assessment is the coverage claim's own number", async ({ page }) => {
   await arrive(page);
-  await claimPage(page, "coverage-bias");
 
-  const coverage = page.locator(".coverage");
+  /*
+    Its own leaf. The assessment is two pages -- what could be measured, and what is held back -- and
+    they face each other now, so both render a `section.coverage` on one spread and an unscoped
+    selector resolves to two. Named rather than narrowed with `.first()`, because "whichever comes
+    first in the DOM" is not the page this half of the test is about.
+  */
+  const measured = pageAt(
+    await layout(),
+    (panel) => panel.kind === "figure" && panel.key === "coverage-bias" && panel.at === 0,
+  );
+  await open(page, measured.at);
+
+  const coverage = page.locator(`.spread > .page--${measured.side} .coverage`);
   await expect(coverage).toBeVisible();
   // The headline, as a share rather than a count: "1,997 cells" means nothing without a denominator.
   await expect(coverage.locator(".coverage__lead")).toContainText(/%/);
@@ -1104,7 +1171,9 @@ test("the sandbox default reproduces the number on the claim it sits under", asy
 test("switching a safeguard off moves the number and says which way", async ({ page }) => {
   // One knob to a page, so the page carrying this one is found rather than assumed.
   await knobOf(page, "autumn-advance", /hardware upgrade/i);
-  const knob = page.locator(".knob").first();
+  // Named rather than first. Two knobs face each other now that the plain-method page changed the
+  // parity, so the leftmost one on the spread is not necessarily the one this test is about.
+  const knob = page.locator(".knob").filter({ hasText: /hardware upgrade/i });
   const before = await knob.locator(".knob__value").textContent();
 
   await knob.locator(".option", { hasText: "break at detected outage" }).click();
@@ -1227,7 +1296,15 @@ test("the dial stops where the fit stops, and offers no position past it", async
 });
 
 test("the flat driver is published as flat rather than left out", async ({ page }) => {
-  await dialPage(page);
+  /*
+    Two navigations, because the two things asserted are on two pages.
+
+    The dial's knobs are a page each and its standfirst is printed once, on the first of them, so the
+    page carrying the wind knob does not carry the lead. They shared a leaf until the plain-method
+    page shifted the parity -- which is the kind of coincidence a test should not rest on, since which
+    knob lands on which page is `response.json`'s order to decide.
+  */
+  await knobOf(page, "anthropogenic-share", /winds were more favourable/i);
 
   // Wind support is the obvious mechanism and it measures nothing: −0.24 ± 0.39 days per m/s, an
   // interval straddling zero. Publishing it is the point -- a panel carrying only the drivers that
@@ -1235,6 +1312,9 @@ test("the flat driver is published as flat rather than left out", async ({ page 
   const wind = page.locator(".response .knob").filter({ hasText: /winds were more favourable/i });
   await expect(wind).toBeVisible();
   await expect(wind.locator(".knob__value")).toContainText("−0.24 days");
+
+  // And the panel says why a flat driver is in it at all, on the page that carries its standfirst.
+  await dialPage(page);
   await expect(page.locator(".response__lead")).toContainText(/published because it is flat/i);
 });
 
@@ -1253,6 +1333,9 @@ test("the dial refuses to be read as a forecast, and refuses to leave its own ra
   // The bound is the band and not the extreme, and the reason is in the verdict rather than implied.
   await expect(beyond.locator(".refusal__verdict")).toContainText(/single observation|one observation/i);
 
+  // Its own page. The two refusals shared a spread until the plain-method page flipped the parity,
+  // and a test that reads both off one leaf is asserting a layout rather than a refusal.
+  await refusalOf(page, "anthropogenic-share", /this coming autumn/i);
   const forecast = page.locator(".response .refusal").filter({ hasText: /this coming autumn/i });
   await expect(forecast.locator(".refusal__verdict")).toContainText(/did not beat chance/i);
 

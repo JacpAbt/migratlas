@@ -40,6 +40,11 @@ SCHEMA_VERSION: Final = 4
 # second dense paragraph, and the reader who needed it has been lost twice.
 PLAIN_MAX_CHARS: Final = 180
 
+# How long a plain method may run before it has stopped being the thing it was added for. Longer
+# than a plain sentence because a method is a sequence and a sequence needs clauses, and short
+# enough that it cannot turn into the method note it stands in front of.
+HOW_MAX_CHARS: Final = 620
+
 # The domains ROBITT asks about (Boyd et al. 2022, Methods in Ecology and Evolution 13:1497), a
 # 17-question tool for risk of bias in studies of temporal trends, built on PRISMA's model. Adopted
 # rather than invented, for the same reason the ethics gate implements GBIF's sensitive-species
@@ -116,6 +121,24 @@ class Finding:
     hundred characters, because that is how long it takes to say something true about two
     disagreeing counterfactuals. A reader who bounces off that paragraph currently leaves with no
     caveat at all, which is worse than leaving with the short one.
+    """
+
+    plain_how: str
+    """How it was measured, for someone who will not open the method note. Always rendered.
+
+    The owner's reading order is what we found, then *how we found it*, then a picture, then the
+    numbers -- and this was the missing register. `method` is a path to a pre-registration and
+    `caveat` is what would make the number wrong; neither of them tells a reader what was actually
+    done, and a claim whose method is a filename is a claim asking to be taken on trust.
+
+    Bound by the same rule as `plain`: it may drop precision and it may not add reach. It must
+    describe the procedure that produced *this* value -- the instrument, the unit, the comparison --
+    and it must not name a taxon the evidence cannot resolve, which is why the same creature check
+    that guards the plain sentence guards this one.
+
+    It also must not restate the figures. `value` and `scope` carry them, computed, and a count
+    typed into a sentence here is a count that goes stale silently -- the defect this whole module
+    re-runs the analysis to avoid.
     """
 
     value: str
@@ -656,6 +679,13 @@ def collect() -> list[Finding]:
     findings.append(
         Finding(
             key="marine-null",
+            plain_how=(
+                "Government research ships have been dragging the same nets over the same "
+                "seabed for decades. For each species in each survey we followed the middle of "
+                "where it was caught, year by year, and fitted how fast that middle was moving "
+                "north or south. Then we looked at all of those fits together instead of "
+                "collapsing them into one — the disagreement between them is the result."
+            ),
             realm=Realm.MARINE.value,
             taxon_scope=TaxonScope.EXACT.value,
             evidence_type=EvidenceType.SURVEY_INDEX.value,
@@ -722,6 +752,14 @@ def collect() -> list[Finding]:
         findings.append(
             Finding(
                 key="composition-stable",
+                plain_how=(
+                    "If a different mix of animals had taken over the night sky, it would fly "
+                    "at a different speed. The radar gives speed over the ground, and a "
+                    "separate weather record gives the wind on that night at that place; taking "
+                    "one from the other leaves how fast the animals were flying through the "
+                    "air. That figure has not moved, which is what makes the earlier passage a "
+                    "change in timing rather than a change in who is passing."
+                ),
                 realm=Realm.AERIAL.value,
                 taxon_scope=TaxonScope.UNATTRIBUTED.value,
                 evidence_type=EvidenceType.FLUX.value,
@@ -816,6 +854,14 @@ def collect() -> list[Finding]:
         findings.append(
             Finding(
                 key="anthropogenic-share",
+                plain_how=(
+                    "Climate models can be run twice: once with the last century as it "
+                    "happened, and once with human emissions taken out of it. We sampled both "
+                    "runs at the same radar stations and over the same years, put each one's "
+                    "temperature through the relationship between warmth and passage date that "
+                    "the observations themselves fitted, and took the difference. What is left "
+                    "is the part of the shift a world without us does not produce."
+                ),
                 realm=Realm.AERIAL.value,
                 taxon_scope=TaxonScope.UNATTRIBUTED.value,
                 evidence_type=EvidenceType.FLUX.value,
@@ -876,6 +922,13 @@ def collect() -> list[Finding]:
     findings.append(
         Finding(
             key="coverage-bias",
+            plain_how=(
+                "No new measurement — a count of what this project holds. Every source with a "
+                "time axis was tallied by hemisphere, separating the records that describe "
+                "animals from the records of weather and vegetation used to explain them. The "
+                "two shares are nothing like each other, and that gap bounds every question "
+                "that needs both halves at once."
+            ),
             # Every realm at once, so the field names the whole lake rather than picking one.
             realm="all",
             taxon_scope="all",
@@ -942,6 +995,14 @@ def collect() -> list[Finding]:
     findings.append(
         Finding(
             key="atlas-no-net-change",
+            plain_how=(
+                "Two atlases thirty years apart, built from the same kind of volunteer "
+                "checklist in the same map squares. Volunteers looked far harder the second "
+                "time, so raw counts would measure the volunteers rather than the birds: "
+                "instead we asked, for each species in each square, how likely a full day's "
+                "card was to record it, and only in squares visited enough in both periods. "
+                "Those probabilities are what we compared."
+            ),
             realm=Realm.TERRESTRIAL.value,
             taxon_scope=TaxonScope.EXACT.value,
             evidence_type=EvidenceType.SURVEY_INDEX.value,
@@ -1042,6 +1103,13 @@ def collect() -> list[Finding]:
     findings.append(
         Finding(
             key="transfer-fails",
+            plain_how=(
+                "A test of whether one realm's answer travels. Three bodies of evidence, and "
+                "three runs: each time, fit on two of them and try to describe the third, which "
+                "the model has never seen. Two of the three could be recovered that way. The "
+                "one measured from the air could not, by an order of magnitude — which is the "
+                "finding rather than a hitch in it."
+            ),
             realm="all",
             taxon_scope="all",
             evidence_type="all",
@@ -1199,6 +1267,13 @@ def _displacement_finding() -> Finding | None:
         return None
     return Finding(
         key="displacement-flat",
+        plain_how=(
+            "Two collared herds, one in the Canadian Rockies and one on Svalbard. For each "
+            "animal in each year we took where it was in a fixed winter window and where it was "
+            "in a fixed summer window and measured the distance between the two — the same two "
+            "windows every year, so the numbers can be compared — then asked whether that "
+            "distance is growing or shrinking. Years with fewer than ten animals are left out."
+        ),
         realm=Realm.TERRESTRIAL.value,
         taxon_scope=TaxonScope.EXACT.value,
         evidence_type=EvidenceType.TRACK.value,
@@ -1275,6 +1350,13 @@ def _autumn_advance(first_year: int, last_year: int) -> Finding:
     ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size)
     return Finding(
         key="autumn-advance",
+        plain_how=(
+            "Weather radar looks up, so it also sees whatever is flying. For every night at "
+            "every station we measured how much was in the air and when the bulk of it went "
+            "past, then asked whether that date has moved across thirty years — one straight "
+            "line per station, and the published figure is what those lines agree on. Nothing "
+            "in this identifies an animal. It counts what reflects."
+        ),
         realm=Realm.AERIAL.value,
         taxon_scope=TaxonScope.UNATTRIBUTED.value,
         evidence_type=EvidenceType.FLUX.value,
@@ -1330,6 +1412,13 @@ def _skill_finding() -> Finding:
     spring, autumn = seasons["spring"], seasons["autumn"]
     return Finding(
         key="skill-sparse",
+        plain_how=(
+            "Prediction was tested the only way that settles anything: fit on the early years, "
+            "predict the later ones, and never look at them first. What the model was allowed "
+            "to use was written down before it was run once. Then every station's score was set "
+            "against the same model fed the same years shuffled, so a station counts as "
+            "predictable only if it beats its own noise. Most did not."
+        ),
         realm=Realm.AERIAL.value,
         taxon_scope=TaxonScope.UNATTRIBUTED.value,
         evidence_type=EvidenceType.FLUX.value,

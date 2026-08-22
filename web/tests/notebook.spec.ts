@@ -64,6 +64,7 @@ async function layout(): Promise<readonly Spread[]> {
 interface ClaimPages {
   key: string;
   finding: string;
+  how: string;
   figure: string;
   record: string;
   bias: string;
@@ -102,6 +103,7 @@ async function eachClaim(page: Page, visit: (pages: ClaimPages) => Promise<void>
     await visit({
       key,
       finding: addressOf("finding"),
+      how: addressOf("how"),
       figure: addressOf("figure"),
       record: addressOf("record"),
       bias: addressOf("bias"),
@@ -297,6 +299,9 @@ for (const surface of ["day", "night"] as const) {
       ["the precise claim", ".claim__precise", AA_SMALL, "record"],
       ["the caveat", ".claim__caveat", AA_SMALL, "record"],
       ["the method link", ".claim__method", AA_SMALL, "record"],
+      ["the plain method", ".how__lead", AA_SMALL, "how"],
+      ["its kicker", ".how__kicker", AA_SMALL, "how"],
+      ["its method link", ".how__method", AA_SMALL, "how"],
       ["a bias domain", ".bias__domain", AA_SMALL, "bias"],
       ["an open bias status", ".bias__status--open", AA_SMALL, "bias"],
       ["a bounded bias status", ".bias__status--bounded", AA_SMALL, "bias"],

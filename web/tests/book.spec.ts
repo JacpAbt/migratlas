@@ -55,6 +55,27 @@ function addressOf(spreads: readonly Spread[], match: (panel: Panel) => boolean)
   return `#ch=${spread.chapter.slug}&p=${spread.at}`;
 }
 
+/**
+ * The spread carrying a panel, *and which side of it the panel is on*.
+ *
+ * Which side a panel lands on is `pages.ts`'s business and it moves: inserting the plain-method page
+ * flipped the parity of every claim, so the figure went from the recto of the opening spread to the
+ * verso of the next one. Seven tests here addressed a page as "the chapter's first spread, on the
+ * right" and all seven failed at once -- correctly, because that was never the fact they were about.
+ * Ask for the panel and be told where it is.
+ */
+function pageAt(
+  spreads: readonly Spread[],
+  match: (panel: Panel) => boolean,
+): { at: string; side: "verso" | "recto" } {
+  for (const spread of spreads) {
+    for (const side of ["verso", "recto"] as const) {
+      if (match(spread[side])) return { at: `#ch=${spread.chapter.slug}&p=${spread.at}`, side };
+    }
+  }
+  throw new Error("no spread carries that panel");
+}
+
 /** Opens the book, which is now simply the site. */
 async function openBook(page: Page, hash = ""): Promise<void> {
   await page.goto(hash || "?");
@@ -204,7 +225,12 @@ test("the turn clears itself even where the animation never fires", async ({ pag
 });
 
 test("the plate is drawn, and its marks are named", async ({ page }) => {
-  await openBook(page, "#ch=what-did-not");
+  // The plate's own page, by kind: it is no longer the leaf facing the claim it belongs to.
+  const plate = pageAt(
+    await layout(),
+    (panel) => panel.kind === "figure" && panel.key === "marine-null",
+  );
+  await openBook(page, plate.at);
   const svg = page.locator(".plate__sheet svg");
   await expect(svg).toBeVisible();
 
@@ -239,8 +265,13 @@ test("the plate's pen is the same weight at any window size", async ({ page }) =
     });
   };
 
+  const plate = pageAt(
+    await layout(),
+    (panel) => panel.kind === "figure" && panel.key === "marine-null",
+  );
+
   await page.setViewportSize({ width: 1600, height: 900 });
-  await openBook(page, "#ch=what-did-not");
+  await openBook(page, plate.at);
   const wide = await read();
 
   await page.setViewportSize({ width: 1100, height: 700 });
@@ -401,7 +432,7 @@ test("the introduction's figures are the ledger's, in the rendered page", async 
   await expect(page.locator(".intro__counted")).toHaveText(published.counted);
 });
 
-test("each chapter's facing page carries the figure its claim actually has", async ({ page }) => {
+test("each claim's figure page carries the figure that claim actually has", async ({ page }) => {
   /*
     The routing that decides this is a handful of conditions, and a condition with no test is a
     condition that flips. Two claims have a figure of their own -- the counterfactual ribbon and the
@@ -410,22 +441,27 @@ test("each chapter's facing page carries the figure its claim actually has", asy
     three times teaches nothing the value already said. Everything else gets the drawn plate, which
     answers a different question.
   */
-  await openBook(page, "#ch=why-it-changed");
-  await expect(page.locator(".page--recto .figure h2")).toHaveText("The world without us");
-  await expect(page.locator(".page--recto .plate")).toHaveCount(0);
-  // One page, one thing: the dial is several leaves on, not stacked under the chart.
-  await expect(page.locator(".page--recto .response")).toHaveCount(0);
+  const spreads = await layout();
+  const figureOf = (key: string) =>
+    pageAt(spreads, (panel) => panel.kind === "figure" && panel.key === key);
 
-  await openBook(page, "#ch=cannot-see");
-  await expect(page.locator(".page--recto .figure h2")).toHaveText(
-    "Where change could be measured",
-  );
-  await expect(page.locator(".page--recto .plate")).toHaveCount(0);
+  for (const [key, heading] of [
+    ["anthropogenic-share", "The world without us"],
+    ["coverage-bias", "Where change could be measured"],
+  ] as const) {
+    const { at, side } = figureOf(key);
+    await openBook(page, at);
+    await expect(page.locator(`.page--${side} .figure h2`)).toHaveText(heading);
+    await expect(page.locator(`.page--${side} .plate`)).toHaveCount(0);
+    // One page, one thing: the dial is several leaves on, not stacked under the chart.
+    await expect(page.locator(`.page--${side} .response`)).toHaveCount(0);
+  }
 
-  await openBook(page, "#ch=what-changed");
-  await expect(page.locator(".page--recto .plate")).toHaveCount(1);
-  await expect(page.locator(".page--recto .figure")).toHaveCount(0);
-  await expect(page.locator(".page--recto .response")).toHaveCount(0);
+  const drawn = figureOf("autumn-advance");
+  await openBook(page, drawn.at);
+  await expect(page.locator(`.page--${drawn.side} .plate`)).toHaveCount(1);
+  await expect(page.locator(`.page--${drawn.side} .figure`)).toHaveCount(0);
+  await expect(page.locator(`.page--${drawn.side} .response`)).toHaveCount(0);
 });
 
 test("a figure that needs more than a page gets more, and its document agrees", async ({
@@ -449,8 +485,12 @@ test("a figure that needs more than a page gets more, and its document agrees", 
 
   // And a chart page draws one chart, which is what made them fit: two came to 1,362px on an 826px
   // page.
-  await openBook(page, "#ch=why-it-changed");
-  await expect(page.locator(".page--recto .pair__set li")).toHaveCount(1);
+  const first = pageAt(
+    await layout(),
+    (panel) => panel.kind === "figure" && panel.key === "anthropogenic-share",
+  );
+  await openBook(page, first.at);
+  await expect(page.locator(`.page--${first.side} .pair__set li`)).toHaveCount(1);
 });
 
 test("the safeguards sit beside the claim they qualify", async ({ page }) => {
@@ -469,9 +509,17 @@ test("the safeguards sit beside the claim they qualify", async ({ page }) => {
     );
     await openBook(page, address);
     await expect(page.locator(".knob").first(), `no knob at ${address}`).toBeVisible();
-    // One to a page, which is what three of them at about 435px each on an 826px page forced.
-    // Counted over the spread, because whether a knob lands left or right is `pages.ts`'s business.
-    await expect(page.locator(".spread .knob")).toHaveCount(1);
+    /*
+      One to a *page*, which is what three of them at about 435px each on an 826px page forced.
+
+      Counted per leaf rather than per spread. Per spread held only while the knobs happened to land
+      against something else: the plain-method page flipped the parity and two knobs now face each
+      other, which is two pages carrying one knob each and exactly what the rule says.
+    */
+    for (const side of ["verso", "recto"] as const) {
+      const knobs = await page.locator(`.spread > .page--${side} .knob`).count();
+      expect(knobs, `${side} at ${address} carries ${knobs} knobs`).toBeLessThanOrEqual(1);
+    }
   }
 });
 
@@ -487,14 +535,31 @@ test("a 460 KB assessment is not fetched by a chapter that does not show it", as
     if (request.url().endsWith(".json")) asked.push(request.url().split("/").pop() ?? "");
   });
 
-  await openBook(page, "#ch=what-changed");
-  await expect(page.locator(".page--recto .plate")).toHaveCount(1);
+  const spreads = await layout();
+  const drawn = pageAt(
+    spreads,
+    (panel) => panel.kind === "figure" && panel.key === "autumn-advance",
+  );
+  await openBook(page, drawn.at);
+  await expect(page.locator(`.page--${drawn.side} .plate`)).toHaveCount(1);
   expect(asked, "the assessment was fetched by a chapter that does not show it").not.toContain(
     "detectability.json",
   );
 
-  await page.locator(".tab", { hasText: "Cannot see" }).click();
-  await expect(page.locator(".page--recto .figure h2")).toHaveText(
+  /*
+    Then its own page rather than its own chapter.
+
+    Opening the chapter used to mount the figure, because the figure was the leaf facing the claim.
+    It is two leaves in now, so a chapter click alone proves nothing either way -- and the rule being
+    tested was always about the page: the figure fetches this file, and the figure exists only while
+    it is on screen.
+  */
+  const assessment = pageAt(
+    spreads,
+    (panel) => panel.kind === "figure" && panel.key === "coverage-bias",
+  );
+  await openBook(page, assessment.at);
+  await expect(page.locator(`.page--${assessment.side} .figure h2`)).toHaveText(
     "Where change could be measured",
   );
   expect(asked, "the chapter that shows it never asked for it").toContain("detectability.json");
@@ -530,9 +595,41 @@ test("no chapter but the world boots a map", async ({ page }) => {
     chapters do not need one. If a map turns up on a claim chapter it means the drawn plate has been
     replaced by the thing it was drawn to avoid.
   */
-  await openBook(page, "#ch=what-changed");
-  await expect(page.locator(".page--recto .plate")).toHaveCount(1);
+  const drawn = pageAt(
+    await layout(),
+    (panel) => panel.kind === "figure" && panel.key === "autumn-advance",
+  );
+  await openBook(page, drawn.at);
+  await expect(page.locator(`.page--${drawn.side} .plate`)).toHaveCount(1);
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
+});
+
+test("a claim reads what, then how, then the picture, then the numbers", async ({ page }) => {
+  /*
+    The owner's reading order, asserted as an order rather than as four pages that exist.
+
+    Every one of these registers was already published; what was missing was the second, and what is
+    easy to lose again is the sequence. A reader who meets the interval before the procedure has been
+    handed a number to trust, which is the failure the plain registers exist against -- so this walks
+    the panels of one claim in the order `pages.ts` emits them and names each one.
+  */
+  const claim = (await layout())
+    .filter((spread) => spread.chapter.slug === "what-changed")
+    .flatMap((spread) => [spread.verso, spread.recto])
+    .filter((panel) => "key" in panel && panel.key === "autumn-advance")
+    .map((panel) => panel.kind);
+
+  expect(claim.slice(0, 4)).toEqual(["finding", "how", "figure", "record"]);
+
+  // And the page renders the sentence the ledger holds, not a summary of it written in Svelte.
+  const ledger = JSON.parse(readFileSync("public/findings.json", "utf8")) as {
+    findings: { key: string; plain_how: string }[];
+  };
+  const how = ledger.findings.find((one) => one.key === "autumn-advance")!.plain_how;
+  await openBook(page, addressOf(await layout(), (panel) => panel.kind === "how"));
+  await expect(page.locator(".how__lead")).toHaveText(how);
+  // The register above it, because a page of prose with no label is a page a reader has to guess at.
+  await expect(page.locator(".how__kicker")).toHaveText("How we found it");
 });
 
 /*

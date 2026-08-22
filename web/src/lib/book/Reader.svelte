@@ -7,6 +7,7 @@
   import Settings from "./Settings.svelte";
   import World from "./World.svelte";
   import Claim from "../claim/Claim.svelte";
+  import How from "../claim/How.svelte";
   import Margin from "../claim/Margin.svelte";
   import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
@@ -289,6 +290,8 @@
     {:else if panel.kind === "finding"}
       <p class="chapter">{chapterOf(panel.key)?.title ?? ""}</p>
       <Claim {finding} part="finding" />
+    {:else if panel.kind === "how"}
+      <How {finding} />
     {:else if panel.kind === "figure"}
       <Figure {finding} number={figureNumber(panel.key)} {base} at={panel.at} />
     {:else if panel.kind === "record"}
