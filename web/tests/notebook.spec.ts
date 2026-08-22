@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import type { Spread } from "../src/lib/book/pages";
+import type { Leaf, Sources, Spread } from "../src/lib/book/pages";
 
 /*
   The size the book is designed at, stated rather than inherited.
@@ -49,15 +49,25 @@ const AA_LARGE = 3;
  * claim that gains a knob moves every page after it, and hard-coded numbers would pass while
  * pointing at the wrong leaf.
  */
-async function layout(): Promise<readonly Spread[]> {
-  const { spreadsOf } = await import("../src/lib/book/pages");
+function documents(): Sources {
   const read = (name: string) => JSON.parse(readFileSync(`public/${name}`, "utf8"));
-  return spreadsOf({
+  return {
     findings: read("findings.json").findings,
     introduction: read("introduction.json"),
     safeguards: read("sandbox.json"),
     dial: read("response.json"),
-  });
+  };
+}
+
+async function layout(): Promise<readonly Spread[]> {
+  const { spreadsOf } = await import("../src/lib/book/pages");
+  return spreadsOf(documents());
+}
+
+/** The phone's arrangement of the same pages, which is shorter by the spread's padding. */
+async function leafLayout(): Promise<readonly Leaf[]> {
+  const { leavesOf } = await import("../src/lib/book/pages");
+  return leavesOf(documents());
 }
 
 /** Where each of one claim's pages is, by kind. */
@@ -81,6 +91,7 @@ interface ClaimPages {
  */
 async function eachClaim(page: Page, visit: (pages: ClaimPages) => Promise<void>): Promise<void> {
   const spreads = await layout();
+  const leaves = await leafLayout();
   const keys = [
     ...new Set(
       spreads
@@ -91,11 +102,25 @@ async function eachClaim(page: Page, visit: (pages: ClaimPages) => Promise<void>
   expect(keys.length, "no claims in the book").toBeGreaterThan(0);
 
   for (const key of keys) {
+    /*
+      The arrangement this viewport will mount, not the spread's.
+
+      A phone arranges the same authored pages without the spread's padding, so `p` is a different
+      offset there -- and the audit test below sets 390px and then asked for a page by its spread
+      address, landing two leaves away from the bias table it was about.
+    */
+    const narrow = (page.viewportSize()?.width ?? 1600) < 62 * 16;
+    const pages = narrow
+      ? leaves.map((leaf) => ({ chapter: leaf.chapter, at: leaf.at, panels: [leaf.panel] }))
+      : spreads.map((one) => ({
+          chapter: one.chapter,
+          at: one.at,
+          panels: [one.verso, one.recto],
+        }));
+
     const addressOf = (kind: string): string => {
-      const at = spreads.find((one) =>
-        [one.verso, one.recto].some(
-          (panel) => panel.kind === kind && "key" in panel && panel.key === key,
-        ),
+      const at = pages.find((one) =>
+        one.panels.some((panel) => panel.kind === kind && "key" in panel && panel.key === key),
       );
       if (!at) throw new Error(`no ${kind} page for ${key}`);
       return `#ch=${at.chapter.slug}&p=${at.at}`;

@@ -58,13 +58,53 @@ function pageAt(
   throw new Error("no spread carries that panel");
 }
 
-/** One claim's plain-register page. */
-async function claimPage(page: Page, key: string): Promise<void> {
-  const spreads = await layout();
-  await open(page, addressOf(spreads, (panel) => panel.kind === "finding" && panel.key === key));
+/**
+ * The address of the page carrying a panel, in the arrangement this viewport will actually mount.
+ *
+ * `p` is an offset within a chapter and the two containers arrange the same authored pages
+ * differently -- the spread pads each argument to an even page count so a leaf ending one never
+ * faces a leaf starting the next, and a phone, showing one page at a time, has nothing to pad
+ * against. So an address computed from the spread list lands on the wrong leaf on a phone, which is
+ * how tests about the audit and about a measurement's line count started failing on a viewport
+ * rather than on anything they were about.
+ *
+ * The width is the same 62rem `Reader` switches on. Asked of the viewport rather than passed in, so
+ * a test that changes size cannot forget.
+ */
+async function address(page: Page, match: (panel: Panel) => boolean): Promise<string> {
+  const { leavesOf, spreadsOf } = await import("../src/lib/book/pages");
+  const { CHAPTERS } = await import("../src/lib/story");
+  const read = (name: string) => JSON.parse(readFileSync(`public/${name}`, "utf8"));
+  const sources = {
+    findings: read("findings.json").findings,
+    introduction: read("introduction.json"),
+    safeguards: read("sandbox.json"),
+    dial: read("response.json"),
+  };
+
+  const narrow = (page.viewportSize()?.width ?? 1600) < 62 * 16;
+  const pages = narrow
+    ? leavesOf(sources, CHAPTERS).map((leaf) => ({
+        chapter: leaf.chapter,
+        at: leaf.at,
+        panels: [leaf.panel],
+      }))
+    : spreadsOf(sources, CHAPTERS).map((spread) => ({
+        chapter: spread.chapter,
+        at: spread.at,
+        panels: [spread.verso, spread.recto],
+      }));
+
+  const found = pages.find((one) => one.panels.some(match));
+  if (!found) throw new Error("no page carries that panel");
+  return `#ch=${found.chapter.slug}&p=${found.at}`;
 }
 
-/** One claim's record page, where the number and the specimen invitation are. */
+/** One claim's plain-register page. */
+async function claimPage(page: Page, key: string): Promise<void> {
+  await open(page, await address(page, (panel) => panel.kind === "finding" && panel.key === key));
+}
+
 /**
  * The page carrying a claim's figure -- its plate, its chart or its assessment.
  *
@@ -74,13 +114,12 @@ async function claimPage(page: Page, key: string): Promise<void> {
  * claim and the record beside it, so the next page inserted anywhere moves nothing here.
  */
 async function figurePage(page: Page, key: string): Promise<void> {
-  const spreads = await layout();
-  await open(page, addressOf(spreads, (panel) => panel.kind === "figure" && panel.key === key));
+  await open(page, await address(page, (panel) => panel.kind === "figure" && panel.key === key));
 }
 
+/** One claim's record page, where the number and the specimen invitation are. */
 async function recordPage(page: Page, key: string): Promise<void> {
-  const spreads = await layout();
-  await open(page, addressOf(spreads, (panel) => panel.kind === "record" && panel.key === key));
+  await open(page, await address(page, (panel) => panel.kind === "record" && panel.key === key));
 }
 
 /**
@@ -755,10 +794,11 @@ for (const [device, width, height] of [
     ).toBeGreaterThan(300);
 
     // The audit is still there and still not behind a control -- it is a leaf of its own now.
-    const spreads = await layout();
+    // Through the viewport-aware address, because this test is the one that changes size: a phone
+    // arranges the same pages without the spread's padding, so `p` is a different offset there.
     await open(
       page,
-      addressOf(spreads, (panel) => panel.kind === "bias" && panel.key === ARRIVAL_KEY),
+      await address(page, (panel) => panel.kind === "bias" && panel.key === ARRIVAL_KEY),
     );
     await expect(page.locator(".bias__finding").first()).toBeVisible();
     await expect(page.locator("details, [hidden]")).toHaveCount(0);

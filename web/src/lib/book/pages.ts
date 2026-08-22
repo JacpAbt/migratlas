@@ -76,6 +76,33 @@ export interface Spread {
   recto: Panel;
 }
 
+/** One page, on its own, which is what a phone shows. */
+export interface Leaf {
+  chapter: Chapter;
+  /** Position within the chapter, so a page has an address a reader can be sent to. */
+  at: number;
+  panel: Panel;
+  /** Null on the very first leaf, which is a title page and carries no number, as on the spread. */
+  folio: number | null;
+}
+
+/**
+ * One run of pages that must not be interleaved with another: a claim, the introduction, the world.
+ *
+ * The unit exists because the two containers disagree about what to do with the same pages, and the
+ * owner's answer to that was that they should: forcing one shape onto both is worse than letting each
+ * be itself. A spread pads each of these to an even count, so a leaf that ends one argument never
+ * faces a leaf that starts the next. A phone shows one page at a time, so it has nothing to pad
+ * against and those blanks are dead swipes -- it concatenates instead.
+ *
+ * Both read the same list. What differs is the arrangement, not the content, which is the line worth
+ * holding: two containers, one authored book.
+ */
+interface Section {
+  chapter: Chapter;
+  pages: Panel[];
+}
+
 /**
  * How many passages the introduction puts on one page.
  *
@@ -120,7 +147,7 @@ function fold(chapter: Chapter, pages: readonly Panel[], from: number): Spread[]
  * safeguard knobs. Padding every claim to the longest would have added a dozen blank spreads, and a
  * book where every chapter is the same length is a form rather than a book.
  */
-function claimSpreads(chapter: Chapter, key: string, at: number, sources: Sources): Spread[] {
+function claimPages(key: string, sources: Sources): Panel[] {
   /*
     What we found, how we found it, the picture, then the numbers.
 
@@ -158,7 +185,7 @@ function claimSpreads(chapter: Chapter, key: string, at: number, sources: Source
     }
   }
 
-  return fold(chapter, pages, at);
+  return pages;
 }
 
 /**
@@ -169,13 +196,13 @@ function claimSpreads(chapter: Chapter, key: string, at: number, sources: Source
  * nothing at all. A phone test looking for content on the leaf before the second chapter is what
  * found it.
  */
-function introSpreads(chapter: Chapter, doc: IntroductionDocument | null): Spread[] {
+function introPages(doc: IntroductionDocument | null): Panel[] {
   const passages = doc?.passages.length ?? 0;
   const pages: Panel[] = [{ kind: "opening" }];
   for (let from = 0; from < passages; from += PASSAGES_PER_PAGE) {
     pages.push({ kind: "intro", from, to: Math.min(from + PASSAGES_PER_PAGE, passages) });
   }
-  return fold(chapter, pages, 0);
+  return pages;
 }
 
 /**
@@ -186,22 +213,28 @@ function introSpreads(chapter: Chapter, doc: IntroductionDocument | null): Sprea
  * claim of their own keep the shapes they already had: the introduction is prose across as many
  * spreads as it has passages, and the world is one spread with the map on it.
  */
-export function spreadsOf(
+function sectionsOf(
   sources: Sources,
-  chapters: readonly Chapter[] = CHAPTERS,
-  realm = "",
-): readonly Spread[] {
+  chapters: readonly Chapter[],
+  realm: string,
+): Section[] {
   const opening = chapters[0];
   const world = chapters[chapters.length - 1];
-  const out: Spread[] = [];
+  const out: Section[] = [];
 
   for (const chapter of chapters) {
     if (chapter === opening) {
-      out.push(...introSpreads(chapter, sources.introduction));
+      out.push({ chapter, pages: introPages(sources.introduction) });
       continue;
     }
     if (chapter === world) {
-      out.push(pair(chapter, 0, { kind: "world", part: "apparatus" }, { kind: "world", part: "map" }));
+      out.push({
+        chapter,
+        pages: [
+          { kind: "world", part: "apparatus" },
+          { kind: "world", part: "map" },
+        ],
+      });
       continue;
     }
     // Published first, then filtered, because the two reasons a chapter can come out empty need
@@ -210,12 +243,11 @@ export function spreadsOf(
       (key) => sources.findings.find((finding) => finding.key === key) ?? [],
     );
 
-    let at = 0;
+    let drawn = 0;
     for (const finding of published) {
       if (!inRealm(finding, realm)) continue;
-      const spreads = claimSpreads(chapter, finding.key, at, sources);
-      out.push(...spreads);
-      at += spreads.length;
+      out.push({ chapter, pages: claimPages(finding.key, sources) });
+      drawn += 1;
     }
 
     /*
@@ -227,12 +259,71 @@ export function spreadsOf(
       because the ledger does not hold them is blank paper, because there is nothing true to say
       about a chapter whose claims never arrived.
     */
-    if (at === 0) {
+    if (drawn === 0) {
       const empty: Panel =
         realm !== "" && published.length > 0
           ? { kind: "absent", realm, chapter: chapter.title }
           : { kind: "blank" };
-      out.push(pair(chapter, 0, empty, { kind: "blank" }));
+      out.push({ chapter, pages: [empty] });
+    }
+  }
+
+  return out;
+}
+
+export function spreadsOf(
+  sources: Sources,
+  chapters: readonly Chapter[] = CHAPTERS,
+  realm = "",
+): readonly Spread[] {
+  const out: Spread[] = [];
+  let chapter: Chapter | null = null;
+  let at = 0;
+
+  for (const section of sectionsOf(sources, chapters, realm)) {
+    // `at` is the offset within the chapter, so it restarts where the chapter does.
+    if (section.chapter !== chapter) {
+      chapter = section.chapter;
+      at = 0;
+    }
+    const spreads = fold(section.chapter, section.pages, at);
+    out.push(...spreads);
+    at += spreads.length;
+  }
+
+  return out;
+}
+
+/**
+ * The same book as a flat run of pages, which is what a phone reads.
+ *
+ * Not the spreads flattened. That is what it used to be, and it carried two of the spread's
+ * decisions onto a screen that has no use for either: the blank that pads a section to an even page
+ * count, which on a phone is a swipe onto nothing, and a folio computed from a spread index.
+ *
+ * The owner's call, when the measurements came in: a phone and a spread can be different, because
+ * the logic is different and forcing one onto the other is worse. So this is its own arrangement of
+ * the same authored pages -- no padding, and numbered by leaf.
+ */
+export function leavesOf(
+  sources: Sources,
+  chapters: readonly Chapter[] = CHAPTERS,
+  realm = "",
+): readonly Leaf[] {
+  const out: Leaf[] = [];
+  let chapter: Chapter | null = null;
+  let at = 0;
+
+  for (const section of sectionsOf(sources, chapters, realm)) {
+    if (section.chapter !== chapter) {
+      chapter = section.chapter;
+      at = 0;
+    }
+    for (const panel of section.pages) {
+      // The first leaf of the book is a title page and carries no number, which is the convention
+      // the spread already keeps -- `folio(0)` returns null for its verso for the same reason.
+      out.push({ chapter: section.chapter, at, panel, folio: out.length === 0 ? null : out.length });
+      at += 1;
     }
   }
 
@@ -240,8 +331,11 @@ export function spreadsOf(
 }
 
 /** Index of the first spread of a chapter, which is where its tab goes. */
-export function openingOf(spreads: readonly Spread[], slug: string): number {
-  const at = spreads.findIndex((spread) => spread.chapter.slug === slug);
+export function openingOf(
+  pages: readonly { chapter: Chapter }[],
+  slug: string,
+): number {
+  const at = pages.findIndex((page) => page.chapter.slug === slug);
   return at < 0 ? 0 : at;
 }
 

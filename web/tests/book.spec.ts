@@ -24,7 +24,7 @@ import { readFileSync } from "node:fs";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import type { Panel, Spread } from "../src/lib/book/pages";
+import type { Leaf, Panel, Spread } from "../src/lib/book/pages";
 
 /**
  * The book's own pagination, computed in the test from the same module and the same documents.
@@ -46,6 +46,37 @@ async function layout(realm = ""): Promise<readonly Spread[]> {
     chapters,
     realm,
   );
+}
+
+/**
+ * The phone's arrangement of the same pages, which is not this list doubled.
+ *
+ * It was, and these tests indexed leaves as `spread * 2` on that basis. The spread pads each
+ * argument to an even page count so a leaf ending one never faces a leaf starting the next; a phone
+ * shows one page at a time and has nothing to pad against, so its list is shorter by exactly that
+ * padding and the doubling is off by however much of it came before.
+ */
+async function leafLayout(realm = ""): Promise<readonly Leaf[]> {
+  const { leavesOf } = await import("../src/lib/book/pages");
+  const { CHAPTERS: chapters } = await import("../src/lib/story");
+  const read = (name: string) => JSON.parse(readFileSync(`public/${name}`, "utf8"));
+  return leavesOf(
+    {
+      findings: read("findings.json").findings,
+      introduction: read("introduction.json"),
+      safeguards: read("sandbox.json"),
+      dial: read("response.json"),
+    },
+    chapters,
+    realm,
+  );
+}
+
+/** The first leaf of a chapter, which is where a tab or a deep link lands on a phone. */
+function leafOpening(leaves: readonly Leaf[], slug: string): number {
+  const at = leaves.findIndex((leaf) => leaf.chapter.slug === slug);
+  if (at < 0) throw new Error(`no leaf in ${slug}`);
+  return at;
 }
 
 /** The address of the first spread carrying a panel that matches. */
@@ -918,8 +949,9 @@ test.describe("on a phone", () => {
 
     const { CHAPTERS } = await import("../src/lib/story");
     const state = await survey(page);
-    // Two leaves per spread, which is the whole of this container: the same pages, one at a time.
-    expect(state.leaves).toHaveLength((await layout()).length * 2);
+    // One page to a leaf, which is the whole of this container -- and its own list, so counted from
+    // `leavesOf` rather than from the spreads doubled.
+    expect(state.leaves).toHaveLength((await leafLayout()).length);
     expect(state.leaves[0]).toBe(`${CHAPTERS[0]!.slug}:verso`);
 
     // The next leaf's edge shows past this one, because otherwise nothing on screen says there is
@@ -970,9 +1002,9 @@ test.describe("on a phone", () => {
     await openLeaves(page);
     await expect(page.locator(".thumb__word")).toHaveText("Changed");
 
-    // The first leaf of "What we cannot see", found from the pagination rather than counted by hand.
-    const spreads = await layout();
-    const target = spreads.findIndex((one) => one.chapter.slug === "cannot-see") * 2;
+    // The first leaf of "What we cannot see", found from the phone's own pagination.
+    const leaves = await leafLayout();
+    const target = leafOpening(leaves, "cannot-see");
 
     await swipeTo(page, target);
     await expect(page).toHaveURL(/[#&]ch=cannot-see/);
@@ -982,7 +1014,7 @@ test.describe("on a phone", () => {
     await page.goBack();
     await expect(page.locator(".thumb__word")).toHaveText("Changed");
     const state = await survey(page);
-    const opened = spreads.findIndex((one) => one.chapter.slug === "what-changed") * 2;
+    const opened = leafOpening(leaves, "what-changed");
     expect(state.scrollLeft).toBe(state.offsets[opened]);
   });
 
@@ -995,9 +1027,9 @@ test.describe("on a phone", () => {
       browser actually dispatches. Reported per leaf this would push three entries and make the back
       button a rewind of the gesture; the URL waits for the rail to stop instead.
     */
-    const spreads = await layout();
-    const crossed = ["what-changed", "what-did-not", "cannot-see"].map(
-      (slug) => spreads.findIndex((one) => one.chapter.slug === slug) * 2,
+    const leaves = await leafLayout();
+    const crossed = ["what-changed", "what-did-not", "cannot-see"].map((slug) =>
+      leafOpening(leaves, slug),
     );
     await page.evaluate(async (leaves) => {
       const rail = document.querySelector<HTMLElement>(".rail")!;
@@ -1020,8 +1052,7 @@ test.describe("on a phone", () => {
   test("only the leaf in view and its neighbours carry anything", async ({ page }) => {
     await openLeaves(page, "#ch=what-changed");
     const state = await survey(page);
-    const spreads = await layout();
-    const opened = spreads.findIndex((one) => one.chapter.slug === "what-changed") * 2;
+    const opened = leafOpening(await leafLayout(), "what-changed");
 
     expect(state.written).toEqual([opened - 1, opened, opened + 1]);
     // Named rather than counted, because this is the assertion that keeps a phone from running a
@@ -1035,21 +1066,72 @@ test.describe("on a phone", () => {
   test("a deep link opens on its chapter rather than scrolling to it", async ({ page }) => {
     await openLeaves(page, "#ch=what-did-not");
     const state = await survey(page);
-    const opened = (await layout()).findIndex((one) => one.chapter.slug === "what-did-not") * 2;
+    const opened = leafOpening(await leafLayout(), "what-did-not");
     expect(state.scrollLeft).toBe(state.offsets[opened]);
     expect(state.written).toEqual([opened - 1, opened, opened + 1]);
   });
 
-  test("a phone prints the same folio the spread does", async ({ page }) => {
-    // A page number that moved when you turned the device would not be a page number.
-    await openLeaves(page, "#ch=what-did-not");
-    const opened = (await layout()).findIndex((one) => one.chapter.slug === "what-did-not") * 2;
-    const shown = await page
-      .locator("[data-leaf]")
-      .nth(opened)
-      .locator(".page__folio")
-      .textContent();
-    expect(shown?.trim()).toBe(`${String(opened).padStart(3, "0")} · migratlas`);
+  test("a phone numbers its own pages, in order and without a gap", async ({ page }) => {
+    /*
+      **This asserted the opposite until the owner decided otherwise, and the reason is recorded
+      here rather than deleted.**
+
+      It used to say a phone prints the same folio the spread does, on the argument that a page
+      number which moved when you turned the device would not be a page number. What overturned it
+      was a measurement: ten of the phone's leaves overflowed and scrolled, worst by 485 pixels, and
+      the cause is geometry rather than type -- a 375px column reflows the same prose about 1.8 times
+      taller than a 677px one, so no readable size makes a desktop page fit a phone leaf. Holding one
+      pagination meant either unreadable type or splitting the spread's pages for a screen that does
+      not need it. The owner's call: a phone and a spread can be different, because the logic is
+      different and forcing one onto the other is worse.
+
+      So the folio is per container, and what is asserted instead is what a folio is for: the numbers
+      run in order, from one, with no gap, so a reader can tell where they are and how far in.
+    */
+    await openLeaves(page, "#ch=how-to-read");
+    const printed = await page
+      .locator("[data-leaf] .page__folio")
+      .evaluateAll((nodes) =>
+        nodes.map((node) => Number.parseInt((node.textContent ?? "").trim(), 10)),
+      );
+
+    // The first leaf is a title page and carries no number, as the spread's own first verso does.
+    expect(printed.length, "no folios printed").toBeGreaterThan(1);
+    expect(printed).toEqual(Array.from({ length: printed.length }, (_, step) => step + 1));
+  });
+
+  test("a phone carries no leaf the spread only needed to pad with", async ({ page }) => {
+    /*
+      The spread pads each argument to an even page count so a leaf ending one never faces a leaf
+      starting the next. A phone shows one page at a time and has nothing to pad against, so those
+      blanks are swipes onto nothing -- four of them, when this was the spread's list flattened.
+
+      Counted against the spread rather than written down: the two lists come from one set of
+      authored pages, so the phone's is shorter by exactly the padding and by nothing else.
+    */
+    const { leavesOf, spreadsOf } = await import("../src/lib/book/pages");
+    const { CHAPTERS: chapters } = await import("../src/lib/story");
+    const read = (name: string) => JSON.parse(readFileSync(`public/${name}`, "utf8"));
+    const sources = {
+      findings: read("findings.json").findings,
+      introduction: read("introduction.json"),
+      safeguards: read("sandbox.json"),
+      dial: read("response.json"),
+    };
+    const leaves = leavesOf(sources, chapters);
+    const spreads = spreadsOf(sources, chapters);
+
+    expect(leaves.length, "the phone gained pages rather than losing padding").toBeLessThan(
+      spreads.length * 2,
+    );
+    // And every page the spread carries, other than its padding, is a leaf: same book, arranged twice.
+    const carried = spreads
+      .flatMap((spread) => [spread.verso, spread.recto])
+      .filter((panel) => panel.kind !== "blank").length;
+    expect(leaves.filter((leaf) => leaf.panel.kind !== "blank").length).toBe(carried);
+
+    await openLeaves(page, "#ch=how-to-read");
+    await expect(page.locator("[data-leaf]")).toHaveCount(leaves.length);
   });
 
   test("the last leaf can be reached, flush", async ({ page }) => {
@@ -1096,7 +1178,7 @@ test.describe("on a phone", () => {
     await expect(page).toHaveURL(/[#&]ch=what-did-not/);
     await expect(page.locator(".fan")).toHaveCount(0);
     const state = await survey(page);
-    const opened = (await layout()).findIndex((one) => one.chapter.slug === "what-did-not") * 2;
+    const opened = leafOpening(await leafLayout(), "what-did-not");
     expect(state.scrollLeft).toBe(state.offsets[opened]);
   });
 

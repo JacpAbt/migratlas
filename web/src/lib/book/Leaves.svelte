@@ -3,13 +3,13 @@
 
   import Page from "./Page.svelte";
   import Realms from "./Realms.svelte";
-  import { folio, openingOf, type Panel, type Spread } from "./pages";
+  import { openingOf, type Leaf, type Panel } from "./pages";
   import { tabStyle } from "./tabs";
   import type { Chapter } from "../story";
 
   let {
     chapters,
-    spreads,
+    leaves,
     open,
     realm,
     onopen,
@@ -17,8 +17,16 @@
     page,
   }: {
     chapters: readonly Chapter[];
-    spreads: readonly Spread[];
-    /** Index of the open spread. */
+    /**
+     * The book as a flat run of pages, which is not the spread's list flattened.
+     *
+     * `pages.ts` arranges the same authored pages twice, on the owner's call that a phone and a
+     * spread can differ. What this drops is the spread's padding -- the blank that keeps one
+     * argument off the next one's leaf, which on a phone is a swipe onto an empty page -- and the
+     * folio that was computed from a spread index.
+     */
+    leaves: readonly Leaf[];
+    /** Index of the open leaf. */
     open: number;
     /** Which realm the book is being read in. Empty for all of them. */
     realm: string;
@@ -38,24 +46,15 @@
   const SETTLE_MS = 140;
 
   /**
-   * Every leaf, in reading order.
+   * Which side of the paper each leaf is, which on a phone is decoration rather than geometry.
    *
-   * One page per leaf, so a spread becomes two of them -- which is the whole of why a phone gets its
-   * own container: the same pages, one at a time. The folio comes from `pages.ts` so the number on a
-   * phone is the number on a monitor; a book whose page 17 moved when you rotated the device would
-   * not be a book.
+   * `Page` needs one -- its narrow block styles both -- and there is no spread to take it from. So
+   * they alternate, which keeps the grain and the shadow varying down the rail the way a stack of
+   * paper does.
    */
-  const leaves = $derived(
-    spreads.flatMap((spread, at) => {
-      const numbers = folio(at);
-      return [
-        { spread, at, side: "verso" as const, panel: spread.verso, folio: numbers[0] },
-        { spread, at, side: "recto" as const, panel: spread.recto, folio: numbers[1] },
-      ];
-    }),
-  );
+  const sideOf = (index: number) => (index % 2 === 0 ? ("verso" as const) : ("recto" as const));
 
-  const here = $derived(spreads[open]?.chapter ?? chapters[0]!);
+  const here = $derived(leaves[open]?.chapter ?? chapters[0]!);
 
   let rail = $state<HTMLDivElement | null>(null);
   let fanned = $state(false);
@@ -68,7 +67,7 @@
    *
    * A plain `let` and not `$state`: the effect below must re-run when `open` changes and never
    * because of this, which is the whole of how the two directions stay apart. It starts at -1, which
-   * is no spread, so the first run aligns the rail with whatever the URL asked for.
+   * is no leaf, so the first run aligns the rail with whatever the URL asked for.
    */
   let reported = -1;
   let quiet: ReturnType<typeof setTimeout> | undefined;
@@ -99,15 +98,21 @@
     paper. The motion in this container belongs to the swipe; a tab means "be there", and the fan
     closing is the transition.
   */
-  function goTo(at: number): void {
+  function goTo(index: number): void {
     const el = rail;
     if (!el) return;
-    const first = leaves.findIndex((leaf) => leaf.at === at);
-    const sheet = sheets(el)[first];
+    const sheet = sheets(el)[index];
     if (!sheet) return;
-    // Said, not inferred. `at` decides which leaves hold content, and waiting for the scroll event
-    // to report a position this function already knows is how the destination arrives blank.
-    at = first;
+    /*
+      Said, not inferred. `at` decides which leaves hold content, and waiting for the scroll event to
+      report a position this function already knows is how the destination arrives blank.
+
+      The parameter is `index` because it was `at`, which shadowed the state this line means to
+      write: the assignment set the argument and nothing else, and the mounted window only ever
+      caught up because `scrollTo` happens to fire a scroll event. An optimisation that was dead for
+      as long as it existed.
+    */
+    at = index;
     el.scrollTo({ left: sheet.offsetLeft, behavior: "instant" });
   }
 
@@ -133,10 +138,11 @@
     clearTimeout(quiet);
     quiet = setTimeout(() => {
       at = nearest(el);
-      const spread = leaves[at]?.at;
-      if (spread === undefined || spread === open) return;
-      reported = spread;
-      onopen(spread);
+      // The leaf's own index, which is the address now: a phone's page list is its own, so there is
+      // no spread to report and nothing to halve.
+      if (at === open) return;
+      reported = at;
+      onopen(at);
     }, SETTLE_MS);
   }
 
@@ -159,7 +165,7 @@
 
   function pick(slug: string): void {
     fanned = false;
-    const at = openingOf(spreads, slug);
+    const at = openingOf(leaves, slug);
     // Tapping the chapter you are already reading means "back to its first page", which no change to
     // `open` can express when you are already on it -- so that one goes straight to the rail.
     if (at === open) goTo(at);
@@ -188,14 +194,14 @@
 -->
 <div class="leaves">
   <div class="rail" bind:this={rail} {onscroll}>
-    {#each leaves as leaf, index (`${leaf.at}-${leaf.side}`)}
+    {#each leaves as leaf, index (`${leaf.chapter.slug}-${leaf.at}`)}
       <article
         class="leaf"
         data-leaf
-        data-chapter={leaf.spread.chapter.slug}
-        data-side={leaf.side}
+        data-chapter={leaf.chapter.slug}
+        data-side={sideOf(index)}
       >
-        <Page side={leaf.side} fill folio={leaf.folio}>
+        <Page side={sideOf(index)} fill folio={leaf.folio}>
           <!--
             The leaf you can see and the one either side of it. A rule about leaves and not about
             chapters, because it is a swipe that has to land on something: the world's map is a live
@@ -203,7 +209,7 @@
             be running already when the leaf before it is on screen.
           -->
           {#if Math.abs(index - at) <= 1}
-            {@render page(leaf.panel, leaf.side)}
+            {@render page(leaf.panel, sideOf(index))}
           {/if}
         </Page>
       </article>

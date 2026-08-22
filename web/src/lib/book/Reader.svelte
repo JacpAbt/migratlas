@@ -11,7 +11,7 @@
   import Margin from "../claim/Margin.svelte";
   import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
-  import { openingOf, spreadsOf, type Panel } from "./pages";
+  import { leavesOf, openingOf, spreadsOf, type Panel } from "./pages";
   import { world as pocket } from "./pocket.svelte";
   import type { IntroductionDocument } from "./introduction";
   import type { ResponseDocument } from "../sandbox/response";
@@ -43,8 +43,31 @@
     dial: ResponseDocument | null;
   } = $props();
 
-  const spreads = $derived(
-    spreadsOf({ findings, introduction: opening, safeguards, dial }, CHAPTERS, realm),
+  const sources = $derived({ findings, introduction: opening, safeguards, dial });
+
+  /*
+    The same book, arranged twice, and the routing works over whichever one is mounted.
+
+    A spread pads each argument to an even page count and a phone does not, so the two lists are
+    different lengths and a page has a different offset in each -- which is the owner's call: the
+    logic is different and forcing one onto the other is worse than letting each be itself. Both
+    lists have a `chapter` and an `at`, and that is all `show` and `fromUrl` ever needed.
+
+    Both are derived rather than one, because `narrow` can change under a reader who rotates a
+    phone. Deriving the unused one costs a list of objects nobody reads.
+  */
+  const spreads = $derived(spreadsOf(sources, CHAPTERS, realm));
+  const leaves = $derived(leavesOf(sources, CHAPTERS, realm));
+
+  /**
+   * The pages of the container that is actually mounted.
+   *
+   * `p` in the URL is an offset within a chapter, and it is read against this -- so the same address
+   * lands on the same chapter on either device and not necessarily the same page of it. `ch` is the
+   * durable half, which is what the comment on `fromUrl` already said and is now load-bearing.
+   */
+  const pages = $derived<readonly { chapter: (typeof CHAPTERS)[number]; at: number }[]>(
+    narrow ? leaves : spreads,
   );
 
   const of = (key: string): Finding | undefined => findings.find((f) => f.key === key);
@@ -93,11 +116,14 @@
 
   /** The spread carrying a claim's plain register, which is where a link to that claim should land. */
   function pageOf(key: string): number {
-    return spreads.findIndex((spread) =>
-      [spread.verso, spread.recto].some(
-        (panel) => panel.kind === "finding" && panel.key === key,
-      ),
-    );
+    // Over the mounted arrangement, and over its own panels: a spread has two and a leaf has one.
+    return narrow
+      ? leaves.findIndex((leaf) => leaf.panel.kind === "finding" && leaf.panel.key === key)
+      : spreads.findIndex((spread) =>
+          [spread.verso, spread.recto].some(
+            (panel) => panel.kind === "finding" && panel.key === key,
+          ),
+        );
   }
 
   /*
@@ -138,12 +164,12 @@
     }
 
     const slug = chapterAt(params.get(CHAPTER_PARAM))?.slug ?? CHAPTERS[1]!.slug;
-    const first = openingOf(spreads, slug);
+    const first = openingOf(pages, slug);
     const into = Number.parseInt(params.get(PAGE_PARAM) ?? "0", 10);
     if (!Number.isFinite(into) || into <= 0) return first;
     // Clamped to the chapter it names, so `p=9` on a two-spread chapter lands on its last page
     // rather than in the middle of the next chapter.
-    const last = spreads.findLastIndex((spread) => spread.chapter.slug === slug);
+    const last = pages.findLastIndex((page) => page.chapter.slug === slug);
     return Math.min(first + into, last < 0 ? first : last);
   }
 
@@ -159,7 +185,7 @@
   */
   let settled = false;
   $effect(() => {
-    if (settled || spreads.length === 0) return;
+    if (settled || pages.length === 0) return;
     settled = true;
     open = fromUrl();
   });
@@ -172,10 +198,10 @@
   */
   function show(at: number): void {
     open = at;
-    const spread = spreads[at];
+    const spread = pages[at];
     if (!spread) return;
     const params = new URLSearchParams(location.hash.slice(1));
-    const into = String(at - openingOf(spreads, spread.chapter.slug));
+    const into = String(at - openingOf(pages, spread.chapter.slug));
     // The realm is part of what makes this address the page it is: the same chapter and the same
     // offset under two filters are two different pages, so a change of filter alone must still be
     // written. Left out of the comparison, turning a tab wrote nothing and back went nowhere.
@@ -203,13 +229,13 @@
    * is an offset into a book that no longer has those pages -- so the chapter is the thing kept and
    * the position is not.
    *
-   * `spreads` is read after the write because runes are computed on read: by the time `openingOf`
+   * `pages` is read after the write because runes are computed on read: by the time `openingOf`
    * sees it, it is the filtered pagination and not the one that was on screen a line ago.
    */
   function filter(slug: string): void {
-    const chapter = spreads[open]?.chapter.slug ?? CHAPTERS[1]!.slug;
+    const chapter = pages[open]?.chapter.slug ?? CHAPTERS[1]!.slug;
     realm = slug;
-    show(openingOf(spreads, chapter));
+    show(openingOf(pages, chapter));
   }
 
   /**
@@ -222,7 +248,7 @@
    */
   function toSpecimen(key: number): void {
     pocket.preselect = key;
-    show(openingOf(spreads, CHAPTERS[CHAPTERS.length - 1]!.slug));
+    show(openingOf(pages, CHAPTERS[CHAPTERS.length - 1]!.slug));
   }
 
   $effect(() => {
@@ -325,7 +351,7 @@
 {#if narrow}
   <Leaves
     chapters={CHAPTERS}
-    {spreads}
+    {leaves}
     {open}
     {realm}
     onopen={show}
