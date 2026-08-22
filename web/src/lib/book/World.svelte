@@ -3,7 +3,7 @@
   import Explore from "../world/Explore.svelte";
   import { clock, instantOf, world } from "./pocket.svelte";
   import { SpeciesSurfaces } from "../../search/taxon";
-  import { exploreView } from "../story";
+  import { exploreView, sphereZoom } from "../story";
 
   let { base, side }: { base: string; side: "verso" | "recto" } = $props();
 
@@ -30,11 +30,16 @@
    * Both halves were found by tests moved off the old shell, which ask what the map actually drew
    * and whether the panel agrees with it.
    */
-  const view = $derived(
-    exploreView(
-      world.layers.filter((layer) => layer.visible ?? true).map((layer) => layer.meta.name),
-    ),
-  );
+  /*
+    Measured, so the sphere fills the page it is on.
+
+    The map is a page of a spread, not a window, and its size changes with the window -- so the zoom
+    is computed from the box rather than carried as a constant. `sphereZoom` has the arithmetic.
+  */
+  let mapWidth = $state(0);
+  let mapHeight = $state(0);
+
+  const view = $derived(exploreView(world.drawn, sphereZoom(mapWidth, mapHeight)));
 </script>
 
 <!--
@@ -57,7 +62,7 @@
   switches it.
 -->
 {#if side === "recto"}
-  <div class="world">
+  <div class="world" bind:clientWidth={mapWidth} bind:clientHeight={mapHeight}>
     <Globe
       {base}
       {view}
@@ -87,6 +92,10 @@
       detectability={world.detectability}
       preselect={world.preselect}
       onpreselected={() => (world.preselect = null)}
+      shown={world.drawn}
+      ontoggle={(name, on) => {
+        world.drawn = on ? [...world.drawn, name] : world.drawn.filter((drawn) => drawn !== name);
+      }}
       onfocus={(at) => world.map?.flyTo({ center: at, zoom: 3, essential: true })}
     />
   {:else}

@@ -20,6 +20,8 @@
     detectability,
     preselect = null,
     onpreselected = () => {},
+    shown,
+    ontoggle,
     onfocus,
   }: {
     layers: LoadedLayer[];
@@ -33,24 +35,29 @@
     onpreselected?: () => void;
     selection: SpeciesSelection | null;
     surfaces: SpeciesSurfaces;
+    /** Which layers are drawn, by name. The world chapter owns this list. */
+    shown: readonly string[];
+    ontoggle: (name: string, on: boolean) => void;
     onfocus: (at: [number, number]) => void;
   } = $props();
 
-  let shown = $state(new Set<string>());
+  /*
+    What is drawn, and it is not this component's to decide.
+
+    `shown` was local state seeded from each layer's declared initial visibility, and `World` built
+    the map's view from that same field -- two readers of one number, which is an invariant rather
+    than a mechanism. The world chapter owns the list now (`pocket.svelte.ts` says why) and this
+    renders it, so a checkbox cannot be ticked for a layer the map is not drawing.
+  */
+  const drawn = $derived(new Set(shown));
   // From the clock, not false: the arrival's "watch a year of movement" starts the clock before
   // this panel exists, and a Play button that said Play while the year ran would be lying.
   let playing = $state(clock.playing);
 
-  $effect(() => {
-    shown = new Set(layers.filter((layer) => layer.visible ?? true).map((l) => l.meta.name));
-  });
-
+  // One writer. The map's own effect applies visibility from the same list, so this reports the
+  // reader's choice upwards rather than reaching into MapLibre beside it.
   function toggle(layer: LoadedLayer, on: boolean): void {
-    layer.setVisible(on);
-    const next = new Set(shown);
-    if (on) next.add(layer.meta.name);
-    else next.delete(layer.meta.name);
-    shown = next;
+    ontoggle(layer.meta.name, on);
   }
 
   // Required, not decorative: published data must never be separable from the terms it was published
@@ -58,7 +65,7 @@
   const terms = $derived([
     ...new Set(
       layers
-        .filter((layer) => shown.has(layer.meta.name))
+        .filter((layer) => drawn.has(layer.meta.name))
         .map((layer) => layer.terms["dwc:dataGeneralizations"])
         .filter(Boolean),
     ),
@@ -78,7 +85,7 @@
     }),
   );
 
-  const detectabilityOn = $derived(shown.has("detectability"));
+  const detectabilityOn = $derived(drawn.has("detectability"));
   const rows = $derived(detectability ? legendRows(detectability) : []);
 </script>
 
@@ -101,10 +108,10 @@
           <label>
             <input
               type="checkbox"
-              checked={shown.has(layer.meta.name)}
+              checked={drawn.has(layer.meta.name)}
               onchange={(event) => toggle(layer, event.currentTarget.checked)}
             />
-            <Ticked seed={layer.meta.name} on={shown.has(layer.meta.name)} />
+            <Ticked seed={layer.meta.name} on={drawn.has(layer.meta.name)} />
             <span class="layers__title" title={layer.meta.description}>{layer.meta.title}</span>
             <em>{layer.meta.value_kind.replace(/_/g, " ")}</em>
           </label>
@@ -189,15 +196,23 @@
 </aside>
 
 <style>
+  /*
+    In the page's flow, which is a change of container rather than of design.
+
+    These four declarations were written against the shell: absolutely positioned in the window's
+    top-right corner, and a height that reserved room for the index strip and the licence notice
+    below it. The book has neither, and there is only one caller left -- the world chapter, which
+    gives the tools a page. So the panel is a block in that page's column, under the chapter's own
+    opening line instead of on top of it, and it scrolls inside its own paper rather than against
+    furniture that no longer exists.
+  */
   .explore {
-    position: absolute;
-    top: var(--gap);
-    right: var(--gap);
-    z-index: 2;
+    position: relative;
     display: flex;
-    width: min(20rem, calc(100vw - 2 * var(--gap)));
-    /* Clears the index strip below it and scrolls if it cannot fit, rather than growing under it. */
-    max-height: calc(100% - var(--strip) - var(--attrib) - 2 * var(--gap));
+    width: 100%;
+    /* Whatever the page has left under the lead, and it scrolls rather than growing past the foot. */
+    min-height: 0;
+    flex: 1;
     font-size: 0.8rem;
   }
 

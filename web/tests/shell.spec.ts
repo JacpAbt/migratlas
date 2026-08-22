@@ -130,8 +130,10 @@ async function open(page: Page, hash = ""): Promise<void> {
 /** The world chapter, which is where the map, the layers, the clock and the search live. */
 async function explore(page: Page): Promise<void> {
   await open(page, "#ch=the-world");
-  await expect(page.locator(".explore")).toBeVisible();
-  await expect(page.locator(".globe canvas")).toBeVisible();
+  // Thirty seconds, for the reason `notebook.spec.ts`'s own world helper states at length: this
+  // waits on a WebGL context and ten layers, and the default five is a number about DOM latency.
+  await expect(page.locator(".explore")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".globe canvas")).toBeVisible({ timeout: 30_000 });
   /*
     And the layers, which arrive after the canvas does. The debug hook is published once every one of
     them has loaded, so its existence is the load-complete signal -- the same one `globe.spec.ts`
@@ -483,39 +485,62 @@ test("the year can be set moving, and the control says so", async ({ page }) => 
   await expect(run, "the clock is running and the button still says Play").toContainText(/pause/i);
 });
 
-test("the world chapter is the whole map, not the last claim's filter", async ({ page }) => {
+test("the world chapter offers the whole map, not the last claim's filter", async ({ page }) => {
   /*
     The regression this exists for: explore mode inherited the last claim's layer subset, so a reader
     who asked for the map got one claim's evidence still filtered onto it -- which reads as a bug
-    rather than a choice. The book cannot inherit a filter the same way, because the world chapter
-    computes its view from every published layer rather than from wherever the reader has been. This
-    reads the same thing after visiting a claim first, which is the state that used to break it.
+    rather than a choice.
+
+    It cannot happen the same way now and the assertion moved with the reason. The chapter draws
+    nothing until asked, on the owner's decision -- nine layers composited read as satellite imagery
+    over a basemap that is already paper and ink -- so "the whole map" is a claim about what is
+    *offered*: every published layer in the panel, and none of them inherited from wherever the reader
+    has been. Visited after a claim, which is the state that used to break it.
   */
   await claimPage(page, "marine-null");
   await explore(page);
-  const wide = await settled(page);
-  /*
-    Polled, not sampled. The layers are added to the style as each one loads, so a single reading
-    taken when the canvas appears legitimately sees none of them -- which reported "the chapter is
-    hiding layers" for a chapter that simply had not finished.
-  */
-  const visible = () =>
-    page.evaluate(() => {
-      const map = (window as unknown as { migratlas?: { map?: unknown } }).migratlas?.map as
-        | { getStyle: () => { layers: { id: string; layout?: { visibility?: string } }[] } }
-        | undefined;
-      return (map?.getStyle().layers ?? [])
-        .filter((layer) => /^(series|surface)-/.test(layer.id))
-        .filter((layer) => layer.layout?.visibility !== "none").length;
-    });
+
+  // Every published layer is on the list, counted from the manifest rather than written here.
+  const manifest = await page.request
+    .get("layers/manifest.json")
+    .then((r) => r.json() as Promise<{ name: string }[]>);
+  // Plus one: the detectability assessment is not a manifest layer -- it is computed and added by
+  // `addDetectability` -- and it still gets a control, which is the point of counting at all.
+  await expect(page.locator(".explore .layers li")).toHaveCount(manifest.length + 1);
+
+  // And none of them is drawn, so nothing was carried over from the claim.
+  const drawn = await page.evaluate(() => {
+    const map = (window as unknown as { migratlas?: { map?: unknown } }).migratlas?.map as
+      | { getStyle: () => { layers: { id: string; layout?: { visibility?: string } }[] } }
+      | undefined;
+    return (map?.getStyle().layers ?? [])
+      .filter((layer) => /^(series|surface|contour|tracks|seasonal|detectability)/.test(layer.id))
+      .filter((layer) => layer.layout?.visibility !== "none")
+      .map((layer) => layer.id);
+  });
+  expect(drawn, `the chapter arrived drawing ${drawn.join(", ")}`).toEqual([]);
+
+  // Ticking one draws one, which is the whole of what the chapter is for.
+  await page.locator(".explore .layers input").first().check();
   await expect
-    .poll(visible, { message: "the world chapter is still hiding layers", timeout: 30_000 })
-    .toBeGreaterThanOrEqual(3);
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const map = (window as unknown as { migratlas?: { map?: unknown } }).migratlas?.map as
+            | { getStyle: () => { layers: { id: string; layout?: { visibility?: string } }[] } }
+            | undefined;
+          return (map?.getStyle().layers ?? []).filter(
+            (layer) => layer.layout?.visibility !== "none" && /^(series|surface)-/.test(layer.id),
+          ).length;
+        }),
+      { message: "ticking a layer drew nothing", timeout: 30_000 },
+    )
+    .toBeGreaterThan(0);
 
-  // And pulled back: nothing is leading the reader anywhere on this chapter.
-  expect(wide.zoom).toBeLessThan(2);
+  // And the camera is still the whole sphere: nothing is leading the reader anywhere on this chapter.
+  const wide = await settled(page);
+  expect(wide.zoom).toBeLessThan(3);
 });
-
 test("every claim is reachable, and says what it found before anyone reads it", async ({ page }) => {
   /*
     The index was a tab per claim with its direction printed on it, so a reader could see at a glance
@@ -944,6 +969,13 @@ test("explore carries the tools, with the terms every drawn layer was published 
 
   // Required, not decorative: published data must never be separable from the terms it was
   // published under. This is the assertion the old page had and the shell has to keep.
+  /*
+    The terms of every layer *currently drawn*, so one is drawn first. On a bare globe the paragraph
+    is absent, and that is the rule working rather than a gap in it: the obligation attaches to data
+    on screen, and what must never happen is a layer drawn with its terms missing.
+  */
+  await expect(panel.locator(".terms")).toHaveCount(0);
+  await panel.locator(".layers input").first().check();
   await expect(panel.locator(".terms")).not.toBeEmpty();
 
   // The clock reads as a date rather than as a day number, and without the stray punctuation a

@@ -89,8 +89,9 @@ async function ready(page: Page): Promise<ReadyReport> {
  */
 async function explore(page: Page): Promise<void> {
   // Already there: the world chapter mounts the tools beside the map. What is still worth waiting
-  // for is the camera, which is why this function exists at all.
-  await expect(page.locator(".explore")).toBeVisible();
+  // for is the camera, which is why this function exists at all -- and the panel appears only once
+  // the layers have reported, so the deadline is the map's rather than the DOM's five seconds.
+  await expect(page.locator(".explore")).toBeVisible({ timeout: 30_000 });
   await settle(page);
 }
 
@@ -183,6 +184,23 @@ const mapLayerFor = (page: Page, name: string): Promise<string> =>
 async function focusOn(page: Page, report: ReadyReport, name: string, layerId: string): Promise<void> {
   const center = report.centers[name];
   expect(center, `no centre reported for ${name}`).toBeDefined();
+
+  /*
+    Drawn first, because the chapter no longer draws anything until a reader asks.
+
+    "Every published layer, and no argument on top of it" used to mean all of them at once, and this
+    function could assume its subject was already on screen. The owner's decision is that the reader
+    paints the map, so pointing a camera at a layer's data now implies switching that layer on --
+    which is what this function's name has always claimed to do.
+
+    Through the panel's own checkbox rather than `setVisible`, so the path under test is the reader's:
+    the rows are in manifest order and so is `report.layers`, which is the same correspondence
+    `the panel and the map never disagree` relies on.
+  */
+  const row = report.layers.indexOf(name);
+  expect(row, `${name} is not in the reported layers`).toBeGreaterThanOrEqual(0);
+  const box = page.locator(".layers li").nth(row).locator("input");
+  if (!(await box.isChecked())) await box.check();
   /*
     The layer's own camera hint, where it declares one, less whatever the map has given up in width.
 
@@ -288,6 +306,18 @@ test("every layer draws features once it is switched on", async ({ page }) => {
 test("the layer panel publishes its generalisation statement", async ({ page }) => {
   await ready(page);
   await explore(page);
+
+  /*
+    Nothing drawn, nothing to state -- and that is the correct reading of the rule rather than a hole
+    in it. The panel publishes the generalisation of every layer *currently drawn*, so on a bare globe
+    the list is legitimately empty; the obligation attaches to data on screen. What must never happen
+    is a layer drawn with its terms absent, which is what this asserts by switching one on.
+  */
+  // Absent rather than empty: the paragraph is not rendered at all when nothing is drawn, which is
+  // the right shape -- an empty box captioned "published under" would read as terms that are missing.
+  await expect(page.locator(".explore .terms")).toHaveCount(0);
+
+  await page.locator(".explore .layers input").first().check();
   // Required, not decorative: published data must never be separable from the terms it was
   // published under.
   await expect(page.locator(".explore .terms")).not.toBeEmpty();
@@ -835,7 +865,14 @@ test("the default build requests nothing off-origin", async ({ page }) => {
     if (!request.url().startsWith("http://localhost")) external.push(request.url());
   });
 
-  await ready(page);
+  const report = await ready(page);
+  /*
+    Drawn on request now, because the chapter draws nothing until asked -- so this switches the layer
+    on rather than assuming the opening view has it. Still no camera flight: the opening view already
+    frames the radar stations, which is what the note below is about.
+  */
+  const row = report.layers.indexOf("aerial-passage");
+  await page.locator(".explore .layers input").nth(row).check();
   // Rendered, but without a camera flight to get there. The arrival view already frames the radar
   // stations, so this layer has drawn by the time the layers report in -- and `focusOn`'s `jumpTo`
   // plus its settle was most of what pushed this test through its 30s deadline once the suite grew

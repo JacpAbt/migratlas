@@ -137,7 +137,17 @@ async function recordPage(page: Page): Promise<void> {
  */
 async function world(page: Page): Promise<void> {
   await page.goto("?debug=1#ch=the-world");
-  await expect(page.locator(".explore")).toBeVisible();
+  /*
+    Thirty seconds, because this waits on a WebGL context and ten layers rather than on a DOM node.
+
+    `.explore` appears only once the globe has reported its layers, and Playwright's default `expect`
+    deadline is five seconds -- which this machine beats and a runner with no GPU does not. Four local
+    gates passed in a row while CI failed five tests on this one line, which is the whole argument for
+    stating a deadline rather than inheriting one: the default is a number nobody chose, and here it
+    was a number about DOM latency applied to a map boot.
+  */
+  await expect(page.locator(".explore")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".globe canvas")).toBeVisible({ timeout: 30_000 });
   await page.evaluate(() => document.fonts.ready);
 }
 

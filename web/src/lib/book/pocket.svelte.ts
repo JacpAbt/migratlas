@@ -49,6 +49,22 @@ export const world = $state({
     map does -- the record page and the world chapter are never mounted by the same parent.
   */
   preselect: null as number | null,
+  /*
+    Which layers are drawn, by name, and the only answer to that question.
+
+    It starts empty on the owner's decision: the chapter's brief is "every published layer, and no
+    argument on top of it", and taken as *all of them at once* that defeated itself -- nine layers
+    composited is a mush that reads as satellite imagery rather than as nine measurements, over a
+    basemap that is already paper and ink. So the reader paints the map, and "every published layer"
+    is a promise about what is available rather than about what is painted before anyone asks.
+
+    One list rather than two, and that is the structural half. The map used to take its layers from
+    each layer's *declared* initial visibility and the panel initialised its checkboxes from the same
+    field -- an invariant held by both sides reading one number, and asserted by hand in
+    `globe.spec.ts` because it had already been broken once. Now the panel writes here and the map
+    reads here, so the two cannot disagree about what is drawn.
+  */
+  drawn: [] as string[],
 });
 
 /**

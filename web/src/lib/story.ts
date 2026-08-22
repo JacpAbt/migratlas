@@ -148,10 +148,28 @@ export function viewFor(finding: Finding): View {
  * `layers` comes from what the globe actually loaded rather than from a list here, so a layer added
  * to the manifest appears in explore mode without anyone remembering to add it.
  */
-export function exploreView(available: string[]): View {
+/**
+ * The zoom at which the sphere just fills a box.
+ *
+ * MapLibre's globe draws the world `512 * 2 ** zoom` pixels around, so the sphere's diameter is that
+ * over pi -- which inverts to this. Written as arithmetic rather than chosen, because the number that
+ * was chosen has been wrong everywhere since it was written: `zoom: 1.4` is a 430px sphere at every
+ * window size, which was small in the shell's 1600x900 and is small again in a 677px page. The owner
+ * called the globe badly implemented and this is the half of that which is measurable.
+ *
+ * The margin leaves the sphere off the page edges, where the map's own controls and its licence
+ * notice sit.
+ */
+export function sphereZoom(width: number, height: number, margin = 0.92): number {
+  const diameter = Math.min(width, height) * margin;
+  if (!Number.isFinite(diameter) || diameter <= 0) return 1.4;
+  return Math.log2((diameter * Math.PI) / 512);
+}
+
+export function exploreView(available: string[], zoom = 1.4): View {
   return {
     center: [-45, 25],
-    zoom: 1.4,
+    zoom,
     layers: available,
     because: "Every published layer, and no argument on top of it.",
   };

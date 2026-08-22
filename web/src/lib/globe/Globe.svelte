@@ -133,6 +133,10 @@
         };
       }
 
+      // After the layers, because each one adds its own credit and MapLibre re-renders the notice
+      // as it does -- closing it before they land leaves the last arrival to open it again.
+      collapseAttribution();
+
       onready?.({
         layers: added,
         detectability: assessment,
@@ -147,14 +151,35 @@
     };
   });
 
-  // Camera and visibility follow the view. Split from the setup effect so a claim change costs a
-  // flyTo and a few visibility properties rather than tearing the map down.
+  // Visibility follows the view, and it is the only writer of it. Split from the setup effect so a
+  // change of view costs a few layout properties rather than tearing the map down.
   $effect(() => {
     if (!map || !view || loaded.length === 0) return;
 
     for (const layer of loaded) {
       layer.setVisible(view.layers.includes(layer.meta.name));
     }
+  });
+
+  /*
+    The camera moves when the camera changes, and not when the layer list does.
+
+    These were one effect, which was fine while the view's layers only changed with its centre -- a
+    claim at a time, each with its own camera. The world chapter made the list the reader's: ticking
+    a box now changes the view, and on one effect that meant a 2.2s flight to the same coordinates on
+    every tick, cancelling whatever the reader was looking at.
+
+    Guarded by the destination rather than by splitting what the effect reads: `view` is one derived
+    object, so both halves re-run whenever any part of it changes no matter how the code is arranged.
+    Comparing where it is going is the thing that actually holds.
+  */
+  let flownTo = "";
+
+  $effect(() => {
+    if (!map || !view || loaded.length === 0) return;
+    const going = `${view.center.join(",")}@${view.zoom.toFixed(3)}`;
+    if (going === flownTo) return;
+    flownTo = going;
 
     map.flyTo({
       center: view.center,
@@ -209,6 +234,27 @@
       getComputedStyle(document.documentElement).getPropertyValue("--night-shade").trim() ||
       "#41566b"
     );
+  }
+
+  /*
+    The licence notice starts closed.
+
+    MapLibre un-compacts its own attribution above 640px of map, and this map is 677 -- so a control
+    that this file's CSS describes as "the (i) that opens it" arrived already open, and 1,515
+    characters of citations and generalisation notes took 337x436 of a 677x856 page. A quarter of the
+    map, over the map.
+
+    Nothing is removed and nothing is shortened: every word is one click away, which is the pattern
+    the styling below was written for, and the generalisation notes are also printed in full in the
+    tools panel where they are actually readable. Closed here rather than in CSS because the state is
+    a `<details>` element's `open` attribute, and CSS cannot unset it.
+  */
+  function collapseAttribution(): void {
+    container
+      ?.querySelectorAll<HTMLDetailsElement>("details.maplibregl-ctrl-attrib")
+      .forEach((notice) => {
+        notice.open = false;
+      });
   }
 
   /** Read from the token rather than from `matchMedia` twice, so one block controls all motion. */
