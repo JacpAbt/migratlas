@@ -724,6 +724,15 @@ def report_phase3f() -> None:
     print(phase3f.render())
 
 
+@report_app.command("phase1k")
+def report_phase1k() -> None:
+    """Four idle monitoring schemes: what each says alone, and what they say in company."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase1k  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase1k.render())
+
+
 @report_app.command("phase3h")
 def report_phase3h() -> None:
     """The pooled-response ladder: does predicting a region beat predicting a station?"""

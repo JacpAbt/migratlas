@@ -171,6 +171,38 @@ Both reported always, neither promotable to primary.
 
 ---
 
+## 3a. Amendments, written while implementing and before the registered run
+
+Two, and the second is the reason this convention exists.
+
+**The footprint rule is `consistent_footprint`, not the first-and-last-fifth rule §2 registered.**
+§2 said each unit would be restricted to sites sampled in the first and last fifth of its window.
+The implementation uses the rule `marine-null` uses instead — cells sampled in at least 80% of the
+network's years. The reason is arm A: the calibration reproduces `marine-null` by calling
+`phase1b.analyse` itself, so if the new networks used a different footprint rule the legs would not
+be comparable to the arm certifying them. A weaker rule on the new sources and a stronger one on the
+calibration would have been the worst of the options.
+
+**Leg 2's estimand had to be reconstructed, and the first implementation fitted the wrong quantity.**
+§2 says the estimand is the trend in mean flight date. The lake does not store a flight date as a day
+number: `ingest/ukbms.py` lands `period_start` as the first day of flight and `count` as the days from
+there to the count-weighted mean, and its own comment says so. The first implementation fitted `count`
+directly, which is **how far into a flight period its mean falls** — a shape, not a date — and would
+have graded prediction 6 and 7 on a quantity neither mentions. The estimand is now
+`period_start.dt.ordinal_day() + count`, which is the mean's day of year.
+
+Recorded rather than quietly corrected, because the registration is what caught it: the prediction
+named a date, and the column did not hold one.
+
+**And a measurement in the holdings audit was wrong.** That note said all four idle sources carry a
+measured effort column. Measured today: `bbs` is 0.00% null, `sbs_point_counts` 0.51%,
+`sbs_fixed_routes` 0.11% — and **`ukbms_phenology` is 100% null.** It has the column and none of the
+values, which `ingest/ukbms.py` sets deliberately: a flight-date series has no catch to denominate.
+The audit is corrected in place. Nothing in this phase depended on it — leg 2 fits dates and never
+touches effort — but the claim was published and it was wrong.
+
+---
+
 ## 4. Predictions
 
 1. **Arm A reproduces `marine-null`'s median to three significant figures.**
@@ -223,3 +255,128 @@ Both reported always, neither promotable to primary.
   which is `transfer-fails`' subject, and nothing else.
 - **Not anything about the bird tilt.** Three of four sources here are birds. This phase makes the
   tilt more visible, not smaller, and the remedy is admission rather than analysis.
+
+---
+
+## Results — run 2026-08-23
+
+**Both calibration arms pass, which is what makes the rest of this readable.**
+
+| arm | quantity | target | measured | verdict |
+| --- | --- | --- | --- | --- |
+| A | `marine-null` median | `-0.011` °lat/dec | **`-0.0110`** | PASS |
+| D | `autumn-advance` slope | `-0.56` d/dec | **`-0.559`** | PASS |
+
+Both by calling the published report itself, so what passed is the pipeline that produced the
+findings and not a second copy of it.
+
+### Leg 1 — distribution
+
+| network | units | median °lat/dec | 95% CI | IQR | beat own null | bar | cells kept / dropped |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `bbs` | 520 | **`+0.0517`** | `[+0.0341, +0.0754]` | `[-0.0827, +0.2104]` | 345 | 34 | 762 / 696 |
+| `sbs_point_counts` | 189 | **`+0.0968`** | `[+0.0701, +0.1433]` | `[-0.0284, +0.3350]` | 118 | 15 | 33 / 42 |
+| `sbs_fixed_routes` | 197 | `+0.0335` | `[-0.0036, +0.0855]` | `[-0.1308, +0.2104]` | 74 | 15 | 84 / 17 |
+
+Every network clears the 30-unit floor, so all three are trends rather than coverage statements. The
+consistency rule is expensive: `bbs` loses 696 of 1,458 cells and `sbs_point_counts` 42 of 75.
+
+### Leg 2 — timing
+
+| network | units | median d/dec | 95% CI | IQR | beat own null | bar |
+| --- | --- | --- | --- | --- | --- | --- |
+| `ukbms_phenology` | 12,213 | **`-2.104`** | `[-2.180, -2.038]` | `[-4.586, +0.519]` | 2,476 | 651 |
+
+12,213 units against Phase 1j's measured 10,941, because 1j counted inside its registered 1995–2021
+window and this fits the whole 1973–2021 span.
+
+### Grading
+
+**Prediction 1 — TRUE.** Arm A reproduced `-0.0110` against a target of `-0.011`.
+
+**Prediction 2 — TRUE.** `bbs`'s median is `+0.0517` and its interval excludes zero. The first
+question ever asked of this source has an answer: the abundance-weighted centroids of North American
+breeding birds have moved poleward, at about half a degree of latitude per century.
+
+**Prediction 3 — TRUE, and it is the result worth keeping.** All three bird networks have an
+interquartile range spanning zero: `bbs` `[-0.083, +0.210]`, `sbs_point_counts` `[-0.028, +0.335]`,
+`sbs_fixed_routes` `[-0.131, +0.210]`. **`marine-null`'s finding that surveys disagree even about the
+direction of movement is not a marine peculiarity.** It reproduces in three independent terrestrial
+count networks, on another continent, in a different taxonomic class, under a different protocol. The
+claim that a single global number would erase every difference worth planning around now has evidence
+outside the realm it was made in.
+
+345 of 520 `bbs` units beat their own year-shuffle null against a chance bar of 34. Two thirds of
+species carry a real trend and they do not share a direction.
+
+**Prediction 4 — TRUE.** All three medians are positive.
+
+**Prediction 5 — FALSE, and this is the uncomfortable one.** The two Swedish networks do not agree
+within each other's intervals: `sbs_point_counts` at `+0.0968` sits outside `sbs_fixed_routes`' CI of
+`[-0.0036, +0.0855]`, and `sbs_fixed_routes` at `+0.0335` sits outside `sbs_point_counts`' CI of
+`[+0.0701, +0.1433]`. Neither point estimate falls inside the other's interval, and the two differ by
+a factor of nearly three.
+
+Their intervals do *overlap*, on `[+0.0701, +0.0855]`, and the registered wording was the strict
+reading — "agree within each other's intervals" — so it grades false on the reading it was written
+with, with the weaker agreement recorded rather than substituted.
+
+**Same country, same birds, two protocols, and the answer moves by three times.** That bounds every
+cross-network comparison this project makes, `transfer-fails` included: one leg disagreeing with
+another is no longer evidence that realms differ, because two protocols on one country's birds
+disagree by as much. This was registered as the prediction that would hurt, and it did.
+
+**Prediction 6 — TRUE.** `ukbms_phenology`'s median is `-2.104` days per decade, its interval excludes
+zero, and 2,476 of 12,213 units beat their own null against a chance bar of 651. The stop condition
+does not fire and the timing leg stands.
+
+**Prediction 7 — TRUE.** `-2.104` against the radar's `-0.56` is 3.8 times the magnitude. Registered
+as the expected direction for a shorter-lived, more tightly thermally coupled group, and it came back
+that way — on 12,213 units against the radar panel's 143.
+
+**Prediction 8 — FALSE, and the prediction was badly posed.** `bbs`'s median `+0.0517` falls inside
+`sbs_fixed_routes`' interval `[-0.0036, +0.0855]`, so at least one pair of the four agrees. Worse, the
+prediction spoke of "the four networks' medians" when `ukbms_phenology`'s estimand is **days** and the
+other three are **degrees of latitude** — a four-way median comparison was never well defined, and
+writing it that way was an error in the registration rather than in the result. Recorded rather than
+edited away.
+
+### Arm S — the synthesis, and what it cannot do
+
+The synthesis was registered to group by the taxonomic class read from `taxon_key`, on the argument
+that `realm` describes the instrument's medium rather than the animal's. That axis turns out to be
+**collinear with the network**: every source in this holding measures a single class. `bbs`,
+`sbs_point_counts` and `sbs_fixed_routes` are birds, `ukbms_phenology` is insects, `fishglob` is fish.
+No network measures two classes.
+
+So the class comparison and the network comparison are the same table, and **this project cannot
+currently separate a taxonomic-class effect from a network effect at all.** That is a stronger version
+of §1's problem than §1 anticipated: §1 said `realm` describes the instrument, and the answer is that
+the alternative axis identifies nothing either, because the holding confounds them by construction.
+The question this phase was asked — what is happening to animals that move through water, air and
+land — needs either a source measuring more than one class, or two sources measuring one class with
+different instruments. The second exists in exactly one case, and it is what makes prediction 5 so
+damaging.
+
+### What this establishes, stated no more strongly than it holds
+
+- **Three idle sources are idle no longer, and two carry a signal.** `bbs` and `sbs_point_counts` have
+  medians whose intervals exclude zero; `sbs_fixed_routes` does not.
+- **A poleward median with a sign-spanning spread, in three networks.** The direction agrees with the
+  literature and with the marine work's framing. The dispersion is the finding.
+- **The largest timing signal this project has measured, on the largest panel it has:** 12,213 units,
+  `-2.104` days per decade.
+- **And a bound on the project's own comparative method**, from prediction 5, which is worth more than
+  any of the three point estimates.
+
+### What the successor has to fix
+
+1. **Prediction 5 needs explaining before any cross-network claim is published.** Two candidates, both
+   testable on data already in the lake: the Swedish networks cover different footprints (33 cells
+   against 84), or point counts and fixed routes weight detectability differently. The first is
+   checkable by restricting both to their shared cells.
+2. **`sbs_fixed_routes` is the shortest network at 30 years** and the only one whose interval includes
+   zero. Whether that is length or protocol is not separable here.
+3. **A class effect needs a source that breaks the collinearity.** Nothing in the current holding does.
+4. **The registered 15-year floor sensitivity was not run.** Recorded as owed rather than quietly
+   dropped.

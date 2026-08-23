@@ -80,9 +80,18 @@ that would flatter it.
 to carry a trend, have never been asked anything.**
 
 `bbs`, `sbs_point_counts`, `sbs_fixed_routes` and `ukbms_phenology` all carry the same columns in the
-lake — `count`, **`effort`**, `effort_unit`, `protocol`, `site_id`, `year` — which is the exact shape
-the atlas and radar analyses needed and got their answers from. Together: **9.1 million rows across
-spans of 30, 49, 50 and 59 years.**
+lake — `count`, `effort`, `effort_unit`, `protocol`, `site_id`, `year` — which is the exact shape the
+atlas and radar analyses needed and got their answers from. Together: **9.1 million rows across spans
+of 30, 49, 50 and 59 years.**
+
+**Corrected 2026-08-23, having been wrong when first written.** The sentence above originally said all
+four carry a *measured* effort column. Three do: `bbs` is 0.00% null on `effort`, `sbs_point_counts`
+0.51%, `sbs_fixed_routes` 0.11%. **`ukbms_phenology` is 100% null** — it has the column and none of
+the values, set that way on purpose by `ingest/ukbms.py`, because a flight-date series has no catch to
+denominate. The claim was measured for the three count networks and generalised to the fourth without
+being checked, which is the failure this note's own status line was written to prevent. It changes
+nothing about the fourth source being idle and worth asking, and it changes what it is idle *for*:
+a timing series, not an abundance one.
 
 `bbs`, `sbs_point_counts` and `sbs_fixed_routes` appear in `src/migratlas/reports/` in **exactly one
 file**: `detectability.py`. They appear in `docs/methods/` only in notes *about coverage*. They exist

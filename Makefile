@@ -237,6 +237,10 @@ report-phase3f:  ## The response-model ladder: pooling, the wind, its form, the 
 ingest-ukbms:  ## UK butterfly flight-period phenology: the fourth leg's response
 	$(RUN) migratlas ingest-ukbms
 
+.PHONY: report-phase1k
+report-phase1k:  ## Four idle schemes: what each finds alone, and what they find in company
+	$(RUN) migratlas report phase1k
+
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
 	$(RUN) migratlas report phase3h
