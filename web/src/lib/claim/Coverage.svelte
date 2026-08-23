@@ -1,9 +1,48 @@
 <script lang="ts">
   import { legendRows, type DetectabilityDocument } from "../../layers/detectability";
 
-  let { doc }: { doc: DetectabilityDocument | null } = $props();
+  let {
+    doc,
+    part = "all",
+  }: {
+    doc: DetectabilityDocument | null;
+    /**
+     * Which part. The assessment overflowed an 826px page by 459, and it had a seam already: the
+     * cells that could carry a trend, and then the sources held back from the map entirely.
+     *
+     * `summary` and `sources` are the phone's halves of `measured`. Sixteen rows of a three-column
+     * table put it 126px past a 375px leaf, and the table is not the summary -- it is the working
+     * behind it, which is exactly the seam.
+     *
+     * **`measured` still means both**, which is what the spread asks for and what it always meant.
+     * Redefining it as the summary alone was the first attempt, and it silently took the table off
+     * the desktop's page: the same word for "the whole thing" and "the first half of it" is how a
+     * split for one container quietly changes the other.
+     */
+    part?: "all" | "measured" | "summary" | "sources" | "held" | "held-first" | "held-more";
+  } = $props();
 
   const rows = $derived(doc ? legendRows(doc) : []);
+
+  /*
+    Which withheld sources this page carries.
+
+    Both of them and their three paragraphs each ran 66px past a 375px leaf, and a source is the unit
+    -- who is held, in plain words why, and then the citation. So the first takes one leaf and the
+    rest take the next, which is one page per refusal at today's two.
+
+    `held-first` and not `held`, which was the first attempt and took a source off the *spread*: the
+    wide page asks for `held` meaning all of them, and redefining it as the first one silently
+    published one refusal where the lake holds two. The same mistake as `measured` and `summary` two
+    fields up, made twice in one change -- one word cannot mean both the whole thing and its first
+    half, however obvious the shorter name looks.
+  */
+  const withheld = $derived.by(() => {
+    const all = doc?.withheld ?? [];
+    if (part === "held-first") return all.slice(0, 1);
+    if (part === "held-more") return all.slice(1);
+    return all;
+  });
   const detectable = $derived(rows.find((row) => row.status === "detectable")?.share ?? 0);
 </script>
 
@@ -16,6 +55,7 @@
 -->
 {#if doc}
   <section class="coverage" aria-label="Where change could be measured">
+    {#if part === "all" || part === "measured" || part === "summary"}
     <p class="coverage__lead">
       <strong>{detectable.toFixed(1)}%</strong> of the cells this lake covers could support a trend.
       Switch the layer on to see where.
@@ -31,6 +71,9 @@
       {/each}
     </ul>
 
+    {/if}
+
+    {#if part === "all" || part === "measured" || part === "sources"}
     <table class="coverage__sources">
       <caption>Per source, ordered by what it can support</caption>
       <thead>
@@ -46,22 +89,33 @@
         {/each}
       </tbody>
     </table>
+    {/if}
 
-    {#if doc.withheld.length > 0}
+    {#if part === "all" || part === "held" || part === "held-first" || part === "held-more"}
+    {#if withheld.length > 0}
       <!--
         Named, not omitted. A map that silently skipped these would read as a map with no wolves in
         it, which is the opposite of true: the lake holds them and will not draw one fix. Listing
         them is also the only way a reader can tell a refusal from a gap in coverage.
       -->
-      <section class="held" aria-labelledby="coverage-held">
-        <h4 id="coverage-held">Held, and never drawn</h4>
-        <p class="held__lead">
-          {doc.withheld.length} source{doc.withheld.length === 1 ? "" : "s"} in this lake
-          {doc.withheld.length === 1 ? "is" : "are"} classified as high sensitivity. Individual
-          locations are withheld entirely — not coarsened, not delayed. Nothing below is on the map.
-        </p>
+      <!-- The heading only where this rides under a claim. On its own page `book/figures.ts`
+           carries the title, and printing it twice is what the first pass did. -->
+      <section class="held" aria-labelledby={part === "all" ? "coverage-held" : undefined}>
+        {#if part === "all"}
+          <h4 id="coverage-held">Held, and never drawn</h4>
+        {/if}
+        <!-- The count is of every withheld source, not of the ones on this leaf: "1 source is
+             classified" printed on each of two pages would be a false statement twice. Printed once,
+             on the first of them. -->
+        {#if part !== "held-more"}
+          <p class="held__lead">
+            {doc.withheld.length} source{doc.withheld.length === 1 ? "" : "s"} in this lake
+            {doc.withheld.length === 1 ? "is" : "are"} classified as high sensitivity. Individual
+            locations are withheld entirely — not coarsened, not delayed. Nothing below is on the map.
+          </p>
+        {/if}
         <ul class="held__list">
-          {#each doc.withheld as source (source.source_id)}
+          {#each withheld as source (source.source_id)}
             <li>
               <p class="held__who">
                 <em>{source.taxon}</em>
@@ -74,14 +128,22 @@
             </li>
           {/each}
         </ul>
-        <p class="held__note">
-          A trend computed from them may still be reported: a rate of change over a population
-          locates no animal. It is the map that is refused, never the finding.
-        </p>
+        <!-- On the last of them, because it is the closing statement about the refusal. -->
+        {#if part !== "held-first"}
+          <p class="held__note">
+            A trend computed from them may still be reported: a rate of change over a population
+            locates no animal. It is the map that is refused, never the finding.
+          </p>
+        {/if}
       </section>
     {/if}
+    {/if}
 
-    <p class="coverage__caveat">{doc.caveat}</p>
+    <!-- With the summary rather than with the table: it qualifies what the percentage means, and the
+         table is the working behind it. -->
+    {#if part === "all" || part === "measured" || part === "summary"}
+      <p class="coverage__caveat">{doc.caveat}</p>
+    {/if}
   </section>
 {/if}
 

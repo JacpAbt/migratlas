@@ -2,40 +2,59 @@
   import type { Snippet } from "svelte";
 
   import Page from "./Page.svelte";
+  import Realms from "./Realms.svelte";
+  import { openingOf, type Leaf, type Panel } from "./pages";
   import { tabStyle } from "./tabs";
   import type { Chapter } from "../story";
 
   let {
     chapters,
+    leaves,
     open,
+    realm,
     onopen,
+    onfilter,
     page,
   }: {
     chapters: readonly Chapter[];
-    /** Slug of the open chapter. */
-    open: string;
-    onopen: (slug: string) => void;
     /**
-     * What goes on a page, given the chapter and which side it is.
+     * The book as a flat run of pages, which is not the spread's list flattened.
+     *
+     * `pages.ts` arranges the same authored pages twice, on the owner's call that a phone and a
+     * spread can differ. What this drops is the spread's padding -- the blank that keeps one
+     * argument off the next one's leaf, which on a phone is a swipe onto an empty page -- and the
+     * folio that was computed from a spread index.
+     */
+    leaves: readonly Leaf[];
+    /** Index of the open leaf. */
+    open: number;
+    /** Which realm the book is being read in. Empty for all of them. */
+    realm: string;
+    onopen: (at: number) => void;
+    onfilter: (realm: string) => void;
+    /**
+     * What goes on a page, given the panel and which side it is.
      *
      * The same signature `Book` takes, and deliberately so: `Reader` hands one snippet to whichever
      * container the window gets, so a phone and a monitor show the same pages rather than two
      * authored versions of them.
      */
-    page: Snippet<[Chapter, "verso" | "recto"]>;
+    page: Snippet<[Panel, "verso" | "recto"]>;
   } = $props();
 
   /** How long the rail has to be still before the chapter goes in the URL. */
   const SETTLE_MS = 140;
 
-  /** Every leaf, in reading order: each chapter's argument page, then its facing page. */
-  const leaves = $derived(
-    chapters.flatMap((chapter) =>
-      (["verso", "recto"] as const).map((side) => ({ chapter, side })),
-    ),
-  );
+  /**
+   * Which side of the paper each leaf is, which on a phone is decoration rather than geometry.
+   *
+   * `Page` needs one -- its narrow block styles both -- and there is no spread to take it from. So
+   * they alternate, which keeps the grain and the shadow varying down the rail the way a stack of
+   * paper does.
+   */
+  const sideOf = (index: number) => (index % 2 === 0 ? ("verso" as const) : ("recto" as const));
 
-  const here = $derived(chapters.find((chapter) => chapter.slug === open) ?? chapters[0]!);
+  const here = $derived(leaves[open]?.chapter ?? chapters[0]!);
 
   let rail = $state<HTMLDivElement | null>(null);
   let fanned = $state(false);
@@ -47,9 +66,10 @@
    * The last slug this component reported, so the answer coming back does not undo the swipe.
    *
    * A plain `let` and not `$state`: the effect below must re-run when `open` changes and never
-   * because of this, which is the whole of how the two directions stay apart.
+   * because of this, which is the whole of how the two directions stay apart. It starts at -1, which
+   * is no leaf, so the first run aligns the rail with whatever the URL asked for.
    */
-  let reported = "";
+  let reported = -1;
   let quiet: ReturnType<typeof setTimeout> | undefined;
 
   function sheets(el: HTMLElement): HTMLElement[] {
@@ -78,15 +98,21 @@
     paper. The motion in this container belongs to the swipe; a tab means "be there", and the fan
     closing is the transition.
   */
-  function goTo(slug: string): void {
+  function goTo(index: number): void {
     const el = rail;
     if (!el) return;
-    const first = leaves.findIndex((leaf) => leaf.chapter.slug === slug);
-    const sheet = sheets(el)[first];
+    const sheet = sheets(el)[index];
     if (!sheet) return;
-    // Said, not inferred. `at` decides which leaves hold content, and waiting for the scroll event
-    // to report a position this function already knows is how the destination arrives blank.
-    at = first;
+    /*
+      Said, not inferred. `at` decides which leaves hold content, and waiting for the scroll event to
+      report a position this function already knows is how the destination arrives blank.
+
+      The parameter is `index` because it was `at`, which shadowed the state this line means to
+      write: the assignment set the argument and nothing else, and the mounted window only ever
+      caught up because `scrollTo` happens to fire a scroll event. An optimisation that was dead for
+      as long as it existed.
+    */
+    at = index;
     el.scrollTo({ left: sheet.offsetLeft, behavior: "instant" });
   }
 
@@ -112,15 +138,16 @@
     clearTimeout(quiet);
     quiet = setTimeout(() => {
       at = nearest(el);
-      const slug = leaves[at]?.chapter.slug;
-      if (!slug || slug === open) return;
-      reported = slug;
-      onopen(slug);
+      // The leaf's own index, which is the address now: a phone's page list is its own, so there is
+      // no spread to report and nothing to halve.
+      if (at === open) return;
+      reported = at;
+      onopen(at);
     }, SETTLE_MS);
   }
 
   $effect(() => {
-    if (!rail || open === reported) return;
+    if (!rail || open === reported || leaves.length === 0) return;
     reported = open;
     goTo(open);
   });
@@ -138,10 +165,11 @@
 
   function pick(slug: string): void {
     fanned = false;
-    // Tapping the chapter you are already in means "back to its first page", which no change to
-    // `open` can express -- so this one goes straight to the rail.
-    if (slug === open) goTo(slug);
-    else onopen(slug);
+    const at = openingOf(leaves, slug);
+    // Tapping the chapter you are already reading means "back to its first page", which no change to
+    // `open` can express when you are already on it -- so that one goes straight to the rail.
+    if (at === open) goTo(at);
+    else onopen(at);
   }
 </script>
 
@@ -166,9 +194,14 @@
 -->
 <div class="leaves">
   <div class="rail" bind:this={rail} {onscroll}>
-    {#each leaves as leaf, index (leaf.chapter.slug + leaf.side)}
-      <article class="leaf" data-leaf data-chapter={leaf.chapter.slug} data-side={leaf.side}>
-        <Page side={leaf.side} fill>
+    {#each leaves as leaf, index (`${leaf.chapter.slug}-${leaf.at}`)}
+      <article
+        class="leaf"
+        data-leaf
+        data-chapter={leaf.chapter.slug}
+        data-side={sideOf(index)}
+      >
+        <Page side={sideOf(index)} fill folio={leaf.folio}>
           <!--
             The leaf you can see and the one either side of it. A rule about leaves and not about
             chapters, because it is a swipe that has to land on something: the world's map is a live
@@ -176,7 +209,7 @@
             be running already when the leaf before it is on screen.
           -->
           {#if Math.abs(index - at) <= 1}
-            {@render page(leaf.chapter, leaf.side)}
+            {@render page(leaf.panel, sideOf(index))}
           {/if}
         </Page>
       </article>
@@ -193,6 +226,11 @@
       onclick={() => (fanned = false)}
     ></button>
   {/if}
+
+  <!-- At the foot, which is both where a phone puts a filter and the same edge the spread uses. -->
+  <div class="tail">
+    <Realms open={realm} onpick={onfilter} foot />
+  </div>
 
   <div class="edge">
     {#if fanned}
@@ -241,13 +279,52 @@
 
       The foot clears the fore-edge tab in the bottom corner. Measured at 51px, so this is that plus
       room to see the last line is the last line.
+
+      The head clears the type controls, which are `position: fixed` in the top-left corner. On a
+      spread they float over the desk's own margin; a phone has no margin, so they sat on the page's
+      first line -- the chapter kicker was printed under "HAND CLEAR DYSLEXIA" on every leaf of the
+      book. Measured: the bar's bottom edge is 35px, so this is that plus air.
     */
+    /*
+      The phone's reading size, which is its own.
+
+      The spread computes type as a fraction of `--book-h`, so a page is a scaled copy of itself at
+      every window. A phone has no such ratio to scale by -- its leaf is whatever the screen is -- so
+      it took the raw token, which was chosen for a 677px page. Three percent smaller buys about 23
+      pixels of leaf, which is a line and a half, and 14.7px is comfortably inside what a phone wants
+      for body text. Anything more than this and the fix would be shrinking the type until it fits,
+      which is the trade the owner already refused.
+    */
+    --size-body: 0.92rem;
+
     --page-pad: clamp(1.1rem, 4.5vw, 2rem);
-    --page-foot: 4.25rem;
+    /*
+      Both measured against the furniture rather than rounded up. The bar's bottom edge is 35px and
+      the thumb is 51 tall, so these clear each by about 6 -- and the 18 pixels the first guesses
+      were over by are 18 pixels of page, which on a leaf this narrow is a line and a half.
+    */
+    --page-head: 2.6rem;
+    --page-foot: 3.6rem;
 
     position: relative;
     height: 100%;
     overflow: hidden;
+  }
+
+  /* Over the rail rather than in a row with it: the leaves are a scroll-snap track and a sibling
+     in the same column would take a leaf's height off every page. Centred, because the fore-edge
+     thumb owns the right-hand side. */
+  .tail {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 4;
+    display: flex;
+    /* Beside the fore-edge thumb rather than centred on the page's foot. Centred, it sat over the
+       folio in the opposite corner -- and the folio is the only thing on a phone that says which
+       page you are on. Right-aligned with room for the thumb clears both at any width. */
+    justify-content: flex-end;
+    padding-right: 7.2rem;
+    --realm-size: 0.66rem;
   }
 
   .rail {

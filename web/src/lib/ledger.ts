@@ -33,6 +33,8 @@ export interface Finding {
   claim: string;
   /** The one limit in plain words, always visible. `caveat` remains the complete statement. */
   plain_caveat: string;
+  /** How it was measured, for a reader who will not open the method note. Its own page in the book. */
+  plain_how: string;
   value: string;
   scope: string;
   caveat: string;

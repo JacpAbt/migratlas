@@ -2,7 +2,29 @@
   import RibbonChart from "./RibbonChart.svelte";
   import { frameOf, loadRibbon, type Comparison } from "./ribbon";
 
-  let { base }: { base: string } = $props();
+  let {
+    base,
+    part = "all",
+    at = 0,
+  }: {
+    base: string;
+    /**
+     * Which slice. Measured at 1600x900 the whole figure overflowed an 826px page by 1,406 and its
+     * charts alone still by 536, so it splits at the seams it already had: one chart, then the
+     * reading of the pair, then what they survived. `book/figures.ts` declares the order.
+     */
+    /**
+     * Which slice of the pair to render.
+     *
+     * `reading` is the disagreement and the caveat that qualifies both reconstructions, together, as
+     * a spread's page takes them. A phone takes them apart -- the two ran 345px past a 375px column
+     * -- and asks for `gap` and `caveat` by name. Named rather than subtracted, so a page cannot
+     * silently render the half it was not asked for.
+     */
+    part?: "all" | "chart" | "reading" | "gap" | "precise" | "caveat" | "notes";
+    /** Which chart, when there is one per page. */
+    at?: number;
+  } = $props();
 
   let doc = $state<Comparison | null>(null);
   let failure = $state<string | null>(null);
@@ -39,30 +61,42 @@
   {#if failure}
     <p class="pair__failure">The counterfactual is unavailable. {failure}</p>
   {:else if doc && frame}
+    {#if part === "all" || part === "chart"}
     <ol class="pair__set">
-      {#each doc.ribbons as ribbon (ribbon.key)}
+      {#each part === "chart" ? doc.ribbons.slice(at, at + 1) : doc.ribbons as ribbon (ribbon.key)}
         <li>
           <RibbonChart {ribbon} {frame} {drawn} />
         </li>
       {/each}
     </ol>
+    {/if}
 
+    {#if part === "all" || part === "reading" || part === "gap" || part === "precise"}
     <section class="pair__gap" aria-labelledby="ribbon-disagreement">
       <h4 id="ribbon-disagreement">
         {doc.ribbons.length > 1 ? "Why the two answers differ" : "Why there is only one answer"}
       </h4>
       <!-- Two registers, as on a claim: the plain line is the answer, and the paragraph that
            earns it is rendered under it in full rather than replaced by it. -->
-      <p class="pair__plain">{doc.plain_disagreement}</p>
-      <p class="pair__precise">
-        <span class="pair__register">Precisely</span>
-        {doc.disagreement}
-      </p>
+      {#if part !== "precise"}
+        <p class="pair__plain">{doc.plain_disagreement}</p>
+      {/if}
+      <!-- Two registers, and on a phone two leaves: the plain answer, then the paragraph that earns
+           it. Together they ran 191px past a 375px column even with the caveat moved off. -->
+      {#if part !== "gap"}
+        <p class="pair__precise">
+          <span class="pair__register">Precisely</span>
+          {doc.disagreement}
+        </p>
+      {/if}
     </section>
+    {/if}
 
-    <p class="pair__caveat">{doc.shared_caveat}</p>
+    {#if part === "all" || part === "reading" || part === "caveat"}
+      <p class="pair__caveat">{doc.shared_caveat}</p>
+    {/if}
 
-    {#if doc.supporting.length > 0}
+    {#if (part === "all" || part === "notes") && doc.supporting.length > 0}
       <ul class="pair__supporting">
         {#each doc.supporting as line (line)}
           <li>{line}</li>

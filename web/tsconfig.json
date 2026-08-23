@@ -28,6 +28,7 @@
   "include": [
     "src",
     "vite.config.ts",
-    "svelte.config.js"
+    "svelte.config.js",
+    "tests"
   ]
 }

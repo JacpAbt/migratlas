@@ -2,35 +2,44 @@
   import type { Snippet } from "svelte";
 
   import Page from "./Page.svelte";
+  import Realms from "./Realms.svelte";
+  import { folio, openingOf, type Panel, type Spread } from "./pages";
   import { tabStyle } from "./tabs";
-  import { still } from "../../state/turn";
+  import { drawMs, still } from "../../state/turn";
   import type { Chapter } from "../story";
 
   let {
     chapters,
+    spreads,
     open,
+    realm,
     onopen,
+    onfilter,
     page,
   }: {
     chapters: readonly Chapter[];
-    /** Slug of the open chapter. */
-    open: string;
-    onopen: (slug: string) => void;
+    spreads: readonly Spread[];
+    /** Index of the open spread. */
+    open: number;
+    /** Which realm the book is being read in. Empty for all of them. */
+    realm: string;
+    onopen: (at: number) => void;
+    onfilter: (realm: string) => void;
     /**
-     * What goes on a page, given the chapter and which side it is.
+     * What goes on a page, given the panel and which side it is.
      *
-     * A snippet rather than two slots, because the turn has to render the *outgoing* chapter as
-     * well as the open one. With slots that means cloning DOM, which is where every defect ADR 0015
+     * A snippet rather than two slots, because the turn has to render the *outgoing* pages as well
+     * as the open ones. With slots that means cloning DOM, which is where every defect ADR 0015
      * lists came from; with a snippet the leaf is another call with different arguments.
      */
-    page: Snippet<[Chapter, "verso" | "recto"]>;
+    page: Snippet<[Panel, "verso" | "recto"]>;
   } = $props();
 
-  const index = $derived(Math.max(0, chapters.findIndex((c) => c.slug === open)));
-  const current = $derived(chapters[index] ?? chapters[0]!);
+  const index = $derived(Math.min(Math.max(open, 0), Math.max(spreads.length - 1, 0)));
+  const current = $derived(spreads[index] ?? spreads[0]);
 
-  /** The chapter being turned away from, and which way. Null when nothing is turning. */
-  let leaving = $state<{ chapter: Chapter; forward: boolean } | null>(null);
+  /** The spread being turned away from, and which way. Null when nothing is turning. */
+  let leaving = $state<{ spread: Spread; forward: boolean } | null>(null);
   let settling: ReturnType<typeof setTimeout> | undefined;
 
   /*
@@ -44,21 +53,19 @@
   const lifted = $derived<"verso" | "recto">(leaving?.forward ? "recto" : "verso");
   const arriving = $derived<"verso" | "recto">(leaving?.forward ? "verso" : "recto");
 
-  function go(slug: string): void {
-    if (slug === open) return;
-    const to = chapters.findIndex((c) => c.slug === slug);
-    if (to < 0) return;
+  function go(to: number): void {
+    if (to === index || to < 0 || to >= spreads.length) return;
 
     if (still()) {
       // Reduced motion is a full path and not a faster one: the new spread is simply there, which
       // is the animation's correct end state rather than a degraded version of it.
-      onopen(slug);
+      onopen(to);
       return;
     }
 
     clearTimeout(settling);
-    leaving = { chapter: current, forward: to > index };
-    onopen(slug);
+    leaving = { spread: current!, forward: to > index };
+    onopen(to);
 
     /*
       Cleared by whichever comes first, the event or the clock, and the clock is not paranoia:
@@ -66,11 +73,23 @@
       pane, a headless run -- and without it the leaf stays parked over half the spread for the rest
       of the session with no way back. Found exactly that way in the mock.
     */
-    const ms = Number.parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue("--draw-slow"),
-    );
-    settling = setTimeout(() => (leaving = null), (Number.isFinite(ms) ? ms : 900) + 120);
+    settling = setTimeout(() => (leaving = null), drawMs("--draw-slow", 900) + 120);
   }
+
+  /* The folio in each outer corner is the button that turns that way -- see `Page.svelte`. Arrow
+     keys do the same, because a reader on a keyboard should not have to find a corner. */
+  const numbers = $derived(folio(index));
+
+  function keys(event: KeyboardEvent): void {
+    if (event.target !== document.body) return;
+    if (event.key === "ArrowRight") go(index + 1);
+    else if (event.key === "ArrowLeft") go(index - 1);
+  }
+
+  $effect(() => {
+    addEventListener("keydown", keys);
+    return () => removeEventListener("keydown", keys);
+  });
 </script>
 
 <!--
@@ -90,51 +109,101 @@
     <div class="block block--edge" aria-hidden="true"></div>
 
     <div class="spread">
-      <Page side="verso">{@render page(current, "verso")}</Page>
-      <Page side="recto">{@render page(current, "recto")}</Page>
+      {#if current}
+        <Page
+          side="verso"
+          folio={numbers[0]}
+          onturn={index > 0 ? () => go(index - 1) : undefined}
+        >
+          {@render page(current.verso, "verso")}
+        </Page>
+        <Page
+          side="recto"
+          folio={numbers[1]}
+          onturn={index < spreads.length - 1 ? () => go(index + 1) : undefined}
+        >
+          {@render page(current.recto, "recto")}
+        </Page>
+      {/if}
 
-      {#if leaving}
+      {#if leaving && current}
         <!-- The outgoing page, held on the half the leaf is about to land on. -->
         <div class="stale stale--{arriving}" aria-hidden="true">
-          <Page side={arriving} fill>{@render page(leaving.chapter, arriving)}</Page>
+          <Page side={arriving} fill>{@render page(leaving.spread[arriving], arriving)}</Page>
         </div>
         <!-- The shadow the turning page throws: a sibling, because a child would rotate with it. -->
         <div class="cast cast--{lifted}" aria-hidden="true"></div>
         <div class="leaf leaf--{lifted}" aria-hidden="true">
           <div class="leaf__face leaf__front">
-            <Page side={lifted} fill>{@render page(leaving.chapter, lifted)}</Page>
+            <Page side={lifted} fill>{@render page(leaving.spread[lifted], lifted)}</Page>
           </div>
           <div class="leaf__face leaf__back">
-            <Page side={arriving} fill>{@render page(current, arriving)}</Page>
+            <Page side={arriving} fill>{@render page(current[arriving], arriving)}</Page>
           </div>
         </div>
       {/if}
 
       <div class="gutter" aria-hidden="true"><span class="gutter__line"></span></div>
+
     </div>
 
     <nav class="tabs" aria-label="chapters">
       {#each chapters as chapter, position (chapter.slug)}
+        {@const here = current?.chapter.slug === chapter.slug}
         <button
           type="button"
           class="tab"
           style={tabStyle(position)}
-          class:is-on={chapter.slug === current.slug}
-          aria-current={chapter.slug === current.slug ? "page" : undefined}
-          onclick={() => go(chapter.slug)}
+          class:is-on={here}
+          aria-current={here ? "page" : undefined}
+          onclick={() => go(openingOf(spreads, chapter.slug))}
         >
           {chapter.tab}
         </button>
       {/each}
     </nav>
+
+    <!--
+      The filter goes on the tail edge, not beside the chapters on the fore-edge.
+
+      Seven vertical labels already stack to 38 times the font size and ran past the foot of a short
+      window once; four more on the same edge is the same bug again. Two edges is also the honest
+      picture of what these are -- one index for the questions and one for the filter, which is what
+      a book with two sets of thumb tabs does.
+    -->
+    <div class="tail" style={tabStyle(chapters.indexOf(current.chapter))}>
+      <Realms open={realm} onpick={onfilter} />
+    </div>
   </div>
 </div>
 
 <style>
   .desk {
     display: grid;
-    place-items: start center;
-    padding: var(--gap) var(--gap-tight) 0;
+    /* Centred rather than top-aligned, so the height the cap gives back appears above the book as
+       well as below it -- top-aligned, every pixel of it would have gone to the foot. The book can
+       never be taller than the window, because `--book-h` is bounded by it, so centring cannot clip. */
+    height: 100%;
+    place-items: center;
+    /*
+      The tail strip's room, out of the head margin rather than out of the book.
+
+      Subtracted from `--book-h` instead, it cost 27 pixels of book and put the dial's page 6 pixels
+      over its leaf at 1280x800 -- one page of seventy, and exactly the failure that height cap's own
+      comment promises, because every panel budget in `pages.ts` was measured against this book and a
+      shorter book has less of every margin. The strip is furniture; the pages are the book.
+
+      So the desk pays, and it pays half: the strip is 21px and this is 13, the rest coming out of
+      the 21px the centring already leaves under the book. A whole strip's worth would have left 7
+      pixels above the book at 1280x800, and the type controls float in that band.
+
+      Declared *here* and not on `.book`, which is where the first attempt put it: custom properties
+      inherit downwards, so a parent reading a child's property gets nothing -- and an unresolved
+      `var()` takes its whole declaration with it, so the desk lost its padding outright rather than
+      losing the addition.
+    */
+    --tail: 0.8rem;
+    padding: var(--gap) var(--gap-tight) calc(var(--gap) + var(--tail));
     /* Two faint washes rather than a flat fill: a flat ground under a shadowed object reads as a
        rectangle floating on a colour. */
     background:
@@ -145,10 +214,54 @@
   .book {
     --ratio: 1.58;
     --book-fold: 2.5rem;
-    --page-pad: clamp(1.6rem, 3.2vw, 3.4rem);
+    /* Trimmed from `clamp(1.6rem, 3.2vw, 3.4rem)`: on a short window the margin was taking 82px
+       of an 728px page while five panels overflowed by less than that. */
+    --page-pad: clamp(1.2rem, 2.5vw, 3rem);
+
+    /*
+      Reading sizes measured against the page, which is what pagination made necessary.
+
+      `tokens.css` records that the book needed no reading *scale* -- and that was right about the
+      thing it was about, a reader's 100/115/130% preference. This is a different quantity. A page
+      that scrolls fits any content at any size by definition; a page that does not fit has to hold
+      the same panel at 1600x900 and at 1280x800, where it is 826px and 726px tall. With the type
+      fixed, twenty-three of twenty-eight spreads overflowed at the smaller size and nine at the
+      larger, and every fix would have been a split that was wrong at the other size.
+
+      So the type is a fraction of the book's own height and the spread is a scaled copy of itself at
+      every window: the aspect is fixed, so the width scales with the height and the text reflows
+      identically. The divisors are the current sizes at `--book-h: 828`, which is 1600x900 -- the
+      size every panel in `pages.ts` was measured at. The clamps are floors and ceilings rather than
+      preferences: below the floor the book stops shrinking its type and the guard test in
+      `tests/book.spec.ts` fails instead, which is the honest failure.
+
+      CSS cannot divide a length by a length, so this is `--book-h / n` rather than a ratio applied
+      to the token. That is also why each line repeats the hand factor it needs.
+    */
+    --size-claim: clamp(1.08rem, calc(var(--book-h) / 26.9 * var(--font-scale-hand)), 2.6rem);
+    --size-lede: clamp(0.86rem, calc(var(--book-h) / 50.2 * var(--font-scale-hand)), 1.5rem);
+    --size-body: clamp(0.73rem, calc(var(--book-h) / 59.5), 1.15rem);
+    --size-value: clamp(0.98rem, calc(var(--book-h) / 41.8), 1.7rem);
+    --size-margin: clamp(0.56rem, calc(var(--book-h) / 85.6), 0.82rem);
+    --size-label: clamp(0.53rem, calc(var(--book-h) / 91.2), 0.76rem);
     /* As large as the window allows in both axes, so it fills a wide monitor and still cannot run
        off the bottom of a short one. The subtraction is the chrome above it. */
-    --book-h: min(calc(98vw / var(--ratio)), calc(100vh - 4.5rem));
+    /*
+      As large as the window allows in both axes, minus the chrome, and then capped.
+
+      The subtraction is measured rather than reserved: `.desk` puts 14px of padding over the book
+      and the lift shadow needs a few more. 4.5rem was a guess that cost 40px of page on exactly the
+      short windows where the pages were tightest.
+
+      The cap is the owner's note that the book was "a bit too tall" on a tall window, and it is a cap
+      rather than a translation: at 1920x1080 the book ran the full 1,038px and now stops at 886, so
+      it is 14% shorter and the desk shows above and below it. `max(54rem, 82vh)` and not a bare
+      `82vh`, because a page must never get *smaller* than the size its panels were measured at --
+      82vh of an 800px window is 656px against the 758 that window gives, and shrinking the page is
+      how the overflow guard would start failing. As written, nothing below about a 1,050px-tall
+      window changes at all.
+    */
+    --book-h: min(calc(98vw / var(--ratio)), calc(100vh - 2.6rem), max(54rem, 82vh));
 
     position: relative;
     width: calc(var(--book-h) * var(--ratio));
@@ -332,6 +445,16 @@
     100% {
       opacity: 0;
     }
+  }
+
+  /* Inside the fore-edge rather than at the corner, so the two strips never touch: the chapter
+     tabs stand off the right edge and this stands off the bottom one. */
+  .tail {
+    position: absolute;
+    inset: auto 7% 0 auto;
+    z-index: 6;
+    --realm-size: clamp(0.58rem, calc(var(--book-h) / 64), 0.82rem);
+    transform: translateY(calc(100% - 3px));
   }
 
   /* --- Thumb tabs ------------------------------------------------------- */

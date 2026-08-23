@@ -4,7 +4,32 @@
   import { BRACKET_WIDTH, bracket } from "../notebook/ink";
   import type { Finding } from "../ledger";
 
-  let { finding }: { finding: Finding } = $props();
+  let {
+    finding,
+    part = "all",
+    slice = "all",
+  }: {
+    finding: Finding;
+    /**
+     * "all" is the whole margin beside a claim, which is what the old shell mounts and what this
+     * component was. "bias" is the book's page of it: the same audit, minus the specimen line.
+     *
+     * The specimen line left because it is `realm · taxon_scope · evidence_type` -- which is exactly
+     * the legend a figure needs, so the plate says it in words instead of in field values in a
+     * margin. "How it could be wrong" and "what it survived" are one question asked from both sides
+     * and were put on one page for that reason; measured, the pair overflowed an 826px page by 231
+     * and 304 on the two claims with the longest audits, so they are two pages that face each other.
+     */
+    part?: "all" | "bias" | "survived";
+    /**
+     * Which half of the assessment, when a phone gives it two pages.
+     *
+     * A narrower value on `part` would have been the wrong shape, for the reason `Claim.svelte`'s
+     * own slice records: these gates read `part !== "survived"` and `part !== "bias"`, so a third
+     * value renders both sections rather than half of one.
+     */
+    slice?: "all" | "first" | "rest";
+  } = $props();
 
   // Measured for the same reason the rule is: stretched, a 3px hook on a 400px column becomes an
   // 8px flag, and the spine's wobble smears into a curve.
@@ -19,7 +44,17 @@
 
   // A domain reading "not applicable" is a real answer and is shown as one. What must never happen
   // is a domain missing from the block entirely, which would read as "no risk here".
-  const shown = $derived(finding.bias);
+  const shown = $derived.by(() => {
+    if (slice === "all") return finding.bias;
+    // Halved rather than cut at a fixed three, so five domains split 3/2 and seven split 4/3 --
+    // `composition-stable` has five, and a hard number would have left a page with two rows on it.
+    const half = Math.ceil(finding.bias.length / 2);
+    return slice === "first" ? finding.bias.slice(0, half) : finding.bias.slice(half);
+  });
+
+  /* The heading says which half. "Risk of bias" twice in two swipes reads as a repeated page rather
+     than as a continued one. */
+  const heading = $derived(slice === "rest" ? "Risk of bias, continued" : "Risk of bias");
 </script>
 
 <!--
@@ -42,8 +77,9 @@
   </svg>
 
   <div class="margin__body">
+    {#if part !== "survived"}
     <section>
-      <h3>Risk of bias</h3>
+      <h3>{heading}</h3>
       <dl class="bias">
         {#each shown as domain (domain.domain)}
           <dt class="bias__domain">{domain.domain}</dt>
@@ -54,8 +90,9 @@
         {/each}
       </dl>
     </section>
+    {/if}
 
-    {#if finding.supporting.length > 0}
+    {#if part !== "bias" && finding.supporting.length > 0}
       <section>
         <h3>Survived</h3>
         <Rule seed={`${finding.key}-survived`} tone="rule" />
@@ -67,12 +104,16 @@
       </section>
     {/if}
 
-    <section class="specimen">
-      <h3>Specimen</h3>
-      <p>
-        {finding.realm} · {finding.taxon_scope} · {finding.evidence_type.replace(/_/g, " ")}
-      </p>
-    </section>
+    <!-- Only where the whole margin is shown. On a page of its own this line is the figure's
+         legend, and `book/Figure.svelte` renders it there in words. -->
+    {#if part === "all"}
+      <section class="specimen">
+        <h3>Specimen</h3>
+        <p>
+          {finding.realm} · {finding.taxon_scope} · {finding.evidence_type.replace(/_/g, " ")}
+        </p>
+      </section>
+    {/if}
   </div>
 </aside>
 

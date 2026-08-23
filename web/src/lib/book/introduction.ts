@@ -35,19 +35,3 @@ export async function loadIntroduction(base: string): Promise<IntroductionDocume
   }
   return document_;
 }
-
-/**
- * Split the passages across the spread.
- *
- * A book's opening spread is not one page with the other left blank. The standfirst and the counted
- * sentence sit with the first half, the rest carries onto the facing page, and the split follows the
- * count so adding a fifth passage does not silently leave it off the end.
- */
-export function acrossTheSpread(document_: IntroductionDocument | null): {
-  verso: Passage[];
-  recto: Passage[];
-} {
-  const passages = document_?.passages ?? [];
-  const half = Math.ceil(passages.length / 2);
-  return { verso: passages.slice(0, half), recto: passages.slice(half) };
-}

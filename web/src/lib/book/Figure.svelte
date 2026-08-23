@@ -3,6 +3,7 @@
   import Coverage from "../claim/Coverage.svelte";
   import Ribbon from "../claim/Ribbon.svelte";
   import Rule from "../notebook/Rule.svelte";
+  import { FIGURES, figurePages } from "./figures";
   import { loadDetectability, type DetectabilityDocument } from "../../layers/detectability";
   import type { Finding } from "../ledger";
 
@@ -10,26 +11,30 @@
     finding,
     number,
     base,
+    at = 0,
+    narrow = false,
   }: {
     finding: Finding;
     number: number;
     base: string;
+    /** Which of the figure's declared pages. A plate has only the one. */
+    at?: number;
+    /*
+      Which list `at` indexes, which is the container's to say.
+
+      `figures.ts` declares a narrow page list for the two figures that do not fit a 375px column, so
+      the same index means a different page on a phone -- and resolving it against the wide list there
+      would render the reading where the sources belong. `Reader` knows which container is mounted;
+      this component does not, and should not have to guess from a media query it cannot see.
+    */
+    narrow?: boolean;
   } = $props();
 
-  /**
-   * Which claims have a figure of their own, and what it is.
-   *
-   * Lifted from `claim/Evidence.svelte` rather than reinvented, including its reasoning: only two
-   * claims have a figure that adds something the sentence does not. A chart per claim would be
-   * decoration — the marine null and the composition control are both "indistinguishable from
-   * zero", and a flat line drawn three times teaches nothing the value already said.
-   *
-   * Everything else gets the drawn plate, which answers a different question: where on Earth.
-   */
-  const FIGURES: Record<string, { kind: "ribbon" | "coverage"; title: string }> = {
-    "anthropogenic-share": { kind: "ribbon", title: "The world without us" },
-    "coverage-bias": { kind: "coverage", title: "Where change could be measured" },
-  };
+  const declared = $derived(figurePages(finding.key, narrow));
+  const leaf = $derived(declared[at] ?? declared[0]!);
+
+  /** Which chart, counting only the chart pages before this one. */
+  const chart = $derived(declared.slice(0, at).filter((page) => page.part === "chart").length);
 
   const figure = $derived(FIGURES[finding.key]);
 
@@ -59,12 +64,12 @@
 -->
 {#if figure}
   <section class="figure">
-    <h2>{figure.title}</h2>
+    <h2>{leaf.title}</h2>
     <Rule seed={`${finding.key}-figure`} tone="pencil" />
     {#if figure.kind === "ribbon"}
-      <Ribbon {base} />
+      <Ribbon {base} part={leaf.part} at={chart} />
     {:else if assessment}
-      <Coverage doc={assessment} />
+      <Coverage doc={assessment} part={leaf.part} />
     {:else if failed}
       <p class="figure__failure" role="status">The coverage assessment did not load.</p>
     {:else}

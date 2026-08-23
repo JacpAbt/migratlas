@@ -52,7 +52,15 @@ export interface LoadedLayer {
    *
    * The *declared initial* value, and deliberately never written to afterwards -- `setVisible` does
    * not update it. Two things read it and both need it to mean the same thing: the tools panel
-   * initialises its checkboxes from it, and `Shell.svelte` builds explore mode's layer list from it.
+   * initialised its checkboxes from it, and `book/World.svelte` built the world chapter's layer list
+   * from it -- which it did not, for one commit after the shell was retired, and the wash came back.
+   *
+   * **Nothing reads it any more, and that is the point.** Two readers of one number is an invariant
+   * held by agreement; the world chapter now owns a single list of what is drawn and the panel
+   * renders that list, so the two cannot disagree by construction. This stays because it is what the
+   * manifest *declares* -- the wash saying "not until somebody asks" is a fact about the layer worth
+   * keeping written down -- and because the next thing that wants a sensible default should read it
+   * rather than invent one.
    * Having `setVisible` write back here would make the second of those a function of the first, and
    * the view effect re-applies visibility whenever the view changes -- which is a loop.
    *

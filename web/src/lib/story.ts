@@ -27,6 +27,14 @@ export interface View {
    * Why the camera is here, in one line. Shown to the reader, because a globe that flies somewhere
    * without saying why is a slideshow -- and because writing it down is what caught two of these
    * pointing at the wrong hemisphere.
+   *
+   * **It has exactly one reader, and that reader is the plate's caption.** So it describes the
+   * *ground*: where in the world this claim is made, and nothing about how any measurement is
+   * marked. Four of these used to describe the `layers` beside them instead -- "ringed where the
+   * count fell, solid where it rose", "as weekly presence on the clock", "the two layers here" --
+   * which was true of the globe and false of the sheet it was printed under, and sent a reader
+   * looking for marks that are not on the paper. What the plate does draw is keyed in
+   * `Plate.svelte`; what the layers draw belongs beside the layers.
    */
   because: string;
 }
@@ -45,7 +53,9 @@ export const VIEWS: Record<string, View> = {
     center: [-96, 42],
     zoom: 3.1,
     layers: ["aerial-passage"],
-    because: "The 78 radar stations the claim is made from, between 37°N and 50°N.",
+    because:
+      "The band the claim is made in: the middle of the United States, between 37 and 50 degrees " +
+      "north, where the radar stations sit.",
   },
   "marine-null": {
     // The North Atlantic shelf. FISHGLOB's 29 surveys are North America and Europe by
@@ -53,19 +63,21 @@ export const VIEWS: Record<string, View> = {
     center: [-35, 50],
     zoom: 2.2,
     layers: ["marine-taxa-recorded"],
-    because: "The bottom-trawl surveys, on both sides of the North Atlantic.",
+    because:
+      "Both shores of the North Atlantic, which is where the bottom-trawl surveys are: North " +
+      "America and Europe, by construction.",
   },
   "composition-stable": {
     center: [-96, 42],
     zoom: 3.1,
     layers: ["aerial-passage"],
-    because: "The same stations, asked a different question: what was flying, not when.",
+    because: "The same band as the timing claim, asked what was flying rather than when.",
   },
   "anthropogenic-share": {
     center: [-96, 42],
     zoom: 2.6,
     layers: ["aerial-passage"],
-    because: "The claim band again, pulled back: the forcing behind it is global.",
+    because: "The same band, pulled back, because the forcing behind it is global.",
   },
   "atlas-no-net-change": {
     // Southern Africa, framed on the atlas footprint itself: South Africa, Lesotho and Eswatini.
@@ -79,8 +91,7 @@ export const VIEWS: Record<string, View> = {
     layers: ["atlas-taxa-change"],
     because:
       "The southern African atlas footprint: South Africa, Lesotho and Eswatini, and inside it " +
-      "only the cells atlassed twice. Each cell is the change in how many of the analysed taxa " +
-      "were recorded there — ringed where the count fell, solid where it rose.",
+      "the squares that were atlassed in both epochs.",
   },
   "transfer-fails": {
     // All three legs at once, which is only possible because they ring one ocean: the radar band
@@ -96,8 +107,8 @@ export const VIEWS: Record<string, View> = {
     zoom: 1.35,
     layers: ["aerial-passage", "marine-taxa-recorded", "atlas-taxa-change"],
     because:
-      "All three records at once. The two that turned out to agree are the two on opposite " +
-      "sides of the equator; the one that did not is the one measuring dates instead of places.",
+      "All three records at once, which is the point: the two that turned out to agree are the " +
+      "two on opposite sides of the equator.",
   },
   "skill-sparse": {
     // The same band as the headline claim, because the two are the same instrument asked
@@ -106,8 +117,8 @@ export const VIEWS: Record<string, View> = {
     zoom: 3.1,
     layers: ["aerial-passage"],
     because:
-      "The same stations as the headline claim, asked the opposite question: not whether " +
-      "timing drifted over decades, but whether any single year can be predicted. Mostly, no.",
+      "The same band as the headline claim, asked the opposite question: not whether timing " +
+      "drifted over decades, but whether any single year can be predicted.",
   },
   "displacement-flat": {
     // Both herds at once: Ya Ha Tinda in the Canadian Rockies and the Svalbard archipelago sit
@@ -117,9 +128,8 @@ export const VIEWS: Record<string, View> = {
     zoom: 2.0,
     layers: ["yahatinda-herd", "svalbard-herd"],
     because:
-      "The two herds the claim is measured from, as weekly presence on the clock: elk in the " +
-      "Canadian Rockies, reindeer on Svalbard. What does not appear is the point -- no trend in " +
-      "how far either herd moves.",
+      "The two herds the claim is measured from, a continent apart: elk in the Canadian " +
+      "Rockies, reindeer on Svalbard.",
   },
   "coverage-bias": {
     // Deliberately the southern hemisphere, and deliberately far out. This claim is about what the
@@ -127,9 +137,7 @@ export const VIEWS: Record<string, View> = {
     center: [20, -30],
     zoom: 1.5,
     layers: ["marine-space-use", "marine-taxa-recorded"],
-    because:
-      "The hemisphere this project has almost no measurable change in. The two layers here " +
-      "cover it and neither can support a trend.",
+    because: "The hemisphere this project can measure almost nothing in.",
   },
 };
 
@@ -148,10 +156,28 @@ export function viewFor(finding: Finding): View {
  * `layers` comes from what the globe actually loaded rather than from a list here, so a layer added
  * to the manifest appears in explore mode without anyone remembering to add it.
  */
-export function exploreView(available: string[]): View {
+/**
+ * The zoom at which the sphere just fills a box.
+ *
+ * MapLibre's globe draws the world `512 * 2 ** zoom` pixels around, so the sphere's diameter is that
+ * over pi -- which inverts to this. Written as arithmetic rather than chosen, because the number that
+ * was chosen has been wrong everywhere since it was written: `zoom: 1.4` is a 430px sphere at every
+ * window size, which was small in the shell's 1600x900 and is small again in a 677px page. The owner
+ * called the globe badly implemented and this is the half of that which is measurable.
+ *
+ * The margin leaves the sphere off the page edges, where the map's own controls and its licence
+ * notice sit.
+ */
+export function sphereZoom(width: number, height: number, margin = 0.92): number {
+  const diameter = Math.min(width, height) * margin;
+  if (!Number.isFinite(diameter) || diameter <= 0) return 1.4;
+  return Math.log2((diameter * Math.PI) / 512);
+}
+
+export function exploreView(available: string[], zoom = 1.4): View {
   return {
     center: [-45, 25],
-    zoom: 1.4,
+    zoom,
     layers: available,
     because: "Every published layer, and no argument on top of it.",
   };
@@ -187,7 +213,22 @@ export interface Chapter {
 }
 
 export const CHAPTERS: readonly Chapter[] = [
-  { slug: "how-to-read", title: "How to read this", tab: "How to read", keys: [] },
+  /*
+    The front matter, and it answers a reader's first question before the epistemic ones.
+
+    `introduction.py` leads with what is being studied, why it is worth measuring and how the work
+    is done -- three passages with no result in them, which is the point: a reader who arrives at a
+    finding without knowing what a finding here is made of has been handed a number to trust.
+
+    The slug is unchanged. It is in every link this site has handed out, and renaming a chapter is
+    not a reason to break them.
+  */
+  {
+    slug: "how-to-read",
+    title: "What this is, and how to read it",
+    tab: "What this is",
+    keys: [],
+  },
   {
     slug: "what-changed",
     title: "What changed",
@@ -219,6 +260,55 @@ export const CHAPTERS: readonly Chapter[] = [
 /** The chapter carrying a claim, or undefined -- which the build guard turns into a failure. */
 export function chapterOf(key: string): Chapter | undefined {
   return CHAPTERS.find((chapter) => chapter.keys.includes(key));
+}
+
+/**
+ * The realms, and the words the tabs show for them.
+ *
+ * **Why realm and not taxon.** `realm` is required on every source and every schema in this project
+ * -- it is the structural half of "this is not a bird project" -- so it is the one axis the book can
+ * filter on that every claim already answers. A taxon filter would promise what the evidence cannot
+ * deliver: the aerial record is reflectivity, it cannot tell a bird from a bat, and a "birds" tab
+ * over it would be a label the measurement does not support. Where an animal is -- air, sea, land --
+ * every source states, and states before it is admitted.
+ *
+ * The tabs carry the plain word rather than the field's. `aerial` is what the schema calls it and
+ * "Air" is what it means, and these are the smallest type in the book.
+ */
+export interface Realm {
+  /** The `realm` field's own value, and what goes in the URL. Empty for the unfiltered tab. */
+  slug: string;
+  /** The word on the tab. */
+  tab: string;
+  /** The same realm inside a sentence, for the page a filter empties: "nothing measured in the sea". */
+  the: string;
+}
+
+export const REALMS: readonly Realm[] = [
+  { slug: "", tab: "All", the: "any realm" },
+  { slug: "aerial", tab: "Air", the: "the air" },
+  { slug: "marine", tab: "Sea", the: "the sea" },
+  { slug: "terrestrial", tab: "Land", the: "the land" },
+];
+
+/** The realm a cross-realm finding carries, which is every realm rather than a fourth one. */
+export const EVERYWHERE = "all";
+
+/**
+ * Whether a finding belongs under a realm tab.
+ *
+ * A cross-realm finding appears under every one of them, because `realm: "all"` means the claim is
+ * true of each realm rather than of none. Both findings that carry it are limits on the whole
+ * project -- the coverage bias and the failure to transfer -- and filtering to the sea and being
+ * told that nothing limits what we know about the sea would be the one reading that is false.
+ */
+export function inRealm(finding: Finding, realm: string): boolean {
+  return realm === "" || finding.realm === realm || finding.realm === EVERYWHERE;
+}
+
+/** A realm by its slug, for reading one out of the URL. Anything unknown reads as unfiltered. */
+export function realmAt(slug: string | null): Realm {
+  return REALMS.find((realm) => realm.slug === slug) ?? REALMS[0]!;
 }
 
 /** A chapter by its slug, for reading one out of the URL. */

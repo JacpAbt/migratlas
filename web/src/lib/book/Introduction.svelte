@@ -1,17 +1,22 @@
 <script lang="ts">
   import Rule from "../notebook/Rule.svelte";
-  import { acrossTheSpread, type IntroductionDocument } from "./introduction";
+  import type { IntroductionDocument } from "./introduction";
 
   let {
     document_,
-    side,
+    opening = false,
+    from = 0,
+    to = 0,
   }: {
     document_: IntroductionDocument | null;
-    side: "verso" | "recto";
+    /** The title, the standfirst and the counted sentence, which belong on one page only. */
+    opening?: boolean;
+    /** The half-open slice of passages this page carries. */
+    from?: number;
+    to?: number;
   } = $props();
 
-  const split = $derived(acrossTheSpread(document_));
-  const passages = $derived(side === "verso" ? split.verso : split.recto);
+  const passages = $derived((document_?.passages ?? []).slice(from, to));
 </script>
 
 <!--
@@ -19,14 +24,14 @@
   verbatim: an introduction written in this file would be the one page on the site whose prose
   nothing holds to account.
 
-  The passages carry across both pages rather than filling one and leaving the other blank, which is
-  what a book's opening spread actually does. The split follows the count, so a fifth passage lands
-  on the facing page instead of falling off the end.
+  Which passages land on which page is `book/pages.ts`, not this component: the introduction runs
+  across as many spreads as it has passages, and a component that split them in half would be
+  deciding the book's length. Here it renders the slice it is given.
 -->
 {#if !document_}
   <p class="intro__missing" role="status">The introduction did not load.</p>
 {:else}
-  {#if side === "verso"}
+  {#if opening}
     <p class="intro__kicker">{document_.title}</p>
     <h1 class="intro__standfirst">{document_.standfirst}</h1>
     <Rule seed="introduction" />

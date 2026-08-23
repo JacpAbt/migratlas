@@ -4,7 +4,34 @@
   import Rule from "../notebook/Rule.svelte";
   import { dialRefusalsFor, dialsFor, type ResponseDocument } from "./response";
 
-  let { doc, claim }: { doc: ResponseDocument | null; claim: string } = $props();
+  let {
+    doc,
+    claim,
+    part = "all",
+    slice = null,
+  }: {
+    doc: ResponseDocument | null;
+    claim: string;
+    /**
+     * Which half of the panel to render.
+     *
+     * "all" is the whole panel under a claim, which is what `claim/Evidence.svelte` mounts. The book
+     * takes it in two because it does not fit a page: measured at 1600x900 the safeguards ran 890 to
+     * 1,178px and the dial 1,762px against an 826px page, so the knobs take the left leaf and the
+     * refusals the right. Nothing is hidden by either -- both halves are always in the book, one
+     * page apart.
+     */
+    part?: "all" | "knobs" | "refusals";
+    /**
+     * One item per page, which is what a page turned out to hold.
+     *
+     * Measured at 1600x900 against an 826px page: three safeguard knobs came to 1,306px and two
+     * dials to 1,173px, so roughly 435 and 586 each -- two on a page overflows either way. The lead
+     * paragraph rides with the first knob only, because repeating it on every leaf would be four
+     * copies of the same sentence in one chapter.
+     */
+    slice?: { kind: "knob" | "refusal"; at: number } | null;
+  } = $props();
 
   const dials = $derived(dialsFor(doc, claim));
   const refusals = $derived(dialRefusalsFor(doc, claim));
@@ -33,27 +60,34 @@
   the range the fit is informed over, and one says plainly that a sensitivity is not a forecast, which
   is a distinction this project spent two phases earning the right to make.
 -->
-{#if dials.length > 0}
+{#if (part !== "refusals" && dials.length > 0) || (part !== "knobs" && refusals.length > 0)}
   <section class="response">
-    <h3>Turn one thing up, and see what the fit says</h3>
+    <h3>
+      {part === "refusals"
+        ? "And what this will not be turned into"
+        : "Turn one thing up, and see what the fit says"}
+    </h3>
     <Rule seed={`${claim}-response`} tone="pencil" />
 
-    <p class="response__lead">
-      These are not predictions. Each setting reads the fitted response <em>backwards through the
-      record</em>: what a season like that has been followed by, at these stations, over thirty
-      years. What next year holds is a different question, and the last panel below is this
-      project refusing to answer it.
-      {#if anyFlat}
-        One of the dials is flat, and it is published because it is flat — a panel carrying only the
-        drivers that worked would be a panel choosing its own story.
-      {/if}
-    </p>
+    {#if part !== "refusals" && (!slice || slice.at === 0)}
+      <p class="response__lead">
+        These are not predictions. Each setting reads the fitted response <em>backwards through the
+        record</em>: what a season like that has been followed by, at these stations, over thirty
+        years. What next year holds is a different question, and the {part === "all"
+          ? "last panel below"
+          : "facing page"} is this project refusing to answer it.
+        {#if anyFlat}
+          One of the dials is flat, and it is published because it is flat — a panel carrying only
+          the drivers that worked would be a panel choosing its own story.
+        {/if}
+      </p>
+    {/if}
 
-    {#each dials as dial (dial.key)}
+    {#each part === "refusals" ? [] : slice ? dials.slice(slice.at, slice.at + 1) : dials as dial (dial.key)}
       <Knob knob={dial} />
     {/each}
 
-    {#each refusals as refusal (refusal.key)}
+    {#each part === "knobs" ? [] : slice ? refusals.slice(slice.at, slice.at + 1) : refusals as refusal (refusal.key)}
       <Refusal {refusal} />
     {/each}
   </section>

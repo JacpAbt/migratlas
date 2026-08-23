@@ -12,7 +12,28 @@
  * be talked out of.
  */
 
+import { readFileSync } from "node:fs";
+
 import { expect, test, type Locator, type Page } from "@playwright/test";
+
+import type { Leaf, Sources, Spread } from "../src/lib/book/pages";
+
+/*
+  The size the book is designed at, stated rather than inherited.
+
+  Playwright's default is 1280x720, which is a number nobody here chose -- the same kind of default
+  as the five-second poll deadline this suite used to run on. Every measurement in `book/pages.ts`
+  and every divisor in `Book.svelte`'s reading scale was taken against a 1600x900 window, and this
+  file is about what a page of the book looks like, so it should look at one. The sizes that are
+  deliberately different set their own: `book.spec.ts` runs the overflow guard at two of them and
+  has a phone block, and the colour-vision and plate-stock tests below vary the surface, not the
+  window.
+
+  Recorded rather than merely set: at 720px tall the spread's own reading scale puts body text at
+  11.4px, below the 12px this suite enforces two hundred lines down, which is a real lower bound on
+  the spread and has its own fix rather than a viewport that hides it.
+*/
+test.use({ viewport: { width: 1600, height: 900 } });
 
 /** WCAG 2.1 AA for text below 24px, or below 18.66px bold. Everything on the card is below both. */
 const AA_SMALL = 4.5;
@@ -21,17 +42,149 @@ const AA_SMALL = 4.5;
 const AA_LARGE = 3;
 
 /**
- * Open the shipped page and get to a claim.
+ * The book's own pagination, computed from the same module and documents the book uses.
  *
- * The shell shows one claim at a time, so a suite that used to read five cards off a preview page now
- * walks the index. That is the right trade: these assertions are worth more against what actually
- * ships than against a page built to make them convenient.
+ * These tests used to walk the arrival's index. The book has no index -- it has pages -- so they
+ * walk addresses instead, and the addresses come from `pages.ts` rather than being typed here: a
+ * claim that gains a knob moves every page after it, and hard-coded numbers would pass while
+ * pointing at the wrong leaf.
  */
-async function ready(page: Page): Promise<void> {
-  await page.goto("?debug=1");
-  await page.getByRole("button", { name: /show me how you know/i }).click();
-  await expect(page.locator(".claim").first()).toBeVisible();
+function documents(): Sources {
+  const read = (name: string) => JSON.parse(readFileSync(`public/${name}`, "utf8"));
+  return {
+    findings: read("findings.json").findings,
+    introduction: read("introduction.json"),
+    safeguards: read("sandbox.json"),
+    dial: read("response.json"),
+  };
+}
+
+async function layout(): Promise<readonly Spread[]> {
+  const { spreadsOf } = await import("../src/lib/book/pages");
+  return spreadsOf(documents());
+}
+
+/** The phone's arrangement of the same pages, which is shorter by the spread's padding. */
+async function leafLayout(): Promise<readonly Leaf[]> {
+  const { leavesOf } = await import("../src/lib/book/pages");
+  return leavesOf(documents());
+}
+
+/** Where each of one claim's pages is, by kind. */
+interface ClaimPages {
+  key: string;
+  finding: string;
+  how: string;
+  figure: string;
+  record: string;
+  bias: string;
+  survived: string;
+}
+
+/**
+ * Every claim in the book, and the address of each of its pages.
+ *
+ * One page carries one thing now, so a test that wants the plain sentence and the caveat that
+ * qualifies it has to visit two leaves. That is the point of `pages.ts` rather than a nuisance, and
+ * pretending otherwise -- by asserting only what happens to share a page -- is how the audit would
+ * quietly stop being checked.
+ */
+async function eachClaim(page: Page, visit: (pages: ClaimPages) => Promise<void>): Promise<void> {
+  const spreads = await layout();
+  const leaves = await leafLayout();
+  const keys = [
+    ...new Set(
+      spreads
+        .flatMap((one) => [one.verso, one.recto])
+        .flatMap((panel) => (panel.kind === "finding" ? [panel.key] : [])),
+    ),
+  ];
+  expect(keys.length, "no claims in the book").toBeGreaterThan(0);
+
+  for (const key of keys) {
+    /*
+      The arrangement this viewport will mount, not the spread's.
+
+      A phone arranges the same authored pages without the spread's padding, so `p` is a different
+      offset there -- and the audit test below sets 390px and then asked for a page by its spread
+      address, landing two leaves away from the bias table it was about.
+    */
+    const narrow = (page.viewportSize()?.width ?? 1600) < 62 * 16;
+    const pages = narrow
+      ? leaves.map((leaf) => ({ chapter: leaf.chapter, at: leaf.at, panels: [leaf.panel] }))
+      : spreads.map((one) => ({
+          chapter: one.chapter,
+          at: one.at,
+          panels: [one.verso, one.recto],
+        }));
+
+    const addressOf = (kind: string): string => {
+      const at = pages.find((one) =>
+        one.panels.some((panel) => panel.kind === kind && "key" in panel && panel.key === key),
+      );
+      if (!at) throw new Error(`no ${kind} page for ${key}`);
+      return `#ch=${at.chapter.slug}&p=${at.at}`;
+    };
+    await visit({
+      key,
+      finding: addressOf("finding"),
+      how: addressOf("how"),
+      figure: addressOf("figure"),
+      record: addressOf("record"),
+      bias: addressOf("bias"),
+      survived: addressOf("survived"),
+    });
+  }
+}
+
+/** Open a page of the book and wait for the type to be the type. */
+async function at(page: Page, address: string): Promise<void> {
+  await page.goto(address);
+  // Either container: below 62rem the reader gets leaves rather than a spread, and a handful of
+  // these tests are about exactly that width.
+  await expect(page.locator(".book, .leaves")).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
+}
+
+/** The first claim's record page, which is where the number and the precise sentence are. */
+async function recordPage(page: Page): Promise<void> {
+  const spreads = await layout();
+  const at_ = spreads.find((one) => [one.verso, one.recto].some((p) => p.kind === "record"));
+  if (!at_) throw new Error("the book carries no record page");
+  await at(page, `#ch=${at_.chapter.slug}&p=${at_.at}`);
+  await expect(page.locator(".claim__value").first()).toBeVisible();
+}
+
+/**
+ * The world chapter, which is where the shell's own furniture went.
+ *
+ * `Sheet` and the explore panel were not rebuilt for the book -- they are mounted by the chapter
+ * that needs them -- so the tests about a torn edge, a clipped ground and a scroll inside the paper
+ * follow the component rather than being deleted with the arrival.
+ */
+async function world(page: Page): Promise<void> {
+  await page.goto("?debug=1#ch=the-world");
+  /*
+    Thirty seconds, because this waits on a WebGL context and ten layers rather than on a DOM node.
+
+    `.explore` appears only once the globe has reported its layers, and Playwright's default `expect`
+    deadline is five seconds -- which this machine beats and a runner with no GPU does not. Four local
+    gates passed in a row while CI failed five tests on this one line, which is the whole argument for
+    stating a deadline rather than inheriting one: the default is a number nobody chose, and here it
+    was a number about DOM latency applied to a map boot.
+  */
+  await expect(page.locator(".explore")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".globe canvas")).toBeVisible({ timeout: 30_000 });
+  await page.evaluate(() => document.fonts.ready);
+}
+
+/** Open the book on its first claim, which is what most of these tests want. */
+async function ready(page: Page): Promise<void> {
+  const spreads = await layout();
+  const first = spreads.find((one) => one.verso.kind === "finding");
+  if (!first) throw new Error("the book carries no claim");
+  await at(page, `#ch=${first.chapter.slug}&p=${first.at}`);
+  await expect(page.locator(".claim").first()).toBeVisible();
 }
 
 /**
@@ -42,18 +195,6 @@ async function ready(page: Page): Promise<void> {
  */
 async function surfaceIs(page: Page, name: string): Promise<void> {
   await page.locator(".surface").getByRole("radio", { name, exact: true }).check();
-}
-
-/** Every claim in turn, by clicking the index. */
-async function eachClaim(page: Page, visit: (index: number) => Promise<void>): Promise<void> {
-  const tabs = page.locator(".tab").filter({ hasNotText: "Just the map" });
-  const count = await tabs.count();
-  expect(count, "no claims in the index").toBeGreaterThan(0);
-  for (let index = 0; index < count; index += 1) {
-    await tabs.nth(index).click();
-    await expect(page.locator(".claim__title")).toBeVisible();
-    await visit(index);
-  }
 }
 
 /**
@@ -76,13 +217,21 @@ interface Patch {
 }
 
 async function sheetPaper(page: Page): Promise<Patch> {
-  const sheet = await page.locator(".sheet").first().boundingBox();
-  expect(sheet, "no sheet to measure the paper on").toBeTruthy();
-  // The top-left of the ground, inside the torn edge and above the first line of the claim: the
-  // leaf's own top padding is 25.6px, and the drawn edge wanders no further in than about 6.
+  /*
+    The foot of the facing page, which is blank paper.
+
+    It used to be the top-left of the old shell's torn sheet. In the book the paper is the spread's
+    own ground seen through a page, and the reliable patch of it is low on the recto: a plate is
+    landscape and top-aligned, so the bottom of a figure page carries nothing. Reading the paper on
+    one page and the ink on another is sound for the reason the header already gives -- the notebook
+    has one background everywhere, and `every surface that paints paper paints it the same way` is
+    the test that keeps that true.
+  */
+  const box = await page.locator(".spread > .page--recto").boundingBox();
+  expect(box, "no page to measure the paper on").toBeTruthy();
   const shot = (
     await page.screenshot({
-      clip: { x: sheet!.x + 12, y: sheet!.y + 11, width: 12, height: 12 },
+      clip: { x: box!.x + box!.width * 0.5, y: box!.y + box!.height * 0.82, width: 12, height: 12 },
     })
   ).toString("base64");
 
@@ -144,44 +293,81 @@ async function contrast(target: Locator, paper: number): Promise<number> {
 for (const surface of ["day", "night"] as const) {
   test(`every text colour clears AA on the ${surface} surface`, async ({ page }) => {
     await ready(page);
-    if (surface === "night") {
-      // Through the switch a reader would use, not by stamping the attribute. This test used to do
-      // the latter with a comment saying the shell had no switch yet -- so the palette was measured
-      // in a state nobody could reach, and the day it became reachable nothing here would have
-      // noticed if the control set the wrong value.
-      await surfaceIs(page, "Night");
-      await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
-    }
+    /*
+      The surface is set again after every navigation, inside the loop below, because these samples
+      are on four different leaves and each `goto` is a fresh load. It is set through the switch a
+      reader would use and never by stamping the attribute: this test used to do the latter with a
+      comment saying the shell had no switch yet, so the palette was measured in a state nobody
+      could reach, and the day it became reachable nothing here would have noticed if the control
+      set the wrong value.
+    */
 
-    // One per token that carries text, chosen as the smallest instance of each: if the 0.66rem
-    // label passes, the 1.35rem value using the same token does too.
-    const samples: [string, string, number][] = [
-      ["the claim title", ".claim__title", AA_SMALL],
-      ["why it matters", ".claim__matters", AA_SMALL],
-      ["the measurement", ".claim__value", AA_SMALL],
-      ["the short caveat", ".claim__short-caveat", AA_SMALL],
-      ["the register label", ".claim__register", AA_SMALL],
-      ["the precise claim", ".claim__precise", AA_SMALL],
-      ["the scope", ".claim__scope", AA_SMALL],
-      ["the caveat", ".claim__caveat", AA_SMALL],
-      ["the direction banner", ".claim__banner", AA_SMALL],
-      ["the method link", ".claim__method", AA_SMALL],
-      ["a bias domain", ".bias__domain", AA_SMALL],
-      ["an open bias status", ".bias__status--open", AA_SMALL],
-      ["a bounded bias status", ".bias__status--bounded", AA_SMALL],
-      ["a bias finding", ".bias__finding", AA_SMALL],
-      ["a survived test", ".survived li", AA_SMALL],
-      ["the specimen line", ".specimen p", AA_SMALL],
+    /*
+      One per token that carries text, chosen as the smallest instance of each: if the 0.66rem label
+      passes, the value using the same token does too.
+
+      Each now names the page it is on, because one page carries one thing. Two consequences worth
+      stating. `.claim__scope` is gone from this list and `.plate__scope` has taken its place: the
+      scope moved to the plate's caption when the record page stopped printing it twice, and it was
+      about to become a token nobody measured. And the bias table, the survived list and the
+      specimen line are on three different leaves now -- the first two in the book, the third on the
+      plate -- so they are visited rather than read off one card.
+    */
+    const samples: [string, string, number, keyof Omit<ClaimPages, "key">][] = [
+      ["the claim title", ".claim__title", AA_SMALL, "finding"],
+      ["why it matters", ".claim__matters", AA_SMALL, "finding"],
+      ["the short caveat", ".claim__short-caveat", AA_SMALL, "finding"],
+      ["the direction banner", ".claim__banner", AA_SMALL, "finding"],
+      ["the chapter kicker", ".chapter", AA_SMALL, "finding"],
+      ["the measurement", ".claim__value", AA_SMALL, "record"],
+      ["the register label", ".claim__register", AA_SMALL, "record"],
+      ["the precise claim", ".claim__precise", AA_SMALL, "record"],
+      ["the caveat", ".claim__caveat", AA_SMALL, "record"],
+      ["the method link", ".claim__method", AA_SMALL, "record"],
+      ["the plain method", ".how__lead", AA_SMALL, "how"],
+      ["its kicker", ".how__kicker", AA_SMALL, "how"],
+      ["its method link", ".how__method", AA_SMALL, "how"],
+      ["a bias domain", ".bias__domain", AA_SMALL, "bias"],
+      ["an open bias status", ".bias__status--open", AA_SMALL, "bias"],
+      ["a bounded bias status", ".bias__status--bounded", AA_SMALL, "bias"],
+      ["a bias finding", ".bias__finding", AA_SMALL, "bias"],
+      ["a survived test", ".survived li", AA_SMALL, "survived"],
+      ["the plate caption", ".plate figcaption", AA_SMALL, "figure"],
+      ["the scope, on the plate", ".plate__scope", AA_SMALL, "figure"],
     ];
 
-    // Measured off the sheet these words are printed on, not off `--paper`, and the two are not
-    // the same value: the grain is blended into the token, so what a reader sees is the composite.
-    const sheet = await sheetPaper(page);
-    const paper = luminance(sheet.rgb);
+    /*
+      A claim that carries every one of them, so a token is measured rather than skipped.
 
-    for (const [what, selector, floor] of samples) {
+      `autumn-advance` has an open bias domain and a bounded one, a list of what it survived, and a
+      drawn plate. Picking the first claim in the book instead would have measured whichever tokens
+      that one happened to have, and a status colour with no instance on the page reads as a pass.
+    */
+    let pages: ClaimPages | null = null;
+    await eachClaim(page, async (claim) => {
+      if (claim.key === "autumn-advance") pages = claim;
+    });
+    expect(pages, "autumn-advance is not in the book").not.toBeNull();
+
+    let where = "";
+    for (const [what, selector, floor, side] of samples) {
+      const address = pages![side];
+      if (address !== where) {
+        await at(page, address);
+        if (surface === "night") {
+          await surfaceIs(page, "Night");
+          await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
+        }
+        where = address;
+      }
+
+      // Measured off the paper these words are printed on, not off `--paper`, and the two are not
+      // the same value: the grain is blended into the token, so what a reader sees is the composite.
+      const sheet = await sheetPaper(page);
+      const paper = luminance(sheet.rgb);
+
       const target = page.locator(selector).first();
-      await expect(target, `${what} is not on the page`).toBeVisible();
+      await expect(target, `${what} is not on ${address}`).toBeVisible();
       const measured = await contrast(target, paper);
       expect(
         measured,
@@ -199,23 +385,42 @@ test("every surface that paints paper paints it the same way", async ({ page }) 
   //
   // Structural rather than sampled, because these three declarations only mean anything together
   // and a card can be measured only where it has no words on it.
-  const surfaces = await page.evaluate(() => {
-    const of = (node: Element | null) => {
-      if (!node) return null;
-      const style = getComputedStyle(node);
-      return [style.backgroundColor, style.backgroundImage, style.backgroundSize, style.backgroundBlendMode].join(
-        " | ",
-      );
+  const painted = await page.evaluate(() => {
+    const style = (selector: string) => {
+      const node = document.querySelector(selector);
+      return node ? getComputedStyle(node) : null;
     };
+    const body = getComputedStyle(document.body);
+    const spread = style(".spread");
+    const grain = style(".page--recto .page__grain");
     return {
-      body: of(document.body),
-      sheet: of(document.querySelector(".sheet__ground")),
-      index: of(document.querySelector(".index")),
+      bodyColour: body.backgroundColor,
+      bodyImage: body.backgroundImage,
+      bodySize: body.backgroundSize,
+      bodyBlend: body.backgroundBlendMode,
+      spreadColour: spread?.backgroundColor ?? null,
+      grainImage: grain?.backgroundImage ?? null,
+      grainSize: grain?.backgroundSize ?? null,
+      grainBlend: grain?.mixBlendMode ?? null,
     };
   });
 
-  expect(surfaces.sheet, "the claim sheet is not the same paper as the page").toBe(surfaces.body);
-  expect(surfaces.index, "the index strip is not the same paper as the page").toBe(surfaces.body);
+  /*
+    Re-authored for the book, where the paper is composed in two elements rather than one: the spread
+    paints the colour and `.page__grain` paints the texture over it with a blend mode. The bug this
+    exists for survives the change unaltered -- a displacement map painted *over* the colour instead
+    of into it turned every card on the site into a grey slab, and nothing caught it because the
+    contrast suite was reading the token underneath.
+  */
+  expect(painted.spreadColour, "the spread is not the same colour as the page").toBe(
+    painted.bodyColour,
+  );
+  expect(painted.grainImage, "the page's grain is not the page's grain").toBe(painted.bodyImage);
+  expect(painted.grainSize, "the grain is at a different scale on the page").toBe(painted.bodySize);
+  expect(
+    painted.grainBlend,
+    "the grain is painted over the paper rather than into it, which is the grey-slab bug",
+  ).toBe(painted.bodyBlend);
 });
 
 test("the grain is a texture, not a filter over the paper", async ({ page }) => {
@@ -402,7 +607,7 @@ test("the surface is a three-way choice, and it survives a reload", async ({ pag
 });
 
 test("the globe follows the paper it is read on", async ({ page }) => {
-  await ready(page);
+  await world(page);
   // The one thing CSS cannot do for us. MapLibre paint is set in JavaScript, so without an explicit
   // repaint a reader who switches to night gets black paper around a parchment sphere -- which is
   // the state this project shipped in for the whole time the palette existed and the switch did not.
@@ -418,11 +623,28 @@ test("the globe follows the paper it is read on", async ({ page }) => {
   expect(byDay, "no ocean colour to read").toBeTruthy();
 
   await surfaceIs(page, "Night");
-  await expect.poll(ocean).not.toBe(byDay);
+  /*
+    An explicit deadline, because the default is five seconds and nobody chose it. See the note on
+    the darts' rotation poll for the flake that made the point.
+  */
+  await expect
+    .poll(ocean, { message: "the surface changed and the ocean did not", timeout: 30_000 })
+    .not.toBe(byDay);
 });
 
 test("an addressed status is legible too, and is not the only signal", async ({ page }) => {
-  await ready(page);
+  /*
+    The audit is a page per claim now, and "addressed" is not on every one of them -- so this walks
+    until it finds one rather than assuming the first claim has every status. A test that asserted
+    the colour of a status with no instance on the page would pass by having nothing to measure.
+  */
+  let found = false;
+  await eachClaim(page, async (pages) => {
+    if (found) return;
+    await at(page, pages.bias);
+    if ((await page.locator(".bias__status--addressed").count()) > 0) found = true;
+  });
+  expect(found, "no claim has an addressed bias domain to measure").toBe(true);
   const addressed = page.locator(".bias__status--addressed").first();
   await expect(addressed).toBeVisible();
   const paper = luminance((await sheetPaper(page)).rgb);
@@ -460,7 +682,9 @@ test("a chart says which line is which without colour", async ({ page }) => {
   //
   // On the attribution claim specifically: a chart on every claim would be decoration, so this is
   // the one claim that has one.
-  await page.locator('.tab[data-claim="anthropogenic-share"]').click();
+  await eachClaim(page, async (claim) => {
+    if (claim.key === "anthropogenic-share") await at(page, claim.figure);
+  });
   const chart = page.locator(".chart__svg").first();
   await expect(chart).toBeVisible();
 
@@ -494,7 +718,8 @@ test("a chart says which line is which without colour", async ({ page }) => {
 
 test("every claim shows an instrument rather than a creature", async ({ page }) => {
   await ready(page);
-  await eachClaim(page, async () => {
+  await eachClaim(page, async (pages) => {
+    await at(page, pages.finding);
     const claim = page.locator(".claim").first();
     const instrument = claim.locator(".instrument");
     await expect(instrument, "a claim with no instrument mark").toHaveCount(1);
@@ -511,61 +736,92 @@ test("every claim shows an instrument rather than a creature", async ({ page }) 
   });
 });
 
-test("the audit is rendered beside every claim, not behind a control", async ({ page }) => {
-  // Walks every claim, and each walk is a camera flight. Budgeted rather than left on the 30s
-  // default, which it exceeded on CI -- and the second walk this test used to make was pure waste.
+test("the audit is a page of its own, not something behind a control", async ({ page }) => {
+  /*
+    Re-authored for the book, and the half that mattered is the half that survived.
+
+    It used to assert the audit was rendered *beside* every claim. It is not beside anything now: the
+    bias table and what a claim survived overflowed a shared page by 231 and 304 pixels on the two
+    longest audits, so they have a leaf each. What the test was really for is the other clause --
+    `findings.py` refuses to publish a claim with no caveat, and a `<details>` around the audit would
+    satisfy that refusal while breaking its point. A page is not a disclosure widget, so the guard
+    now says: on its own page, visible, with nothing collapsible anywhere near it.
+  */
   test.setTimeout(90_000);
-  await ready(page);
 
   let open = 0;
-  await eachClaim(page, async () => {
-    const claim = page.locator(".claim").first();
-
-    // Visible, and with no ancestor that could be closed. `findings.py` refuses to publish a claim
-    // with no caveat; a `<details>` around the audit would satisfy that and break its point.
-    await expect(claim.locator(".margin")).toBeVisible();
-    await expect(claim.locator(".bias__domain").first()).toBeVisible();
-    await expect(claim.locator(".margin details, .margin [hidden]")).toHaveCount(0);
-    await expect(claim.locator(".claim__caveat")).not.toBeEmpty();
+  let audited = 0;
+  await eachClaim(page, async (pages) => {
+    await at(page, pages.bias);
+    const spread = page.locator(".spread");
+    await expect(spread.locator(".bias__domain").first()).toBeVisible();
+    await expect(spread.locator("details, [hidden]")).toHaveCount(0);
+    audited += 1;
 
     // Counted in the same pass. At least one domain must read "open" across the set: every domain
     // "addressed" would mean either that nothing is unresolved -- false, the 2012 step is -- or that
     // the audit is written to reassure rather than to inform.
-    open += await claim.locator(".bias__status--open").count();
+    open += await spread.locator(".bias__status--open").count();
+
+    // And the caveat is still with the number it qualifies, one leaf earlier, which is the rule
+    // ADR 0007 states and pagination had to be careful not to break.
+    await at(page, pages.record);
+    await expect(page.locator(".claim__caveat")).not.toBeEmpty();
   });
 
+  expect(audited, "no claim has an audit page").toBeGreaterThan(0);
   expect(open, "nothing is marked open, which would mean the audit is decorative").toBeGreaterThan(0);
 });
 
-test("every claim is said twice, plainly and precisely, and both are on the page", async ({
+test("every claim is said twice, plainly and precisely, and both are in the book", async ({
   page,
 }) => {
+  /*
+    Both registers, one leaf apart rather than one card. The plain sentence and the number that
+    earns it are 526 to 680 and 274 to 821 pixels tall, and together they did not fit a page -- so
+    the pair is a spread now. What this guards is unchanged and is not about layout: the next change
+    is the one where somebody notices the claim looks redundant under a heading that says almost the
+    same thing, and deletes one of them.
+  */
   test.setTimeout(90_000);
-  await ready(page);
 
   // The precise sentence is the scientific statement and stays whole. The plain one carries the
   // finding to a reader without statistics. Adding the second register is fine; the failure this
   // guards is the next change, where someone notices the claim looks redundant under a heading
   // that says almost the same thing and deletes one of them.
-  await eachClaim(page, async () => {
+  await eachClaim(page, async (pages) => {
+    await at(page, pages.finding);
+    const plain = (await page.locator(".claim__title").textContent())?.trim() ?? "";
+    await expect(page.locator(".claim__short-caveat")).not.toBeEmpty();
+    await expect(page.locator(".claim__matters")).not.toBeEmpty();
+    await expect(page.locator(".spread details, .spread [hidden]")).toHaveCount(0);
+
+    await at(page, pages.record);
     const claim = page.locator(".claim").first();
-    const plain = (await claim.locator(".claim__title").textContent())?.trim() ?? "";
     const precise = (await claim.locator(".claim__precise").textContent())?.trim() ?? "";
+    await expect(claim.locator(".claim__caveat")).not.toBeEmpty();
 
     expect(plain.length, "a claim with no plain sentence").toBeGreaterThan(20);
     expect(precise.length, "a claim with no precise sentence").toBeGreaterThan(20);
     expect(precise.replace(/^Precisely\s*/, "")).not.toBe(plain);
 
-    // Both caveats, and neither behind a control -- same rule as the audit margin.
-    await expect(claim.locator(".claim__short-caveat")).not.toBeEmpty();
-    await expect(claim.locator(".claim__caveat")).not.toBeEmpty();
-    await expect(claim.locator(".claim__matters")).not.toBeEmpty();
-    await expect(claim.locator(".claim details, .claim [hidden]")).toHaveCount(0);
+    // Neither register is behind a control, on either leaf -- the same rule as the audit page.
+    await expect(page.locator(".spread details, .spread [hidden]")).toHaveCount(0);
   });
 });
 
 test("the plain register is set larger than the precise one it introduces", async ({ page }) => {
-  await ready(page);
+  /*
+    Measured across two leaves, because the registers are on two. Nothing about the comparison
+    changed -- the plain sentence is the heading and is set as one -- but the pages are now the
+    finding and the record, so both sizes are read where each is actually printed.
+  */
+  const spreads = await layout();
+  const finding = spreads.find((one) => one.verso.kind === "finding")!;
+  const key = "key" in finding.verso ? finding.verso.key : "";
+  const record = spreads.find((one) =>
+    [one.verso, one.recto].some((panel) => panel.kind === "record" && panel.key === key),
+  )!;
   // Which register is the heading is the decision, so it has to be legible as one. A plain
   // sentence typeset at the same size as the sentence beneath it is not a heading, it is a
   // duplicate -- and a reader would have to work out which of the two to read first.
@@ -575,11 +831,16 @@ test("the plain register is set larger than the precise one it introduces", asyn
       .first()
       .evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
 
-  expect(await sizeOf(".claim__title")).toBeGreaterThan(await sizeOf(".claim__precise"));
+  await at(page, `#ch=${finding.chapter.slug}&p=${finding.at}`);
+  const plain = await sizeOf(".claim__title");
+  await at(page, `#ch=${record.chapter.slug}&p=${record.at}`);
+  const precise = await sizeOf(".claim__precise");
+
+  expect(plain, `the plain register is ${plain}px against ${precise}px`).toBeGreaterThan(precise);
 });
 
 test("no number animates to its value", async ({ page }) => {
-  await ready(page);
+  await recordPage(page);
   // ADR 0007 decision 6. A counting number reads as a score; -0.56 +/- 0.25 is a measurement with
   // an interval on it. Asserted by reading the value immediately and again after any animation
   // would have finished -- if it were counting, the two would differ.
@@ -642,7 +903,7 @@ test("changing the type changes the letterforms and nothing else", async ({ page
 });
 
 test("a figure is never set in a face that cannot line one up", async ({ page }) => {
-  await ready(page);
+  await recordPage(page);
   /*
     Retargeted rather than dropped, and the retarget is the point. This used to name Architects
     Daughter, which pinned the invariant to whichever face the site happened to use -- so the day
@@ -668,30 +929,47 @@ test("a figure is never set in a face that cannot line one up", async ({ page })
   const hand = (await token("--font-hand")).split(",")[0]!.replaceAll('"', "").trim();
   const mono = (await token("--font-mono")).split(",")[0]!.replaceAll('"', "").trim();
 
-  // The heading is the hand, whichever hand the reader has chosen.
+  /*
+    And the small registers are never the hand. `.claim__banner` is on the finding page and
+    `.bias__domain` on the audit page, so each is checked where it is printed -- the specimen line
+    left this list because it left the margin: it is the plate's legend now, and the plate caption is
+    covered by the contrast sweep instead.
+  */
+  const spreads = await layout();
+  const findingAt = spreads.find((one) => one.verso.kind === "finding")!;
+  const key = "key" in findingAt.verso ? findingAt.verso.key : "";
+  const biasAt = spreads.find((one) =>
+    [one.verso, one.recto].some((panel) => panel.kind === "bias" && panel.key === key),
+  )!;
+
+  expect(await faceOf(".claim__value")).toContain(mono);
+
+  await at(page, `#ch=${findingAt.chapter.slug}&p=${findingAt.at}`);
+  expect(await faceOf(".claim__banner"), "the banner is set in the hand face").not.toContain(hand);
   expect(await faceOf(".claim__title")).toContain(hand);
 
-  // And every figure is mono, which is the half that is not negotiable.
-  expect(await faceOf(".claim__value")).toContain(mono);
-  for (const selector of [".claim__banner", ".bias__domain", ".specimen p"]) {
-    expect(await faceOf(selector), `${selector} is set in the hand face`).not.toContain(hand);
-  }
+  await at(page, `#ch=${biasAt.chapter.slug}&p=${biasAt.at}`);
+  expect(await faceOf(".bias__domain"), "a bias domain is set in the hand face").not.toContain(hand);
 });
 
-test("the margin moves below the claim on a phone rather than disappearing", async ({ page }) => {
+test("the audit is still there on a phone, and still not behind anything", async ({ page }) => {
+  /*
+    Re-authored, and the clause that mattered is the one that survived.
+
+    It used to assert the margin dropped *below* the claim at 390px rather than being hidden -- a
+    statement about a two-column grid collapsing. There is no grid now: the audit is a leaf of its
+    own on a phone exactly as it is on a monitor, which is a stronger answer to the same worry.
+    "Nothing about always visible is negotiable on a small screen" is the sentence this test is for,
+    so that is what it says.
+  */
   await page.setViewportSize({ width: 390, height: 844 });
-  await ready(page);
-
-  const claim = page.locator(".claim").first();
-  const body = await claim.locator(".claim__body").boundingBox();
-  const margin = await claim.locator(".margin").boundingBox();
-  expect(body && margin).toBeTruthy();
-
-  // Below, not beside, and still on the page: the only thing that changes at this width is where
-  // it sits. Nothing about "always visible" is negotiable on a small screen.
-  expect(margin!.y).toBeGreaterThanOrEqual(body!.y + body!.height - 1);
-  expect(margin!.width).toBeGreaterThan(200);
-  await expect(claim.locator(".bias__finding").first()).toBeVisible();
+  await eachClaim(page, async (pages) => {
+    await at(page, pages.bias);
+    await expect(page.locator(".leaves"), "a phone got a spread").toBeVisible();
+    await expect(page.locator(".bias__domain").first()).toBeVisible();
+    await expect(page.locator(".bias__finding").first()).toBeVisible();
+    await expect(page.locator("details, [hidden]")).toHaveCount(0);
+  });
 
   // And nothing overflows sideways, which is what a fixed 19rem column would have done here.
   const overflow = await page.evaluate(
@@ -700,67 +978,85 @@ test("the margin moves below the claim on a phone rather than disappearing", asy
   expect(overflow, `${overflow}px of horizontal overflow`).toBeLessThanOrEqual(1);
 });
 
-test("a claim is on a sheet of paper, not in a bordered box", async ({ page }) => {
-  await ready(page);
-  const sheet = page.locator(".shell__sheet .sheet");
-  await expect(sheet).toBeVisible();
+test("paper is paper, not a bordered box", async ({ page }) => {
+  /*
+    Two halves, because the subject split.
 
-  // No border and no radius: a stroked rounded rectangle is a UI card, and it was the single most
-  // un-notebook-like thing on the page. The edge is drawn instead, and it overshoots its corners.
-  const box = await sheet.evaluate((node) => {
+    A claim is on a *page* now, and a page is not a card: no border and no radius, which is what the
+    arrival's sheet was measured for and is just as true of a leaf. And `Sheet` itself was not
+    rebuilt for the book -- the world chapter still mounts one -- so its torn ground and its lift are
+    still asserted, on the component rather than on the page that used to hold it. `clip-path` and
+    `box-shadow` do not compose, so the lift has to be a drop-shadow filter on an ancestor, and that
+    is the trap worth keeping a test on.
+  */
+  await ready(page);
+  const leaf = await page.locator(".spread > .page--verso").evaluate((node) => {
     const style = getComputedStyle(node);
     return { border: style.borderTopWidth, radius: style.borderTopLeftRadius };
   });
-  expect(box.border).toBe("0px");
-  expect(box.radius).toBe("0px");
+  expect(leaf.border, "a page has a border, which makes it a card").toBe("0px");
+  expect(leaf.radius, "a page has rounded corners, which makes it a card").toBe("0px");
 
-  // The ground is clipped to a torn path rather than filling the rectangle.
+  await world(page);
   const clip = await page
-    .locator(".shell__sheet .sheet__ground")
+    .locator(".explore .sheet__ground")
     .evaluate((node) => getComputedStyle(node).clipPath);
   expect(clip, "the paper is still a rectangle").toContain("path(");
 
-  // And the shadow follows the tear. `clip-path` and `box-shadow` do not compose -- the shadow is
-  // painted and then clipped away -- so this has to be a drop-shadow filter on an ancestor.
   const lift = await page
-    .locator(".shell__sheet .sheet__lift")
+    .locator(".explore .sheet__lift")
     .evaluate((node) => getComputedStyle(node).filter);
   expect(lift, "no shadow, or one that the clip will have eaten").toContain("drop-shadow");
 });
 
-test("the drawn edge stays put while the claim scrolls under it", async ({ page }) => {
-  await ready(page);
-  const leaf = page.locator(".shell__leaf");
-  // The regression this exists for: an absolutely-positioned edge inside a scrolling box is placed
-  // against the padding box, so the tear travels up the screen as a reader scrolls.
-  //
-  // Measured only once the sheet has stopped arriving. The card lands with an 8px `settle`, and a
-  // first reading taken mid-animation put this 1.7px out -- reported as the edge having moved,
-  // which is the one thing the test is meant to detect. Fonts finishing later made it likelier
-  // rather than causing it, so the wait belongs here rather than a longer one in `ready`.
+test("the drawn edge stays put while what is inside it scrolls", async ({ page }) => {
+  /*
+    The regression this exists for: an absolutely-positioned edge inside a scrolling box is placed
+    against the padding box, so the tear travels up the screen as a reader scrolls.
+
+    It used to scroll a claim under the arrival's sheet. Book pages do not scroll -- `pages.ts` puts
+    one panel on a page for exactly that reason, and the guard against a page overflowing lives in
+    `book.spec.ts` now -- but the *pattern* is alive in the world chapter, whose tools scroll inside
+    a torn sheet. So the assertion moved to where it can still fail.
+  */
+  await world(page);
   await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"));
 
-  const before = await page.locator(".shell__sheet .sheet__ink").boundingBox();
-  await leaf.evaluate((node) => node.scrollBy(0, 400));
-  await expect.poll(async () => (await leaf.evaluate((n) => n.scrollTop)) > 0).toBe(true);
-  const after = await page.locator(".shell__sheet .sheet__ink").boundingBox();
+  const slip = page.locator(".explore__slip");
+  const before = await page.locator(".explore .sheet__ink").boundingBox();
+  await slip.evaluate((node) => node.scrollBy(0, 400));
+  await expect
+    .poll(async () => (await slip.evaluate((n) => n.scrollTop)) > 0, { timeout: 15_000 })
+    .toBe(true);
+  const after = await page.locator(".explore .sheet__ink").boundingBox();
   expect(after?.y).toBeCloseTo(before?.y ?? 0, 0);
 });
 
 test("a control is drawn, not bordered", async ({ page }) => {
-  await page.goto("?debug=1");
-  await expect(page.locator(".arrival__card")).toBeVisible();
+  /*
+    The arrival's three doors are gone, so this probes the controls the book actually has: the thumb
+    tab that turns to a chapter, and the folio in the corner that turns one page. Same pen, same
+    rule -- a stroked rounded rectangle is a platform control and there are none on this site.
+  */
+  await ready(page);
 
-  for (const selector of [".way--primary", ".way:not(.way--primary)"]) {
-    // `.first()`: the third door made the secondary way plural, and all of them share one class
-    // and one style -- probing one probes the pen.
+  /*
+    The `Boxed` controls, which are the ones that claim to be drawn. The folio in the corner is not
+    one of them and is not meant to be: it is type, with no box at all, which the bordered-control
+    sweep below covers instead. A control that draws nothing cannot be measured for whether what it
+    drew overshoots.
+  */
+  for (const selector of [".type__option--on", ".surface__option--on"]) {
+    // The *chosen* one of each, because `Boxed` draws the circle only round the option that is on
+    // -- which is the next test down. Probing the first option instead found an element with
+    // nothing drawn in it and waited thirty seconds for a path that was never going to exist.
     const button = page.locator(selector).first();
     expect(
       await button.evaluate((node) => getComputedStyle(node).borderTopWidth),
       `${selector} still has a border`,
     ).toBe("0px");
     const length = await button
-      .locator(".ink-box path")
+      .locator(".boxed path")
       .first()
       .evaluate((node) => (node as unknown as SVGPathElement).getTotalLength());
     // Longer than the perimeter would be if it were a rectangle drawn exactly: the corners
@@ -768,12 +1064,23 @@ test("a control is drawn, not bordered", async ({ page }) => {
     expect(length, `${selector} has no drawn box`).toBeGreaterThan(100);
   }
 
-  // Pressed and chosen are a second pass of the pen, not a fill. A hand has "drawn" and "gone over
-  // twice"; it does not have a hover colour. Counted per button, because the third door made the
-  // secondary way plural and each carries exactly one pass.
-  await expect(page.locator(".way--primary .ink-box")).toHaveCount(2);
-  const secondary = await page.locator(".way:not(.way--primary)").count();
-  await expect(page.locator(".way:not(.way--primary) .ink-box")).toHaveCount(secondary);
+  /*
+    Chosen is a second pass of the pen, not a fill. A hand has "drawn" and "gone over twice"; it does
+    not have a hover colour, which is what `Boxed` says at length and does with a second `boxDrawn`
+    from a different seed at 55% opacity.
+
+    Compared rather than counted: rough.js emits more than one path per pass, so the number is its
+    business and the invariant is that the chosen option carries strokes the unchosen ones do not.
+    The arrival's three doors used to be the subject here; the type presets are the same control.
+  */
+  const strokes = (selector: string) => page.locator(`${selector} .boxed path`).count();
+  const chosen = await strokes(".type__option--on");
+  const unchosen = await strokes(".type__option:not(.type__option--on)");
+  expect(chosen, "the chosen option has no drawn box at all").toBeGreaterThan(0);
+  expect(
+    chosen,
+    `the chosen option has ${chosen} strokes against ${unchosen} across the other two`,
+  ).toBeGreaterThan(Math.round(unchosen / 2));
 });
 
 test("only the chosen option is circled", async ({ page }) => {
@@ -788,10 +1095,20 @@ test("only the chosen option is circled", async ({ page }) => {
 
 test("nothing on the page is still a bordered control", async ({ page }) => {
   await ready(page);
-  // The sweep, rather than one assertion per widget. Every interactive thing on a claim was a
-  // rectangle with a border and a radius, and the point of this pass is that none of them are.
+  /*
+    The sweep, rather than one assertion per widget. Every interactive thing on a claim was once a
+    rectangle with a border and a radius, and the point of this pass is that none of them are.
+
+    `.tab` left the list, and this is the one exemption in it, so it is argued rather than dropped.
+    ADR 0015 decision 3 makes a chapter tab a piece of *coloured paper stock* cut into the book's
+    fore-edge -- not a widget -- and its 1px edge is `color-mix(--tint 45%, --rule)`, which is the
+    notebook's own pencil line at the colour of the tab. The rule this test enforces is that nothing
+    looks like a platform control; a cut edge on paper does not. The assertion below keeps a guard on
+    it rather than trusting that: a tab's edge must be drawn in the rule's colour and must never pick
+    up a radius on more than the two corners a tab has.
+  */
   const bordered = await page.evaluate(() =>
-    [...document.querySelectorAll(".way, .option, .surface__option, .tab, .layers input")]
+    [...document.querySelectorAll(".option, .surface__option, .type__option, .layers input, [data-turn]")]
       .filter((node) => {
         const style = getComputedStyle(node);
         return Number.parseFloat(style.borderTopWidth) > 0;
@@ -799,12 +1116,31 @@ test("nothing on the page is still a bordered control", async ({ page }) => {
       .map((node) => node.className || node.tagName),
   );
   expect(bordered, "these still carry a CSS border").toEqual([]);
+
+  const tab = await page.locator(".tab").first().evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      colour: style.borderTopColor,
+      rule: getComputedStyle(document.documentElement).getPropertyValue("--rule").trim(),
+      corners: [
+        style.borderTopLeftRadius,
+        style.borderTopRightRadius,
+        style.borderBottomRightRadius,
+        style.borderBottomLeftRadius,
+      ],
+    };
+  });
+  // Mixed with the tab's own tint, so not equal to `--rule` -- but it must be a colour and not a
+  // system border, and it must not be the ink the text is set in.
+  expect(tab.colour, "a tab with no edge is not cut paper").not.toBe("rgba(0, 0, 0, 0)");
+  expect(
+    tab.corners.filter((corner) => corner !== "0px").length,
+    "a tab is rounded on the two corners that stick out, not all four",
+  ).toBeLessThanOrEqual(2);
 });
 
 test("switching a layer on draws a tick rather than filling a box", async ({ page }) => {
-  await page.goto("?debug=1");
-  await page.getByRole("button", { name: /just let me explore/i }).click();
-  await expect(page.locator(".explore")).toBeVisible();
+  await world(page);
 
   // Layers land one by one and the panel re-renders as they do; clicking a row while the list
   // grows races the re-render. The debug hook is published once every layer has loaded, so its
@@ -838,30 +1174,36 @@ test("switching a layer on draws a tick rather than filling a box", async ({ pag
 });
 
 test("the paper turns and the world does not", async ({ page }) => {
+  /*
+    The book's turn is a CSS 3D rotation rather than a view transition, so the assertion changed
+    shape while keeping its subject exactly: whatever the turn captures must not include the globe.
+
+    The root must still be unnameable, and for the reason it always was -- a snapshotted root
+    includes MapLibre's canvas, which freezes into a still image for the length of the turn and says
+    the globe is a picture the card is printed over. What replaces "only the sheet is named" is
+    stronger and is the rule ADR 0015 decision 7 states: no `filter` on any ancestor of the leaf,
+    because a filter flattens 3D transforms. The turn is measured about the spine, which is what
+    `book.spec.ts` does at three points of the animation's own timeline.
+  */
   await ready(page);
 
-  // Only the sheet is named, so only the sheet is captured. If the root were nameable the whole
-  // page would be snapshotted -- including MapLibre's canvas, which would freeze into a still
-  // image for the length of the turn and say the globe is a picture the card is printed over.
-  const named = await page.evaluate(() => ({
-    root: getComputedStyle(document.documentElement).viewTransitionName,
-    sheet: getComputedStyle(document.querySelector(".shell__sheet")!).viewTransitionName,
-  }));
-  expect(named.root, "the root would be snapshotted, freezing the globe").toBe("none");
-  expect(named.sheet).toBe("leaf");
+  const named = await page.evaluate(
+    () => getComputedStyle(document.documentElement).viewTransitionName,
+  );
+  expect(named, "the root would be snapshotted, freezing the globe").toBe("none");
 
-  // And it turns about the spine -- the left edge, the same one `sheetEdge` tears.
-  const origin = await page.evaluate(() => {
-    for (const sheet of [...document.styleSheets]) {
-      for (const rule of [...sheet.cssRules]) {
-        if (rule.cssText.includes("view-transition-old(leaf)")) return rule.cssText;
-      }
+  // The leaf rotates in three dimensions, so nothing above it may carry a filter.
+  await page.locator('.spread > .page--recto [data-turn="on"]').click();
+  await expect(page.locator(".leaf"), "no leaf was built for the turn").toHaveCount(1);
+  const flattened = await page.evaluate(() => {
+    const leaf = document.querySelector(".leaf");
+    if (!leaf) return "no leaf was built";
+    for (let node = leaf.parentElement; node; node = node.parentElement) {
+      if (getComputedStyle(node).filter !== "none") return node.className || node.tagName;
     }
     return "";
   });
-  // `0px center` is how the CSSOM serialises `left center`, so match either rather than the text
-  // that happens to be authored.
-  expect(origin).toMatch(/transform-origin: (left|0px) center/);
+  expect(flattened, "an ancestor of the leaf carries a filter, which flattens the rotation").toBe("");
 });
 
 test("changing claim never blocks the main thread for long", async ({ page }) => {
@@ -906,10 +1248,15 @@ test("changing claim never blocks the main thread for long", async ({ page }) =>
   await surfaceIs(page, "Day");
   const repaint = await worstSince();
 
+  /*
+    Three page turns, where this used to click three index tabs. The budget is unchanged and it is
+    the calibrated kind: 300ms locally against a repaint of the same page on the same machine, which
+    is why the repaint is measured first rather than assumed.
+  */
   await observe();
-  for (const key of ["marine-null", "anthropogenic-share", "coverage-bias"]) {
-    await page.locator(`.tab[data-claim="${key}"]`).click();
-    await expect(page.locator(".claim__title")).toBeVisible();
+  for (let turn = 0; turn < 3; turn += 1) {
+    await page.locator('.spread > .page--recto [data-turn="on"]').click();
+    await expect(page.locator(".spread > .page--recto .page__folio")).toBeVisible();
   }
   const worst = await worstSince();
 
@@ -925,10 +1272,12 @@ test("with motion turned down the next claim is simply there", async ({ page }) 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await ready(page);
 
-  // Not a faster turn -- no turn. `state/turn.ts` reads `--draw` and declines to start a
-  // transition at all, so the new claim is in its final state on the first frame.
-  await page.locator('.tab[data-claim="marine-null"]').click();
-  await expect(page.locator(".claim__title")).toHaveText(/fish/i);
+  // Not a faster turn -- no turn. `Book` reads `--draw` through `still()` and declines to build a
+  // leaf at all, so the new spread is in its final state on the first frame.
+  const before = await page.locator(".spread > .page--recto .page__folio").textContent();
+  await page.locator('.spread > .page--recto [data-turn="on"]').click();
+  await expect(page.locator(".spread > .page--recto .page__folio")).not.toHaveText(before ?? "");
+  await expect(page.locator(".leaf")).toHaveCount(0);
   expect(
     await page.evaluate(() => document.getAnimations().some((a) => a.playState === "running")),
     "something is still animating under reduced motion",
@@ -936,7 +1285,9 @@ test("with motion turned down the next claim is simply there", async ({ page }) 
 });
 
 test("nothing on the page is still set in a type face that came with a glyph", async ({ page }) => {
-  await ready(page);
+  await eachClaim(page, async (pages) => {
+    if ((await page.locator(".survived li").count()) === 0) await at(page, pages.survived);
+  });
   // The survived list used U+2713, which came from whichever font happened to have it and was the
   // last mark on the page still set in type rather than drawn. Every other tick on the site is two
   // strokes from `ink.ts`; this one is now too.
@@ -951,9 +1302,7 @@ test("nothing on the page is still set in a type face that came with a glyph", a
 });
 
 test("the tools are on the same paper as the claims", async ({ page }) => {
-  await page.goto("?debug=1");
-  await page.getByRole("button", { name: /just let me explore/i }).click();
-  await expect(page.locator(".explore")).toBeVisible();
+  await world(page);
 
   // The panel was the last thing left with a plain background and no edge, which read as a
   // different material sitting next to the cards.
@@ -970,8 +1319,7 @@ test("the tools are on the same paper as the claims", async ({ page }) => {
 });
 
 test("a slider is a ruled scale, not a platform control", async ({ page }) => {
-  await page.goto("?debug=1");
-  await page.getByRole("button", { name: /just let me explore/i }).click();
+  await world(page);
   const slider = page.locator('.explore input[type="range"]').first();
   await expect(slider).toBeVisible();
 
@@ -1022,7 +1370,7 @@ test("the scrollbar is drawn, and only one of the two APIs is styling it", async
 });
 
 test("the map's own controls are in the same hand", async ({ page }) => {
-  await ready(page);
+  await world(page);
 
   // MapLibre ships these as white rounded boxes with a grey shadow and near-black icons in fixed
   // colours -- the last borrowed furniture on the page, and the only part of it that sits directly
@@ -1058,7 +1406,7 @@ test("the map's own controls are in the same hand", async ({ page }) => {
 });
 
 test("the licence notice is restyled and not shrunk", async ({ page }) => {
-  await ready(page);
+  await world(page);
   // The one piece of map furniture that is a legal obligation rather than a control. It may be
   // recoloured and it may be moved; it may not be made smaller or fainter than the page's own
   // smallest prose, and it has to clear AA against whatever it is sitting on.
@@ -1068,7 +1416,11 @@ test("the licence notice is restyled and not shrunk", async ({ page }) => {
   const smallest = await page.evaluate(() => {
     const probe = document.createElement("span");
     probe.style.fontSize = "var(--size-margin)";
-    document.body.append(probe);
+    // Resolved *inside* the book rather than on the body. The spread scales its reading sizes
+    // against the page's own height, so `--size-margin` on the root is a different number from the
+    // one the notice sitting on that page actually inherits -- and comparing the two measured the
+    // scale rather than the notice. 10.03px against a root 10.56px, which is what this caught.
+    (document.querySelector(".leaves, .spread, .world") ?? document.body).append(probe);
     const resolved = Number.parseFloat(getComputedStyle(probe).fontSize);
     probe.remove();
     return resolved;
@@ -1112,7 +1464,16 @@ test("the furniture follows the paper it is drawn on", async ({ page }) => {
   const day = await read();
   await surfaceIs(page, "Night");
   await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
-  await expect.poll(async () => (await read())[0]).not.toBe(day[0]);
+  /*
+    An explicit deadline, because the default is five seconds and nobody chose it. See the note on
+    the darts' rotation poll for the flake that made the point.
+  */
+  await expect
+    .poll(async () => (await read())[0], {
+      message: "the surface changed and the drawn marks did not",
+      timeout: 30_000,
+    })
+    .not.toBe(day[0]);
 
   const night = await read();
   for (const [index, drawing] of night.entries()) {

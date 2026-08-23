@@ -129,7 +129,7 @@ advance does not track temperature at all and remains unexplained.
 Two things the table cannot show, both deliberate. A **latitude-graded step change at 2012** in the
 southern radar bands is still unexplained after four candidate mechanisms were each tested and each
 failed, so those bands are excluded from every claim. And the evidence has crossed the equator while
-the data that would explain it has not — **35.9% of the time-series rows are southern, against 1.31%
+the data that would explain it has not — **35.5% of the time-series rows are southern, against 0.80%
 of the driver samples** — computed rather than estimated, and published as a finding in its own
 right. Global extent, measurable change and explainable change are, so far, three different data.
 

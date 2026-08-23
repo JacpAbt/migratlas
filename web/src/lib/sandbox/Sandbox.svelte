@@ -4,7 +4,34 @@
   import Rule from "../notebook/Rule.svelte";
   import { knobsFor, refusalsFor, type SandboxDocument } from "./sandbox";
 
-  let { doc, claim }: { doc: SandboxDocument | null; claim: string } = $props();
+  let {
+    doc,
+    claim,
+    part = "all",
+    slice = null,
+  }: {
+    doc: SandboxDocument | null;
+    claim: string;
+    /**
+     * Which half of the panel to render.
+     *
+     * "all" is the whole panel under a claim, which is what `claim/Evidence.svelte` mounts. The book
+     * takes it in two because it does not fit a page: measured at 1600x900 the safeguards ran 890 to
+     * 1,178px and the dial 1,762px against an 826px page, so the knobs take the left leaf and the
+     * refusals the right. Nothing is hidden by either -- both halves are always in the book, one
+     * page apart.
+     */
+    part?: "all" | "knobs" | "refusals";
+    /**
+     * One item per page, which is what a page turned out to hold.
+     *
+     * Measured at 1600x900 against an 826px page: three safeguard knobs came to 1,306px and two
+     * dials to 1,173px, so roughly 435 and 586 each -- two on a page overflows either way. The lead
+     * paragraph rides with the first knob only, because repeating it on every leaf would be four
+     * copies of the same sentence in one chapter.
+     */
+    slice?: { kind: "knob" | "refusal"; at: number } | null;
+  } = $props();
 
   const knobs = $derived(knobsFor(doc, claim));
   const refusals = $derived(refusalsFor(doc, claim));
@@ -19,12 +46,15 @@
   );
 </script>
 
-{#if knobs.length > 0 || refusals.length > 0}
+{#if (part !== "refusals" && knobs.length > 0) || (part !== "knobs" && refusals.length > 0)}
   <section class="sandbox">
-    <h3>Switch the safeguards off</h3>
+    <h3>
+      {part === "refusals" ? "And what we would not compute" : "Switch the safeguards off"}
+    </h3>
     <Rule seed={`${claim}-sandbox`} tone="pencil" />
 
-    {#if knobs.length > 0}
+    {#if part !== "refusals" && knobs.length > 0}
+      {#if !slice || slice.at === 0}
       <p class="sandbox__lead">
         Every setting below is a real run on the real data, with one parameter changed.
         {#if anyLarger}
@@ -33,13 +63,14 @@
           the story this kind of panel usually tells.
         {/if}
       </p>
+      {/if}
 
-      {#each knobs as knob (knob.key)}
+      {#each slice ? knobs.slice(slice.at, slice.at + 1) : knobs as knob (knob.key)}
         <Knob {knob} />
       {/each}
     {/if}
 
-    {#each refusals as refusal (refusal.key)}
+    {#each part === "knobs" ? [] : slice ? refusals.slice(slice.at, slice.at + 1) : refusals as refusal (refusal.key)}
       <Refusal {refusal} />
     {/each}
   </section>

@@ -34,6 +34,7 @@ def _finding(**overrides: object) -> Finding:
         "plain": "A thing is different now.",
         "matters": "Because it is.",
         "plain_caveat": "It might not be.",
+        "plain_how": "We counted the things and then we counted them again.",
         "claim": "Something changed.",
         "value": "+1.0 units",
         "scope": "Somewhere, sometime.",
@@ -151,6 +152,7 @@ def test_a_finding_round_trips_every_field_the_frontend_reads() -> None:
         "matters",
         "claim",
         "plain_caveat",
+        "plain_how",
         "value",
         "scope",
         "caveat",
@@ -200,7 +202,7 @@ def test_every_published_finding_says_it_plainly_and_says_why_it_matters() -> No
     """
     document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
     for item in document["findings"]:
-        for required in ("plain", "matters", "plain_caveat"):
+        for required in ("plain", "matters", "plain_caveat", "plain_how"):
             assert item[required].strip(), f"{item['key']} has no {required}"
 
 
@@ -222,6 +224,27 @@ def test_a_plain_sentence_stays_plain() -> None:
         )
         assert "±" not in plain, f"{item['key']} puts an interval in its plain sentence"
         assert "+/-" not in plain, f"{item['key']} puts an interval in its plain sentence"
+
+
+@pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
+def test_a_plain_method_stays_a_method() -> None:
+    """The two ways the how-we-found-it register stops being one.
+
+    Length, for the same reason the plain sentence is capped: a plain method that grows into the
+    method note it stands in front of has replaced the thing it was summarising. And digits, which
+    is the sharper rule -- `value` and `scope` carry every figure and they are computed from the
+    lake on every build, so a count typed into a sentence here is exactly the drift this module is
+    arranged against. A method can be described without one.
+    """
+    document = json.loads(PUBLISHED.read_text(encoding="utf-8"))
+    for item in document["findings"]:
+        how = item["plain_how"]
+        assert len(how) <= findings.HOW_MAX_CHARS, (
+            f"{item['key']}'s plain method is {len(how)} characters, over {findings.HOW_MAX_CHARS}"
+        )
+        assert not re.search(r"\d", how), (
+            f"{item['key']} types a figure into its plain method; `value` and `scope` compute them"
+        )
 
 
 @pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")
@@ -252,11 +275,15 @@ def test_no_plain_sentence_claims_a_taxon_its_claim_does_not() -> None:
     for item in document["findings"]:
         if item["taxon_scope"] != "unattributed":
             continue
-        named = creatures.search(item["plain"])
-        assert not named, (
-            f"{item['key']} is taxon_scope=unattributed but its plain sentence says "
-            f"{named.group(0)!r}"
-        )
+        # Both plain registers, because the temptation is the same in each and the method is the
+        # more inviting of the two: "we measured when the birds went past" is how anyone would
+        # describe a radar they had not thought about.
+        for register in ("plain", "plain_how"):
+            named = creatures.search(item[register])
+            assert not named, (
+                f"{item['key']} is taxon_scope=unattributed but its {register} says "
+                f"{named.group(0)!r}"
+            )
 
 
 @pytest.mark.skipif(not PUBLISHED.is_file(), reason="findings.json not built")

@@ -2,8 +2,11 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { readFile } from "node:fs/promises";
 
+import type { Map as MapLibreMap } from "maplibre-gl";
+
 import { JITTER, MIN_EXTENT, drawnCoast } from "../src/globe/coastline";
 import { graticuleSource } from "../src/globe/graticule";
+import type { LoadedLayer } from "../src/layers/types";
 
 /**
  * What this suite is for.
@@ -18,15 +21,18 @@ import { graticuleSource } from "../src/globe/graticule";
  * basemap is bundled, so a run cannot be reddened by someone else's CDN.
  */
 
-interface LoadedLayer {
-  meta: { name: string; value_kind: string };
-  cells: number;
-  center: [number, number];
-}
+/*
+  The app's own types, imported rather than restated.
 
+  This file used to declare its own `LoadedLayer` with three of its fields, and that shadow had
+  drifted: no `zoom`, no `visible`. `report.zooms?.[name]` was therefore an error nobody saw, because
+  `tests/` was not in `tsconfig.json`'s `include` -- so 4,200 lines of TypeScript were only ever
+  checked by being run. A misspelled field there would have silently sent every layer to the default
+  camera, which is the failure this suite exists to catch in the app.
+*/
 interface Hook {
   migratlas: {
-    map: maplibregl.Map;
+    map: MapLibreMap;
     loaded: LoadedLayer[];
   };
 }
@@ -35,6 +41,8 @@ interface ReadyReport {
   layers: string[];
   cells: Record<string, number>;
   centers: Record<string, [number, number]>;
+  /** Each layer's own camera hint, where it declares one. */
+  zooms: Record<string, number | undefined>;
 }
 
 /**
@@ -44,11 +52,15 @@ interface ReadyReport {
  * the origin root instead of the project subpath. `vite preview` happens to redirect the root to
  * its base, so an absolute path passes locally and would fetch somebody else's site on Pages.
  *
- * Polls for the hook rather than awaiting a promise on it: the shell publishes it once every layer
- * has loaded, and the arrival card is interactive well before the 50,000-feature assessment lands.
+ * Polls for the hook rather than awaiting a promise on it: `Globe` publishes it once every layer
+ * has loaded, and the page is interactive well before the 50,000-feature assessment lands.
+ *
+ * The world chapter, because that is where the map is. This suite used to open the arrival, and the
+ * layers, the clock, the search and the tools all moved with the chapter rather than being rebuilt
+ * -- so every assertion here still has its subject, one address further on.
  */
 async function ready(page: Page): Promise<ReadyReport> {
-  await page.goto("?debug=1");
+  await page.goto("?debug=1#ch=the-world");
   await expect
     .poll(
       () => page.evaluate(() => (window as unknown as Hook).migratlas?.loaded?.length ?? 0),
@@ -75,9 +87,31 @@ async function ready(page: Page): Promise<ReadyReport> {
  * which showed up as a layer reporting zero rendered features while being visible, source-loaded,
  * and pointed at, i.e. as a bug in the app rather than in the test.
  */
+/**
+ * Opens the tools, wherever this viewport keeps them.
+ *
+ * A narrow window is a phone now, and on a phone the world chapter is one leaf with the tools in a
+ * flap whose first depth is the clock alone. So a test that sets a small viewport to save GPU work --
+ * which the panel-versus-map test does deliberately, at 520px -- found no checkboxes and read every
+ * layer as `ticked=null`. Pulling the flap up is what a reader does; doing it here keeps the small
+ * viewport, which was chosen for the render cost and not to test a phone.
+ */
+async function openTools(page: Page): Promise<void> {
+  const grip = page.locator(".flap__grip");
+  if ((await grip.count()) === 0) return;
+  for (let taps = 0; taps < 3; taps += 1) {
+    if ((await page.locator(".flap .layers li").count()) > 0) return;
+    await grip.click();
+  }
+}
+
 async function explore(page: Page): Promise<void> {
-  await page.getByRole("button", { name: /just let me explore/i }).click();
-  await expect(page.locator(".explore")).toBeVisible();
+  // Already there: the world chapter mounts the tools beside the map. What is still worth waiting
+  // for is the camera, which is why this function exists at all -- and the panel appears only once
+  // the layers have reported, so the deadline is the map's rather than the DOM's five seconds.
+  await expect(page.locator(".explore")).toBeVisible({ timeout: 30_000 });
+  // And open, if this viewport keeps them folded away. See `openTools`.
+  await openTools(page);
   await settle(page);
 }
 
@@ -118,7 +152,9 @@ async function diagnose(page: Page, layer: string): Promise<string> {
       centre: [Number(centre.lng.toFixed(2)), Number(centre.lat.toFixed(2))],
       zoom: Number(map.getZoom().toFixed(2)),
       visibility: spec?.layout?.visibility ?? "visible",
-      filter: JSON.stringify(spec?.filter),
+      // Narrowed rather than cast: `LayerSpecification` is a union and a background layer has no
+      // filter at all, which the hand-written type this file used to carry could not express.
+      filter: JSON.stringify(spec && "filter" in spec ? spec.filter : undefined),
       sourceLoaded: map.isSourceLoaded(id),
       allLayers: map.queryRenderedFeatures().length,
     });
@@ -152,8 +188,8 @@ const mapLayerFor = (page: Page, name: string): Promise<string> =>
     (layer) =>
       (window as unknown as Hook).migratlas.map
         .getStyle()
-        .layers.map((l) => l.id)
-        .find((candidate) => candidate.endsWith(layer)) ?? "",
+        .layers.map((l: { id: string }) => l.id)
+        .find((candidate: string) => candidate.endsWith(layer)) ?? "",
     name,
   );
 
@@ -168,15 +204,68 @@ const mapLayerFor = (page: Page, name: string): Promise<string> =>
 async function focusOn(page: Page, report: ReadyReport, name: string, layerId: string): Promise<void> {
   const center = report.centers[name];
   expect(center, `no centre reported for ${name}`).toBeDefined();
-  // The layer's own camera hint, where it declares one: a compact layer's cells sit below the
-  // tiler's hand-over zoom and are legitimately absent from the globe view.
-  const zoom = report.zooms?.[name] ?? 2.2;
-  await page.evaluate(
-    (view) => (window as unknown as Hook).migratlas.map.jumpTo(view),
-    { center: center as [number, number], zoom },
-  );
-  await settle(page);
-  await expectDrawn(page, layerId);
+
+  /*
+    Drawn first, because the chapter no longer draws anything until a reader asks.
+
+    "Every published layer, and no argument on top of it" used to mean all of them at once, and this
+    function could assume its subject was already on screen. The owner's decision is that the reader
+    paints the map, so pointing a camera at a layer's data now implies switching that layer on --
+    which is what this function's name has always claimed to do.
+
+    Through the panel's own checkbox rather than `setVisible`, so the path under test is the reader's:
+    the rows are in manifest order and so is `report.layers`, which is the same correspondence
+    `the panel and the map never disagree` relies on.
+  */
+  const row = report.layers.indexOf(name);
+  expect(row, `${name} is not in the reported layers`).toBeGreaterThanOrEqual(0);
+  const box = page.locator(".layers li").nth(row).locator("input");
+  if (!(await box.isChecked())) await box.check();
+  /*
+    The layer's own camera hint, where it declares one, less whatever the map has given up in width.
+
+    Those hints were tuned when the map was the whole window. In the book it is one page of a spread
+    -- about a third of the viewport -- so the same zoom frames roughly a ninth of the ground, and a
+    sparse layer legitimately falls outside it: the August ice edge is three features in a
+    full-window view and none in a page-width one. Measured rather than guessed at, because the page
+    is a fraction of the window that changes with the window: one zoom level is a halving of linear
+    scale, so `log2(window / map)` is exactly the correction.
+  */
+  const shrink = await page.evaluate(() => {
+    const canvas = document.querySelector(".globe canvas")?.getBoundingClientRect();
+    if (!canvas || canvas.width === 0) return 0;
+    return Math.max(0, Math.log2(window.innerWidth / canvas.width));
+  });
+
+  /*
+    Three cameras around the declared one, because a page-width map pulls in two directions at once
+    and no single figure serves both.
+
+    Every `zoom` in the manifest was chosen when the map filled the window. In the book it is one
+    page of a spread -- 677px of 1600 -- and that costs a layer detail in one sense and ground in
+    another. A *sparse* layer needs the ground: the August ice edge is three features in a full
+    window and none in a page-width one, so it wants zooming out. A *tiled* layer needs the detail,
+    because zoom is defined per tile and a narrower canvas at the same zoom crosses the tiler's
+    hand-over: the southern African atlas surface draws 410 features at 2.2 in a full window and
+    nothing until 4 in this one.
+
+    So the declared zoom is tried first, then one shrink either side of it, and the layer has to draw
+    at one of the three. What that asserts is unchanged -- the layer draws where its own manifest
+    says to look -- and what it no longer asserts is that a number tuned for a different viewport is
+    exactly right for this one.
+  */
+  const declared = report.zooms?.[name] ?? 2.2;
+  const cameras = [declared, declared - shrink, declared + shrink];
+  for (const [index, zoom] of cameras.entries()) {
+    await page.evaluate(
+      (view) => (window as unknown as Hook).migratlas.map.jumpTo(view),
+      { center: center as [number, number], zoom },
+    );
+    await settle(page);
+    if ((await rendered(page, layerId)) > 0) return;
+    // The last one carries the failure, so the message names the state rather than the loop.
+    if (index === cameras.length - 1) await expectDrawn(page, layerId);
+  }
 }
 
 
@@ -237,6 +326,18 @@ test("every layer draws features once it is switched on", async ({ page }) => {
 test("the layer panel publishes its generalisation statement", async ({ page }) => {
   await ready(page);
   await explore(page);
+
+  /*
+    Nothing drawn, nothing to state -- and that is the correct reading of the rule rather than a hole
+    in it. The panel publishes the generalisation of every layer *currently drawn*, so on a bare globe
+    the list is legitimately empty; the obligation attaches to data on screen. What must never happen
+    is a layer drawn with its terms absent, which is what this asserts by switching one on.
+  */
+  // Absent rather than empty: the paragraph is not rendered at all when nothing is drawn, which is
+  // the right shape -- an empty box captioned "published under" would read as terms that are missing.
+  await expect(page.locator(".explore .terms")).toHaveCount(0);
+
+  await page.locator(".explore .layers input").first().check();
   // Required, not decorative: published data must never be separable from the terms it was
   // published under.
   await expect(page.locator(".explore .terms")).not.toBeEmpty();
@@ -271,7 +372,13 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
   // now, and driving it the way a visitor does tests the wiring as well as the filter.
   await page.locator(".explore .time input").fill("250");
 
-  await expect.poll(weekIndex).toBe("35");
+  /*
+    An explicit deadline, because the default is five seconds and nobody chose it. See the note on
+    the darts' rotation poll for the flake that made the point.
+  */
+  await expect
+    .poll(weekIndex, { message: "the clock moved and the layer did not", timeout: 30_000 })
+    .toBe("35");
   expect(before).not.toBe("35");
   await expectDrawn(page, id);
   expect(fetches, "a week change must not refetch the layer").toBe(0);
@@ -312,17 +419,32 @@ test("the passage layer wears its measured direction, and the clock turns it", a
   expect(before.rotate).toContain("dw");
   expect(before.alignment, "a bearing is geographic, not a screen decoration").toBe("map");
   await expect
-    .poll(async () => (await state()).drawn, { message: "no darts rendered" })
+    .poll(async () => (await state()).drawn, { message: "no darts rendered", timeout: 30_000 })
     .toBeGreaterThan(0);
 
   await page.locator(".explore .time input").fill("250");
-  await expect.poll(async () => (await state()).rotate).toContain("dw35");
+  /*
+    An explicit deadline, because the default one is five seconds and nobody chose it.
+
+    This poll waits for a layout property to name a different week. Nothing on this line asserts
+    speed -- the test's budget is its own `setTimeout(90_000)` above -- so five seconds here is a
+    hang detector wearing a budget's clothes, which is the distinction `playwright.config.ts` already
+    draws. It flaked exactly that way on 2026-08-21: run 32480987897 passed the whole suite in
+    21m30s and run 32482794530 failed on this line in 24m17s, on the same commit and the same tests,
+    the second one sharing a runner with a second WebGL context.
+  */
+  await expect
+    .poll(async () => (await state()).rotate, {
+      message: "the clock moved and the darts did not re-aim",
+      timeout: 30_000,
+    })
+    .toContain("dw35");
 });
 
 test("a station popup states the caveat with the number", async ({ page }) => {
   test.setTimeout(90_000);
   const report = await ready(page);
-  // In explore mode: a claim sheet covers the sphere, so there would be nothing to click.
+  // The map has the facing page to itself, so there is a sphere to click.
   await explore(page);
   await focusOn(page, report, "aerial-passage", "series-aerial-passage");
 
@@ -331,15 +453,41 @@ test("a station popup states the caveat with the number", async ({ page }) => {
   // as a broken popup rather than as a click that never reached the map.
   const point = await page.evaluate(() => {
     const { map } = (window as unknown as Hook).migratlas;
-    const panels = [...document.querySelectorAll(".explore, .index, .maplibregl-ctrl-bottom-right")]
+    /*
+      One coordinate space, which is the fix.
+
+      `map.project` answers in *container* coordinates and `getBoundingClientRect` in viewport ones.
+      Those were the same number while the map filled the window; in the book it is one page of a
+      spread, so the two were compared across an offset and the overlap test was meaningless. The
+      canvas's own origin is the conversion, and the point handed back stays container-relative
+      because that is what Playwright's `position` on the canvas wants.
+    */
+    const canvas = document.querySelector(".globe canvas")!.getBoundingClientRect();
+    /*
+      Everything the map has put on top of itself, not a list of the ones that used to be in the way.
+
+      The list used to name `.maplibregl-ctrl-bottom-right`; on a page-width map the licence notice
+      is a good part of the lower half and `.maplibregl-ctrl-attrib-inner` took the click -- reported
+      by Playwright as "intercepts pointer events", which is at least honest, after thirty seconds of
+      retrying. A notice that big is a consequence of giving the map a page rather than the window,
+      and it is a legal obligation either way, so the test avoids it rather than the layout losing it.
+    */
+    const panels = [
+      ...document.querySelectorAll(".explore, .maplibregl-control-container *"),
+    ]
       .map((node) => node.getBoundingClientRect())
-      .filter((box) => box.width > 0);
+      .filter((box) => box.width > 0 && box.height > 0);
 
     for (const feature of map.queryRenderedFeatures({ layers: ["series-aerial-passage"] })) {
       const at = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
       const { x, y } = map.project(at);
+      const onScreen = { x: x + canvas.left, y: y + canvas.top };
       const covered = panels.some(
-        (box) => x >= box.left && x <= box.right && y >= box.top && y <= box.bottom,
+        (box) =>
+          onScreen.x >= box.left &&
+          onScreen.x <= box.right &&
+          onScreen.y >= box.top &&
+          onScreen.y <= box.bottom,
       );
       if (!covered) return { x: Math.round(x), y: Math.round(y) };
     }
@@ -396,29 +544,40 @@ test("each counterfactual is drawn to the scatter, and both to one frame", async
   // 0.89-day gap and ATTRICI's 0.29-day gap would render the same height -- so the reader would see
   // two counterfactuals agreeing where the whole finding is that they do not.
   await ready(page);
-  await page.getByRole("button", { name: /show me how you know/i }).click();
-  await page.locator('.tab[data-claim="anthropogenic-share"]').click();
-  await expect(page.locator(".chart__svg").first()).toBeVisible();
+  /*
+    One chart to a page: `figures.ts` gives the ribbon four, because two charts on one overflowed it
+    by 536px. So the pair is read by visiting both leaves, which is the same comparison the frame
+    argument below needs -- each drawn to its own extents would make a 0.89-day gap and a 0.29-day
+    gap render the same height.
+  */
+  const geometryOf = () =>
+    page.locator(".chart__svg").evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const y = (selector: string) => {
+          const line = node.querySelector(selector) as SVGLineElement | null;
+          return line ? Number(line.getAttribute("y2")) : NaN;
+        };
+        const dots = [...node.querySelectorAll(".chart__year")].map((dot) =>
+          Number(dot.getAttribute("cy")),
+        );
+        const ticks = [...node.querySelectorAll(".chart__tick")].map((tick) =>
+          Number(tick.getAttribute("y")),
+        );
+        return {
+          gap: Math.abs(y(".chart__line--observed") - y(".chart__line--counterfactual")),
+          scatter: Math.max(...dots) - Math.min(...dots),
+          ticks: ticks.join(","),
+        };
+      }),
+    );
 
-  const charts = await page.locator(".chart__svg").evaluateAll((nodes) =>
-    nodes.map((node) => {
-      const y = (selector: string) => {
-        const line = node.querySelector(selector) as SVGLineElement | null;
-        return line ? Number(line.getAttribute("y2")) : NaN;
-      };
-      const dots = [...node.querySelectorAll(".chart__year")].map((dot) =>
-        Number(dot.getAttribute("cy")),
-      );
-      const ticks = [...node.querySelectorAll(".chart__tick")].map((tick) =>
-        Number(tick.getAttribute("y")),
-      );
-      return {
-        gap: Math.abs(y(".chart__line--observed") - y(".chart__line--counterfactual")),
-        scatter: Math.max(...dots) - Math.min(...dots),
-        ticks: ticks.join(","),
-      };
-    }),
-  );
+  const charts: Awaited<ReturnType<typeof geometryOf>> = [];
+  for (const at of [0, 1, 2, 3]) {
+    await page.goto(`?debug=1#ch=why-it-changed&p=${at}`);
+    await expect(page.locator(".book")).toBeVisible();
+    if ((await page.locator(".chart__svg").count()) === 0) continue;
+    charts.push(...(await geometryOf()));
+  }
 
   expect(charts.length).toBeGreaterThan(1);
   for (const chart of charts) {
@@ -449,14 +608,11 @@ test("no ribbon is drawn past its own frame, and each shades where its evidence 
   // as a straight diagonal and read as the line continuing through them, and only one of the two
   // charts shading at all -- which told a reader DAMIP carried evidence to 2025 when `f` is fitted to
   // 2014. Eyes do not run in CI.
-  await ready(page);
-  await page.getByRole("button", { name: /show me how you know/i }).click();
-  await page.locator('.tab[data-claim="anthropogenic-share"]').click();
-  await expect(page.locator(".chart__svg").first()).toBeVisible();
-
-  const measured = await page.locator(".chart__svg").evaluateAll((nodes) =>
-    nodes.map((node) => {
-      const box = node.viewBox.baseVal;
+  // Across the pair's two leaves, for the reason the test above gives: one chart to a page.
+  const readChart = () =>
+    page.locator(".chart__svg").evaluateAll((nodes) =>
+      nodes.map((node) => {
+      const box = (node as unknown as SVGSVGElement).viewBox.baseVal;
       const labels = [...node.querySelectorAll<SVGTextElement>(".chart__label, .chart__rate")];
       return {
         overflowing: labels
@@ -470,6 +626,14 @@ test("no ribbon is drawn past its own frame, and each shades where its evidence 
       };
     }),
   );
+
+  const measured: Awaited<ReturnType<typeof readChart>> = [];
+  for (const at of [0, 1, 2, 3]) {
+    await page.goto(`?debug=1#ch=why-it-changed&p=${at}`);
+    await expect(page.locator(".book")).toBeVisible();
+    if ((await page.locator(".chart__svg").count()) === 0) continue;
+    measured.push(...(await readChart()));
+  }
 
   for (const chart of measured) {
     expect(chart.overflowing, "labels printing past the chart's own box").toEqual([]);
@@ -510,16 +674,28 @@ test("the detectability layer draws, and most of it is not detectable", async ({
   expect(detectable, "most of the world is detectable, which is not true").toBeLessThan(50);
 });
 
-test("a missing ledger says so rather than showing an empty globe", async ({ page }) => {
-  // The old page degraded to a globe with a broken panel, because the layers were the subject.
-  // Here the claims are, so there is nothing to carry on with, and the honest failure is to say
-  // what happened. Asserted because the alternative -- an unhandled rejection and a blank
-  // sphere -- is invisible until it happens in production.
+test("a missing ledger says so rather than leaving a blank page", async ({ page }) => {
+  /*
+    The old shell degraded to a globe with a broken panel, because layers were its subject. The
+    book's subject is the claims, so there is nothing to carry on with -- and this test's own reason
+    for existing turned out to describe what the book did when it became the front door: `main.ts`
+    awaited the ledger and rejected unhandled, which is a blank page and no message. Invisible until
+    it happens in production, exactly as written here before it happened.
+
+    So the assertion changed shape and kept its point: the failure is *stated*. There is no
+    half-working page to check, which is the honest outcome rather than a lesser one.
+  */
   await page.route("**/findings.json", (route) => route.fulfill({ status: 404, body: "" }));
-  const report = await ready(page);
-  expect(report.layers.length, "the globe should still have its layers").toBeGreaterThan(0);
-  await expect(page.locator(".shell__failure")).toBeVisible();
-  await expect(page.locator(".shell__detail")).toContainText("404");
+  await page.goto("?debug=1#ch=the-world");
+
+  const notice = page.locator(".boot-failure");
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText(/did not load/i);
+  // The reason, not just the refusal: an unexplained failure cannot be diagnosed.
+  await expect(notice.locator(".boot-failure__detail")).toContainText("404");
+
+  // And nothing pretending to be a book.
+  await expect(page.locator(".book, .leaves")).toHaveCount(0);
 });
 
 /**
@@ -709,7 +885,14 @@ test("the default build requests nothing off-origin", async ({ page }) => {
     if (!request.url().startsWith("http://localhost")) external.push(request.url());
   });
 
-  await ready(page);
+  const report = await ready(page);
+  /*
+    Drawn on request now, because the chapter draws nothing until asked -- so this switches the layer
+    on rather than assuming the opening view has it. Still no camera flight: the opening view already
+    frames the radar stations, which is what the note below is about.
+  */
+  const row = report.layers.indexOf("aerial-passage");
+  await page.locator(".explore .layers input").nth(row).check();
   // Rendered, but without a camera flight to get there. The arrival view already frames the radar
   // stations, so this layer has drawn by the time the layers report in -- and `focusOn`'s `jumpTo`
   // plus its settle was most of what pushed this test through its 30s deadline once the suite grew
@@ -748,7 +931,10 @@ test("the land is hatched, and the hatch tile meets its own edge", async ({ page
   // one has an outlier there, and that is the whole test.
   const seam = await page.evaluate(() => {
     const image = (window as unknown as Hook).migratlas.map.getImage("land-hatch");
-    const { width, height, data } = image!.data as ImageData;
+    // MapLibre's own `RGBAImage`, which is `ImageData`'s shape without a colour space. Through
+    // `unknown`, because the two do not overlap enough for a direct assertion and pretending they do
+    // is how a real mismatch would slip through later.
+    const { width, height, data } = image!.data as unknown as ImageData;
     const at = (x: number, y: number) => data[(y * width + x) * 4]!;
     const between = (left: number, right: number) => {
       let total = 0;
@@ -773,7 +959,7 @@ test("the land is hatched, and the hatch tile meets its own edge", async ({ page
   // what they take back.
   const tone = await page.evaluate(() => {
     const { map } = (window as unknown as Hook).migratlas;
-    const { data } = map.getImage("land-hatch")!.data as ImageData;
+    const { data } = map.getImage("land-hatch")!.data as unknown as ImageData;
     const total = [0, 0, 0];
     for (let index = 0; index < data.length; index += 4) {
       total[0]! += data[index]!;
@@ -804,7 +990,7 @@ test("the graticule is ruled by hand, bounded, and gone before it could mislead"
   const grid = await page.evaluate(() => {
     const { map } = (window as unknown as Hook).migratlas;
     return {
-      order: map.getStyle().layers.map((layer) => layer.id),
+      order: map.getStyle().layers.map((layer: { id: string }) => layer.id),
       opacity: map.getPaintProperty("graticule", "line-opacity"),
     };
   });
@@ -856,7 +1042,7 @@ test("the drawn coastline is bounded, and hands over to the surveyed one", async
 
   const coast = await page.evaluate(() => {
     const { map } = (window as unknown as Hook).migratlas;
-    const ids = map.getStyle().layers.map((layer) => layer.id);
+    const ids = map.getStyle().layers.map((layer: { id: string }) => layer.id);
     const opacityAt = (layer: string, zoom: number) => {
       const stops = map.getPaintProperty(layer, "line-opacity") as unknown[];
       // The ramp is `interpolate linear zoom z0 v0 z1 v1 ...`; read the pairs off the tail.
@@ -1005,6 +1191,16 @@ test("the drawn shore wobbles the same amount in both directions, at every latit
 });
 
 test("the panel and the map never disagree about what is drawn", async ({ page }) => {
+  /*
+    Ninety seconds, like every other test in this file that drives the map.
+
+    It takes 23 alone and it inherited the default 30, which was enough until the suite got slower --
+    it then failed on the deadline in a 14.8-minute run having passed in a 13.1-minute one. That is
+    not a flake to re-run: the work is ten layer toggles against a WebGL context sharing a GPU with
+    another worker, and a budget three seconds over the solo time was never a budget.
+  */
+  test.setTimeout(90_000);
+
   // A small viewport, and it costs this test nothing: what is asserted is layout properties and
   // checkbox state, neither of which depends on how many pixels MapLibre fills. What it saves is
   // real -- the toggle sweep below switches on the fifty-thousand-cell detectability wash, and at
@@ -1031,8 +1227,8 @@ test("the panel and the map never disagree about what is drawn", async ({ page }
         const id =
           map
             .getStyle()
-            .layers.map((entry) => entry.id)
-            .find((entry) => entry === layer.meta.name || entry.endsWith(`-${layer.meta.name}`)) ??
+            .layers.map((entry: { id: string }) => entry.id)
+            .find((entry: string) => entry === layer.meta.name || entry.endsWith(`-${layer.meta.name}`)) ??
           "";
         return {
           name: layer.meta.name,
@@ -1062,8 +1258,15 @@ test("the panel and the map never disagree about what is drawn", async ({ page }
   for (let index = 0; index < (await rows.count()); index += 1) {
     await rows.nth(index).locator("input").click();
   }
+  /*
+    An explicit deadline, because the default is five seconds and nobody chose it. See the note on
+    the darts' rotation poll for the flake that made the point.
+  */
   await expect
-    .poll(async () => (await compare()).filter((layer) => layer.drawn !== layer.ticked).length)
+    .poll(async () => (await compare()).filter((layer) => layer.drawn !== layer.ticked).length, {
+      message: "a ticked layer is not drawn",
+      timeout: 60_000,
+    })
     .toBe(0);
 
   // Every one of them actually moved, or the loop above proved nothing.
@@ -1161,7 +1364,7 @@ test("the atlas surface draws its losses and its gains apart", async ({ page }) 
   which takes 3.6 minutes on its own, timed out at ten.
 */
 async function openChapter(page: Page, slug: string): Promise<void> {
-  await page.goto(`?book#ch=${slug}`);
+  await page.goto(`?debug=1#ch=${slug}`);
   await expect(page.locator(".book")).toBeVisible();
 }
 
@@ -1180,7 +1383,7 @@ test("the world chapter carries a live map, its controls, and the clock in its U
     Verified here rather than by hand because MapLibre fires `load` after its first render, so in a
     browser that is not compositing the layer step never finishes and the controls never appear.
   */
-  await page.goto("?book#ch=the-world");
+  await page.goto("?debug=1#ch=the-world");
   await expect(page.locator(".book")).toBeVisible();
 
   // The map is the facing page.
@@ -1210,8 +1413,93 @@ test("the world chapter carries a live map, its controls, and the clock in its U
     so neither can evict the other, and this asserts the rule rather than an ordering.
   */
   await expect(page).toHaveURL(/[#&]d=/);
+  /*
+    Turned to another chapter *through the book*, not by typing a URL. That is the whole assertion: a
+    reader who navigates carries the clock's parameters with them, because `show()` reads the existing
+    hash before writing to it. A `goto` sets the hash directly and discards `d`, which would be
+    testing the address bar rather than the rule.
+  */
   await page.locator(".tab", { hasText: "Changed" }).click();
   await expect(page).toHaveURL(/[#&]ch=what-changed/);
   await expect(page).toHaveURL(/[#&]d=/);
   await expect(page.locator(".page--verso")).toContainText("What changed");
+});
+test("on a phone the world is one leaf, and the map stays under the flap", async ({ page }) => {
+  /*
+    ADR 0015 decision 8, closed. It recorded this as deliberately open: the spread gives the tools the
+    left page and the map the right, and a phone showing one page at a time therefore put the clock on
+    one leaf and the map on the next -- "so you cannot watch the map while you move the clock".
+
+    That is not a reachability problem, which is why nothing about swiping fixed it. The clock and the
+    layer switches are controls whose whole purpose is watching the map answer; on a separate leaf
+    they are not slow, they are pointless. So on a phone the chapter is *one* leaf: the globe fills
+    it and the tools are a flap tucked into its foot, in three depths -- the clock alone, the layers
+    as well, then the terms and the search.
+
+    The flap covers the foot of the map, which is the opposite of the correction this same chapter got
+    on a spread, where MapLibre's licence notice un-compacted itself over a quarter of the map. The
+    difference is who opened it. A reader pulling a flap up is not a control seizing the page, and the
+    objection was never that nothing may cover a map.
+  */
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("?debug=1#ch=the-world");
+
+  // One leaf for the whole chapter, and the map is on it.
+  await expect(page.locator("[data-leaf][data-chapter='the-world']")).toHaveCount(1);
+  const clock = page.locator(".flap .time input").first();
+  await expect(clock).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".globe canvas")).toBeVisible({ timeout: 30_000 });
+
+  /*
+    The measurement the whole design is for: at a peek, most of the leaf is still map, and the clock
+    is on screen at the same time. Asserted as a share rather than a pixel count so it survives a
+    different phone.
+  */
+  const peek = await page.evaluate(() => {
+    const flap = document.querySelector(".flap")!.getBoundingClientRect();
+    const canvas = document.querySelector(".globe canvas")!.getBoundingClientRect();
+    const track = document.querySelector(".flap .time input")!.getBoundingClientRect();
+    return {
+      mapShare: (Math.min(canvas.bottom, flap.top) - canvas.top) / window.innerHeight,
+      clockUnderFlapTop: track.top >= flap.top,
+      clockOnScreen: track.bottom <= window.innerHeight,
+    };
+  });
+  expect(peek.mapShare, `only ${Math.round(peek.mapShare * 100)}% of the leaf is map`).toBeGreaterThan(0.6);
+  expect(peek.clockUnderFlapTop, "the clock is drawn outside the flap that holds it").toBe(true);
+  expect(peek.clockOnScreen, "the clock is off the bottom of the screen").toBe(true);
+
+  // No layer list at a peek: it is the second question, and it is one tap away.
+  await expect(page.locator(".flap .layers li")).toHaveCount(0);
+
+  /*
+    And the map is not remounted when the flap moves, which is the expensive mistake available here.
+    Stamped on the canvas rather than counted: a fresh WebGL context would arrive as a fresh element
+    and lose every layer the reader had switched on.
+  */
+  await page.evaluate(() => {
+    document.querySelector(".globe canvas")!.setAttribute("data-same", "yes");
+  });
+
+  await page.locator(".flap__grip").click();
+  await expect(page.locator(".flap .layers li").first()).toBeVisible();
+  await page.locator(".flap__grip").click();
+  await expect(page.locator(".flap .search, .flap input[type='search']").first()).toBeVisible();
+  await page.locator(".flap__grip").click();
+  await expect(page.locator(".flap .layers li")).toHaveCount(0);
+
+  await expect(page.locator(".globe canvas[data-same='yes']")).toHaveCount(1);
+
+  // The flap never covers the folio or the realm tabs: the page's own foot is furniture, not canvas.
+  const clear = await page.evaluate(() => {
+    const flap = document.querySelector(".flap")!.getBoundingClientRect();
+    const folio = document.querySelector("[data-chapter='the-world'] .page__folio")?.getBoundingClientRect();
+    const realms = document.querySelector(".realms")?.getBoundingClientRect();
+    return {
+      folio: folio ? flap.bottom <= folio.top + 2 : true,
+      realms: realms ? flap.bottom <= realms.top + 2 : true,
+    };
+  });
+  expect(clear.folio, "the flap covers the folio").toBe(true);
+  expect(clear.realms, "the flap covers the realm tabs").toBe(true);
 });

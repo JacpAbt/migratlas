@@ -213,3 +213,23 @@ button:focus-visible {
     transform: perspective(1400px) rotateY(0deg) translateZ(0);
   }
 }
+
+/* The one failure that has no page behind it: the ledger did not load, so `main.ts` writes this
+   instead of mounting a book with nothing in it. Plain CSS because nothing else is running. */
+.boot-failure {
+  margin: 0;
+  padding: var(--gap-wide);
+  max-width: 34rem;
+  font-family: var(--font-body);
+  font-size: var(--size-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+}
+
+.boot-failure__detail {
+  display: block;
+  margin-top: var(--gap-tight);
+  font-family: var(--font-mono);
+  font-size: var(--size-margin);
+  color: var(--status-open);
+}

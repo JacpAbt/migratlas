@@ -8,6 +8,7 @@
   import { addTracks } from "../../layers/tracks";
   import { addSurface } from "../../layers/surface";
   import { loadManifest, type LoadedLayer } from "../../layers/types";
+  import { still } from "../../state/turn";
   import { nightPolygon } from "../../layers/terminator";
   import { addDetectability, type DetectabilityDocument } from "../../layers/detectability";
   import { SpeciesSelection } from "../../layers/selection";
@@ -132,6 +133,10 @@
         };
       }
 
+      // After the layers, because each one adds its own credit and MapLibre re-renders the notice
+      // as it does -- closing it before they land leaves the last arrival to open it again.
+      collapseAttribution();
+
       onready?.({
         layers: added,
         detectability: assessment,
@@ -146,14 +151,35 @@
     };
   });
 
-  // Camera and visibility follow the view. Split from the setup effect so a claim change costs a
-  // flyTo and a few visibility properties rather than tearing the map down.
+  // Visibility follows the view, and it is the only writer of it. Split from the setup effect so a
+  // change of view costs a few layout properties rather than tearing the map down.
   $effect(() => {
     if (!map || !view || loaded.length === 0) return;
 
     for (const layer of loaded) {
       layer.setVisible(view.layers.includes(layer.meta.name));
     }
+  });
+
+  /*
+    The camera moves when the camera changes, and not when the layer list does.
+
+    These were one effect, which was fine while the view's layers only changed with its centre -- a
+    claim at a time, each with its own camera. The world chapter made the list the reader's: ticking
+    a box now changes the view, and on one effect that meant a 2.2s flight to the same coordinates on
+    every tick, cancelling whatever the reader was looking at.
+
+    Guarded by the destination rather than by splitting what the effect reads: `view` is one derived
+    object, so both halves re-run whenever any part of it changes no matter how the code is arranged.
+    Comparing where it is going is the thing that actually holds.
+  */
+  let flownTo = "";
+
+  $effect(() => {
+    if (!map || !view || loaded.length === 0) return;
+    const going = `${view.center.join(",")}@${view.zoom.toFixed(3)}`;
+    if (going === flownTo) return;
+    flownTo = going;
 
     map.flyTo({
       center: view.center,
@@ -210,10 +236,30 @@
     );
   }
 
+  /*
+    The licence notice starts closed.
+
+    MapLibre un-compacts its own attribution above 640px of map, and this map is 677 -- so a control
+    that this file's CSS describes as "the (i) that opens it" arrived already open, and 1,515
+    characters of citations and generalisation notes took 337x436 of a 677x856 page. A quarter of the
+    map, over the map.
+
+    Nothing is removed and nothing is shortened: every word is one click away, which is the pattern
+    the styling below was written for, and the generalisation notes are also printed in full in the
+    tools panel where they are actually readable. Closed here rather than in CSS because the state is
+    a `<details>` element's `open` attribute, and CSS cannot unset it.
+  */
+  function collapseAttribution(): void {
+    container
+      ?.querySelectorAll<HTMLDetailsElement>("details.maplibregl-ctrl-attrib")
+      .forEach((notice) => {
+        notice.open = false;
+      });
+  }
+
   /** Read from the token rather than from `matchMedia` twice, so one block controls all motion. */
   function reducedMotion(): boolean {
-    const draw = getComputedStyle(document.documentElement).getPropertyValue("--draw").trim();
-    return draw === "0ms" || draw === "0s";
+    return still();
   }
 </script>
 
@@ -250,5 +296,255 @@
     font-family: var(--font-mono);
     font-size: var(--size-margin);
     color: var(--rust);
+  }
+
+  /*
+    Moved here from `shell/Shell.svelte` on 2026-08-21, which is why that file no longer exists to
+    look at -- and it was a regression for as long as it lived there.
+
+    Every rule below was scoped to `.shell`, so the moment the book became the front door the map in
+    the world chapter lost all of it -- MapLibre's own white rounded boxes, grey drop shadows and
+    fixed near-black icons came back, on paper, which is the exact thing these rules exist to
+    prevent. `notebook.spec.ts` caught it the day those tests moved to the book, which is a fair
+    argument for moving tests rather than deleting them.
+
+    The component that mounts MapLibre is the honest owner: `.globe` rather than `.shell`, so the
+    furniture follows the map wherever it is mounted instead of following one page.
+  */
+  /*
+    The map's own furniture, in the same hand as the rest.
+
+    These were the last white rounded boxes on the page: a 4px radius, a white fill and a grey
+    drop shadow, sitting on paper. Everything here is an override of MapLibre's stylesheet, so
+    every rule has to undo something before it sets anything -- and `:global` because these are
+    nodes MapLibre creates, which Svelte's scoping never sees.
+
+    Some selectors carry a clause they do not need to match -- `:not(:empty)` here,
+    `.maplibregl-ctrl` on the attribution below -- purely to reach the specificity of the rule they
+    override. Without it they tie, and a tie is settled by whichever stylesheet the bundler emitted
+    last, which is not a thing to leave to a build.
+
+    The drawings come from `notebook/furniture.ts` as data URIs, redrawn on a surface change.
+  */
+  .globe :global(.maplibregl-ctrl-group:not(:empty)) {
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .globe :global(.maplibregl-ctrl-group button) {
+    /* The separator line between stacked buttons: each has its own drawn box now, so a border
+       between them draws a straight line across two wobbling ones. */
+    border: 0;
+    margin-bottom: 3px;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  /* The icons are MapLibre's own SVG data URIs on an inner span, in a fixed near-black that follows
+     no surface. Cleared, and both the mark and the box drawn on the button itself. */
+  .globe :global(.maplibregl-ctrl-group .maplibregl-ctrl-icon) {
+    background-image: none;
+  }
+
+  .globe :global(.maplibregl-ctrl-zoom-in) {
+    background-image: var(--ctrl-zoom-in);
+  }
+
+  .globe :global(.maplibregl-ctrl-zoom-out) {
+    background-image: var(--ctrl-zoom-out);
+  }
+
+  .globe :global(.maplibregl-ctrl-globe) {
+    background-image: var(--ctrl-globe);
+  }
+
+  .globe :global(.maplibregl-ctrl-globe-enabled) {
+    background-image: var(--ctrl-globe-enabled);
+  }
+
+  .globe :global(.maplibregl-ctrl-group button:hover) {
+    background-color: transparent;
+    filter: contrast(1.4);
+  }
+
+  /* MapLibre paints its own blue glow on focus, including for a mouse click. Rust, and only for a
+     keyboard, which is the same rule `base.css` applies to everything else. */
+  .globe :global(.maplibregl-ctrl-group button:focus) {
+    box-shadow: none;
+  }
+
+  .globe :global(.maplibregl-ctrl-group button:focus-visible) {
+    outline: 2px solid var(--rust);
+    outline-offset: -2px;
+  }
+
+  /*
+    The scale bar: a measure, drawn.
+
+    Three images and only one of them stretches. MapLibre sets this element's width in pixels to
+    whatever the current zoom makes a round distance, so the rule has to follow that width exactly
+    -- it is the measurement. The end ticks are pinned to each end at their drawn size.
+  */
+  .globe :global(.maplibregl-ctrl-scale) {
+    border: 0;
+    padding: 0 2px 6px;
+    background-color: transparent;
+    background-image: var(--scale-rule), var(--scale-left), var(--scale-right);
+    background-repeat: no-repeat;
+    background-position:
+      center bottom,
+      left bottom,
+      right bottom;
+    background-size:
+      100% 6px,
+      auto,
+      auto;
+    font-family: var(--font-mono);
+    font-size: var(--size-label);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--tracking-label);
+    color: var(--ink-soft);
+    /* A halo rather than a panel. This is the one label on the page that can end up over open
+       ocean, coastline or a data surface depending on where the camera is, and a box of paper
+       under it would be a box of paper in the middle of the map. */
+    text-shadow:
+      0 0 3px var(--paper),
+      0 0 6px var(--paper);
+  }
+
+  /*
+    The attribution, which is a licence notice before it is furniture.
+
+    Restyled, never shrunk: it keeps the body's own reading size rather than MapLibre's 10px, and
+    it sits on opaque paper rather than a half-transparent white so it stays readable over an ocean
+    at any zoom. The radius goes, the fill becomes paper, and the links take the page's rust.
+  */
+  .globe :global(.maplibregl-ctrl.maplibregl-ctrl-attrib) {
+    padding: 0.2rem 0.5rem;
+    border-radius: 0;
+    background-color: var(--paper);
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: var(--size-margin);
+    line-height: 1.5;
+    /* Opened, it is a readable column, not a banner: seven citations at full map width once
+       covered the middle third of the sphere and every radar station with it. */
+    max-width: min(56ch, 70vw);
+  }
+
+  .globe :global(.maplibregl-ctrl-attrib a) {
+    color: var(--rust);
+  }
+
+  /* The (i) that opens it. MapLibre's is a blue disc with a glyph in it; this is the same drawn box
+     the zoom buttons wear, with the mark left as a letter because a hand-drawn "i" at nine pixels
+     is a smudge rather than a character. */
+  .globe :global(.maplibregl-ctrl-attrib summary.maplibregl-ctrl-attrib-button) {
+    border-radius: 0;
+    background-color: transparent;
+    background-image: var(--ctrl-info);
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: var(--size-label);
+    font-style: italic;
+    text-align: center;
+    line-height: 24px;
+  }
+
+  .globe :global(.maplibregl-ctrl-attrib summary.maplibregl-ctrl-attrib-button)::before {
+    content: "i";
+  }
+
+  .globe :global(.maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-button) {
+    background-color: var(--paper-sunken);
+  }
+
+  /*
+    The station popup: a specimen label, not a dialog.
+
+    MapLibre ships it as a white rounded card with its own sans stack, and the fill does not
+    follow the surface -- so on night the page's tokens turned the text chalk while the card
+    stayed white, and the label all but vanished. Paper, ink and mono, like the attribution:
+    it reports measurements, it is not pressed, so it gets no drawn box.
+  */
+  .globe :global(.maplibregl-popup-content) {
+    padding: 0.6rem 0.9rem 0.7rem;
+    border-radius: 0;
+    background: var(--paper);
+    box-shadow: var(--shadow-sheet);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--size-margin);
+    letter-spacing: var(--tracking-body);
+    line-height: 1.5;
+  }
+
+  /* The pointer is a border-triangle MapLibre colours white, one border per anchor; every
+     anchor has to follow the paper or the tip gives the old card away. */
+  .globe :global(.maplibregl-popup-anchor-bottom .maplibregl-popup-tip),
+  .globe :global(.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip),
+  .globe :global(.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip) {
+    border-top-color: var(--paper);
+  }
+
+  .globe :global(.maplibregl-popup-anchor-top .maplibregl-popup-tip),
+  .globe :global(.maplibregl-popup-anchor-top-left .maplibregl-popup-tip),
+  .globe :global(.maplibregl-popup-anchor-top-right .maplibregl-popup-tip) {
+    border-bottom-color: var(--paper);
+  }
+
+  .globe :global(.maplibregl-popup-anchor-left .maplibregl-popup-tip) {
+    border-right-color: var(--paper);
+  }
+
+  .globe :global(.maplibregl-popup-anchor-right .maplibregl-popup-tip) {
+    border-left-color: var(--paper);
+  }
+
+  /* A station id is an identifier, so it is set as one. */
+  .globe :global(.maplibregl-popup-content strong) {
+    font-family: var(--font-mono);
+    font-size: var(--size-body);
+    font-weight: 500;
+    letter-spacing: var(--tracking-label);
+  }
+
+  .globe :global(.maplibregl-popup-content table) {
+    margin: 0.3rem 0;
+    border-collapse: collapse;
+  }
+
+  .globe :global(.maplibregl-popup-content th) {
+    padding: 0.1rem 0.6rem 0.1rem 0;
+    color: var(--ink-soft);
+    font-weight: 400;
+    text-align: left;
+  }
+
+  .globe :global(.maplibregl-popup-content td) {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .globe :global(.maplibregl-popup-content .caveat) {
+    margin: 0.2rem 0 0;
+    color: var(--pencil);
+    font-size: var(--size-label);
+    line-height: 1.55;
+  }
+
+  /* MapLibre's close button, kept bare: ink instead of its fixed near-black, a wash on hover
+     like every other control, and no white disc behind either state. */
+  .globe :global(.maplibregl-popup-close-button) {
+    padding: 0 0.4rem;
+    border-radius: 0;
+    color: var(--ink-soft);
+    font-size: 1rem;
+  }
+
+  .globe :global(.maplibregl-popup-close-button:hover) {
+    background-color: var(--paper-sunken);
+    color: var(--ink);
   }
 </style>
