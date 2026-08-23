@@ -291,7 +291,7 @@
   {:else if panel.kind === "intro"}
     <Introduction document_={opening} from={panel.from} to={panel.to} />
   {:else if panel.kind === "world"}
-    <World {base} side={panel.part === "map" ? "recto" : "verso"} />
+    <World {base} part={panel.part} />
   {:else if panel.kind === "absent"}
     <Absent chapter={panel.chapter} realm={panel.realm} />
   {:else if panel.kind === "blank"}
@@ -314,16 +314,20 @@
     {#if !finding}
       <p class="aside aside--quiet">This claim is not in the ledger.</p>
     {:else if panel.kind === "finding"}
-      <p class="chapter">{chapterOf(panel.key)?.title ?? ""}</p>
-      <Claim {finding} part="finding" />
+      <!-- The chapter's name on the leaf that opens it, and not again on its second: a phone splits
+           this page in two and the kicker twice reads as having turned back a page. -->
+      {#if panel.part !== "matters"}
+        <p class="chapter">{chapterOf(panel.key)?.title ?? ""}</p>
+      {/if}
+      <Claim {finding} part="finding" slice={panel.part} />
     {:else if panel.kind === "how"}
       <How {finding} />
     {:else if panel.kind === "figure"}
-      <Figure {finding} number={figureNumber(panel.key)} {base} at={panel.at} />
+      <Figure {finding} number={figureNumber(panel.key)} {base} at={panel.at} {narrow} />
     {:else if panel.kind === "record"}
-      <Claim {finding} part="record" onspecimen={toSpecimen} />
+      <Claim {finding} part="record" slice={panel.part} onspecimen={toSpecimen} />
     {:else if panel.kind === "bias"}
-      <Margin {finding} part="bias" />
+      <Margin {finding} part="bias" slice={panel.part} />
     {:else if panel.kind === "survived"}
       <Margin {finding} part="survived" />
     {:else if panel.kind === "panel" && panel.doc === "safeguards"}

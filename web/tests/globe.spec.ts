@@ -87,11 +87,31 @@ async function ready(page: Page): Promise<ReadyReport> {
  * which showed up as a layer reporting zero rendered features while being visible, source-loaded,
  * and pointed at, i.e. as a bug in the app rather than in the test.
  */
+/**
+ * Opens the tools, wherever this viewport keeps them.
+ *
+ * A narrow window is a phone now, and on a phone the world chapter is one leaf with the tools in a
+ * flap whose first depth is the clock alone. So a test that sets a small viewport to save GPU work --
+ * which the panel-versus-map test does deliberately, at 520px -- found no checkboxes and read every
+ * layer as `ticked=null`. Pulling the flap up is what a reader does; doing it here keeps the small
+ * viewport, which was chosen for the render cost and not to test a phone.
+ */
+async function openTools(page: Page): Promise<void> {
+  const grip = page.locator(".flap__grip");
+  if ((await grip.count()) === 0) return;
+  for (let taps = 0; taps < 3; taps += 1) {
+    if ((await page.locator(".flap .layers li").count()) > 0) return;
+    await grip.click();
+  }
+}
+
 async function explore(page: Page): Promise<void> {
   // Already there: the world chapter mounts the tools beside the map. What is still worth waiting
   // for is the camera, which is why this function exists at all -- and the panel appears only once
   // the layers have reported, so the deadline is the map's rather than the DOM's five seconds.
   await expect(page.locator(".explore")).toBeVisible({ timeout: 30_000 });
+  // And open, if this viewport keeps them folded away. See `openTools`.
+  await openTools(page);
   await settle(page);
 }
 
@@ -1171,6 +1191,16 @@ test("the drawn shore wobbles the same amount in both directions, at every latit
 });
 
 test("the panel and the map never disagree about what is drawn", async ({ page }) => {
+  /*
+    Ninety seconds, like every other test in this file that drives the map.
+
+    It takes 23 alone and it inherited the default 30, which was enough until the suite got slower --
+    it then failed on the deadline in a 14.8-minute run having passed in a 13.1-minute one. That is
+    not a flake to re-run: the work is ten layer toggles against a WebGL context sharing a GPU with
+    another worker, and a budget three seconds over the solo time was never a budget.
+  */
+  test.setTimeout(90_000);
+
   // A small viewport, and it costs this test nothing: what is asserted is layout properties and
   // checkbox state, neither of which depends on how many pixels MapLibre fills. What it saves is
   // real -- the toggle sweep below switches on the fifty-thousand-cell detectability wash, and at
@@ -1393,4 +1423,83 @@ test("the world chapter carries a live map, its controls, and the clock in its U
   await expect(page).toHaveURL(/[#&]ch=what-changed/);
   await expect(page).toHaveURL(/[#&]d=/);
   await expect(page.locator(".page--verso")).toContainText("What changed");
+});
+test("on a phone the world is one leaf, and the map stays under the flap", async ({ page }) => {
+  /*
+    ADR 0015 decision 8, closed. It recorded this as deliberately open: the spread gives the tools the
+    left page and the map the right, and a phone showing one page at a time therefore put the clock on
+    one leaf and the map on the next -- "so you cannot watch the map while you move the clock".
+
+    That is not a reachability problem, which is why nothing about swiping fixed it. The clock and the
+    layer switches are controls whose whole purpose is watching the map answer; on a separate leaf
+    they are not slow, they are pointless. So on a phone the chapter is *one* leaf: the globe fills
+    it and the tools are a flap tucked into its foot, in three depths -- the clock alone, the layers
+    as well, then the terms and the search.
+
+    The flap covers the foot of the map, which is the opposite of the correction this same chapter got
+    on a spread, where MapLibre's licence notice un-compacted itself over a quarter of the map. The
+    difference is who opened it. A reader pulling a flap up is not a control seizing the page, and the
+    objection was never that nothing may cover a map.
+  */
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("?debug=1#ch=the-world");
+
+  // One leaf for the whole chapter, and the map is on it.
+  await expect(page.locator("[data-leaf][data-chapter='the-world']")).toHaveCount(1);
+  const clock = page.locator(".flap .time input").first();
+  await expect(clock).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".globe canvas")).toBeVisible({ timeout: 30_000 });
+
+  /*
+    The measurement the whole design is for: at a peek, most of the leaf is still map, and the clock
+    is on screen at the same time. Asserted as a share rather than a pixel count so it survives a
+    different phone.
+  */
+  const peek = await page.evaluate(() => {
+    const flap = document.querySelector(".flap")!.getBoundingClientRect();
+    const canvas = document.querySelector(".globe canvas")!.getBoundingClientRect();
+    const track = document.querySelector(".flap .time input")!.getBoundingClientRect();
+    return {
+      mapShare: (Math.min(canvas.bottom, flap.top) - canvas.top) / window.innerHeight,
+      clockUnderFlapTop: track.top >= flap.top,
+      clockOnScreen: track.bottom <= window.innerHeight,
+    };
+  });
+  expect(peek.mapShare, `only ${Math.round(peek.mapShare * 100)}% of the leaf is map`).toBeGreaterThan(0.6);
+  expect(peek.clockUnderFlapTop, "the clock is drawn outside the flap that holds it").toBe(true);
+  expect(peek.clockOnScreen, "the clock is off the bottom of the screen").toBe(true);
+
+  // No layer list at a peek: it is the second question, and it is one tap away.
+  await expect(page.locator(".flap .layers li")).toHaveCount(0);
+
+  /*
+    And the map is not remounted when the flap moves, which is the expensive mistake available here.
+    Stamped on the canvas rather than counted: a fresh WebGL context would arrive as a fresh element
+    and lose every layer the reader had switched on.
+  */
+  await page.evaluate(() => {
+    document.querySelector(".globe canvas")!.setAttribute("data-same", "yes");
+  });
+
+  await page.locator(".flap__grip").click();
+  await expect(page.locator(".flap .layers li").first()).toBeVisible();
+  await page.locator(".flap__grip").click();
+  await expect(page.locator(".flap .search, .flap input[type='search']").first()).toBeVisible();
+  await page.locator(".flap__grip").click();
+  await expect(page.locator(".flap .layers li")).toHaveCount(0);
+
+  await expect(page.locator(".globe canvas[data-same='yes']")).toHaveCount(1);
+
+  // The flap never covers the folio or the realm tabs: the page's own foot is furniture, not canvas.
+  const clear = await page.evaluate(() => {
+    const flap = document.querySelector(".flap")!.getBoundingClientRect();
+    const folio = document.querySelector("[data-chapter='the-world'] .page__folio")?.getBoundingClientRect();
+    const realms = document.querySelector(".realms")?.getBoundingClientRect();
+    return {
+      folio: folio ? flap.bottom <= folio.top + 2 : true,
+      realms: realms ? flap.bottom <= realms.top + 2 : true,
+    };
+  });
+  expect(clear.folio, "the flap covers the folio").toBe(true);
+  expect(clear.realms, "the flap covers the realm tabs").toBe(true);
 });

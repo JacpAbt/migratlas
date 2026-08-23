@@ -8,6 +8,7 @@
     finding,
     draw = true,
     part = "all",
+    slice = "all",
     onspecimen,
   }: {
     finding: Finding;
@@ -26,6 +27,15 @@
      * to 2,564px. Nothing was shortened to make either fit.
      */
     part?: "all" | "finding" | "record";
+    /**
+     * Which half of the record, when a phone gives it two pages.
+     *
+     * A third value on `part` would have been the wrong shape: the gates below are written as
+     * `part !== "record"` and `part !== "finding"`, so anything new renders the banner, the plain
+     * sentence and the short caveat as well -- which is how a new page becomes a copy of an old one.
+     * This narrows the record rather than widening the switch.
+     */
+    slice?: "all" | "value" | "caveat" | "said" | "matters";
     onspecimen?: (key: number) => void;
   } = $props();
 
@@ -48,7 +58,7 @@
     prose. A grid row is as tall as its tallest member, and the margin is always the tallest member.
   -->
   <div class="claim__body">
-    {#if part !== "record"}
+    {#if part !== "record" && slice !== "matters"}
       <header class="claim__head">
         <Instrument kind={instrument} />
         <p class="claim__banner">{DIRECTION_LABEL[finding.direction]}</p>
@@ -62,10 +72,14 @@
       what the science says, and nothing here shortens anything -- a second register was added
       above the first.
     -->
-    {#if part !== "record"}
+    {#if part !== "record" && slice !== "matters"}
       <h2 class="claim__title">{finding.plain}</h2>
       <Rule seed={finding.key} {draw} />
+    {/if}
 
+    <!-- Why it matters, and on a phone its own leaf: the sentence is the finding and this is what
+         follows from it, which is the order the whole claim is arranged in. -->
+    {#if part !== "record" && slice !== "said"}
       <p class="claim__matters">{finding.matters}</p>
     {/if}
 
@@ -74,41 +88,49 @@
       figures, so a measurement set in it stops reading as a measurement -- and it never animates
       to its value, because a counting number reads as a score rather than as an interval.
     -->
-    {#if part !== "finding"}
+    {#if part !== "finding" && slice !== "caveat"}
       <p class="claim__value">{finding.value}</p>
     {/if}
 
     <!-- Gated one element at a time rather than in two blocks, so `part="all"` emits the same
          children in the same order it always did. The old shell mounts this component too. -->
-    {#if part !== "record"}
+    {#if part !== "record" && slice !== "said"}
       <p class="claim__short-caveat">{finding.plain_caveat}</p>
     {/if}
 
     {#if part !== "finding"}
       <div class="claim__prose">
-        <p class="claim__precise">
-          <span class="claim__register">Precisely</span>
-          {finding.claim}
-        </p>
+        {#if slice !== "caveat"}
+          <p class="claim__precise">
+            <span class="claim__register">Precisely</span>
+            {finding.claim}
+          </p>
+        {/if}
         <!-- Not on the record page in the book: `Plate` prints `finding.scope` in its own caption,
              so a spread showed the same sentence twice, two leaves apart, and the record page
              overflowed by up to 144px carrying the copy. -->
         {#if part === "all"}
           <p class="claim__scope">{finding.scope}</p>
         {/if}
-        <p class="claim__caveat">{finding.caveat}</p>
+        {#if slice !== "value"}
+          <p class="claim__caveat">{finding.caveat}</p>
+        {/if}
       </div>
 
-      <a
-        class="claim__method"
-        href={`${REPOSITORY}${finding.method}`}
-        rel="noopener"
-        target="_blank"
-      >
-        Method and pre-registration
-      </a>
+      <!-- With the caveat rather than with the number: the reader who wants the pre-registration is
+           the one who has just been told what would make the number wrong. -->
+      {#if slice !== "value"}
+        <a
+          class="claim__method"
+          href={`${REPOSITORY}${finding.method}`}
+          rel="noopener"
+          target="_blank"
+        >
+          Method and pre-registration
+        </a>
+      {/if}
     {/if}
-    {#if part !== "finding" && finding.specimen_key !== null && finding.specimen && onspecimen}
+    {#if part !== "finding" && slice !== "value" && finding.specimen_key !== null && finding.specimen && onspecimen}
       <!-- The claim's argument on one animal, reachable at last: computed in the reports layer
            with the same threshold the species cards use for "moved", so the invitation and the
            card it opens cannot disagree about what counts as moving. -->

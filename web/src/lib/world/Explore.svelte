@@ -22,6 +22,7 @@
     onpreselected = () => {},
     shown,
     ontoggle,
+    only = "all",
     onfocus,
   }: {
     layers: LoadedLayer[];
@@ -38,6 +39,8 @@
     /** Which layers are drawn, by name. The world chapter owns this list. */
     shown: readonly string[];
     ontoggle: (name: string, on: boolean) => void;
+    /** `clock` renders the time section alone, which is what the phone's flap shows at a peek. */
+    only?: "all" | "clock";
     onfocus: (at: [number, number]) => void;
   } = $props();
 
@@ -50,6 +53,15 @@
     renders it, so a checkbox cannot be ticked for a layer the map is not drawing.
   */
   const drawn = $derived(new Set(shown));
+
+  /*
+    Which sections to render, for the phone's flap at a peek.
+
+    `clock` is the date, its track and the play control -- the smallest thing that is still worth
+    having on screen with the map. Rendering a slice rather than a second copy of the markup, because
+    a phone-only clock written out again here is a control that drifts from the one on the spread.
+  */
+  const everything = $derived(only === "all");
   // From the clock, not false: the arrival's "watch a year of movement" starts the clock before
   // this panel exists, and a Play button that said Play while the year ran would be lying.
   let playing = $state(clock.playing);
@@ -99,6 +111,7 @@
 <aside class="explore" aria-label="Layers and time">
  <Sheet seed="explore">
   <div class="explore__slip">
+  {#if everything}
   <section>
     <h2>Drawn now</h2>
     <Rule seed="explore-layers" tone="pencil" />
@@ -138,9 +151,13 @@
     {/if}
   </section>
 
-  <section>
-    <h2>Time of year</h2>
-    <Rule seed="explore-time" tone="pencil" />
+  {/if}
+
+  <section class="time-of-year">
+    {#if everything}
+      <h2>Time of year</h2>
+      <Rule seed="explore-time" tone="pencil" />
+    {/if}
     <p class="clockface">{dayLabel} · week {Math.floor(day / 7) + 1}</p>
     <div class="time">
       <input
@@ -167,6 +184,10 @@
         {playing ? "Pause" : "Play"}
       </button>
     </div>
+    <!-- The terminator's hand and the note that explains it are the second question, and the flap's
+         peek is for the first. Both are one tap away, which is the same trade the map's own licence
+         notice makes on a spread. -->
+    {#if everything}
     <label class="utc">
       <span>Time of day, UTC</span>
       <input
@@ -184,13 +205,16 @@
       time-indexed. The gridded surfaces are one value per cell
       for their whole period, so the slider does not move them.
     </p>
+    {/if}
   </section>
 
+  {#if everything}
   <section>
     <h2>Find an animal</h2>
     <Rule seed="explore-search" tone="pencil" />
     <Search {selection} {surfaces} {preselect} {onpreselected} {onfocus} />
   </section>
+  {/if}
   </div>
  </Sheet>
 </aside>
@@ -466,16 +490,15 @@
     accent-color: var(--pencil);
   }
 
-  @media (max-width: 52rem) {
-    .explore {
-      /* Full width and top-anchored: a 20rem panel floating over a 390px globe leaves neither
-         usable. It scrolls, and the globe is reachable by scrolling the panel out of the way. */
-      top: auto;
-      right: var(--gap-tight);
-      bottom: calc(var(--strip) + var(--attrib));
-      left: var(--gap-tight);
-      width: auto;
-      max-height: 55%;
-    }
-  }
+  /*
+    A narrow block used to live here and it was the shell's, not the book's.
+
+    It anchored this panel to the window with `bottom: calc(var(--strip) + var(--attrib))` -- an
+    index strip and an attribution bar that were deleted with the shell -- and capped it at 55% of
+    the viewport. Those declarations survived the panel becoming a block in a page's column, where
+    `bottom` on a `relative` element is not a placement but an offset: it lifted the whole panel 79
+    pixels out of the flap that contains it, so a phone's clock was drawn above the flap it belongs
+    to and clipped away. Nothing replaces it -- where this sits on a phone is the flap's business,
+    and the flap is in `book/World.svelte`.
+  */
 </style>

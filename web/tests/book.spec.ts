@@ -1055,12 +1055,19 @@ test.describe("on a phone", () => {
     const opened = leafOpening(await leafLayout(), "what-changed");
 
     expect(state.written).toEqual([opened - 1, opened, opened + 1]);
-    // Named rather than counted, because this is the assertion that keeps a phone from running a
-    // MapLibre context most of a book away from the reader.
-    expect(state.leaves.slice(-2)).toEqual(["the-world:verso", "the-world:recto"]);
-    for (const leaf of [state.leaves.length - 2, state.leaves.length - 1]) {
-      expect(state.written).not.toContain(leaf);
-    }
+    /*
+      Named rather than counted, because this is the assertion that keeps a phone from running a
+      MapLibre context most of a book away from the reader.
+
+      One world leaf, not two. The spread gives the tools a page and the map the page facing it; a
+      phone puts the globe on one leaf with the tools in a flap over its foot, because a clock on a
+      separate leaf from the map it moves is not slow, it is pointless. So the tail of the book is a
+      single leaf and this used to name a pair.
+    */
+    expect(state.leaves.slice(-1)).toEqual(["the-world:verso"]);
+    expect(state.written, "the phone is holding a map at the far end of the book").not.toContain(
+      state.leaves.length - 1,
+    );
   });
 
   test("a deep link opens on its chapter rather than scrolling to it", async ({ page }) => {
@@ -1100,14 +1107,22 @@ test.describe("on a phone", () => {
     expect(printed).toEqual(Array.from({ length: printed.length }, (_, step) => step + 1));
   });
 
-  test("a phone carries no leaf the spread only needed to pad with", async ({ page }) => {
+  test("a phone carries no padding, and splits what a narrow column cannot hold", async ({
+    page,
+  }) => {
     /*
-      The spread pads each argument to an even page count so a leaf ending one never faces a leaf
-      starting the next. A phone shows one page at a time and has nothing to pad against, so those
-      blanks are swipes onto nothing -- four of them, when this was the spread's list flattened.
+      **Rewritten once already, and the first version's premise is the interesting part.**
 
-      Counted against the spread rather than written down: the two lists come from one set of
-      authored pages, so the phone's is shorter by exactly the padding and by nothing else.
+      It said the phone's list is the spread's minus the padding, and asserted it was shorter. True
+      when the two arrangements differed only by padding, and false the moment the phone started
+      splitting: the record is two pages there and one on a spread, and the introduction takes one
+      passage a leaf instead of two, so the phone is now *longer* -- 86 leaves against 78 spread
+      pages. An assertion about a count was standing in for two facts, which is why it broke.
+
+      So both facts, separately. No padding: the spread's blanks exist to keep one argument off the
+      next one's leaf, and a phone showing one page at a time has nothing to pad against, so it
+      carries none at all. And the splits: every page of the spread is present, and the panels that
+      overflowed a 375px column are present more than once.
     */
     const { leavesOf, spreadsOf } = await import("../src/lib/book/pages");
     const { CHAPTERS: chapters } = await import("../src/lib/story");
@@ -1121,14 +1136,29 @@ test.describe("on a phone", () => {
     const leaves = leavesOf(sources, chapters);
     const spreads = spreadsOf(sources, chapters);
 
-    expect(leaves.length, "the phone gained pages rather than losing padding").toBeLessThan(
-      spreads.length * 2,
-    );
-    // And every page the spread carries, other than its padding, is a leaf: same book, arranged twice.
-    const carried = spreads
-      .flatMap((spread) => [spread.verso, spread.recto])
-      .filter((panel) => panel.kind !== "blank").length;
-    expect(leaves.filter((leaf) => leaf.panel.kind !== "blank").length).toBe(carried);
+    expect(
+      leaves.filter((leaf) => leaf.panel.kind === "blank"),
+      "a phone carries a leaf that exists only to pad a spread",
+    ).toEqual([]);
+    expect(
+      spreads.flatMap((spread) => [spread.verso, spread.recto]).filter((p) => p.kind === "blank")
+        .length,
+      "the spread stopped padding, which is what those blanks are for",
+    ).toBeGreaterThan(0);
+
+    // The record: one page on a spread, two on a phone, for every claim that has one.
+    const records = (panels: { kind: string }[]) => panels.filter((p) => p.kind === "record").length;
+    const wide = records(spreads.flatMap((spread) => [spread.verso, spread.recto]));
+    expect(records(leaves.map((leaf) => leaf.panel))).toBe(wide * 2);
+
+    // Nothing was lost in the rearranging: every kind the spread carries, the phone carries.
+    const kinds = (panels: { kind: string }[]) => new Set(panels.map((p) => p.kind));
+    for (const kind of kinds(spreads.flatMap((spread) => [spread.verso, spread.recto]))) {
+      if (kind === "blank") continue;
+      expect(kinds(leaves.map((leaf) => leaf.panel)), `the phone has no ${kind} page`).toContain(
+        kind,
+      );
+    }
 
     await openLeaves(page, "#ch=how-to-read");
     await expect(page.locator("[data-leaf]")).toHaveCount(leaves.length);
@@ -1180,6 +1210,75 @@ test.describe("on a phone", () => {
     const state = await survey(page);
     const opened = leafOpening(await leafLayout(), "what-did-not");
     expect(state.scrollLeft).toBe(state.offsets[opened]);
+  });
+
+  test("no leaf overflows unless it holds one indivisible thing", async ({ page }) => {
+    /*
+      The phone's answer to the guard that walks the spread, and it is deliberately not the same rule.
+
+      Seventeen of the phone's leaves scrolled when it started arranging its own pages. Eleven were
+      fixed by splitting at seams the material already had -- the record into the measurement and the
+      caveat, the assessment into three domains and three, the coverage summary away from its table of
+      sources, the ribbon's disagreement away from the paragraph that earns it and away from the
+      caveat that qualifies both -- plus one introduction passage to a leaf and a reading size three
+      percent smaller than the token's.
+
+      Six remain and they are all one of two shapes:
+
+      - **one paragraph.** The attribution caveat runs to fourteen hundred characters, which is about
+        thirty-one lines in a 375px column. No pagination fixes that, and splitting a sentence across
+        two leaves is worse than letting the paragraph scroll.
+      - **one control.** A knob is a question and its settings; half a knob on a leaf is not a page,
+        it is a broken control.
+
+      So the rule is not "nothing overflows". It is that nothing overflows *except* where the page
+      holds a single indivisible thing -- which forbids the actual defect, a leaf of mixed content
+      running off the bottom, while admitting the two cases a book cannot paginate away. A guard that
+      demanded zero would have been met by shrinking the type until it was true, which is the trade
+      the owner refused when this started.
+    */
+    await openLeaves(page, "#ch=how-to-read");
+    const total = await page.locator("[data-leaf]").count();
+    expect(total, "no leaves to walk").toBeGreaterThan(20);
+
+    const offenders: string[] = [];
+    for (let index = 0; index < total; index += 1) {
+      // Scrolled into view because a leaf outside the mounted window renders nothing, which would
+      // measure as a page that fits.
+      await page.locator("[data-leaf]").nth(index).scrollIntoViewIfNeeded();
+      /*
+        And settled before measuring. A leaf mounts when the rail reaches it, so the reading taken in
+        the same frame catches the page mid-layout -- which reported four leaves over that are not,
+        including one by 67px that measures 5 once it has settled.
+      */
+      await expect
+        .poll(() =>
+          page.evaluate((at) => {
+            const inner = document
+              .querySelectorAll("[data-leaf]")[at]?.querySelector(".page__inner");
+            return inner ? inner.scrollHeight : 0;
+          }, index),
+        )
+        .toBeGreaterThan(0);
+      const verdict = await page.evaluate((at) => {
+        const inner = document.querySelectorAll("[data-leaf]")[at]?.querySelector(".page__inner");
+        if (!inner) return null;
+        const over = inner.scrollHeight - inner.clientHeight;
+        // Two pixels of slack for sub-pixel layout, and no more: this is a budget, not a target.
+        if (over <= 2) return null;
+        const paragraphs = inner.querySelectorAll("p").length;
+        const knobs = inner.querySelectorAll(".knob").length;
+        if (knobs === 1) return null;
+        if (knobs === 0 && paragraphs <= 1) return null;
+        const head = (inner.textContent ?? "").trim().slice(0, 40).replace(/\s+/g, " ");
+        return `leaf ${at} by ${over}px (${paragraphs} paragraphs, ${knobs} knobs): ${head}`;
+      }, index);
+      if (verdict) offenders.push(verdict);
+    }
+
+    expect(offenders, `${offenders.length} leaves of ${total} overflow with mixed content`).toEqual(
+      [],
+    );
   });
 
   test("the fan shuts without picking anything", async ({ page }) => {

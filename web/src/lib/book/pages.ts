@@ -47,17 +47,47 @@ import type { Finding } from "../ledger";
 export type Panel =
   | { kind: "opening" }
   | { kind: "intro"; from: number; to: number }
-  | { kind: "finding"; key: string }
+  /**
+   * What was found: the sentence, and why it matters -- one page, or two.
+   *
+   * `all` is the spread's. A phone takes them apart because the four blocks together ran 21 to 67px
+   * past a 375px leaf, and the seam is the owner's own reading order: what we found, and then what
+   * follows from it. The plain sentence alone on a leaf is also the better opening.
+   */
+  | { kind: "finding"; key: string; part: "all" | "said" | "matters" }
   /** How it was measured, in plain words: the page between the finding and its figure. */
   | { kind: "how"; key: string }
   /** Which of the figure's declared pages, by index into `figures.ts`. */
   | { kind: "figure"; key: string; at: number }
-  | { kind: "record"; key: string }
-  | { kind: "bias"; key: string }
+  /**
+   * The number, with its scope and its caveat -- in one page, or in two.
+   *
+   * `all` is the spread's. A phone gets `value` and `caveat`, because this is the panel that
+   * overflowed a 375px column worst: 517 pixels past the leaf on the coverage claim, whose value is
+   * two eight-digit counts and two percentages. The seam is the one the register already has -- the
+   * measurement and the precise sentence, then what would make them wrong.
+   */
+  | { kind: "record"; key: string; part: "all" | "value" | "caveat" }
+  /**
+   * The risk-of-bias assessment: six domains on one page, or half of them on each of two.
+   *
+   * The table is the tallest thing in the margin -- 433 to 1,092px on the spread, which is why it is
+   * a page at all -- and in a 375px column every domain's finding is a paragraph. Split by domain,
+   * because a row is the unit the assessment already has.
+   */
+  | { kind: "bias"; key: string; part: "all" | "first" | "rest" }
   | { kind: "survived"; key: string }
   /** One knob or one refusal, from whichever of the two documents keys it to this claim. */
   | { kind: "panel"; doc: "safeguards" | "dial"; key: string; part: "knobs" | "refusals"; at: number }
-  | { kind: "world"; part: "map" | "apparatus" }
+  /**
+   * The world: its map, its tools, or both on one leaf.
+   *
+   * A spread gives the tools the left page and the map the right. A phone cannot: the clock and the
+   * layer switches are controls whose whole purpose is watching the map answer, and on separate
+   * leaves that is not slow, it is pointless -- which ADR 0015 decision 8 left open and named. So
+   * `all` is the phone's: one leaf, the globe filling it, and the tools in a flap over its foot.
+   */
+  | { kind: "world"; part: "map" | "apparatus" | "all" }
   /**
    * A chapter the realm filter emptied, which is a different silence from a missing claim.
    *
@@ -111,6 +141,15 @@ interface Section {
  */
 const PASSAGES_PER_PAGE = 2;
 
+/**
+ * And one on a phone.
+ *
+ * Two passages of 171 to 426px fit an 826px page at the spread's reading scale. In a 375px column
+ * the same prose reflows about 1.8 times taller and the first pair ran 22px past the leaf, which is
+ * the whole argument for the phone arranging these pages itself.
+ */
+const PASSAGES_PER_LEAF = 1;
+
 /** The documents the pagination depends on. All of them, because a page count cannot arrive late. */
 export interface Sources {
   findings: readonly Finding[];
@@ -147,7 +186,7 @@ function fold(chapter: Chapter, pages: readonly Panel[], from: number): Spread[]
  * safeguard knobs. Padding every claim to the longest would have added a dozen blank spreads, and a
  * book where every chapter is the same length is a form rather than a book.
  */
-function claimPages(key: string, sources: Sources): Panel[] {
+function claimPages(key: string, sources: Sources, narrow: boolean): Panel[] {
   /*
     What we found, how we found it, the picture, then the numbers.
 
@@ -157,9 +196,32 @@ function claimPages(key: string, sources: Sources): Panel[] {
     to 680 of its 826 and a plain method is another 150 -- the split is where the material already
     had a seam, which is the rule every other split in this file follows.
   */
-  const pages: Panel[] = [{ kind: "finding", key }, { kind: "how", key }];
-  figurePages(key).forEach((_page, at) => pages.push({ kind: "figure", key, at }));
-  pages.push({ kind: "record", key }, { kind: "bias", key }, { kind: "survived", key });
+  const pages: Panel[] = narrow
+    ? [
+        { kind: "finding", key, part: "said" },
+        { kind: "finding", key, part: "matters" },
+        { kind: "how", key },
+      ]
+    : [{ kind: "finding", key, part: "all" }, { kind: "how", key }];
+  figurePages(key, narrow).forEach((_page, at) => pages.push({ kind: "figure", key, at }));
+  // The record is one page on a spread and two on a phone. Its own seam, stated where the panel is.
+  pages.push(
+    ...(narrow
+      ? ([
+          { kind: "record", key, part: "value" },
+          { kind: "record", key, part: "caveat" },
+        ] as Panel[])
+      : ([{ kind: "record", key, part: "all" }] as Panel[])),
+  );
+  pages.push(
+    ...(narrow
+      ? ([
+          { kind: "bias", key, part: "first" },
+          { kind: "bias", key, part: "rest" },
+        ] as Panel[])
+      : ([{ kind: "bias", key, part: "all" }] as Panel[])),
+  );
+  pages.push({ kind: "survived", key });
 
   /*
     One knob and one refusal per page, in the order `claim/Evidence.svelte` fixed: how much to trust
@@ -196,11 +258,12 @@ function claimPages(key: string, sources: Sources): Panel[] {
  * nothing at all. A phone test looking for content on the leaf before the second chapter is what
  * found it.
  */
-function introPages(doc: IntroductionDocument | null): Panel[] {
+function introPages(doc: IntroductionDocument | null, narrow: boolean): Panel[] {
   const passages = doc?.passages.length ?? 0;
+  const each = narrow ? PASSAGES_PER_LEAF : PASSAGES_PER_PAGE;
   const pages: Panel[] = [{ kind: "opening" }];
-  for (let from = 0; from < passages; from += PASSAGES_PER_PAGE) {
-    pages.push({ kind: "intro", from, to: Math.min(from + PASSAGES_PER_PAGE, passages) });
+  for (let from = 0; from < passages; from += each) {
+    pages.push({ kind: "intro", from, to: Math.min(from + each, passages) });
   }
   return pages;
 }
@@ -217,6 +280,7 @@ function sectionsOf(
   sources: Sources,
   chapters: readonly Chapter[],
   realm: string,
+  narrow: boolean,
 ): Section[] {
   const opening = chapters[0];
   const world = chapters[chapters.length - 1];
@@ -224,16 +288,18 @@ function sectionsOf(
 
   for (const chapter of chapters) {
     if (chapter === opening) {
-      out.push({ chapter, pages: introPages(sources.introduction) });
+      out.push({ chapter, pages: introPages(sources.introduction, narrow) });
       continue;
     }
     if (chapter === world) {
       out.push({
         chapter,
-        pages: [
-          { kind: "world", part: "apparatus" },
-          { kind: "world", part: "map" },
-        ],
+        pages: narrow
+          ? [{ kind: "world", part: "all" }]
+          : [
+              { kind: "world", part: "apparatus" },
+              { kind: "world", part: "map" },
+            ],
       });
       continue;
     }
@@ -246,7 +312,7 @@ function sectionsOf(
     let drawn = 0;
     for (const finding of published) {
       if (!inRealm(finding, realm)) continue;
-      out.push({ chapter, pages: claimPages(finding.key, sources) });
+      out.push({ chapter, pages: claimPages(finding.key, sources, narrow) });
       drawn += 1;
     }
 
@@ -280,7 +346,7 @@ export function spreadsOf(
   let chapter: Chapter | null = null;
   let at = 0;
 
-  for (const section of sectionsOf(sources, chapters, realm)) {
+  for (const section of sectionsOf(sources, chapters, realm, false)) {
     // `at` is the offset within the chapter, so it restarts where the chapter does.
     if (section.chapter !== chapter) {
       chapter = section.chapter;
@@ -314,7 +380,7 @@ export function leavesOf(
   let chapter: Chapter | null = null;
   let at = 0;
 
-  for (const section of sectionsOf(sources, chapters, realm)) {
+  for (const section of sectionsOf(sources, chapters, realm, true)) {
     if (section.chapter !== chapter) {
       chapter = section.chapter;
       at = 0;

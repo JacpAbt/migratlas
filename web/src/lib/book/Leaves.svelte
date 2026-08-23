@@ -285,9 +285,26 @@
       first line -- the chapter kicker was printed under "HAND CLEAR DYSLEXIA" on every leaf of the
       book. Measured: the bar's bottom edge is 35px, so this is that plus air.
     */
+    /*
+      The phone's reading size, which is its own.
+
+      The spread computes type as a fraction of `--book-h`, so a page is a scaled copy of itself at
+      every window. A phone has no such ratio to scale by -- its leaf is whatever the screen is -- so
+      it took the raw token, which was chosen for a 677px page. Three percent smaller buys about 23
+      pixels of leaf, which is a line and a half, and 14.7px is comfortably inside what a phone wants
+      for body text. Anything more than this and the fix would be shrinking the type until it fits,
+      which is the trade the owner already refused.
+    */
+    --size-body: 0.92rem;
+
     --page-pad: clamp(1.1rem, 4.5vw, 2rem);
-    --page-head: 3.1rem;
-    --page-foot: 4.25rem;
+    /*
+      Both measured against the furniture rather than rounded up. The bar's bottom edge is 35px and
+      the thumb is 51 tall, so these clear each by about 6 -- and the 18 pixels the first guesses
+      were over by are 18 pixels of page, which on a leaf this narrow is a line and a half.
+    */
+    --page-head: 2.6rem;
+    --page-foot: 3.6rem;
 
     position: relative;
     height: 100%;

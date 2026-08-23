@@ -65,6 +65,15 @@ export const world = $state({
     reads here, so the two cannot disagree about what is drawn.
   */
   drawn: [] as string[],
+  /*
+    How far the phone's tool flap is open: the clock only, the layers as well, or everything.
+
+    Here rather than inside the component because the render window mounts three leaves and drops the
+    rest -- a reader who opens the flap, swipes back a page to re-read a claim and returns would find
+    it shut, which is the state being thrown away rather than remembered. `peek` is the default
+    because the clock is the control that most needs the map beside it.
+  */
+  flap: "peek" as "peek" | "half" | "full",
 });
 
 /**

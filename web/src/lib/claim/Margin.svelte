@@ -7,6 +7,7 @@
   let {
     finding,
     part = "all",
+    slice = "all",
   }: {
     finding: Finding;
     /**
@@ -20,6 +21,14 @@
      * and 304 on the two claims with the longest audits, so they are two pages that face each other.
      */
     part?: "all" | "bias" | "survived";
+    /**
+     * Which half of the assessment, when a phone gives it two pages.
+     *
+     * A narrower value on `part` would have been the wrong shape, for the reason `Claim.svelte`'s
+     * own slice records: these gates read `part !== "survived"` and `part !== "bias"`, so a third
+     * value renders both sections rather than half of one.
+     */
+    slice?: "all" | "first" | "rest";
   } = $props();
 
   // Measured for the same reason the rule is: stretched, a 3px hook on a 400px column becomes an
@@ -35,7 +44,17 @@
 
   // A domain reading "not applicable" is a real answer and is shown as one. What must never happen
   // is a domain missing from the block entirely, which would read as "no risk here".
-  const shown = $derived(finding.bias);
+  const shown = $derived.by(() => {
+    if (slice === "all") return finding.bias;
+    // Halved rather than cut at a fixed three, so five domains split 3/2 and seven split 4/3 --
+    // `composition-stable` has five, and a hard number would have left a page with two rows on it.
+    const half = Math.ceil(finding.bias.length / 2);
+    return slice === "first" ? finding.bias.slice(0, half) : finding.bias.slice(half);
+  });
+
+  /* The heading says which half. "Risk of bias" twice in two swipes reads as a repeated page rather
+     than as a continued one. */
+  const heading = $derived(slice === "rest" ? "Risk of bias, continued" : "Risk of bias");
 </script>
 
 <!--
@@ -60,7 +79,7 @@
   <div class="margin__body">
     {#if part !== "survived"}
     <section>
-      <h3>Risk of bias</h3>
+      <h3>{heading}</h3>
       <dl class="bias">
         {#each shown as domain (domain.domain)}
           <dt class="bias__domain">{domain.domain}</dt>

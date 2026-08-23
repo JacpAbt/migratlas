@@ -12,22 +12,29 @@
     number,
     base,
     at = 0,
+    narrow = false,
   }: {
     finding: Finding;
     number: number;
     base: string;
     /** Which of the figure's declared pages. A plate has only the one. */
     at?: number;
+    /*
+      Which list `at` indexes, which is the container's to say.
+
+      `figures.ts` declares a narrow page list for the two figures that do not fit a 375px column, so
+      the same index means a different page on a phone -- and resolving it against the wide list there
+      would render the reading where the sources belong. `Reader` knows which container is mounted;
+      this component does not, and should not have to guess from a media query it cannot see.
+    */
+    narrow?: boolean;
   } = $props();
 
-  const leaf = $derived(figurePages(finding.key)[at] ?? figurePages(finding.key)[0]!);
+  const declared = $derived(figurePages(finding.key, narrow));
+  const leaf = $derived(declared[at] ?? declared[0]!);
 
   /** Which chart, counting only the chart pages before this one. */
-  const chart = $derived(
-    figurePages(finding.key)
-      .slice(0, at)
-      .filter((page) => page.part === "chart").length,
-  );
+  const chart = $derived(declared.slice(0, at).filter((page) => page.part === "chart").length);
 
   const figure = $derived(FIGURES[finding.key]);
 
