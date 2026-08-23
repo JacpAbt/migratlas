@@ -1023,30 +1023,57 @@ test.describe("on a phone", () => {
     const before = await page.evaluate(() => history.length);
 
     /*
-      Three leaves crossed inside the settle window, with real gaps so each one is a scroll event the
-      browser actually dispatches. Reported per leaf this would push three entries and make the back
-      button a rewind of the gesture; the URL waits for the rail to stop instead.
+      Three leaves crossed in one gesture, and the entry count taken from what the rule actually
+      promises rather than from a race.
+
+      **This asserted a coincidence and CI collected on it.** It crossed the three with 40ms of real
+      wall-clock between them and then demanded exactly one history entry -- which holds only while
+      the whole loop finishes inside the 140ms settle window. On a loaded runner it does not, and
+      three separate settles is the component behaving *correctly*: a rail that stops for a fifth of
+      a second has stopped, and the URL is supposed to say so. The test was measuring the runner.
+
+      So the flick is driven in a single task, with no await between the assignments. The debounce can
+      only fire once after the last of them however slow the machine is, which is the mechanism this
+      is about -- and the loop with gaps follows, asserting the weaker thing that is true either way:
+      fewer entries than leaves crossed.
     */
     const leaves = await leafLayout();
     const crossed = ["what-changed", "what-did-not", "cannot-see"].map((slug) =>
       leafOpening(leaves, slug),
     );
-    await page.evaluate(async (leaves) => {
+    await page.evaluate((stops) => {
       const rail = document.querySelector<HTMLElement>(".rail")!;
       const sheets = rail.querySelectorAll<HTMLElement>("[data-leaf]");
-      for (const leaf of leaves) {
+      for (const leaf of stops) rail.scrollLeft = sheets[leaf]!.offsetLeft;
+    }, crossed);
+
+    await expect(page).toHaveURL(/[#&]ch=cannot-see/);
+    expect(
+      await page.evaluate(() => history.length),
+      "a flick inside one task pushed more than one entry",
+    ).toBe(before + 1);
+
+    // And the paper kept up with the flick, which is the other cadence: mounted at once, so a fling
+    // never lands on blank paper. Read here, before the return trip moves the reader again.
+    const landed = crossed[crossed.length - 1]!;
+    expect((await survey(page)).written).toEqual([landed - 1, landed, landed + 1]);
+
+    // With real pauses between them, still fewer entries than leaves crossed -- a stop is a stop,
+    // but a leaf passed through is never one.
+    const midFlick = await page.evaluate(() => history.length);
+    await page.evaluate(async (stops) => {
+      const rail = document.querySelector<HTMLElement>(".rail")!;
+      const sheets = rail.querySelectorAll<HTMLElement>("[data-leaf]");
+      for (const leaf of [...stops].reverse()) {
         rail.scrollLeft = sheets[leaf]!.offsetLeft;
         await new Promise((settle) => setTimeout(settle, 40));
       }
     }, crossed);
-
-    await expect(page).toHaveURL(/[#&]ch=cannot-see/);
-    expect(await page.evaluate(() => history.length)).toBe(before + 1);
-
-    // And the paper kept up with the flick, which is the other cadence: mounted at once, so a fling
-    // never lands on blank paper.
-    const landed = crossed[crossed.length - 1]!;
-    expect((await survey(page)).written).toEqual([landed - 1, landed, landed + 1]);
+    await expect(page).toHaveURL(/[#&]ch=what-changed/);
+    expect(
+      (await page.evaluate(() => history.length)) - midFlick,
+      "the URL was reported per leaf crossed rather than per stop",
+    ).toBeLessThan(crossed.length);
   });
 
   test("only the leaf in view and its neighbours carry anything", async ({ page }) => {

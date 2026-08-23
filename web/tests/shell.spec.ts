@@ -541,10 +541,15 @@ test("a claim's specimen button opens the fish that carries its argument", async
   await expect(invitation).toBeVisible();
   await invitation.click();
 
-  // The preselect is consumed through the same code path as a visitor's click, which runs after
-  // explore's data is up -- and the wave made that load heavier. CI hit 5s with the study still
-  // on its way; this is the load-gated wait other tests already get, not a new patience.
-  await expect(page.locator(".study")).toBeVisible({ timeout: 15_000 });
+  /*
+    The preselect is consumed through the same code path as a visitor's click, which runs after
+    explore's data is up -- and the wave made that load heavier. CI hit 5s with the study still on its
+    way, then 15 once the suite reached twelve minutes and this path was waiting on the map's data and
+    a taxon fetch behind two workers' WebGL. Thirty, for the reason the map helpers already carry:
+    the number is about how long the *work* takes, and every time it has been left at a default
+    chosen for DOM latency it has failed on a runner rather than on a defect.
+  */
+  await expect(page.locator(".study")).toBeVisible({ timeout: 30_000 });
   await expect(page.locator(".study")).toContainText("north");
 });
 
