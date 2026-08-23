@@ -1,9 +1,9 @@
 # Migratlas
 
-A globe of animal movement — where animals are, how their movements have changed over decades,
-what is driving the change, and where they are heading.
+A field notebook about animal movement — where animals go, how it has changed over decades, what is
+driving the change, and where the evidence runs out. The whole world map is in the back pocket.
 
-> **Status: Phase 2a.** 9 findings published and recomputed from the lake on every build, across
+> **Status: v1.0.0.** 9 findings published and recomputed from the lake on every build, across
 > 3 realms and 35 registered sources. Live at
 > [jacpabt.github.io/migratlas](https://jacpabt.github.io/migratlas).
 > The counts are guarded by `tests/test_readme_status.py` — they drifted twice when typed freehand.
@@ -12,12 +12,24 @@ what is driving the change, and where they are heading.
 
 ## What this is
 
-An interactive globe backed by a research pipeline. The globe is the visible half; the half that
-matters is the attempt to answer *why* movements are changing, rather than only showing that they are.
+A book you read, backed by a research pipeline. Reading it is the visible half; the half that matters
+is the attempt to answer *why* movements are changing, rather than only showing that they are.
+
+It is arranged as a notebook because the argument has an order. An opening that says what is being
+studied and why, before it says what was found. Chapters that are the argument — what changed, what
+did not, what cannot be seen, what can be predicted, why — each filterable by realm, because air, sea
+and land are what every source states and "birds" is a label the aerial instrument cannot support.
+Every claim in four registers: what we found in plain words, how we found it, a drawn plate, then the
+number with its scope and its caveat. And the world in the back pocket, where every published layer
+is offered and nothing is argued over the top of it.
+
+One authored book, two containers. A spread on a desk, and a phone that paginates the same pages its
+own way — because a 375px column is not a 677px page, and forcing one shape onto both is worse than
+letting each be itself.
 
 Three things have to be true at once, or the project isn't worth doing:
 
-1. **A shipped artifact** — a globe that is pleasant to use and cheap to host.
+1. **A shipped artifact** — a book that is pleasant to read and cheap to host.
 2. **Sound research** — change detection that replicates a published result before extending it,
    attribution with a real identification strategy, forecasts that admit where they extrapolate.
 3. **Engineering that holds up** — typed, tested, reproducible from a clean clone.
@@ -85,8 +97,14 @@ range-requests them. There is no application server to run, secure or pay for.
 sources ──► ingest ──► evidence lake ──► metrics / models ──► ethics gate ──► tiles ──► CDN
             (Parquet, evidence-typed, realm-tagged)                                      │
                                                                                          ▼
-                                                                       MapLibre globe (static)
+                                                                    the book (static), and one
+                                                                    MapLibre globe in its back
+                                                                    pocket
 ```
+
+Each claim's map is a **drawn plate** rather than a live one — hand-inked coastlines, a graticule and
+a ring on the ground the claim is about, with a key for the three marks it actually carries. That is
+why a chapter of claims boots no GPU: the globe is mounted once, by the chapter whose subject it is.
 
 The frontend is **MapLibre GL JS v6 with globe projection, and no deck.gl in globe mode** — an
 evidence-based choice, not a preference. deck.gl's `GlobeView` is still experimental with no basemap
@@ -112,10 +130,16 @@ Ordered so each phase is the foundation of the next, rather than the most exciti
 | **1d** | Can 6M mammal track fixes carry a timing trend? | **no** — 2 of 51 cells reach fifteen years, and changing the collar moves the date by 46.8 days |
 | **1e** | Did southern-African bird distributions change between two atlases? | **no net change** — median Δψ −0.007 across 512 species on 496 shared cells |
 | **1i** | Does the thermal-tracking measure transfer across realm and hemisphere? | **no** — the two spatial records agree across the equator; the phenological one sits 0.68 from both |
+| **1h** | Do two collared herds show a trend in how far they move between seasons? | **no** — −1.84 ± 3.89 km/decade over 341 elk animal-years, +1.16 ± 2.13 over 219 reindeer |
 | **2a** | How much of the change is attributable to human influence? | **−0.30 of the −0.56**, `f` = 0.98 across 15 CMIP6 models |
-| **2b** | What drives an individual animal's decisions? | not started |
+| **2b** | What drives an individual animal's decisions? | pre-registered — conditional logistic on 2h steps, four covariates fixed in advance; the terrain fetch is next |
 | **3a** | Where is movement *predictable* at all? | mostly nowhere — autumn timing above chance at 20/143 radar stations, spring at the false-positive rate; marine and herd halves excluded by their own registered rules |
-| **3** | Where will they be? | not started — licensed only where 3a's map is not empty |
+| **3b** | Does the marine record survive at the scale its own null demanded? | stopped by its own rule — the gear salvage recovered 17 single-gear segments and only 10 carried 20 years of in-situ temperature, against a registered floor of 12 |
+| **3c** | What moves together, and what drives it? | one known signal of two — sea-surface temperature to plankton bloom detected cleanly, winter NAO to band green-up not, so the stop condition fired and no hypothesis edge was interpreted |
+| **3d** | Would the two-stage forecast have worked, graded on the forecasts actually issued? | **no, and it refused its own licence** — the driver half carries real signal (map-median r +0.344) and the whole pipeline still failed chance |
+| **3e** | Marine at its real scale, inside the satellite era | 18 units — the heterogeneity is emphatic (Q 235.7 against a bar of 27.6), and warming does not predict shifting (+0.04 ± 0.18) |
+| **3f** | Can a pooled response model earn more skill than 3a found? | pre-registered, not run — the condition #57 named for itself |
+| **3** | Where will they be? | not started — licensed only where 3a's map is not empty, and 3d refused that licence on the evidence |
 
 Phase 1a replicates Horton et al. 2020 on their own window before extending it — reproducing a known
 finding first is what makes the extension believable.
@@ -132,6 +156,13 @@ failed, so those bands are excluded from every claim. And the evidence has cross
 the data that would explain it has not — **35.5% of the time-series rows are southern, against 0.80%
 of the driver samples** — computed rather than estimated, and published as a finding in its own
 right. Global extent, measurable change and explainable change are, so far, three different data.
+
+Four of those phases stopped themselves. 3b fell below a floor it had registered in advance, 3c
+interpreted no hypothesis edge because one of its two calibrations failed, 3d graded eight blind
+predictions and refused the licence it was written to grant, and 3e found the opposite depth
+interaction to the one registered and published it as false. Each is in the ledger or the method note
+as a result, not as a delay — a pre-registration that turned out wrong is recorded as a correction
+rather than edited away, and that convention is the most valuable thing in this repository.
 
 Method choices are frozen in [`docs/methods/`](docs/methods/) *before* held-out years are touched.
 
