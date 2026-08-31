@@ -751,6 +751,15 @@ def report_phase1m() -> None:
     print(phase1m.render())
 
 
+@report_app.command("phase2c")
+def report_phase2c() -> None:
+    """Is the thermal sensitivity a response, or a co-trend?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2c  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2c.render())
+
+
 @report_app.command("phase3h")
 def report_phase3h() -> None:
     """The pooled-response ladder: does predicting a region beat predicting a station?"""

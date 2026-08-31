@@ -249,6 +249,10 @@ report-phase1l:  ## Paired by species: how much of a network difference is the c
 report-phase1m:  ## A level between one species and all of them?
 	$(RUN) migratlas report phase1m
 
+.PHONY: report-phase2c
+report-phase2c:  ## Is the thermal sensitivity a response, or a co-trend?
+	$(RUN) migratlas report phase2c
+
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
 	$(RUN) migratlas report phase3h

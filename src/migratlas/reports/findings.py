@@ -20,7 +20,7 @@ selection.
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, NamedTuple
 
 import numpy as np
 import polars as pl
@@ -1013,6 +1013,61 @@ def _evidence_types_in_use() -> int:
     return sum(1 for kind in EvidenceType if lake_sources(kind))
 
 
+class Timescale(NamedTuple):
+    """The three pieces of prose the timescale bracket contributes to the attribution claim."""
+
+    share: str
+    """Appended to `value`: the bracket as a percentage range, or empty."""
+    caveat: str
+    """Appended to the caveat: why the share is a range and why it cannot be narrowed."""
+    supporting: str
+    """A supporting line, whether or not the check could run."""
+
+
+def _timescale(sensitivity: float, ensemble: float) -> Timescale:
+    """Bracket the attributed share over the two timescales the response can be fitted on.
+
+    The published response function carries no time term, so it absorbs the shared trend of passage
+    date and temperature and reproduces part of the advance by construction. Phase 2c refits with
+    one; the ledger carries both ends rather than the end that happens to be published.
+    """
+    from migratlas.reports import phase2c  # noqa: PLC0415 -- heavy, and only this claim
+
+    timescale = phase2c.bracket()
+    if timescale is None:
+        log.warning("anthropogenic-share: no timescale bracket, so the share is published as one")
+        return Timescale(
+            share="",
+            caveat="",
+            supporting=(
+                "The response function's timescale could not be checked on this build, so the "
+                "share is published as a point estimate rather than as the range it should be."
+            ),
+        )
+
+    low = ensemble * timescale.low
+    high = ensemble * timescale.high
+    moved = abs(sensitivity - timescale.interannual) / timescale.interannual_ci
+    return Timescale(
+        share=f", {low:.0%}-{high:.0%} of it",
+        caveat=(
+            f" The share is a range rather than a point because the response function carries no "
+            f"time term: adding one moves the sensitivity from {sensitivity:+.3f} to "
+            f"{timescale.interannual:+.3f} days per °C across {timescale.units} stations, and the "
+            f"attributed share from {high:.0%} to {low:.0%}. The two specifications bracket the "
+            f"answer and this record cannot narrow it — a response acting over decades and a "
+            f"non-thermal process that trends the same way are the same column of that design "
+            f"matrix."
+        ),
+        supporting=(
+            f"The response function was refitted with a time term in it, because without one it "
+            f"absorbs the shared trend of passage date and temperature and would reproduce part of "
+            f"the advance by construction. The sensitivity moved {moved:.2f} of its own interval, "
+            f"which is why this number survived the check rather than being withdrawn by it."
+        ),
+    )
+
+
 def collect() -> list[Finding]:
     """Compute every finding. Re-runs the analyses, so this takes minutes rather than seconds."""
     # Imported here rather than at module scope: the reports import this module's siblings,
@@ -1190,8 +1245,9 @@ def collect() -> list[Finding]:
         # smaller advance. That is not a competing estimate of this number and it is not averaged
         # into it -- but it changes how "almost all" here should be read, so it goes in the caveat
         # rather than staying in a methods note nobody opens.
-        from migratlas.reports import phase2a_attrici  # noqa: PLC0415
+        from migratlas.reports import phase2a_attrici  # noqa: PLC0415 -- heavy, and only here
 
+        timescale = _timescale(seen.sensitivity, primary.ensemble)
         second = phase2a_attrici.attributed(seen.sensitivity, seen.sensitivity_ci95)
         variability = (
             ' Read "almost all" as a share of the forced warming as the ensemble mean has it, '
@@ -1250,7 +1306,10 @@ def collect() -> list[Finding]:
                     "Human forcing accounts for almost all of the pre-season warming the animals "
                     "are responding to, and so for about half of the observed advance."
                 ),
-                value=f"{days:+.2f} days per decade of the {seen.advance:+.2f} observed",
+                value=(
+                    f"{days:+.2f} days per decade of the {seen.advance:+.2f} observed"
+                    f"{timescale.share}"
+                ),
                 scope=(
                     f"{primary.models} CMIP6 models with both a historical and a hist-nat run, "
                     f"sampled at the {seen.stations} radar stations between 37°N and 50°N over "
@@ -1263,11 +1322,13 @@ def collect() -> list[Finding]:
                     "share "
                     f"spans {bracket[0]:.2f} to {bracket[-1]:.2f} depending on the window fitted, "
                     "and CMIP6's historical runs stop in 2014 while the radar record runs to 2025."
+                    + timescale.caveat
                     + variability
                 ),
                 method="docs/methods/phase2a-attribution.md",
                 direction="change",
                 supporting=[
+                    timescale.supporting,
                     "The counterfactual runs warm at "
                     f"{primary.natural:+.2f} °C per decade against {primary.historical:+.2f} "
                     "with human forcing included.",

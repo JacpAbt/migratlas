@@ -153,6 +153,42 @@ that the deliverable is an interval rather than a point. Nothing joins this list
 
 ---
 
+## 3a. Amendments, written while implementing and before the registered run
+
+Five things §3 under-specified. All five were settled before any arm was fitted — no sensitivity
+existed at any timescale when these were written — and each would otherwise have been a silent
+choice inside the code.
+
+**A. Arm C differences consecutive years only.** §3 says "first differences of response and every
+covariate" and does not say what to do about a gap. A difference across a missing year spans more
+than a year and is not a first difference, so only steps of exactly one year are used. The break
+dummy differences to a **spike at the transition year**, which is the correct differenced analogue
+of a level shift, and it is kept rather than dropped.
+
+**B. Arm C's floor is one fewer than the other arms'.** A unit with *n* observations has at most
+*n − 1* usable differences, so applying `MIN_YEARS` to differences would exclude units the other
+arms admit and turn the ladder into a comparison of panels. The floor is `MIN_YEARS − 1` usable
+differences, which is the natural analogue.
+
+**C. Arm D's regions are `response_floor`'s, and the band is applied first.** The assignment is
+`region_of` and the four-station floor is `MIN_STATIONS`, both called rather than reimplemented, for
+the reason Phase 1k's calibration arms call the published reports. The panel is restricted to the
+claim band *before* regions are formed, so a region cannot be built partly out of stations no claim
+covers. Regions under the floor are logged by name.
+
+**D. `W` and `A` come from the raw series in every arm.** §2 says `W` is not refitted; this makes it
+explicit for `A` as well. Both secular quantities are fitted once per unit on the undifferenced,
+untrended series and reused across arms, so the arms differ in exactly one thing — how `s` is
+estimated — and their shares are therefore comparable. A test pins it.
+
+**E. The panel was extracted from `phase2a_timing.sensitivities()` as a pure refactor.** Arm A has to
+reproduce the published `S`, and the surest way is for the published fit and arm A to consume one
+panel rather than two copies of one. `panel()` now carries station longitude, which arm D needs and
+which nothing in `phase2a_timing` reads. `sensitivities()` is otherwise untouched, and prediction 1
+is the check that the refactor changed nothing.
+
+---
+
 ## 4. Predictions
 
 1. **Arm A reproduces the published `S`** to three significant figures on 78 stations. Calibration,
@@ -208,3 +244,114 @@ that the deliverable is an interval rather than a point. Nothing joins this list
 - **Anything about the *forecast* question.** Interannual skill was measured by Phase 3a and refused
   by Phase 3d. A response function read forwards is a different object, as `forecast-a.md` argues at
   length, and nothing here reopens either.
+
+---
+
+# Results — run 2026-08-31
+
+`make report-phase2c`. Two consecutive runs are identical, checked before anything here was written
+down, because Phase 3f's null was irreproducible and measuring twice is the only thing that found it.
+
+| arm | units | S d/°C | W | S × W | observed | residual `b` | share |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **A** as published | 78 | **−0.659 ± 0.165** | +0.518 | −0.301 ± 0.090 | −0.559 | −0.258 | **0.54** |
+| **B** + year term | 78 | **−0.624 ± 0.175** | +0.518 | −0.287 ± 0.094 | −0.559 | −0.272 | **0.51** |
+| **C** first differences | 77 | −0.514 ± 0.238 | +0.514 | −0.205 ± 0.142 | −0.557 | −0.353 | 0.37 |
+| **D** regions | 6 | −0.562 ± 0.291 | +0.467 | −0.266 ± 0.142 | −0.133 | +0.134 | *not read* |
+
+**Calibration — PASS.** Arm A returns **−0.6585** against the published −0.659, on 78 stations.
+
+## The answer, stated before the grading
+
+**The circularity is real and it is small.** Adding a time term moves the sensitivity from −0.659 to
+−0.624 — a shift of **0.20 of arm B's own interval** — and the attributed share from 54% to 51%. The
+stop condition that would have withdrawn `anthropogenic-share` outright did not fire, and the
+published number survives a check it had never been given.
+
+**The bracket this phase publishes is 51% to 54% of the observed advance**, and the ledger now
+carries it: `anthropogenic-share` reads `−0.30 days per decade of the −0.56 observed, 50%–53% of it`,
+the two ends being the two specifications multiplied by the ensemble's own `f`.
+
+That the bracket is narrower than the interval on either end of it is the useful part. "About half"
+was not resting on the missing time term.
+
+## The predictions, graded
+
+**1 — TRUE.** Arm A reproduces the published `S` to three significant figures (−0.6585), so the
+panel extraction in amendment E changed nothing and the ladder is readable.
+
+**2 — TRUE.** Arm B is −0.624 ± 0.175 and its interval excludes zero. There is an interannual
+thermal response, measured net of a linear time trend.
+
+**3 — TRUE, and barely.** |−0.624| < |−0.659|, by 0.035 on an interval of ±0.175. The registered
+direction is right and the magnitude is small enough that the two specifications are not
+distinguishable from each other — which is a different statement from either being right.
+
+**4 — TRUE, on both clauses.** Arm C agrees in sign (−0.514) and its interval is wider (±0.238
+against ±0.175), as differencing should make it.
+
+**5 — FALSE, and the registration is at fault rather than the result.** Arm D's interval is *wider*
+than arm B's (±0.291 against ±0.175), not narrower. Its point estimate −0.562 does sit inside arm
+B's interval, so the second clause held and the conjunction failed on the first. See the correction
+below: §3's table said eleven regions and the claim band cannot contain more than six.
+
+**6 — FALSE, by one point.** The thermal share under arm B is **51%**, not below 50%. Recorded as
+false because that is what the registration says; the margin is stated so nobody has to wonder
+whether it was close, and it was one point. The substantive reading is unchanged either way — about
+half of the advance tracks pre-season temperature and about half does not, and the half that does
+not remains unexplained.
+
+## Correction: §3's table said eleven regions, and six is the most that can exist
+
+§3 describes arm D's unit as "11 flyway-band regions", carried over from Phase 3h. Phase 3h pooled
+across **all four** latitude bands. This phase is restricted to 37–50°N, which contains **two** of
+them, so with three flyways the claim band admits at most six regions — and six is what fitted.
+
+The consequence is that arm D was under-powered for its own prediction before it ran, and the
+registration did not notice because it copied a unit count across a change of scope. The prediction
+stands as graded false rather than being reinterpreted, and what the arm still says usefully is
+below.
+
+## Arm D's share is not read, and its `observed` is why
+
+Arm D's sensitivity, −0.562 ± 0.291, is comparable to the others and is the one thing worth taking
+from it: at regional scale the interannual thermal response is the same size as at station scale,
+which is what should happen if both are estimating one quantity.
+
+Its **share is not read**, because its denominator is a different quantity. The regional series'
+observed trend is **−0.133 days per decade against the station-mean −0.559**, so the ratio 2.01 is
+S × W at one aggregation divided by an advance at another. Amendment D fixed that `W` and `A` come
+from the raw series in every arm, and they do — but the *unit* changed, and a secular trend is not
+invariant to aggregation when the panel is unbalanced.
+
+**That is a caution for Phase 3h and it is recorded here rather than as an aside.** A region-year is
+the mean of whichever member stations reported, and Phase 3h noted that this makes the response's
+measurement error vary across years. It does more than that: it moves the series' own trend, here to
+a quarter of the station-mean value. Phase 3h's skill result is unaffected — skill is scored against
+each series' own climatology, so a smaller trend is not a smaller score — but any *trend* read off a
+regional series is not the trend read off its stations, and nothing in this project had said so.
+
+## Arm C is below the bracket, and there are two reasons it could be
+
+The three specifications fall in order: 54%, 51%, 37%. Removing more low-frequency covariation gives
+a smaller thermal share every time, which is the pattern a shared trend produces.
+
+**It is also the pattern measurement error produces, and this design cannot separate them.** Noise
+in a predictor attenuates a slope towards zero, differencing amplifies predictor noise, and Phase 3h
+measured this response as only 34% explainable at a station. So arm C's −0.514 is consistent with a
+cleaner interannual estimate *and* with an attenuated one, and it is reported as the registered
+sensitivity it is rather than as the low end of a bound.
+
+**The bracket therefore is not a bound over all specifications**, and §2's language should be read
+strictly: it is the range spanned by the two specifications §3 registered, published because those
+two are the ones the identification argument is about. A high-pass stricter than a linear time term
+gives a smaller share, and how much of that is bias is unmeasured.
+
+## What did not change
+
+- The stop condition that would have withdrawn `anthropogenic-share` did not fire, and neither did
+  the one that would have rescoped `response.py`'s dial or Forecast A's envelope.
+- `W`, `A`, the wind null and the temperature/wind split are untouched, as the correction to
+  `phase2a-timing.md` said they would be — none of them turns on the timescale.
+- The residual is still about half the advance and still unexplained. Under arm B it is −0.272 days
+  per decade, and naming it would be inventing it.

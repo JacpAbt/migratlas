@@ -221,8 +221,13 @@ def _fit(design: np.ndarray, response: np.ndarray) -> np.ndarray | None:
     return np.asarray(coefficients, dtype=float)
 
 
-def sensitivities() -> list[Sensitivity]:
-    """Per station: the thermal and wind response of passage date, and the station's warming."""
+def panel() -> pl.DataFrame:
+    """The station-year panel the timing question is fitted on: passage, temperature, wind, place.
+
+    Extracted so this module's `S` and Phase 2c's arms are computed over one panel rather than two
+    copies of one -- the reason Phase 1k's calibration arms call the published reports rather than
+    reimplementing them. Longitude is carried for Phase 2c's regional arm; nothing here reads it.
+    """
     nights = load_conus_nights(quantity="reflectivity_traffic")
     quantiles = passage_quantiles(
         nights,
@@ -233,15 +238,21 @@ def sensitivities() -> list[Sensitivity]:
         min_observations=MIN_NIGHTS,
     ).filter(pl.col("q50_doy").is_not_null())
 
-    sites = nights.group_by("station_id").agg(pl.col("station_latitude").first())
-    panel = (
+    sites = nights.group_by("station_id").agg(
+        pl.col("station_latitude").first(), pl.col("station_longitude").first()
+    )
+    return (
         quantiles.join(pre_season_temperature(), on=("station_id", "year"), how="inner")
         .join(wind_support(), on=("station_id", "year"), how="left")
         .join(sites, on="station_id", how="inner")
     )
 
+
+def sensitivities() -> list[Sensitivity]:
+    """Per station: the thermal and wind response of passage date, and the station's warming."""
     results: list[Sensitivity] = []
-    for (station,), group in panel.sort("station_id").group_by(["station_id"], maintain_order=True):
+    frame = panel().sort("station_id")
+    for (station,), group in frame.group_by(["station_id"], maintain_order=True):
         series = group.drop_nulls(["q50_doy", "temperature", "support"]).sort("year")
         if series.height < MIN_YEARS:
             continue
