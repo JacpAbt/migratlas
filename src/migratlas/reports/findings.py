@@ -1888,7 +1888,11 @@ def _skill_finding() -> Finding:
             "the marine and herd halves of the same design produced no skill map at all: the "
             "surveys mostly changed gear mid-record, and the herds' usable years fall below "
             "the design's own floor. The empty cells are statements about the data and the "
-            "design, published at the same rank as the filled ones."
+            "design, published at the same rank as the filled ones. One thing this number does "
+            "not carry on its own: every aerial skill phase in this project has scored the same "
+            "held-out era of the same panel, each blind within itself and none blind to the "
+            "tables before it. ADR 0017 reserves the record's last three years for a single "
+            "confirmatory run and requires each phase to state where in that sequence it sits."
         ),
         method="docs/methods/phase3a-skill.md",
         direction="limit",

@@ -8,13 +8,17 @@ the break handling.
 
 import logging
 from dataclasses import dataclass
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import numpy as np
 import polars as pl
 from scipy import stats
 
 from migratlas.lake.reader import scan_dataset
+from migratlas.models.influence import Influence, leave_one_out
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 log = logging.getLogger(__name__)
 
@@ -62,6 +66,13 @@ class Regression:
     temp_ci: float
     interaction_slope: float
     interaction_ci: float
+    leverage: Influence | None
+    """ADR 0016: whether the warming slope survives losing any one unit.
+
+    Not a graded prediction anywhere -- it is a property of the estimate, computed on every fit so
+    that the next phase inherits the check rather than remembering to run it. Phase 3g had to ask
+    this by hand, after its result was in, and the answer decided what it could claim.
+    """
 
 
 def gear_by_year(restricted: pl.DataFrame) -> pl.DataFrame:
@@ -215,17 +226,18 @@ def units() -> tuple[list[Unit], list[str]]:
     return fitted, coverage
 
 
-def regression(fitted: list[Unit]) -> Regression:
-    """The one registered cross-unit fit: WLS with a depth interaction, and Cochran's Q."""
+def _solve(fitted: Sequence[Unit]) -> tuple[float, float, float, float]:
+    """The registered design, as two slopes and their half-widths.
+
+    Split out of `regression` so ADR 0016's leave-one-out can refit a subset through exactly the
+    same weights, standardisation and pseudoinverse. An analytic influence measure would assume
+    those three do not change when a row leaves, and all of them do.
+    """
     y = np.array([u.latitude_trend for u in fitted])
     weights = np.array([1.0 / max((u.latitude_ci / 1.96) ** 2, 1e-6) for u in fitted])
     temp = np.array([u.temperature_trend for u in fitted])
     depth = np.array([u.median_depth_m for u in fitted])
     depth_std = (depth - depth.mean()) / depth.std(ddof=1)
-
-    pooled = float(np.sum(weights * y) / np.sum(weights))
-    q = float(np.sum(weights * (y - pooled) ** 2))
-    q_bar = float(stats.chi2.ppf(0.95, len(fitted) - 1))
 
     design = np.column_stack([np.ones(len(y)), temp, temp * depth_std])
     root = np.sqrt(weights)
@@ -239,15 +251,37 @@ def regression(fitted: list[Unit]) -> Regression:
     covariance = sigma2 * np.linalg.pinv(design.T @ (design * weights[:, None]))
     errors = np.sqrt(np.diag(covariance))
 
+    return (
+        float(solution[1]),
+        float(1.96 * errors[1]),
+        float(solution[2]),
+        float(1.96 * errors[2]),
+    )
+
+
+def regression(fitted: list[Unit]) -> Regression:
+    """The one registered cross-unit fit: WLS with a depth interaction, and Cochran's Q."""
+    y = np.array([u.latitude_trend for u in fitted])
+    weights = np.array([1.0 / max((u.latitude_ci / 1.96) ** 2, 1e-6) for u in fitted])
+    pooled = float(np.sum(weights * y) / np.sum(weights))
+    q = float(np.sum(weights * (y - pooled) ** 2))
+    q_bar = float(stats.chi2.ppf(0.95, len(fitted) - 1))
+
+    temp_slope, temp_ci, interaction_slope, interaction_ci = _solve(fitted)
     return Regression(
         units=len(fitted),
         q_statistic=q,
         q_bar=q_bar,
         heterogeneous=q > q_bar,
-        temp_slope=float(solution[1]),
-        temp_ci=float(1.96 * errors[1]),
-        interaction_slope=float(solution[2]),
-        interaction_ci=float(1.96 * errors[2]),
+        temp_slope=temp_slope,
+        temp_ci=temp_ci,
+        interaction_slope=interaction_slope,
+        interaction_ci=interaction_ci,
+        leverage=leave_one_out(
+            fitted,
+            lambda subset: _solve(subset)[:2],
+            name=lambda unit: unit.segment.survey,
+        ),
     )
 
 
