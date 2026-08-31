@@ -44,6 +44,16 @@ MIN_UNITS: Final = 30
 # units clear fifteen years inside its registered window.
 FLIGHT_MIN_YEARS: Final = 15
 
+# Prediction 6's registered window, and the two quantities the scheme publishes about the shape of
+# a flight curve. Leg 2 fits the whole 1973-2021 span while the prediction names 1995-2021, so both
+# are computed and a trend in either withholds the comparison -- when a registration and the claim
+# it guards disagree about a window, narrowing what may be published is the safe direction.
+FLIGHT_SHAPE_WINDOW: Final = 1995
+FLIGHT_SHAPE_QUANTITIES: Final[tuple[tuple[str, str], ...]] = (
+    ("flight-curve spread", "sd_days"),
+    ("flight-period duration", "duration_days"),
+)
+
 # Calibration targets, quoted from the published findings they must reproduce.
 MARINE_NULL_MEDIAN: Final = -0.011
 AUTUMN_ADVANCE_SLOPE: Final = -0.56
@@ -329,6 +339,108 @@ def timing() -> TimingResult | None:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class ShapeTrend:
+    """A trend in the flight curve's shape -- Phase 1j's prediction 6, graded at last."""
+
+    name: str
+    """What to call it in prose. The column name is a machine's word."""
+    quantity: str
+    since: int | None
+    """First year fitted, or None for the whole span leg 2 publishes."""
+    units: int
+    median: float
+    interval: tuple[float, float]
+
+    @property
+    def flat(self) -> bool:
+        """True while the interval covers zero, which is what prediction 6 asked of it."""
+        low, high = self.interval
+        return not (low > 0.0 or high < 0.0)
+
+    @property
+    def label(self) -> str:
+        window = "1973-2021" if self.since is None else f"{self.since}-2021"
+        return (
+            f"{self.name} {self.median:+.3f} "
+            f"[{self.interval[0]:+.3f}, {self.interval[1]:+.3f}] days per decade over {window}"
+        )
+
+
+def shape_trends(series: pl.DataFrame) -> tuple[ShapeTrend, ...]:
+    """Per-unit shape trends, on leg 2's own unit, estimator and floor.
+
+    Split from `flight_shape` so the arithmetic can be tested without an archive or a lake: the
+    guard decides what a published sentence says, so it needs a test that does not depend on
+    either being present.
+    """
+    out: list[ShapeTrend] = []
+    for name, quantity in FLIGHT_SHAPE_QUANTITIES:
+        for since in (None, FLIGHT_SHAPE_WINDOW):
+            window = series if since is None else series.filter(pl.col("year") >= since)
+            panel = window.select(
+                unit=(
+                    pl.col("site").cast(pl.String)
+                    + pl.lit(":")
+                    + pl.col("taxon_label")
+                    + pl.lit(":")
+                    + pl.col("brood").cast(pl.String)
+                ),
+                year="year",
+                value=pl.col(quantity),
+            ).drop_nulls()
+            slopes = range_metrics.shift_per_decade(
+                panel, column="value", group_by=("unit",), min_years=FLIGHT_MIN_YEARS
+            )
+            if slopes.is_empty():
+                log.info("%s: no unit clears the floor for %s", FLIGHT_NETWORK, quantity)
+                continue
+            values = slopes["per_decade"].to_numpy().astype(float)
+            out.append(
+                ShapeTrend(
+                    name=name,
+                    quantity=quantity,
+                    since=since,
+                    units=slopes.height,
+                    median=float(np.median(values)),
+                    interval=_median_interval(values, name=f"{quantity}:{since}"),
+                )
+            )
+    return tuple(out)
+
+
+def flight_shape() -> tuple[ShapeTrend, ...]:
+    """Prediction 6: did the flight curve's shape trend on the panel leg 2 is fitted on?
+
+    Registered in Phase 1j and never graded there -- the leg stopped on a different condition and
+    this one went with it. It matters because leg 2's headline compares a count-weighted *mean*
+    flight date against the radar's traffic-weighted *median* passage date: any constant
+    difference between the two summaries cancels in a ratio of trends, and only a trend in the
+    curve's own shape can bias it.
+
+    The panel is leg 2's. Restricting the archive to the sites the lake holds reproduces its unit
+    count exactly, because the only rows the ingest drops are those whose position the scheme
+    withholds -- so this guard and the number it guards are computed over the same series.
+
+    An unreadable archive raises rather than returning nothing. A missing file and a flat shape
+    must not arrive at the caller looking alike, and a build that quietly stopped guarding a
+    published comparison would be the worse failure.
+    """
+    from migratlas.ingest import ukbms  # noqa: PLC0415 -- the one archive read in this package
+
+    sites = (
+        scan(EvidenceType.SURVEY_INDEX, source_id=FLIGHT_NETWORK)
+        .select(pl.col("site_id").cast(pl.Int64))
+        .unique()
+        .collect()
+        .to_series()
+    )
+    if sites.is_empty():
+        log.info("%s: no rows in the lake, so the shape guard has no panel", FLIGHT_NETWORK)
+        return ()
+    return shape_trends(ukbms.shape_series().filter(pl.col("site").is_in(sites)))
+
+
 def render() -> str:
     """The whole ladder, as text, with the calibration verdicts first."""
     out = [
@@ -386,6 +498,19 @@ def render() -> str:
             f"  IQR [{flight.iqr[0]:+.3f}, {flight.iqr[1]:+.3f}]",
             f"  beat own null: {flight.significant} of {flight.units}, chance bar {flight.bar}",
         ]
+        out += ["", "  Prediction 6 -- did the flight curve's shape trend?"]
+        shape = flight_shape()
+        if not shape:
+            out.append("    no shape series -- the radar comparison is unlicensed")
+        out += [
+            f"    {trend.label}, {trend.units} units -- {'flat' if trend.flat else 'MOVED'}"
+            for trend in shape
+        ]
+        out.append(
+            "    verdict: the shape is flat, so the radar comparison stands"
+            if shape and all(trend.flat for trend in shape)
+            else "    verdict: WITHDRAWN -- Phase 1j's registered consequence applies"
+        )
 
     out += ["", "Predictions are graded in the method note, not here."]
     return "\n".join(out)

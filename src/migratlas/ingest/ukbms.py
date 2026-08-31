@@ -216,3 +216,27 @@ def ingest() -> WriteResult:
     spec = spec_for(EvidenceType.SURVEY_INDEX)
     table: pa.Table = rows.select(spec.schema.names).to_arrow().cast(spec.schema)
     return write_evidence(table, spec, source_id=SOURCE_ID)
+
+
+def shape_series() -> pl.DataFrame:
+    """The flight curve's *shape* per row, for the guard Phase 1j registered as prediction 6.
+
+    Neither quantity belongs in the lake and neither is there. `SURVEY_INDEX` carries one value
+    column, that column carries the flight date, and a second and third number about the same
+    period have nowhere to go -- so the guard reads the archive rather than widening a schema for
+    a diagnostic.
+
+    The two are not equally trustworthy and a grading has to say which of them moved.
+    `FLIGHTPERIOD_SD` is the measure the scheme's own supporting document recommends.
+    `FLIGHTPERIOD_RANGE` rests on `FIRSTDAY` and `LASTDAY`, which the same document warns are
+    unreliable where a flight period runs past the 1 April to 30 September window. A trend in the
+    duration with none in the spread is therefore as likely to be the window as the animals.
+    """
+    return phenology().select(
+        site=pl.col("SITENO").cast(pl.Int64),
+        taxon_label=pl.col("SPECIES_NAME"),
+        brood=pl.col("BROOD").cast(pl.Int64),
+        year=pl.col("YEAR").cast(pl.Int64),
+        sd_days=pl.col("FLIGHTPERIOD_SD").cast(pl.Float64),
+        duration_days=pl.col("FLIGHTPERIOD_RANGE").cast(pl.Float64),
+    )

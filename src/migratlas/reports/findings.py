@@ -763,12 +763,73 @@ def _protocol_finding() -> Finding | None:
 
 
 def _flight_finding() -> Finding | None:
-    """The largest timing signal in this lake, and the first from an insect series."""
+    """The largest timing signal in this lake, and the first from an insect series.
+
+    The comparison to the radar is published only while the flight curve's *shape* is flat. That is
+    Phase 1j's prediction 6, whose registered consequence is that a shape trend withdraws the
+    comparison rather than caveating it. The reason is that the two records summarise their season
+    differently -- a count-weighted mean here against a traffic-weighted median there -- so a
+    constant offset between them cancels in a ratio of trends and only a trend in the shape can
+    bias it. The standalone advance is unaffected either way and keeps its own sentence.
+    """
     from migratlas.reports import phase1k  # noqa: PLC0415 -- heavy, and only this claim
 
     flight = phase1k.timing()
     if flight is None:
         return None
+
+    shape = phase1k.flight_shape()
+    moved = [trend for trend in shape if not trend.flat]
+    # An unevaluated guard is not a guard that passed: with no shape series the comparison is
+    # unlicensed, which is the direction the registration points.
+    licensed = bool(shape) and not moved
+
+    comparison = ""
+    guard = ""
+    if licensed:
+        radar, _ = phase1k.calibrate_timing()
+        ratio = abs(flight.median / radar) if radar else float("nan")
+        # The plain sentence says "nearly four times" in words, as every plain sentence here is
+        # worded rather than numbered. A word is still a published figure, so it is published only
+        # while the recomputed ratio is one the word describes -- the README status line and
+        # `coverage-bias` were both wrong for days because a figure was typed once.
+        verbal_low, verbal_high = 3.5, 4.5
+        if verbal_low <= ratio <= verbal_high:
+            comparison = " and the shift is nearly four times the one measured in the night sky"
+        else:
+            log.warning(
+                "flight-advance: the radar ratio is %.2f, which 'nearly four times' no longer "
+                "describes, so the plain sentence drops the comparison",
+                ratio,
+            )
+        guard = (
+            " That ratio rests on a guard graded before it was quoted: a mean and a median are "
+            "commensurable only while the curve's shape holds still, and neither measure of it "
+            "moved."
+        )
+        supporting_comparison = (
+            f"The advance is {ratio:.1f} times the radar's autumn slope, recomputed from the lake "
+            f"rather than quoted, and Phase 1j's registered guard on the comparison holds: "
+            f"{'; '.join(trend.label for trend in shape)}."
+        )
+    else:
+        guard = (
+            " No ratio between the two is published: a mean and a median are commensurable only "
+            "while the curve's shape holds still, and it did not. Withdrawing rather than "
+            "caveating is Phase 1j's registered consequence."
+        )
+        supporting_comparison = (
+            "The comparison to the radar is withheld, and by a condition registered in Phase 1j "
+            "before either number existed. What moved: "
+            + (
+                "; ".join(trend.label for trend in moved)
+                if moved
+                else "nothing measurable -- the shape series is unavailable, so the guard could "
+                "not be evaluated at all"
+            )
+            + ". The interval resamples units as if independent, so it is if anything too tight -- "
+            "which withholds more than a wider one would, and is the safe direction for a guard."
+        )
 
     return Finding(
         key="flight-advance",
@@ -776,15 +837,11 @@ def _flight_finding() -> Finding | None:
         taxon_scope=TaxonScope.EXACT.value,
         evidence_type=EvidenceType.SURVEY_INDEX.value,
         bias=FLIGHT_BIAS,
-        plain=(
-            "British butterflies are flying about two days earlier every decade, and the shift is "
-            "nearly four times the one measured in the night sky."
-        ),
+        plain=(f"British butterflies are flying about two days earlier every decade{comparison}."),
         matters=(
             "Timing is where a warming year shows up first. This is the same question the radar "
             "answers over North America, asked of a completely different kind of animal with a "
-            "completely different instrument -- and the answer is much larger, on a panel eighty "
-            "times bigger."
+            "completely different instrument, on a panel eighty times bigger."
         ),
         plain_caveat=(
             "Most of these are butterflies that stay put, so this is when they emerge rather than "
@@ -824,7 +881,7 @@ def _flight_finding() -> Finding | None:
             "untested here. A mean flight date is one summary of a flight period, and a species "
             "whose season lengthened at one end without moving its centre reports nothing. And a "
             "flight period is not a migration: the comparison to nocturnal passage is a comparison "
-            "of thermal tracking, not of the same behaviour."
+            f"of thermal tracking, not of the same behaviour.{guard}"
         ),
         method="docs/methods/phase1k-idle-networks.md",
         direction="change",
@@ -832,9 +889,7 @@ def _flight_finding() -> Finding | None:
             "The phase's estimator reproduced two of this project's published numbers before "
             "touching a new source -- the marine median to three significant figures and the "
             "aerial slope to two -- by calling those reports rather than a copy of them.",
-            "The registered prediction that the advance exceeds the radar's in magnitude was "
-            "graded true at 3.8 times, and the prediction that the advance exists at all was "
-            "wired to a stop condition rather than to an interpretation.",
+            supporting_comparison,
             "The estimand had to be reconstructed because the lake stores no flight date, and the "
             "first implementation fitted the wrong quantity; the correction is recorded in the "
             "method note rather than edited away.",

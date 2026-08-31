@@ -327,3 +327,94 @@ than pretending to be blind to it.
    substitutes for it.
 3. **The 1995–2021 window and the migrant species list stay as registered.** Neither was chosen
    after seeing anything, and re-opening them now would cost the thing this convention buys.
+
+---
+
+# Prediction 6, graded 2026-08-31
+
+Registered above and never graded. The stop condition fired on prediction 2, the leg was not
+computed, and the shape guard went with it — but Phase 1k then fitted this note's estimand under its
+own registration, on the unit this note declared, and published `flight-advance` carrying the
+radar comparison prediction 6 was written to license. So the guard is graded now, as written, and
+its registered consequence is applied.
+
+**Nothing in the registration is reopened.** The window stays 1995–2021, the quantities stay the two
+the scheme publishes, and the consequence stays *withdrawn rather than caveated*. One thing is
+added: the wider span, because the claim being guarded covers it. Phase 1k fits 1973–2021, so a
+guard computed only over the registered window would license a number reaching outside it. Both are
+reported and a trend in either withholds the comparison — a narrowing of what may be published,
+which is the safe direction when a registration and the claim it guards disagree about a window.
+
+## The panel
+
+Both quantities are published by the scheme and neither is in the lake: `SURVEY_INDEX` carries one
+value column and that column carries the flight date. The guard therefore reads the cached archive
+rather than widening a schema for a diagnostic, and it is the only archive read in `reports/`.
+
+The panel is still leg 2's. Restricting the archive to the sites the lake holds returns **627,752
+rows and 12,213 units clearing fifteen years — leg 2's count exactly** — because the only rows the
+ingest drops are the 12,641 whose position the scheme withholds.
+
+## The result
+
+| quantity | window | units | median d/decade | 95% CI | |
+| --- | --- | --- | --- | --- | --- |
+| flight-curve spread, `FLIGHTPERIOD_SD` | 1973–2021 | 12,213 | **+0.097** | +0.051 to +0.133 | **moved** |
+| flight-curve spread | 1995–2021 | 11,003 | +0.055 | −0.003 to +0.111 | flat |
+| flight-period duration, `FLIGHTPERIOD_RANGE` | 1973–2021 | 12,213 | −0.034 | −0.189 to +0.116 | flat |
+| flight-period duration | 1995–2021 | 11,003 | **−0.201** | −0.408 to −0.034 | **moved** |
+
+**Prediction 6 — FALSE.** On the registered window the flight-period duration carries a trend whose
+interval excludes zero: about **0.2 days shorter per decade**, so roughly half a day over the
+window. The registered consequence applies and **the comparison between the butterfly advance and
+the radar's is withdrawn from `flight-advance` rather than caveated.**
+
+The standalone advance of −2.10 days per decade is untouched. Prediction 6 governs whether two
+summaries of a season are commensurable, not whether either of them moved.
+
+## The two measures disagree, and amendment D says which to trust
+
+Neither quantity moves in both windows, and they move in opposite directions:
+
+- the **spread widens** over the full span and is flat in the registered window;
+- the **duration shortens** in the registered window and is flat over the full span.
+
+Amendment D recorded the asymmetry before any of this was computed: `FIRSTDAY` and `LASTDAY` are
+unreliable where a flight period runs past the 1 April – 30 September window, and the supporting
+document recommends the mean flight date and its standard deviation as *"less sensitive to the UKBMS
+methodology"*. The duration rests on the unreliable pair; the spread does not.
+
+So the reading that fires the condition on the registered window is built on the **weaker** measure,
+and the reading built on the stronger measure fires on the **wider span the published claim actually
+covers**. There is no window in which both measures are flat, which is what the guard asked.
+
+## A criticism of prediction 6 that belongs here rather than in a later apology
+
+**The condition has no magnitude in it, and it should have.** It asks only whether a shape trend is
+distinguishable from zero. The interval it is judged against is a percentile bootstrap that
+resamples **units**, and the 12,213 units are not independent — a species appears at hundreds of
+sites and responds to one national weather sequence. So the interval is too tight by an amount this
+note does not measure, and a shape trend of a fifth of a day per decade clears a bar that a wider
+interval would not.
+
+Whether a shape trend that size *materially* biases a ratio of trends between a mean and a median is
+a question the registration never asked, and it is not answered here — computing it now, having seen
+which way the condition fired, is the move this convention exists to prevent. What follows from the
+grading as written is the withdrawal, and what follows for a successor is that a shape guard needs a
+magnitude fixed in advance, the way Phase 3g's C2 needed one.
+
+The direction of the error is worth stating because it is the only reassuring thing here: an
+over-precise interval makes a *withholding* condition fire more readily, so the withdrawal is the
+conservative outcome of a generous instrument rather than a claim that squeaked through. The same
+over-precision applies to leg 2's own published interval, where it is not conservative at all. That
+is recorded as owed work rather than fixed here.
+
+## What this does not establish
+
+- **Not that the advance is wrong.** It is a statement about comparing two records, not about either.
+- **Not why the shape moved.** No driver enters this. A shortening flight period is equally
+  consistent with warming, with recorder behaviour, and with the window the day numbers count from.
+- **Not the radar's shape.** The guard measures one side of the comparison. Whether nocturnal
+  passage changed shape over the same decades is unasked, and a symmetric guard would need it.
+- **Not a magnitude.** See the criticism above: this establishes that the shape is not stationary,
+  and not that the instability is large enough to matter.
