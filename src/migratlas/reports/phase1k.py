@@ -176,7 +176,7 @@ def _median_interval(values: np.ndarray, *, name: str) -> tuple[float, float]:
     return (float(np.percentile(draws, 2.5)), float(np.percentile(draws, 97.5)))
 
 
-def _iqr(values: np.ndarray) -> tuple[float, float]:
+def iqr(values: np.ndarray) -> tuple[float, float]:
     if values.size == 0:
         return (float("nan"), float("nan"))
     return (float(np.percentile(values, 25)), float(np.percentile(values, 75)))
@@ -228,7 +228,7 @@ def distribution(source_id: str, *, min_years: int = MIN_YEARS) -> NetworkResult
         units=shifts.height,
         median=float(np.median(values)),
         interval=_median_interval(values, name=f"{source_id}:median"),
-        iqr=_iqr(values),
+        iqr=iqr(values),
         significant=beat.height,
         bar=_binomial_bar(shifts.height),
         cells_kept=footprint.cells,
@@ -323,7 +323,7 @@ def timing() -> TimingResult | None:
         units=slopes.height,
         median=float(np.median(values)),
         interval=_median_interval(values, name=f"{FLIGHT_NETWORK}:median"),
-        iqr=_iqr(values),
+        iqr=iqr(values),
         significant=beat.height,
         bar=_binomial_bar(slopes.height),
     )

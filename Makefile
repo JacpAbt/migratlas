@@ -241,6 +241,14 @@ ingest-ukbms:  ## UK butterfly flight-period phenology: the fourth leg's respons
 report-phase1k:  ## Four idle schemes: what each finds alone, and what they find in company
 	$(RUN) migratlas report phase1k
 
+.PHONY: report-phase1l
+report-phase1l:  ## Paired by species: how much of a network difference is the counting?
+	$(RUN) migratlas report phase1l
+
+.PHONY: report-phase1m
+report-phase1m:  ## A level between one species and all of them?
+	$(RUN) migratlas report phase1m
+
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
 	$(RUN) migratlas report phase3h

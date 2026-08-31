@@ -131,6 +131,25 @@ export const VIEWS: Record<string, View> = {
       "The two herds the claim is measured from, a continent apart: elk in the Canadian " +
       "Rockies, reindeer on Svalbard.",
   },
+  "flight-advance": {
+    // Britain, and no layer: the transects are a series in the lake with no tile behind them, so
+    // the plate carries this claim's evidence and the globe carries only the place.
+    center: [-2.4, 54.2],
+    zoom: 4.4,
+    layers: [],
+    because:
+      "Britain, where the same fixed transects are walked every year by volunteers who count " +
+      "what crosses them.",
+  },
+  "protocol-disagreement": {
+    // Sweden, which is the whole claim: one country counted twice, by two programmes, at once.
+    center: [16.5, 62.5],
+    zoom: 3.8,
+    layers: [],
+    because:
+      "Sweden, counted twice over: two national bird-counting programmes have run side by side " +
+      "across the same country for decades.",
+  },
   "coverage-bias": {
     // Deliberately the southern hemisphere, and deliberately far out. This claim is about what the
     // project cannot see, so the camera points at the emptiness rather than at the data.
@@ -199,6 +218,11 @@ export function exploreView(available: string[], zoom = 1.4): View {
  * departure from ADR 0013's own list and is the amendment that ADR made room for: the attribution
  * is the answer to why, and the chapter that holds it also holds the mechanism dial and the
  * forecast's novelty mask.
+ *
+ * `protocol-disagreement` is in *What we cannot see* and it is the odd one there, because the other
+ * two claims in that chapter are about missing data and this one is about data that is present.
+ * It belongs anyway: what the reader cannot see is which of two programmes counting the same birds
+ * is closer to right, and that limit sits under every comparison the rest of the book makes.
  */
 export interface Chapter {
   /** Stable identity, and what goes in the URL. */
@@ -233,7 +257,7 @@ export const CHAPTERS: readonly Chapter[] = [
     slug: "what-changed",
     title: "What changed",
     tab: "Changed",
-    keys: ["autumn-advance", "composition-stable"],
+    keys: ["autumn-advance", "flight-advance", "composition-stable"],
   },
   {
     slug: "what-did-not",
@@ -245,7 +269,7 @@ export const CHAPTERS: readonly Chapter[] = [
     slug: "cannot-see",
     title: "What we cannot see",
     tab: "Cannot see",
-    keys: ["coverage-bias", "transfer-fails"],
+    keys: ["coverage-bias", "protocol-disagreement", "transfer-fails"],
   },
   {
     slug: "can-be-predicted",

@@ -136,6 +136,31 @@ def centroids(
     )
 
 
+def _slope_stderr(matrix: np.ndarray, value: np.ndarray, coefficients: np.ndarray) -> float | None:
+    """The standard error of the trend, in the same per-decade units.
+
+    Added because it was always available and always thrown away, and a comparison of two trends
+    cannot be read without it: Phase 1l found two survey programmes disagreeing about one species
+    more than species disagree with each other, and that has two readings -- the instruments differ,
+    or each trend is too noisy to compare. Telling them apart needs exactly this number.
+
+    None where the residual degrees of freedom run out, which is a series with no room left to
+    estimate scatter rather than a series with none.
+    """
+    residual_df = matrix.shape[0] - matrix.shape[1]
+    if residual_df <= 0:
+        return None
+    residuals = value - matrix @ coefficients
+    scatter = float(residuals @ residuals) / residual_df
+    # The slope is column 1, so its variance is that entry of the inverse Gram matrix.
+    try:
+        gram_inverse = np.linalg.inv(matrix.T @ matrix)
+    except np.linalg.LinAlgError:
+        return None
+    variance = scatter * float(gram_inverse[1, 1])
+    return float(np.sqrt(variance)) * 10 if variance >= 0 else None
+
+
 def shift_per_decade(
     series: pl.DataFrame,
     *,
@@ -175,6 +200,7 @@ def shift_per_decade(
                 **dict(zip(group_by, key_values, strict=True)),
                 "years": usable.height,
                 "per_decade": float(coefficients[1]) * 10,
+                "stderr": _slope_stderr(matrix, value, coefficients),
                 "break_shift": (float(coefficients[2]) if len(coefficients) > WITH_BREAK else None),
             }
         )

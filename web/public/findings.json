@@ -367,6 +367,118 @@
    ]
   },
   {
+   "key": "protocol-disagreement",
+   "plain": "Two bird surveys counting the same species often disagree about which way it is moving, and mostly because neither can measure one species precisely enough to tell.",
+   "matters": "Almost everything on this site is a comparison: one place against another, one kind of animal against another, one method against another. All of it assumes that how you counted matters less than what you counted. Here that assumption was tested for the first time and it did not hold -- the two matter about equally. The useful half of the answer is why: a single species counted by a single programme is too faint a signal to compare, which is a reason to read the pages that follow as being about many animals at once rather than about any one of them.",
+   "claim": "On the one population pair this lake can check, between-protocol disagreement in a species' latitudinal trend is comparable to between-species dispersion once each side's own estimation error is removed from both: 1.17 to one. Only 24% of the raw paired disagreement is that error, so most of what separates the two programmes is a real difference in what they measure rather than noise in how well they measure it.",
+   "plain_caveat": "This is one country and one kind of survey. It does not prove the same is true of radar or of fishing nets, and it cannot say which of the two surveys is closer to right. Averaging species together makes each reading sharper without bringing the two surveys any closer, so the disagreement is not something more counting fixes.",
+   "plain_how": "Sweden runs two independent bird-counting programmes side by side. We took every species counted by both, cut the records back to the years the two share, and worked out how far north that species had moved according to each one. Then we compared the two answers for the same animal, so that differences between species could not be the explanation, and asked whether the gap between methods was smaller or larger than the gap between species.",
+   "value": "method-to-species scatter 1.17x, estimation error removed from both; 24% of the raw disagreement is that error",
+   "scope": "Two Swedish bird programmes, 1996-2024, 166 species qualifying in both at twenty years each, paired species by species with the window held common, of which 166 carry a standard error on both sides and enter the decomposition.",
+   "caveat": "The two readings a paired difference allows have been separated rather than left open, from the standard errors the fits were already computing: 24% of the raw disagreement is the two fits' own estimation error, so the remainder is a real difference in what the programmes measure. What that remainder is made of is not resolved: footprints were left unequal on purpose (33 consistently sampled cells against 84), so part of it is geography rather than protocol. The sign disagreements are softer than they read: 62 of 73 involve at least one estimate that cannot be told apart from zero, which two weak readings of a near-zero trend do as a matter of course. The reason is in the third figure: a median species trend here is 1.69 standard errors from zero, short of the two a single estimate needs, so these networks do not measure one species' movement precisely enough to compare. And agreement would have licensed comparison, never accuracy -- two programmes in one country can share a bias and agree while both are wrong.",
+   "method": "docs/methods/phase1l-paired-protocols.md",
+   "realm": "terrestrial",
+   "taxon_scope": "exact",
+   "evidence_type": "survey_index",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "Sweden, and only Sweden. It is the one place in this lake where two independent programmes count the same populations, so it is the only place the question can be asked at all -- which is itself a fact about the holding rather than about birds."
+    },
+    {
+     "domain": "temporal",
+     "status": "addressed",
+     "finding": "Both programmes restricted to their shared window, 1996-2024, before any slope was fitted. Window cannot contribute to the disagreement."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "addressed",
+     "finding": "Paired species by species. The comparison is one animal against itself, so the species mixture -- which is what made the first version of this diagnosis wrong -- cannot contribute either."
+    },
+    {
+     "domain": "environmental",
+     "status": "open",
+     "finding": "Footprints still differ: 33 consistently sampled cells against 84. Part of the residual may be real geography rather than method, and restricting to shared cells is the successor's first job."
+    },
+    {
+     "domain": "detectability",
+     "status": "open",
+     "finding": "This is a measurement *of* a detectability difference and cannot correct for one. A point count and a fixed route weight a species' detectability differently by construction; which of the two is closer to the truth is not answerable from the pair."
+    },
+    {
+     "domain": "phenological",
+     "status": "not applicable",
+     "finding": "A latitude centroid over a breeding season carries no timing claim."
+    }
+   ],
+   "specimen_key": null,
+   "specimen": "",
+   "direction": "limit",
+   "supporting": [
+    "The pairing was run because an earlier version of this diagnosis compared two network averages over different species mixtures, which is the error it was warning about; removing the mixture made the disagreement larger rather than smaller.",
+    "Two of the phase's four registered predictions were graded false, and they fired the stop condition that withholds the distribution results this claim replaces.",
+    "A successor grouped the same species by where they live and recomputed the ratio with groups as the unit, which is how a difference that averages away is told from one that does not. It did not move, so the remainder is systematic rather than species-specific -- the more serious of the two possibilities, and the reason the withholding stands on firmer ground than when it fired.",
+    "The window was made common before any slope was fitted, so the disagreement is not two programmes describing two different periods.",
+    "The headline moved in the correcting, and the earlier figure is kept here rather than replaced quietly: 1.43 compared interquartile ranges with both sides' estimation error left in, and 1.17 compares standard deviations with that error removed from each. Two changes at once, so the fall is not attributable to the correction alone."
+   ]
+  },
+  {
+   "key": "flight-advance",
+   "plain": "British butterflies are flying about two days earlier every decade, and the shift is nearly four times the one measured in the night sky.",
+   "matters": "Timing is where a warming year shows up first. This is the same question the radar answers over North America, asked of a completely different kind of animal with a completely different instrument -- and the answer is much larger, on a panel eighty times bigger.",
+   "claim": "Mean flight date across UK monitoring transects has advanced by 2.10 days per decade (median across 12,213 site-species-generation series, 95% CI -2.18 to -2.04), with 2,476 series beating their own year-shuffle null against a chance bar of 651.",
+   "plain_caveat": "Most of these are butterflies that stay put, so this is when they emerge rather than when they travel. It is one country, and it is volunteers walking transects.",
+   "plain_how": "Volunteers have walked the same transects in Britain since the scheme began, recording what they see. For each species at each site, the scheme records the middle of its flight period, and we asked whether that date has moved -- one straight line per site-species series, and only where fifteen years of it exist. Every series was also compared against itself with the years shuffled, so a series only counts if it beats its own noise.",
+   "value": "-2.10 days per decade across 12,213 series (IQR -4.6 to +0.5)",
+   "scope": "UK Butterfly Monitoring Scheme transects, 1973-2021, 12,213 site-species-generation series clearing fifteen years each, split generations kept apart from pooled-brood rows.",
+   "caveat": "The median hides a spread that is wider than itself: the interquartile range runs -4.6 to +0.5 days per decade, so a substantial minority of series are flying later, and this is a summary of series doing different things rather than one behaviour. No driver enters the fit, so it is a change and not an attribution -- that warming is the cause is the literature's expectation and is untested here. A mean flight date is one summary of a flight period, and a species whose season lengthened at one end without moving its centre reports nothing. And a flight period is not a migration: the comparison to nocturnal passage is a comparison of thermal tracking, not of the same behaviour.",
+   "method": "docs/methods/phase1k-idle-networks.md",
+   "realm": "terrestrial",
+   "taxon_scope": "exact",
+   "evidence_type": "survey_index",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "The United Kingdom's transect network, 3,144 sites. A phenological response measured where volunteers walk, which is not a sample of anywhere else."
+    },
+    {
+     "domain": "temporal",
+     "status": "addressed",
+     "finding": "1973-2021, and the unit qualifies only with fifteen years of its own. Long enough that a decadal rate is not an artefact of two endpoints."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "bounded",
+     "finding": "59 taxa, resolved to name, and the great majority resident. This is a flight-period response and not a migration timing shift -- the two are different behaviours and the claim is only about the first."
+    },
+    {
+     "domain": "environmental",
+     "status": "open",
+     "finding": "No driver enters this. That the advance tracks warming is the literature's expectation and is not tested here, so the finding is a change and not an attribution."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "The estimand is a date, not an abundance, so no effort denominator is needed -- and the source carries none. A year with fewer visits gives a noisier date, not a biased one."
+    },
+    {
+     "domain": "phenological",
+     "status": "bounded",
+     "finding": "Mean flight date is one summary of a flight period. A species whose season lengthened at one end without moving its centre would report no change here."
+    }
+   ],
+   "specimen_key": null,
+   "specimen": "",
+   "direction": "change",
+   "supporting": [
+    "The phase's estimator reproduced two of this project's published numbers before touching a new source -- the marine median to three significant figures and the aerial slope to two -- by calling those reports rather than a copy of them.",
+    "The registered prediction that the advance exceeds the radar's in magnitude was graded true at 3.8 times, and the prediction that the advance exists at all was wired to a stop condition rather than to an interpretation.",
+    "The estimand had to be reconstructed because the lake stores no flight date, and the first implementation fitted the wrong quantity; the correction is recorded in the method note rather than edited away."
+   ]
+  },
+  {
    "key": "displacement-flat",
    "plain": "Two collared herds travel about as far between winter and summer as they did when tracking began -- as far as their collars can honestly tell.",
    "matters": "The obvious measure of animal movement -- distance walked along the track -- mostly measures how often the collar spoke, which changed 104-fold over this record. The distance between winter and summer does not care how often the collar spoke, and it has not changed. Six million fixes in this project's lake carry that lesson for every collar study ever pooled.",

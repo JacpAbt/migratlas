@@ -733,6 +733,24 @@ def report_phase1k() -> None:
     print(phase1k.render())
 
 
+@report_app.command("phase1l")
+def report_phase1l() -> None:
+    """Two programmes, one country's birds: how much of the difference is the counting?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase1l  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase1l.render())
+
+
+@report_app.command("phase1m")
+def report_phase1m() -> None:
+    """Is there a level between one species and all of them?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase1m  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase1m.render())
+
+
 @report_app.command("phase3h")
 def report_phase3h() -> None:
     """The pooled-response ladder: does predicting a region beat predicting a station?"""

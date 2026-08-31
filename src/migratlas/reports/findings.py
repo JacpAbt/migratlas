@@ -45,6 +45,16 @@ PLAIN_MAX_CHARS: Final = 180
 # enough that it cannot turn into the method note it stands in front of.
 HOW_MAX_CHARS: Final = 620
 
+# There is no character cap on the pages, and one was tried and refuted rather than not considered.
+# `value`, `scope` and `caveat` share a page 826 pixels tall, and `web/tests/book.spec.ts` fails on
+# three pixels of overflow -- twelve minutes after the fact, which is what made a cap attractive.
+# The measurement says it cannot work: `anthropogenic-share` fits at 1,584 characters (821 pixels,
+# five to spare) while `protocol-disagreement` overflowed at **1,573**, because three fields of
+# different word lengths reflow into different numbers of lines. No threshold passes the first and
+# fails the second, and a guard that cannot fail before the browser does is decoration. The browser
+# guard is the authority; when it reports an overflow, move a sentence to a page with room rather
+# than trimming words until the pixels agree.
+
 # The domains ROBITT asks about (Boyd et al. 2022, Methods in Ecology and Evolution 13:1497), a
 # 17-question tool for risk of bias in studies of temporal trends, built on PRISMA's model. Adopted
 # rather than invented, for the same reason the ethics gate implements GBIF's sensitive-species
@@ -269,6 +279,76 @@ DISPLACEMENT_BIAS: Final = _domains(
         "The season windows are fixed calendar blocks, so a herd that shifted *when* it moves "
         "rather than how far is invisible here -- the trade the method note makes explicitly, "
         "because timing is what Phase 1d proved a changing collar record cannot measure.",
+    ),
+)
+
+PROTOCOL_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "Sweden, and only Sweden. It is the one place in this lake where two independent "
+        "programmes count the same populations, so it is the only place the question can be asked "
+        "at all -- which is itself a fact about the holding rather than about birds.",
+    ),
+    temporal=(
+        "addressed",
+        "Both programmes restricted to their shared window, 1996-2024, before any slope was "
+        "fitted. Window cannot contribute to the disagreement.",
+    ),
+    taxonomic=(
+        "addressed",
+        "Paired species by species. The comparison is one animal against itself, so the species "
+        "mixture -- which is what made the first version of this diagnosis wrong -- cannot "
+        "contribute either.",
+    ),
+    environmental=(
+        "open",
+        "Footprints still differ: 33 consistently sampled cells against 84. Part of the residual "
+        "may be real geography rather than method, and restricting to shared cells is the "
+        "successor's first job.",
+    ),
+    detectability=(
+        "open",
+        "This is a measurement *of* a detectability difference and cannot correct for one. A point "
+        "count and a fixed route weight a species' detectability differently by construction; "
+        "which of the two is closer to the truth is not answerable from the pair.",
+    ),
+    phenological=(
+        "not applicable",
+        "A latitude centroid over a breeding season carries no timing claim.",
+    ),
+)
+
+FLIGHT_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "The United Kingdom's transect network, 3,144 sites. A phenological response measured "
+        "where volunteers walk, which is not a sample of anywhere else.",
+    ),
+    temporal=(
+        "addressed",
+        "1973-2021, and the unit qualifies only with fifteen years of its own. Long enough that a "
+        "decadal rate is not an artefact of two endpoints.",
+    ),
+    taxonomic=(
+        "bounded",
+        "59 taxa, resolved to name, and the great majority resident. This is a flight-period "
+        "response and not a migration timing shift -- the two are different behaviours and the "
+        "claim is only about the first.",
+    ),
+    environmental=(
+        "open",
+        "No driver enters this. That the advance tracks warming is the literature's expectation "
+        "and is not tested here, so the finding is a change and not an attribution.",
+    ),
+    detectability=(
+        "addressed",
+        "The estimand is a date, not an abundance, so no effort denominator is needed -- and the "
+        "source carries none. A year with fewer visits gives a noisier date, not a biased one.",
+    ),
+    phenological=(
+        "bounded",
+        "Mean flight date is one summary of a flight period. A species whose season lengthened at "
+        "one end without moving its centre would report no change here.",
     ),
 )
 
@@ -533,6 +613,232 @@ def _coverage_bias(evidence_types: int) -> list[BiasDomain]:
             "Long digitised radar and trawl series exist where they were funded, so the "
             "environmental space this project covers is a funding history rather than a sample.",
         ),
+    )
+
+
+def _optional(finding: Finding | None, *, withheld: str) -> list[Finding]:
+    """One finding, or none with the reason logged.
+
+    Three claims are conditional on their own data clearing a registered floor, and each wrote the
+    same four lines. A withheld finding must leave a trace -- silence is how a claim disappears
+    without anybody deciding to drop it.
+    """
+    if finding is not None:
+        return [finding]
+    log.warning(withheld)
+    return []
+
+
+def _idle_network_findings() -> list[Finding]:
+    """Phase 1k and 1l's publishable half, which is not the half that was expected.
+
+    1l's stop condition fired -- two protocols disagree about one species more than species disagree
+    with each other -- so 1k's three latitude medians are withheld and the bound 1l measured stands
+    in their place. The butterfly timing leg makes no cross-network comparison and is unaffected.
+
+    Its own function rather than eight statements in `collect`, which was already at its limit.
+    """
+    return [
+        *_optional(
+            _protocol_finding(),
+            withheld="protocol-disagreement withheld: the paired panel fell below its floor",
+        ),
+        *_optional(
+            _flight_finding(),
+            withheld="flight-advance withheld: no series cleared the registered floor",
+        ),
+    ]
+
+
+def _protocol_finding() -> Finding | None:
+    """The bound Phase 1l measured on this project's own comparative method.
+
+    Published because Phase 1l's stop condition fired: its ratio came back above 1, so Phase 1k's
+    three latitude medians are withheld and this is what stands in their place. A project that
+    compares realms, legs and networks has to publish what it measured about the reliability of
+    comparing.
+    """
+    from migratlas.reports import phase1l  # noqa: PLC0415 -- heavy, and only this claim
+
+    paired = phase1l.paired()
+    split = phase1l.decompose()
+    if paired is None or split is None:
+        return None
+
+    noise = 100.0 * split.noise_share
+    corrected = (
+        split.method_sd / split.species_sd
+        if split.method_sd is not None and split.species_sd
+        else float("nan")
+    )
+    return Finding(
+        key="protocol-disagreement",
+        realm=Realm.TERRESTRIAL.value,
+        taxon_scope=TaxonScope.EXACT.value,
+        evidence_type=EvidenceType.SURVEY_INDEX.value,
+        bias=PROTOCOL_BIAS,
+        plain=(
+            "Two bird surveys counting the same species often disagree about which way it is "
+            "moving, and mostly because neither can measure one species precisely enough to tell."
+        ),
+        matters=(
+            "Almost everything on this site is a comparison: one place against another, one kind "
+            "of animal against another, one method against another. All of it assumes that how "
+            "you counted matters less than what you counted. Here that assumption was tested for "
+            "the first time and it did not hold -- the two matter about equally. The useful half "
+            "of the answer is why: a single species counted by a single programme is too faint a "
+            "signal to compare, which is a reason to read the pages that follow as being about "
+            "many animals at once rather than about any one of them."
+        ),
+        plain_caveat=(
+            "This is one country and one kind of survey. It does not prove the same is true of "
+            "radar or of fishing nets, and it cannot say which of the two surveys is closer to "
+            "right. Averaging species together makes each reading sharper without bringing the "
+            "two surveys any closer, so the disagreement is not something more counting fixes."
+        ),
+        plain_how=(
+            "Sweden runs two independent bird-counting programmes side by side. We took every "
+            "species counted by both, cut the records back to the years the two share, and worked "
+            "out how far north that species had moved according to each one. Then we compared the "
+            "two answers for the same animal, so that differences between species could not be "
+            "the explanation, and asked whether the gap between methods was smaller or larger "
+            "than the gap between species."
+        ),
+        claim=(
+            f"On the one population pair this lake can check, between-protocol disagreement in a "
+            f"species' latitudinal trend is comparable to between-species dispersion once each "
+            f"side's own estimation error is removed from both: {corrected:.2f} to one. Only "
+            f"{noise:.0f}% of the raw paired disagreement is that error, so most of what "
+            f"separates the two programmes is a real difference in what they measure rather than "
+            f"noise in how well they measure it."
+        ),
+        value=(
+            f"method-to-species scatter {corrected:.2f}x, estimation error removed from both; "
+            f"{noise:.0f}% of the raw disagreement is that error"
+        ),
+        scope=(
+            f"Two Swedish bird programmes, {paired.shared_years[0]}-{paired.shared_years[1]}, "
+            f"{paired.species} species qualifying in both at twenty years each, paired species by "
+            f"species with the window held common, of which {split.species} carry a standard "
+            f"error on both sides and enter the decomposition."
+        ),
+        caveat=(
+            f"The two readings a paired difference allows have been separated rather than left "
+            f"open, from the standard errors the fits were already computing: {noise:.0f}% of the "
+            f"raw disagreement is the two fits' own estimation error, so the remainder is a real "
+            f"difference in what the programmes measure. What that remainder is made of is not "
+            f"resolved: footprints were left unequal on purpose (33 consistently sampled cells "
+            f"against 84), so part of it is geography rather than protocol. The sign "
+            f"disagreements are softer than they read: {split.flips_explained} of "
+            f"{split.flips} involve at least one estimate that cannot be told apart from zero, "
+            f"which two weak readings of a near-zero trend do as a matter of course. The reason "
+            f"is in the third figure: a median species trend here is "
+            f"{split.slope_vs_stderr:.2f} standard errors from zero, short of the two a single "
+            f"estimate needs, so these networks do not measure one species' movement precisely "
+            f"enough to compare. And agreement would have licensed comparison, never accuracy -- "
+            f"two programmes in one country can share a bias and agree while both are wrong."
+        ),
+        method="docs/methods/phase1l-paired-protocols.md",
+        direction="limit",
+        supporting=[
+            "The pairing was run because an earlier version of this diagnosis compared two "
+            "network averages over different species mixtures, which is the error it was warning "
+            "about; removing the mixture made the disagreement larger rather than smaller.",
+            "Two of the phase's four registered predictions were graded false, and they fired "
+            "the stop condition that withholds the distribution results this claim replaces.",
+            "A successor grouped the same species by where they live and recomputed the ratio "
+            "with groups as the unit, which is how a difference that averages away is told from "
+            "one that does not. It did not move, so the remainder is systematic rather than "
+            "species-specific -- the more serious of the two possibilities, and the reason the "
+            "withholding stands on firmer ground than when it fired.",
+            "The window was made common before any slope was fitted, so the disagreement is not "
+            "two programmes describing two different periods.",
+            f"The headline moved in the correcting, and the earlier figure is kept here rather "
+            f"than replaced quietly: {paired.ratio:.2f} compared interquartile ranges with both "
+            f"sides' estimation error left in, and {corrected:.2f} compares standard deviations "
+            f"with that error removed from each. Two changes at once, so the fall is not "
+            f"attributable to the correction alone.",
+        ],
+    )
+
+
+def _flight_finding() -> Finding | None:
+    """The largest timing signal in this lake, and the first from an insect series."""
+    from migratlas.reports import phase1k  # noqa: PLC0415 -- heavy, and only this claim
+
+    flight = phase1k.timing()
+    if flight is None:
+        return None
+
+    return Finding(
+        key="flight-advance",
+        realm=Realm.TERRESTRIAL.value,
+        taxon_scope=TaxonScope.EXACT.value,
+        evidence_type=EvidenceType.SURVEY_INDEX.value,
+        bias=FLIGHT_BIAS,
+        plain=(
+            "British butterflies are flying about two days earlier every decade, and the shift is "
+            "nearly four times the one measured in the night sky."
+        ),
+        matters=(
+            "Timing is where a warming year shows up first. This is the same question the radar "
+            "answers over North America, asked of a completely different kind of animal with a "
+            "completely different instrument -- and the answer is much larger, on a panel eighty "
+            "times bigger."
+        ),
+        plain_caveat=(
+            "Most of these are butterflies that stay put, so this is when they emerge rather than "
+            "when they travel. It is one country, and it is volunteers walking transects."
+        ),
+        plain_how=(
+            "Volunteers have walked the same transects in Britain since the scheme began, "
+            "recording what they see. For each species at each site, the scheme records the middle "
+            "of its flight period, and we asked whether that date has moved -- one straight line "
+            "per site-species series, and only where fifteen years of it exist. Every series was "
+            "also compared against itself with the years shuffled, so a series only counts if it "
+            "beats its own noise."
+        ),
+        claim=(
+            f"Mean flight date across UK monitoring transects has advanced by "
+            f"{abs(flight.median):.2f} days per decade (median across {flight.units:,} "
+            f"site-species-generation series, 95% CI "
+            f"{flight.interval[0]:+.2f} to {flight.interval[1]:+.2f}), with "
+            f"{flight.significant:,} series beating their own year-shuffle null against a chance "
+            f"bar of {flight.bar:,}."
+        ),
+        value=(
+            f"{flight.median:+.2f} days per decade across {flight.units:,} series "
+            f"(IQR {flight.iqr[0]:+.1f} to {flight.iqr[1]:+.1f})"
+        ),
+        scope=(
+            f"UK Butterfly Monitoring Scheme transects, 1973-2021, {flight.units:,} "
+            "site-species-generation series clearing fifteen years each, split generations kept "
+            "apart from pooled-brood rows."
+        ),
+        caveat=(
+            "The median hides a spread that is wider than itself: the interquartile range runs "
+            f"{flight.iqr[0]:+.1f} to {flight.iqr[1]:+.1f} days per decade, so a substantial "
+            "minority of series are flying later, and this is a summary of series doing different "
+            "things rather than one behaviour. No driver enters the fit, so it is a change and not "
+            "an attribution -- that warming is the cause is the literature's expectation and is "
+            "untested here. A mean flight date is one summary of a flight period, and a species "
+            "whose season lengthened at one end without moving its centre reports nothing. And a "
+            "flight period is not a migration: the comparison to nocturnal passage is a comparison "
+            "of thermal tracking, not of the same behaviour."
+        ),
+        method="docs/methods/phase1k-idle-networks.md",
+        direction="change",
+        supporting=[
+            "The phase's estimator reproduced two of this project's published numbers before "
+            "touching a new source -- the marine median to three significant figures and the "
+            "aerial slope to two -- by calling those reports rather than a copy of them.",
+            "The registered prediction that the advance exceeds the radar's in magnitude was "
+            "graded true at 3.8 times, and the prediction that the advance exists at all was "
+            "wired to a stop condition rather than to an interpretation.",
+            "The estimand had to be reconstructed because the lake stores no flight date, and the "
+            "first implementation fitted the wrong quantity; the correction is recorded in the "
+            "method note rather than edited away.",
+        ],
     )
 
 
@@ -1079,11 +1385,14 @@ def collect() -> list[Finding]:
 
     findings.append(_skill_finding())
 
-    displacement = _displacement_finding()
-    if displacement is not None:
-        findings.append(displacement)
-    else:
-        log.warning("displacement-flat withheld: the escape correlation exceeded its bar")
+    findings.extend(_idle_network_findings())
+
+    findings.extend(
+        _optional(
+            _displacement_finding(),
+            withheld="displacement-flat withheld: the escape correlation exceeded its bar",
+        )
+    )
 
     # --- Phase 1i: does any of this transfer? -----------------------------
     # The slowest entry in the build by a wide margin: it re-runs all three legs, and two of them
