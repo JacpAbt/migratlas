@@ -380,3 +380,28 @@ damaging.
 3. **A class effect needs a source that breaks the collinearity.** Nothing in the current holding does.
 4. **The registered 15-year floor sensitivity was not run.** Recorded as owed rather than quietly
    dropped.
+
+---
+
+## Correction, 2026-08-31: `reports/` is not inside the AST guard
+
+§1 says, of writing no taxon name into an identifier: *"That package is inside the taxon-agnostic
+AST guard, and `ingest/` and `models/` are the only exempt ones."* Both halves are false, checked
+against `tests/test_taxon_agnostic.py` rather than remembered.
+
+`GUARDED_PACKAGES` is `catalog`, `drivers`, `evidence`, `features`, `lake`, `metrics`, `taxonomy`
+and `tiles`, plus `redact.py` and `config.py`. **`reports/` is not in it**, and neither are `cli.py`,
+`ingest/` or `models/` — so the exempt set is much larger than two packages, and this phase's own
+package was never being checked.
+
+**And it cannot simply be added.** `reports/phase1_ebird.py` exists and `cli.py` imports it by name,
+so the guard would fail on the identifier `phase1_ebird` the moment `reports/` entered the tuple.
+Whether that file should be renamed and the package admitted is a real question and it is not this
+note's to answer; it is recorded so the next person finds the measurement rather than the belief.
+
+**What this does and does not change.** §1's *decision* stands on its own merits: grouping by the
+taxonomic class read from `taxon_key` rather than by hand-written taxon names is right because the
+grouping should be data-driven, and the synthesis found the axis collinear with the network anyway.
+What was wrong is the reason given for it — a mechanism was cited where the truth is a convention
+this package keeps voluntarily. A convention is worth less than a guard, and the difference is
+exactly the kind of thing this project writes down.
