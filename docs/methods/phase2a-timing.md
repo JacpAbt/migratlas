@@ -141,3 +141,43 @@ explained.
    pooled `S` computed over an unbalanced panel would weight late-joining stations differently.
    Sensitivities are fitted per station and only then pooled, which is the same discipline Phase 1a
    used for its trends.
+
+---
+
+## Correction, 2026-08-31: confound 3's description of the estimator is false
+
+Confound 3 above says, of the reanalysis caveat:
+
+> It bites less here than for a trend, because `S` is fitted on year-to-year *variation* rather than
+> on the long-term slope.
+
+**`S` is not fitted on year-to-year variation.** Read off `phase2a_timing.sensitivities()` rather
+than remembered, the per-station design matrix is
+
+```
+[1, temperature, wind_support, post_2012]
+```
+
+with no year term and no detrending of either series. So `S` is a within-station slope over
+thirty-one years in which the response and the predictor both trend, and it absorbs their shared
+trend in proportion to how much of each series is trend.
+
+**Why that matters beyond the sentence.** Write the model with a time term in it and the observed
+trend decomposes as `A = b + s x w`. Estimating `s` without the time term folds `b` — everything
+non-thermal that moved over the record — into the coefficient, and `S x W` then partly reproduces `A`
+by construction. The published ratio is 0.54 rather than 1.0, so interannual variance does dominate
+and the circularity is partial; **how partial has never been measured.**
+
+The correction is recorded rather than edited because the sentence was written in advance and being
+wrong in advance is what this convention exists to preserve. Nothing else in this note changes: the
+sign, the wind result, the identifiability of the split between temperature and wind, and the
+southern band's misbehaviour are all unaffected, because none of them turns on the timescale.
+
+**What follows from it** is registered separately, before anything was refitted, in
+[`phase2c-timescale.md`](phase2c-timescale.md): the same fit with a year term, with first
+differences, and at Phase 3h's regional scale, with the deliverable an *interval* on the explained
+share rather than a corrected point estimate — because a secular response and a non-thermal process
+that trends the same way are the same column of this design matrix, and one realised series cannot
+separate them. Five published products rest on the answer: this note's own share,
+`anthropogenic-share`, the ATTRICI comparison, `transfer-fails`' aerial leg, the response dial and
+Forecast A.
