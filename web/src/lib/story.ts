@@ -150,6 +150,22 @@ export const VIEWS: Record<string, View> = {
       "Sweden, counted twice over: two national bird-counting programmes have run side by side " +
       "across the same country for decades.",
   },
+  "seas-disagree": {
+    // Pulled back much further than `marine-null`, and that is the claim rather than a framing
+    // preference: this one says the seas differ *from each other*, so a camera on one of them would
+    // contradict the sentence it illustrates. North America with an ocean on each side puts the
+    // Bering Sea, the two Gulf of Mexico series, the Scotian shelf and the European surveys in one
+    // frame, which is the comparison.
+    center: [-70, 45],
+    zoom: 1.6,
+    // The same survey-footprint layer `marine-null` draws, because it is the same 2.8 million rows
+    // and it shows where the eighteen segments are. It does not draw the heterogeneity: no tile
+    // does, and the plate carries that.
+    layers: ["marine-taxa-recorded"],
+    because:
+      "North America with an ocean on each side, because the finding is that these seas disagree " +
+      "with one another -- framing one of them would argue against the sentence.",
+  },
   "coverage-bias": {
     // Deliberately the southern hemisphere, and deliberately far out. This claim is about what the
     // project cannot see, so the camera points at the emptiness rather than at the data.
@@ -223,6 +239,12 @@ export function exploreView(available: string[], zoom = 1.4): View {
  * two claims in that chapter are about missing data and this one is about data that is present.
  * It belongs anyway: what the reader cannot see is which of two programmes counting the same birds
  * is closer to right, and that limit sits under every comparison the rest of the book makes.
+ *
+ * `seas-disagree` joins it for the same reason and makes the pair a kind rather than an exception:
+ * what the reader cannot see is which sea will move, because the seas differ far beyond sampling
+ * and the thermometer does not sort them. Two of the four claims here are now limits on comparison
+ * rather than absences of data, which is a sign this chapter's axis is doing less work than its
+ * title suggests -- recorded here rather than acted on, because renaming a chapter is not free.
  */
 export interface Chapter {
   /** Stable identity, and what goes in the URL. */
@@ -269,7 +291,7 @@ export const CHAPTERS: readonly Chapter[] = [
     slug: "cannot-see",
     title: "What we cannot see",
     tab: "Cannot see",
-    keys: ["coverage-bias", "protocol-disagreement", "transfer-fails"],
+    keys: ["coverage-bias", "protocol-disagreement", "seas-disagree", "transfer-fails"],
   },
   {
     slug: "can-be-predicted",

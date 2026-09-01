@@ -616,6 +616,143 @@ def _coverage_bias(evidence_types: int) -> list[BiasDomain]:
     )
 
 
+SEAS_DISAGREE_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "Eighteen shelf surveys of the North Atlantic and North Pacific. 0% southern hemisphere "
+        "and 0% tropics, so this is a statement about northern shelf seas and not about the ocean.",
+    ),
+    temporal=(
+        "addressed",
+        "The unit is a survey's longest unbroken run under one gear, clipped to the satellite era, "
+        "so no break term is needed anywhere: the segment is the break handling. A deterministic "
+        "gear rule replaced one whose tie order was unstable between runs.",
+    ),
+    taxonomic=(
+        "addressed",
+        "Around 1,400 species-survey pairs summarised per survey by their median. The "
+        "heterogeneity is measured between surveys, which is the level a pooled median destroys.",
+    ),
+    environmental=(
+        "open",
+        "The warming driver is a satellite reading the sea surface at a quarter degree, and these "
+        "are bottom trawls. Where both waters exist they agree in direction at +0.216 across ten "
+        "surveys, which is modest, and that correlation is the whole of what bounds the "
+        "substitution.",
+    ),
+    detectability=(
+        "bounded",
+        "A trawl samples trawlable ground, and a survey that recorded no haul depth cannot enter "
+        "the registered regression at all rather than being given a substituted depth.",
+    ),
+    phenological=(
+        "bounded",
+        "Surveys run in fixed seasons, so a species that shifted its timing rather than its "
+        "position does not appear here.",
+    ),
+)
+
+
+def _seas_finding() -> Finding | None:
+    """Phase 3e's established result, owed to the ledger since the presentation arc closed.
+
+    Two halves and the note calls them inseparable: the seas differ emphatically, and the
+    thermometer does not sort which of them moved. Publishing either alone would be a different
+    claim -- the heterogeneity without the null reads as "warming redistributes fish unevenly",
+    and the null without the heterogeneity reads as "warming does nothing".
+    """
+    from migratlas.reports import phase3b, phase3e  # noqa: PLC0415 -- heavy, and only this claim
+
+    fitted, coverage, calibration = phase3e.units_3e()
+    if not calibration.passes or len(fitted) < phase3b.MIN_UNITS:
+        return None
+    fit = phase3b.regression(fitted)
+    if not fit.heterogeneous:
+        return None
+    # ADR 0016, extended to Q by this phase because that ADR deferred it here. Q is a sum over
+    # units, so one extreme sea could carry it exactly as one carried Phase 3g's slope -- and a
+    # heterogeneity claim that rests on a single sea is a claim about that sea.
+    if not fit.q_survives:
+        log.warning("seas-disagree withheld: Q does not survive dropping one unit")
+        return None
+
+    return Finding(
+        key="seas-disagree",
+        plain_how=(
+            "The same research trawls, cut a different way. Instead of asking how far fish moved "
+            "on average, we asked whether the seas agree with each other at all — a formal test of "
+            "whether eighteen surveys are one population with noise or genuinely different places. "
+            "Then we asked whether the seas that warmed fastest were the seas whose fish moved "
+            "furthest, using satellite temperature over each survey's own footprint."
+        ),
+        realm=Realm.MARINE.value,
+        taxon_scope=TaxonScope.EXACT.value,
+        evidence_type=EvidenceType.SURVEY_INDEX.value,
+        bias=SEAS_DISAGREE_BIAS,
+        plain=(
+            "The seas are doing genuinely different things, not one thing with noise around it — "
+            "and how fast a sea warmed does not tell you whether its fish moved."
+        ),
+        matters=(
+            "A single number for the ocean would erase this, and a single number is what a reader "
+            "wants. The seas disagree far beyond what sampling can explain, so any plan built on "
+            "an average is planning for a place that does not exist. And the obvious explanation "
+            "for who moved — whose water warmed most — is measured here and is not the answer."
+        ),
+        plain_caveat=(
+            "This says the seas differ and that temperature alone does not sort them. It does not "
+            "say what does. A warming that moved some kinds of fish and left others alone would "
+            "look like this too, and that has not been tested yet."
+        ),
+        claim=(
+            f"Across {fit.units} shelf-survey segments the latitude trends are heterogeneous far "
+            f"beyond sampling — Cochran's Q {fit.q_statistic:.1f} against a chi-square bar of "
+            f"{fit.q_bar:.1f} — while warming does not predict which segments moved: "
+            f"{fit.temp_slope:+.3f} ± {fit.temp_ci:.3f} °latitude per °C, both per decade."
+        ),
+        value=(
+            f"Q {fit.q_statistic:.1f} against a bar of {fit.q_bar:.1f} across {fit.units} "
+            f"segments; warming {fit.temp_slope:+.3f} ± {fit.temp_ci:.3f} °lat per °C"
+        ),
+        scope=(
+            f"{fit.units} bottom-trawl survey segments, each its longest unbroken run under one "
+            f"gear clipped to the satellite era at twenty years or more, against a footprint-mean "
+            f"satellite sea-surface temperature. {len(coverage)} surveys published as coverage "
+            f"instead."
+        ),
+        caveat=(
+            "The warming null is an average over units that emphatically disagree, so it rules out "
+            "warming as the sorter *on this axis at this unit* and not as a driver: something that "
+            "moved a third of the pairs and left the rest alone produces this number, and the "
+            "cluster test for that is registered in docs/methods/phase3j-thermal-clusters.md and "
+            "not yet run. The registered depth interaction came out "
+            f"{fit.interaction_slope:+.3f} ± {fit.interaction_ci:.3f}, the opposite sign to the "
+            "prediction, and is reported as the graded failure it is rather than turned around "
+            "into a story. The driver is a satellite reading the surface where the fish are on the "
+            "bottom, bounded only by the two waters agreeing in direction at "
+            f"{calibration.correlation:+.3f} across {calibration.units} surveys. And a segment is "
+            "shorter than its survey's record, so the most recent years of the longest series go "
+            "unused by this design."
+        ),
+        method="docs/methods/phase3e-marine-oisst.md",
+        direction="limit",
+        supporting=[
+            "The heterogeneity survives ADR 0016: dropping any one of the segments leaves Q above "
+            "its own recomputed bar, so this is not one extreme sea carrying a statistic.",
+            "The warming null has no verdict for a single unit to overturn, and the furthest any "
+            "one segment moves it leaves it a null as well.",
+            "Five of five registered predictions were graded and two came back false, including "
+            "the warming one this claim reports — the design was built to be able to say so.",
+            "The satellite substitution was gated on a calibration fixed before any value was "
+            "read: where a survey recorded its own water, the two had to agree in direction or "
+            "nothing below was interpreted.",
+            "An earlier version of this phase died on its own floor, with ten units against a "
+            "registered twelve, because it required each survey to have recorded its own "
+            "temperature. The salvage is what made eighteen possible and it is priced in the note.",
+        ],
+    )
+
+
 def _optional(finding: Finding | None, *, withheld: str) -> list[Finding]:
     """One finding, or none with the reason logged.
 
@@ -646,6 +783,13 @@ def _idle_network_findings() -> list[Finding]:
         *_optional(
             _flight_finding(),
             withheld="flight-advance withheld: no series cleared the registered floor",
+        ),
+        *_optional(
+            _seas_finding(),
+            withheld=(
+                "seas-disagree withheld: the calibration, the unit floor or the heterogeneity "
+                "test did not hold"
+            ),
         ),
     ]
 
@@ -1828,6 +1972,62 @@ def _autumn_advance(first_year: int, last_year: int) -> Finding:
     )
 
 
+class Scales(NamedTuple):
+    """What the regional half of the predictability question adds to `skill-sparse`."""
+
+    claim: str
+    value: str
+    supporting: str
+
+
+def _scales() -> Scales:
+    """The reconciliation, published at last.
+
+    Two findings looked like a contradiction for as long as this number sat in a method note. One
+    says knowing the weather barely predicts next year's passage; the other credits pre-season
+    temperature with about half the thirty-year trend. Phase 3h's floor diagnostic is what makes
+    both true at once: at a single station there is very little explainable variance for any driver
+    to reach, and pooling stations into a region roughly doubles it. A trend and interannual
+    predictability were always different properties, and this is the measurement that says why.
+    """
+    from migratlas.reports import phase3h, response_floor  # noqa: PLC0415 -- heavy, and only here
+
+    floors = {floor.season: floor for floor in response_floor.collect()}
+    floor = floors.get("autumn")
+    regional = phase3h.regional_arm("autumn")
+    if floor is None or regional is None:
+        log.warning("skill-sparse: no regional half, so only the per-station scale is published")
+        return Scales(
+            claim="",
+            value="",
+            supporting=(
+                "The regional scale could not be measured on this build, so this claim carries "
+                "only the per-station answer and not the reason for it."
+            ),
+        )
+    return Scales(
+        claim=(
+            f" The limit is the target rather than the drivers: a station's own passage date is "
+            f"only {floor.station_ceiling:.0%} explainable against {floor.pooled_ceiling:.0%} for "
+            f"a flyway-band region, and predicting the region instead lifts the autumn median to "
+            f"{regional.median_skill:+.3f} with {regional.significant} of {regional.units} regions "
+            f"beating their own null."
+        ),
+        value=(
+            f"; regions {regional.significant}/{regional.units}, "
+            f"median {regional.median_skill:+.3f}"
+        ),
+        supporting=(
+            f"Two of this project's claims read as a contradiction until this was published: "
+            f"temperature barely predicts a station's next year, and yet it is credited with about "
+            f"half the thirty-year advance. Both hold, because a station's date is "
+            f"{floor.station_ceiling:.0%} explainable and a region's {floor.pooled_ceiling:.0%} — "
+            f"a trend and interannual predictability are different properties, and the second was "
+            f"being measured against a target that is mostly noise."
+        ),
+    )
+
+
 def _skill_finding() -> Finding:
     """Phase 3a's product: the predictability of timing, measured and mostly absent.
 
@@ -1840,6 +2040,7 @@ def _skill_finding() -> Finding:
     results = phase3a.aerial()
     seasons = {v.season: v for v in phase3a.verdicts(results)}
     spring, autumn = seasons["spring"], seasons["autumn"]
+    scales = _scales()
     return Finding(
         key="skill-sparse",
         plain_how=(
@@ -1874,11 +2075,11 @@ def _skill_finding() -> Finding:
             f"at {spring.significant} of {spring.stations} (chance bar {spring.binomial_bar}), "
             f"autumn at {autumn.significant} of {autumn.stations} (chance bar "
             f"{autumn.binomial_bar}), with median test-era skill "
-            f"{spring.median_skill:+.3f} and {autumn.median_skill:+.3f}."
+            f"{spring.median_skill:+.3f} and {autumn.median_skill:+.3f}.{scales.claim}"
         ),
         value=(
             f"autumn {autumn.significant}/{autumn.stations} stations above chance; spring "
-            f"{spring.significant}/{spring.stations} at the chance bar"
+            f"{spring.significant}/{spring.stations} at the chance bar{scales.value}"
         ),
         scope=(
             f"{autumn.stations} US weather-radar stations, 1995-2025, era-split ridge against "
@@ -1902,6 +2103,7 @@ def _skill_finding() -> Finding:
         method="docs/methods/phase3a-skill.md",
         direction="limit",
         supporting=[
+            scales.supporting,
             "Two of the design's own pre-registered predictions were graded false and stand "
             "recorded in the method note -- spring, the literature's temperature-forced "
             "season, is indistinguishable from the false-positive rate.",

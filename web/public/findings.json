@@ -316,10 +316,10 @@
    "key": "skill-sparse",
    "plain": "Knowing the weather and the big climate patterns barely helps predict when next year's migration will pass -- only a scattered few autumn stations beat guessing the average.",
    "matters": "Migration timing has shifted over thirty years, and it is tempting to assume the shift makes each year predictable. It does not: a trend and year-to-year predictability are different properties, and every forecast this site will ever draw is licensed only where this map is not empty.",
-   "claim": "Interannual passage-timing skill is absent at most stations: spring significant at 11 of 140 (chance bar 11), autumn at 20 of 143 (chance bar 12), with median test-era skill -0.031 and +0.005.",
+   "claim": "Interannual passage-timing skill is absent at most stations: spring significant at 11 of 140 (chance bar 11), autumn at 20 of 143 (chance bar 12), with median test-era skill -0.031 and +0.005. The limit is the target rather than the drivers: a station's own passage date is only 34% explainable against 65% for a flyway-band region, and predicting the region instead lifts the autumn median to +0.065 with 3 of 11 regions beating their own null.",
    "plain_caveat": "Tested with one deliberately simple model and seven registered inputs; a cleverer model might do better, but it would be answering a different, unregistered question.",
    "plain_how": "Prediction was tested the only way that settles anything: fit on the early years, predict the later ones, and never look at them first. What the model was allowed to use was written down before it was run once. Then every station's score was set against the same model fed the same years shuffled, so a station counts as predictable only if it beats its own noise. Most did not.",
-   "value": "autumn 20/143 stations above chance; spring 11/140 at the chance bar",
+   "value": "autumn 20/143 stations above chance; spring 11/140 at the chance bar; regions 3/11, median +0.065",
    "scope": "143 US weather-radar stations, 1995-2025, era-split ridge against the training climatology with a per-station year-shuffle null; covariates fixed in docs/methods/phase3a-skill.md before any fit.",
    "caveat": "One registered model class, one covariate list, one split: absence of skill here is absence under those registered choices, not a theorem about the atmosphere. Part of what skill exists is the shared climate modes wearing local clothes -- where the modes alone predict, the weather's marginal contribution halves -- and the marine and herd halves of the same design produced no skill map at all: the surveys mostly changed gear mid-record, and the herds' usable years fall below the design's own floor. The empty cells are statements about the data and the design, published at the same rank as the filled ones. One thing this number does not carry on its own: every aerial skill phase in this project has scored the same held-out era of the same panel, each blind within itself and none blind to the tables before it. ADR 0017 reserves the record's last three years for a single confirmatory run and requires each phase to state where in that sequence it sits.",
    "method": "docs/methods/phase3a-skill.md",
@@ -362,6 +362,7 @@
    "specimen": "",
    "direction": "limit",
    "supporting": [
+    "Two of this project's claims read as a contradiction until this was published: temperature barely predicts a station's next year, and yet it is credited with about half the thirty-year advance. Both hold, because a station's date is 34% explainable and a region's 65% \u2014 a trend and interannual predictability are different properties, and the second was being measured against a target that is mostly noise.",
     "Two of the design's own pre-registered predictions were graded false and stand recorded in the method note -- spring, the literature's temperature-forced season, is indistinguishable from the false-positive rate.",
     "Autumn's count clears its exact binomial chance bar, so the sparse map is not noise promoted to a story.",
     "The fits reproduced byte-for-byte across two runs under the registered seed, after a data gap forced the only rerun."
@@ -477,6 +478,63 @@
     "The phase's estimator reproduced two of this project's published numbers before touching a new source -- the marine median to three significant figures and the aerial slope to two -- by calling those reports rather than a copy of them.",
     "The comparison to the radar is withheld, and by a condition registered in Phase 1j before either number existed. What moved: flight-curve spread +0.097 [+0.051, +0.133] days per decade over 1973-2021; flight-period duration -0.201 [-0.408, -0.034] days per decade over 1995-2021. The interval resamples units as if independent, so it is if anything too tight -- which withholds more than a wider one would, and is the safe direction for a guard.",
     "The estimand had to be reconstructed because the lake stores no flight date, and the first implementation fitted the wrong quantity; the correction is recorded in the method note rather than edited away."
+   ]
+  },
+  {
+   "key": "seas-disagree",
+   "plain": "The seas are doing genuinely different things, not one thing with noise around it \u2014 and how fast a sea warmed does not tell you whether its fish moved.",
+   "matters": "A single number for the ocean would erase this, and a single number is what a reader wants. The seas disagree far beyond what sampling can explain, so any plan built on an average is planning for a place that does not exist. And the obvious explanation for who moved \u2014 whose water warmed most \u2014 is measured here and is not the answer.",
+   "claim": "Across 18 shelf-survey segments the latitude trends are heterogeneous far beyond sampling \u2014 Cochran's Q 235.7 against a chi-square bar of 27.6 \u2014 while warming does not predict which segments moved: +0.039 \u00b1 0.179 \u00b0latitude per \u00b0C, both per decade.",
+   "plain_caveat": "This says the seas differ and that temperature alone does not sort them. It does not say what does. A warming that moved some kinds of fish and left others alone would look like this too, and that has not been tested yet.",
+   "plain_how": "The same research trawls, cut a different way. Instead of asking how far fish moved on average, we asked whether the seas agree with each other at all \u2014 a formal test of whether eighteen surveys are one population with noise or genuinely different places. Then we asked whether the seas that warmed fastest were the seas whose fish moved furthest, using satellite temperature over each survey's own footprint.",
+   "value": "Q 235.7 against a bar of 27.6 across 18 segments; warming +0.039 \u00b1 0.179 \u00b0lat per \u00b0C",
+   "scope": "18 bottom-trawl survey segments, each its longest unbroken run under one gear clipped to the satellite era at twenty years or more, against a footprint-mean satellite sea-surface temperature. 11 surveys published as coverage instead.",
+   "caveat": "The warming null is an average over units that emphatically disagree, so it rules out warming as the sorter *on this axis at this unit* and not as a driver: something that moved a third of the pairs and left the rest alone produces this number, and the cluster test for that is registered in docs/methods/phase3j-thermal-clusters.md and not yet run. The registered depth interaction came out +0.176 \u00b1 0.131, the opposite sign to the prediction, and is reported as the graded failure it is rather than turned around into a story. The driver is a satellite reading the surface where the fish are on the bottom, bounded only by the two waters agreeing in direction at +0.216 across 10 surveys. And a segment is shorter than its survey's record, so the most recent years of the longest series go unused by this design.",
+   "method": "docs/methods/phase3e-marine-oisst.md",
+   "realm": "marine",
+   "taxon_scope": "exact",
+   "evidence_type": "survey_index",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "Eighteen shelf surveys of the North Atlantic and North Pacific. 0% southern hemisphere and 0% tropics, so this is a statement about northern shelf seas and not about the ocean."
+    },
+    {
+     "domain": "temporal",
+     "status": "addressed",
+     "finding": "The unit is a survey's longest unbroken run under one gear, clipped to the satellite era, so no break term is needed anywhere: the segment is the break handling. A deterministic gear rule replaced one whose tie order was unstable between runs."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "addressed",
+     "finding": "Around 1,400 species-survey pairs summarised per survey by their median. The heterogeneity is measured between surveys, which is the level a pooled median destroys."
+    },
+    {
+     "domain": "environmental",
+     "status": "open",
+     "finding": "The warming driver is a satellite reading the sea surface at a quarter degree, and these are bottom trawls. Where both waters exist they agree in direction at +0.216 across ten surveys, which is modest, and that correlation is the whole of what bounds the substitution."
+    },
+    {
+     "domain": "detectability",
+     "status": "bounded",
+     "finding": "A trawl samples trawlable ground, and a survey that recorded no haul depth cannot enter the registered regression at all rather than being given a substituted depth."
+    },
+    {
+     "domain": "phenological",
+     "status": "bounded",
+     "finding": "Surveys run in fixed seasons, so a species that shifted its timing rather than its position does not appear here."
+    }
+   ],
+   "specimen_key": null,
+   "specimen": "",
+   "direction": "limit",
+   "supporting": [
+    "The heterogeneity survives ADR 0016: dropping any one of the segments leaves Q above its own recomputed bar, so this is not one extreme sea carrying a statistic.",
+    "The warming null has no verdict for a single unit to overturn, and the furthest any one segment moves it leaves it a null as well.",
+    "Five of five registered predictions were graded and two came back false, including the warming one this claim reports \u2014 the design was built to be able to say so.",
+    "The satellite substitution was gated on a calibration fixed before any value was read: where a survey recorded its own water, the two had to agree in direction or nothing below was interpreted.",
+    "An earlier version of this phase died on its own floor, with ten units against a registered twelve, because it required each survey to have recorded its own temperature. The salvage is what made eighteen possible and it is priced in the note."
    ]
   },
   {

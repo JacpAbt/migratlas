@@ -225,6 +225,31 @@ def collect() -> tuple[list[ArmResult], dict[str, list[str]]]:
     return results, dropped
 
 
+def regional_arm(season: str) -> ArmResult | None:
+    """Arm B alone, for the ledger to carry beside the per-station numbers.
+
+    `collect` runs three arms over two seasons and two driver scopes, which is the right shape for
+    grading a registration and the wrong shape for a claim that needs one number. Arm A is not
+    re-run here because `skill-sparse` already computes Phase 3a's per-station medians from Phase
+    3a itself -- running it twice would be two paths to one figure.
+
+    The arm, its columns, its seed and its null are `LADDER[1]`'s, untouched: this is a narrower
+    door into the same room, not a second room.
+    """
+    arm = next((rung for rung in LADDER if rung.key == "B"), None)
+    if arm is None:  # pragma: no cover -- the ladder is a module constant
+        return None
+    stations, _ = units(season)
+    if not stations:
+        log.info("%s: no station units, so there is no region to pool", season)
+        return None
+    regions, _ = regional_units(stations, station_sites(load_conus_nights()))
+    if not regions:
+        log.info("%s: no region cleared the station floor", season)
+        return None
+    return run_arm(arm, regions, season, scope="all")
+
+
 def calibration_verdict(results: Sequence[ArmResult]) -> tuple[bool, list[str]]:
     """Does arm A reproduce Phase 3a's medians? Nothing above it is interpreted if not."""
     lines, passed = [], True
