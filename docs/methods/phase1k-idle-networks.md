@@ -405,3 +405,78 @@ grouping should be data-driven, and the synthesis found the axis collinear with 
 What was wrong is the reason given for it — a mechanism was cited where the truth is a convention
 this package keeps voluntarily. A convention is worth less than a guard, and the difference is
 exactly the kind of thing this project writes down.
+
+---
+
+# Registration — how precise is one flight-date series, and how wide is the median's interval?
+
+**Pre-registered 2026-09-01, before either quantity has been computed.** Neither the per-unit
+standard errors nor any species-clustered interval exists for leg 2 in this repository. What *is*
+known is everything this note already publishes, and it is the reason for asking.
+
+## Why
+
+Leg 2's median is published as `flight-advance`: **−2.10 days per decade across 12,213 units, 95% CI
+−2.180 to −2.038**. Two things about that interval were never checked, and Phase 1l checked both for
+leg 1.
+
+**The interval resamples units as if they were independent.** `_median_interval`'s own docstring
+records the choice and the amendment behind it. But 12,213 site-species-generation units rest on 59
+taxa and 3,144 sites: one species appears at hundreds of sites and responds to a single national
+spring, so the units share far more than a resample over them admits. An interval 0.14 days wide on
+a signal of 2.10 is the kind of precision that should be checked rather than enjoyed.
+
+**And nobody measured what one series is worth.** Phase 1l's decisive number is that a median species
+trend sits **1.69 standard errors from zero**, short of the two a single estimate needs — which is
+why Phase 1k's three latitude medians are withheld to this day. The identical quantity for leg 2 has
+never been computed, even though `shift_per_decade` returns a standard error per unit and leg 2
+throws it away.
+
+## The two quantities
+
+1. **Per-unit precision.** The median of `|per_decade| / stderr` across the qualifying units, which
+   is Phase 1l's `slope_vs_stderr` applied to leg 2's panel. Above 2 and a single site-species
+   series is individually readable; below it, this network measures one series no better than the
+   Swedish programmes measure one species.
+2. **A species-clustered interval on the median.** The same percentile bootstrap, resampling **taxa**
+   with all their series attached rather than resampling series. Taxa rather than sites because a
+   species is the coarser dependence: it shares one national weather sequence across every site it
+   occupies, where a site holds many species responding to different cues. The site-clustered
+   interval is computed and reported beside it, and the **wider of the two is the one that counts** —
+   a conservative choice, fixed here so it cannot be chosen after seeing which is wider.
+
+## Predictions
+
+1. **The median `|slope|/stderr` is below 2.** Derived from a number this note already published
+   rather than from a hunch: 2,476 of 12,213 units beat their own year-shuffle null, so about a
+   fifth clear roughly two standard errors and the median unit is well short of it. Registered as
+   the expected and uncomfortable outcome.
+2. **The species-clustered interval is at least three times wider than the published one.** 12,213
+   units over 59 taxa is an effective sample size far closer to the taxa than to the units.
+3. **The median itself does not move.** Clustering changes an interval, not a point estimate, so any
+   movement beyond rounding is a bug rather than a result.
+
+## Stop conditions
+
+- **Prediction 1 false and the interval still excludes zero.** The claim stands unchanged and gains
+  the per-unit figure as reassurance rather than as a caveat.
+- **Prediction 1 true and the interval still excludes zero.** `flight-advance` stands as a **network
+  median** and its caveat says explicitly that no individual series is readable — the same shape
+  Phase 1l imposed on the latitude medians, without the withholding, because a median over 12,213
+  series is a different object from a median over 189.
+- **The wider interval covers zero.** Then the advance is not distinguishable from no change once
+  dependence is admitted, and `flight-advance` is rescoped to `direction="limit"` in the same commit
+  — the finding becoming a statement about what this panel can resolve rather than about
+  butterflies. **This outcome is live and this registration is worthless if it is not willing to pay
+  it.**
+- Neither clustering, nor the choice of the wider interval, nor the floor of 2 is revisited after any
+  number is seen.
+
+## What this cannot establish
+
+- **Not whether the advance is real.** It measures the precision of a summary, not the biology.
+- **Not the right dependence structure.** Site and species dependence are both present and a two-way
+  cluster bootstrap is not attempted; taking the wider of two one-way clusterings is a bound, not a
+  model.
+- **Nothing about the other networks.** Leg 1's medians are withheld on Phase 1l's stop condition and
+  nothing here lifts that.

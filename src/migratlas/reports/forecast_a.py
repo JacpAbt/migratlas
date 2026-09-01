@@ -188,6 +188,65 @@ def _share(rows: list[Cell], scenario: str, window: str) -> tuple[int, int, floa
     return sayable, len(subset), (sayable / len(subset) if subset else float("nan"))
 
 
+@dataclass(frozen=True, slots=True)
+class Mask:
+    """The deliverable, as the ledger needs it: what may be said at all, and where nothing may.
+
+    The note's own closing recommendation, made structural: *"a successor should also consider
+    reporting the sayable share as the headline number rather than any shift."* So this carries the
+    shares and the unsayable count, and the shift only as the bound it is -- the median shift sits
+    near a day in every scenario-window because masking keeps exactly the cells bunched against the
+    envelope's upper edge, and read as a projection it would understate every scenario.
+    """
+
+    best_scenario: str
+    best_window: str
+    best_share: float
+    unsayable: int
+    """Scenario-windows with nothing sayable in them at all."""
+    total_frames: int
+    worst_delta: float
+    """The largest multi-model median warming asked of the response, degC."""
+    envelope_high: float
+    """The top of the band the response was fitted over, degC."""
+    largest_shift: float
+    """The biggest sayable shift, days. A bound on the thermal component, not an expectation."""
+    stations: int
+
+
+def mask() -> Mask | None:
+    """Summarise the mask across every scenario and window, for the ledger to carry."""
+    rows, refusals = cells()
+    if not rows:
+        log.warning("forecast A: no cells, so there is no mask to publish")
+        return None
+    if refusals:
+        log.info("forecast A: %d refusals carried into the mask", len(refusals))
+
+    frames = [
+        (scenario, window, *_share(rows, scenario, window))
+        for scenario in SCENARIOS
+        for window in WINDOWS
+    ]
+    usable = [frame for frame in frames if frame[3]]
+    if not usable:
+        return None
+    best = max(usable, key=lambda frame: frame[4])
+    response = fitted_response()
+    sayable_shifts = [abs(cell.shift) for cell in rows if cell.sayable]
+    return Mask(
+        best_scenario=best[0],
+        best_window=best[1],
+        best_share=best[4],
+        unsayable=sum(1 for frame in usable if frame[2] == 0),
+        total_frames=len(usable),
+        worst_delta=max(cell.delta for cell in rows),
+        envelope_high=response.band[1] if response is not None else float("nan"),
+        largest_shift=max(sayable_shifts) if sayable_shifts else float("nan"),
+        stations=len({cell.station_id for cell in rows}),
+    )
+
+
 def _grade(passed: bool) -> str:  # noqa: FBT001 -- a grade is a boolean by nature
     return "GRADED TRUE" if passed else "GRADED FALSE"
 

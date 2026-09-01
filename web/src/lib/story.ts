@@ -150,6 +150,16 @@ export const VIEWS: Record<string, View> = {
       "Sweden, counted twice over: two national bird-counting programmes have run side by side " +
       "across the same country for decades.",
   },
+  "projection-mask": {
+    // The claim band, pulled back the way the attribution's view is, because the forcing behind a
+    // scenario is global even where the response is 78 stations wide.
+    center: [-96, 42],
+    zoom: 2.6,
+    layers: ["aerial-passage"],
+    because:
+      "The same band the response was fitted in, which is the only band any of it may be " +
+      "projected into.",
+  },
   "seas-disagree": {
     // Pulled back much further than `marine-null`, and that is the claim rather than a framing
     // preference: this one says the seas differ *from each other*, so a camera on one of them would
@@ -297,7 +307,7 @@ export const CHAPTERS: readonly Chapter[] = [
     slug: "can-be-predicted",
     title: "What can be predicted",
     tab: "Predicted",
-    keys: ["skill-sparse"],
+    keys: ["skill-sparse", "projection-mask"],
   },
   { slug: "why-it-changed", title: "Why it changed", tab: "Why", keys: ["anthropogenic-share"] },
   { slug: "the-world", title: "The world", tab: "The world", keys: [] },

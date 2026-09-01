@@ -753,6 +753,141 @@ def _seas_finding() -> Finding | None:
     )
 
 
+PROJECTION_MASK_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "The 78 radar stations between 37°N and 50°N, which is where the response function is "
+        "published and nowhere else. Nothing here is projected outside that band, and the whole "
+        "point of the claim is that a fitted line does not travel.",
+    ),
+    temporal=(
+        "open",
+        "Every model's anomaly is taken against its own 1995-2014 baseline, which ends where "
+        "CMIP6's historical runs end. The response it multiplies was fitted over 1995-2025, so the "
+        "two windows do not coincide and the ratio construction is what makes that tolerable.",
+    ),
+    taxonomic=(
+        "open",
+        "The response is aerial reflectivity, which cannot tell a bird from a bat from an insect. "
+        "A projection inherits that whole and adds nothing to it.",
+    ),
+    environmental=(
+        "open",
+        "Wind, land use, light and the unexplained half of the observed advance are all held at no "
+        "change, which is a claim about the future and not a neutral choice.",
+    ),
+    detectability=(
+        "addressed",
+        "Every row carries whether that station has any interannual skill at all, because a "
+        "scenario response read forwards is not a year-ahead forecast and a reader who confuses "
+        "them has been misled by presentation.",
+    ),
+    phenological=(
+        "bounded",
+        "The response is a passage date, so this projects timing and nothing about abundance, "
+        "route or destination.",
+    ),
+)
+
+
+def _projection_finding() -> Finding | None:
+    """Forecast A's deliverable, which is the mask and never the shift.
+
+    The note's own closing words: *"a successor should also consider reporting the sayable share as
+    the headline number rather than any shift."* Done here, and the reason is arithmetic -- masking
+    keeps exactly the cells bunched against the envelope's upper edge, so the median sayable shift
+    sits near a day in every scenario at every horizon. Four scenarios differing by four degrees of
+    warming cannot imply the same shift; what they share is the edge of the mask.
+    """
+    from migratlas.reports import forecast_a  # noqa: PLC0415 -- heavy, and only this claim
+
+    read = forecast_a.mask()
+    if read is None:
+        return None
+
+    return Finding(
+        key="projection-mask",
+        plain_how=(
+            "No new measurement and no model of our own. The relationship between a warm "
+            "pre-season and an earlier passage was already fitted from thirty years of "
+            "observations, over a range of temperatures those thirty years actually contained. We "
+            "took published climate projections, asked how much warmer each scenario makes each "
+            "station's pre-season, and then asked the only question that matters: is that warming "
+            "inside the range the relationship was measured over? Where it is not, nothing is "
+            "drawn."
+        ),
+        realm=Realm.AERIAL.value,
+        taxon_scope=TaxonScope.UNATTRIBUTED.value,
+        evidence_type=EvidenceType.FLUX.value,
+        bias=PROJECTION_MASK_BIAS,
+        plain=(
+            "Under strong mitigation, about half these places sit inside the range we actually "
+            "measured by mid-century. Under every other scenario, and everywhere by late century, "
+            "the warming runs off the end of what was measured — and there we decline to guess."
+        ),
+        matters=(
+            "A projection three degrees outside the range it was fitted in is not a cautious "
+            "estimate. It is arithmetic wearing the clothes of evidence, and it is the single "
+            "commonest way this kind of forecasting goes wrong. Publishing where the answer runs "
+            "out is the result here, and it is a smaller map than anyone wants."
+        ),
+        plain_caveat=(
+            "This projects only the part of the timing shift that follows temperature, which is "
+            "about half of it. And it is not a forecast for any particular year — a response read "
+            "forwards under a scenario and a prediction of next autumn are different things."
+        ),
+        claim=(
+            f"Of the scenario-and-horizon frames projected across {read.stations} stations in the "
+            f"claim band, {read.unsayable} of {read.total_frames} have nothing sayable in them at "
+            f"all: the multi-model median warming reaches {read.worst_delta:+.2f} °C against a "
+            f"fitted envelope whose upper bound is {read.envelope_high:+.2f} °C. The best-covered "
+            f"frame is {read.best_scenario} at {read.best_window}, sayable at "
+            f"{read.best_share:.0%} of stations, and the largest sayable shift anywhere is "
+            f"{read.largest_shift:.2f} days per the fitted response."
+        ),
+        value=(
+            f"{read.best_share:.0%} sayable at best ({read.best_scenario}, {read.best_window}); "
+            f"{read.unsayable} of {read.total_frames} frames entirely unsayable"
+        ),
+        scope=(
+            f"{read.stations} radar stations between 37°N and 50°N, four SSPs and two twenty-year "
+            "windows, each model's June-July anomaly against its own 1995-2014 baseline, masked "
+            "against the 5th-to-95th band of the within-station departures the response was fitted "
+            "over."
+        ),
+        caveat=(
+            "The number a reader will reach for is the projected shift, and it is the one number "
+            "here that misleads: masking removes every cell warmer than the envelope's edge, so "
+            "the surviving cells are bunched against that edge and the median sayable shift sits "
+            "near a day in every scenario at every horizon. Four scenarios that differ by four "
+            "degrees of warming cannot imply the same shift — what they share is the mask. Read it "
+            "as a bound on the thermal component, never as an expectation. That component is also "
+            "only about half of the observed advance and the response behind it can be fitted on "
+            "two timescales, so it carries its own range before any scenario is applied. Nothing "
+            "here says the response stays linear outside the band, which is exactly what the mask "
+            "declines to assert, and the model spread is wider than the response's own interval — "
+            "which model you pick matters more than how well the response is known. And this is "
+            "not a year-ahead forecast: interannual skill is absent at most of these stations, and "
+            "a standing annual prediction was tested and refused on measured grounds."
+        ),
+        method="docs/methods/forecast-a.md",
+        direction="limit",
+        supporting=[
+            "The mask was applied before any projected value was reported, not after inspecting "
+            "them, and the envelope, the windows, the member cap and the baseline were all fixed "
+            "before a single scenario store was opened.",
+            "Four of five registered predictions held. The one that failed was the mid-century "
+            "share under strong mitigation, short of a bar chosen for its roundness by one "
+            "station, and it is recorded as false rather than rounded up.",
+            "The response function is read from the published fit rather than re-estimated here, "
+            "so the projection and the ledger cannot disagree about the coefficient they share.",
+            "Every projected row carries whether its station has any interannual skill at all, "
+            "because a scenario response and a year-ahead forecast are different objects and the "
+            "difference is presentation's responsibility.",
+        ],
+    )
+
+
 def _optional(finding: Finding | None, *, withheld: str) -> list[Finding]:
     """One finding, or none with the reason logged.
 
@@ -790,6 +925,10 @@ def _idle_network_findings() -> list[Finding]:
                 "seas-disagree withheld: the calibration, the unit floor or the heterogeneity "
                 "test did not hold"
             ),
+        ),
+        *_optional(
+            _projection_finding(),
+            withheld="projection-mask withheld: no scenario frame carried a station",
         ),
     ]
 
@@ -1671,6 +1810,12 @@ def collect() -> list[Finding]:
     agreed = transfer.indistinguishable
     worst = transfer.worst
 
+    # How many standard errors the marine median sits from zero. Named because the caveat used
+    # to call both agreeing legs "indistinguishable from no tracking", and that is true of one
+    # of them: a measured near-absence and an unmeasurable one are different things.
+    marine_leg = by_realm[phase1i.MARINE]
+    marine_sigma = abs(marine_leg.median) / marine_leg.median_se
+
     def coverage_of(realm: str) -> float:
         return next(held.coverage for held in transfer.held_out if held.realm == realm)
 
@@ -1689,15 +1834,16 @@ def collect() -> list[Finding]:
             evidence_type="all",
             bias=TRANSFER_BIAS,
             plain=(
-                "Two records on opposite sides of the world agreed about how animals follow a "
-                "warming climate. The third, measured a different way, did not."
+                "Two records on opposite sides of the world agreed that the animals in them are "
+                "barely following the warming at all. The third, measured a different way, found a "
+                "large response — so what crossed the equator was an absence, not an answer."
             ),
             matters=(
                 "Almost every published forecast of where wildlife will go assumes a response "
                 "measured in one place holds in another. It is an assumption because testing it "
-                "needs several responses measured the same way, which is rare. Here the crossing "
-                "that everyone worries about — hemisphere — turned out to be the one that held, "
-                "and the one nobody names broke it."
+                "needs several responses measured the same way, which is rare. This is three of "
+                "them under one audit — and the honest result is that the test could not be run "
+                "as intended, because two of the three had almost no response to carry across."
             ),
             plain_caveat=(
                 "Three records is three points. The one that disagreed is also the only one "
@@ -1708,9 +1854,12 @@ def collect() -> list[Finding]:
                 "Thermal tracking measured in the northern marine realm "
                 f"({by_realm[phase1i.MARINE].median:+.3f}) and the southern terrestrial realm "
                 f"({by_realm[phase1i.TERRESTRIAL].median:+.3f}) cannot be told apart, while the "
-                f"aerial record ({by_realm[phase1i.AERIAL].median:+.3f}) differs from both. "
-                "Responses transferred across the equator and failed to transfer across the kind "
-                "of response being measured."
+                f"aerial record ({by_realm[phase1i.AERIAL].median:+.3f}) differs from both. But "
+                "the two that agree sit within a few percent of no tracking on a scale where one "
+                "is full tracking, so what agreed across the equator is a near-absence of "
+                "response — and two near-zeros matching cannot establish that a response "
+                "transfers. The one leg carrying a substantial response is the one that broke the "
+                "agreement, which is the result this design can support."
             ),
             value=(
                 f"hold-one-out error {worst.error:.2f} for {worst.realm} against "
@@ -1728,12 +1877,18 @@ def collect() -> list[Finding]:
             caveat=(
                 "This tests whether three measured responses agree, not whether a model fitted in "
                 "one would work in another — a weaker question, and the only one three cases can "
-                "answer. The two realms that agree do so at a median tracking of "
+                "answer. And it could not be run as intended, because the two realms that agree do "
+                "so at a median tracking of "
                 f"{by_realm[phase1i.MARINE].median:+.3f} and "
-                f"{by_realm[phase1i.TERRESTRIAL].median:+.3f}: both are indistinguishable from no "
-                "tracking at all, so what transferred is an absence of response, which is a much "
-                "cheaper thing to reproduce than a response. The aerial leg is the only one with a "
-                "clear signal in it and the only one that failed, and it is also the only "
+                f"{by_realm[phase1i.TERRESTRIAL].median:+.3f} on a scale where one is full "
+                "tracking. The southern figure is not separable from zero at all; the marine one "
+                f"is, at about {marine_sigma:.1f} "
+                "standard errors, which makes it a measured near-absence rather than an "
+                "unmeasurable one — and neither is a response. So what transferred is an absence, "
+                "which is a far cheaper thing to reproduce, and the held-out prediction that "
+                "succeeded predicted approximately nothing from two values near nothing. The "
+                "aerial leg is the only one carrying a substantial response and the only one that "
+                "failed, and it is also the only "
                 "phenological leg, the only radar leg and the only one needing a seasonal "
                 "temperature slope to reach common units — the pre-registration listed realm, "
                 "hemisphere, instrument and decade as inseparable here and did not list response "
