@@ -1050,20 +1050,25 @@ def _timescale(sensitivity: float, ensemble: float) -> Timescale:
     moved = abs(sensitivity - timescale.interannual) / timescale.interannual_ci
     return Timescale(
         share=f", {low:.0%}-{high:.0%} of it",
+        # Short on purpose, and the coefficients live in `supporting` rather than here. The record
+        # page carrying value, scope and caveat overflowed by 43px with them in it, and the fix is
+        # the one the last overrun taught: move the sentence to a page with room rather than trim
+        # words until the pixels agree.
         caveat=(
-            f" The share is a range rather than a point because the response function carries no "
-            f"time term: adding one moves the sensitivity from {sensitivity:+.3f} to "
-            f"{timescale.interannual:+.3f} days per °C across {timescale.units} stations, and the "
-            f"attributed share from {high:.0%} to {low:.0%}. The two specifications bracket the "
-            f"answer and this record cannot narrow it — a response acting over decades and a "
-            f"non-thermal process that trends the same way are the same column of that design "
-            f"matrix."
+            " The share is a range because the response can be fitted on two timescales and this "
+            "record cannot choose between them."
         ),
         supporting=(
             f"The response function was refitted with a time term in it, because without one it "
             f"absorbs the shared trend of passage date and temperature and would reproduce part of "
-            f"the advance by construction. The sensitivity moved {moved:.2f} of its own interval, "
-            f"which is why this number survived the check rather than being withdrawn by it."
+            f"the advance by construction. Adding one moves the sensitivity from "
+            f"{sensitivity:+.3f} to {timescale.interannual:+.3f} days per °C across "
+            f"{timescale.units} stations — "
+            f"{moved:.2f} of its own interval — and the attributed share from {high:.0%} to "
+            f"{low:.0%}. That is why this number survived the check rather than being withdrawn. "
+            f"The record cannot narrow the range further: a response acting over decades and a "
+            f"non-thermal process that trends the same way are the same column of that design "
+            f"matrix."
         ),
     )
 
