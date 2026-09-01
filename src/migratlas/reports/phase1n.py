@@ -319,3 +319,47 @@ def render() -> str:
         f"{'varies with ' + ', '.join(varying) if varying else 'no covariate slope clears zero'}"
     )
     return "\n".join(out)
+
+
+def sampling_drift() -> dict[str, float]:
+    """Where each programme's *sampling* went over time, with no species in it at all.
+
+    UNREGISTERED, and labelled so wherever it prints. §5 asked for no such diagnostic, so it can
+    never be a graded prediction -- run after the offset was seen, it could only confirm a hunch.
+
+    It is here because the offset needs an explanation and "a constant difference in a rate" names a
+    shape rather than a mechanism. The most obvious mechanism is bookkeeping: a centroid is an
+    effort-weighted mean position, so if one programme's effort drifts north relative to the
+    other's,
+    *every* species' centroid drifts with it by the same amount -- which is exactly a constant rate
+    offset that does not vary with detectability or with where a species lives.
+
+    The consistency rule keeps a cell only where it was sampled in 80% of years. It says nothing
+    about how much effort each kept cell got in each year, and the centroid is weighted by that.
+    """
+    years = phase1l.shared_window()
+    _, _, restricted = footprints(years)
+    drift: dict[str, float] = {}
+    for source_id, rows in restricted.items():
+        per_year = (
+            rows.group_by("year")
+            .agg(
+                latitude=(
+                    (pl.col("cell_latitude") * pl.col("effort")).sum() / pl.col("effort").sum()
+                )
+            )
+            .drop_nulls()
+            .sort("year")
+        )
+        if per_year.height < 3:  # noqa: PLR2004 -- a trend through two points is a line
+            drift[source_id] = float("nan")
+            continue
+        fit = np.polyfit(
+            per_year["year"].to_numpy().astype(float),
+            per_year["latitude"].to_numpy().astype(float),
+            1,
+        )
+        drift[source_id] = float(fit[0] * 10.0)
+    first, second = (drift.get(source_id, float("nan")) for source_id in phase1l.PAIR)
+    drift["difference"] = first - second
+    return drift

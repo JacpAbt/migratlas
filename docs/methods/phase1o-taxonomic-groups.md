@@ -274,3 +274,46 @@ licence question and a new registry entry.
 - **Not migratory strategy**, and so not the owner's proposal in full.
 - **Nothing about the marine or aerial realms.** Three terrestrial count networks.
 - **Not a mechanism, a cause, or a licence to project.**
+
+---
+
+## Diagnostic, 2026-09-01: the panel-size warning above was too strong
+
+**UNREGISTERED.** §4 asked for no such test, so this can never be a graded prediction — run after the
+pattern was seen, it could only confirm a suspicion. It is here because the results section stopped at
+*"exactly what small-sample optimism looks like"* and never asked whether it was, and a pattern
+flagged rather than tested is a pattern nobody has explained.
+
+Three things produce a coherence that falls as the panel grows, and only the first is an artefact:
+
+1. the noise-corrected estimate is biased upward where the between-group term is poorly determined;
+2. `bbs` spans a continent while the Swedish networks span one country, so a family's members there
+   experience far more different climates and genuinely disagree more;
+3. the species pools are different families entirely, North American against European.
+
+**Thinning `bbs` to the Swedish panel size separates the first from the other two**, and it is a
+`_icc` over random subsets of a table this phase already built — 200 draws per size.
+
+| `bbs` thinned to | median family coherence | 90th percentile |
+| --- | --- | --- |
+| 459 species (whole panel) | 0.105 | 0.118 |
+| 300 | 0.131 | 0.171 |
+| 200 | 0.138 | 0.200 |
+| **127** — `sbs_point_counts`' size | **0.123** | 0.220 |
+
+**Small-sample bias is real and it is small.** Thinning from 459 species to 127 moves `bbs` from
+about 0.105 to about 0.123 — a rise of roughly **0.03**, against a gap to Sweden's 0.346 of **0.22**.
+Sweden's value sits *above the 90th percentile* of `bbs` draws at its own panel size, so it is not a
+draw `bbs` would plausibly produce.
+
+**So the ordering is not mainly sample size, and the results section above was wrong to lean that
+way.** About an eighth of the gap is the estimator; the rest is one of the two explanations that are
+about the world — the continent, or the pool. Between those this diagnostic cannot choose, and the
+test that would is registered nowhere yet: restrict `bbs` to a Sweden-sized window and recompute. If
+coherence rises toward 0.3 inside one region of North America, the answer is geographic extent and
+family binds tightly wherever the climate is uniform enough for it to.
+
+That is a better position than the note reached this morning, and the reason it took a second pass is
+worth recording: the results section identified a competing explanation and treated naming it as
+enough. It is not. A pattern with two candidate causes and a cheap test between them is an unfinished
+result, not a caveated one.

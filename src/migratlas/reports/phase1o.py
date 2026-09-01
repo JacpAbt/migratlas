@@ -170,7 +170,8 @@ def _axis(
     sizes = joined.group_by(axis).agg(members=pl.len())
     big = sizes.filter(pl.col("members") >= MIN_MEMBERS)[axis]
     table = joined.filter(pl.col(axis).is_in(big)).rename({axis: "group"})
-    if table.is_empty() or table["group"].n_unique() < 2:  # noqa: PLR2004 -- one group has no spread
+
+    if table.is_empty() or table["group"].n_unique() < 2:  # noqa: PLR2004
         log.info("%s/%s: fewer than two groups clear the member floor", source_id, axis)
         return None
 
@@ -325,3 +326,55 @@ def render() -> str:
         + (f", best {best.coherence_corrected:.3f} at {best.source_id}" if best else "")
     )
     return "\n".join([*out, f"VERDICT: {verdict}"])
+
+
+def subsampled_coherence(source_id: str, size: int, draws: int = 200) -> tuple[float, float]:
+    """Family coherence on random subsets of one network, at a chosen panel size.
+
+    UNREGISTERED, and labelled so wherever it prints. §4 asked for no such diagnostic and this could
+    only ever confirm a suspicion, having been run after the pattern was seen.
+
+    It is here because the pattern needs separating rather than flagging. Family coherence falls as
+    the panel grows -- 0.346 at 127 species, 0.192 at 141, 0.094 at 459 -- and at least three things
+    produce that ordering:
+
+    * the noise-corrected estimate is biased upward when the between-group term is poorly
+    determined,
+      which is a property of the estimator and nothing to do with taxonomy;
+    * `bbs` spans a continent while the Swedish networks span one country, so a family's members
+      there experience far more different climates and genuinely disagree more -- which is biology,
+      not bias;
+    * the species pools are different families entirely, North American against European.
+
+    **Thinning `bbs` to the Swedish panel size separates the first from the other two.** If a
+    127-species draw from `bbs` returns something near 0.35, the ordering is sample size. If it
+    stays
+    near 0.09, the ordering is the continent or the pool, and family really does bind more tightly
+    in
+    Sweden.
+
+    Returns the median and the 90th percentile across draws.
+    """
+    rank_table = ranks()
+    slopes = _slopes(source_id)
+    if slopes.is_empty() or rank_table.is_empty():
+        return (float("nan"), float("nan"))
+    joined = slopes.join(rank_table, on="taxon_key", how="left").drop_nulls(FAMILY)
+    if joined.height <= size:
+        return (float("nan"), float("nan"))
+
+    rng = np.random.default_rng(SEED)
+    found: list[float] = []
+    for _ in range(draws):
+        picked = joined[rng.choice(joined.height, size=size, replace=False)]
+        sizes = picked.group_by(FAMILY).agg(members=pl.len())
+        big = sizes.filter(pl.col("members") >= MIN_MEMBERS)[FAMILY]
+        table = picked.filter(pl.col(FAMILY).is_in(big)).rename({FAMILY: "group"})
+        if table.is_empty() or table["group"].n_unique() < 2:  # noqa: PLR2004
+            continue
+        _, corrected = phase1m._icc(table)  # noqa: SLF001 -- Phase 1m's own measure
+        if np.isfinite(corrected):
+            found.append(corrected)
+    if not found:
+        return (float("nan"), float("nan"))
+    return (float(np.median(found)), float(np.percentile(found, 90)))

@@ -277,3 +277,44 @@ identifies neither party.
 - **Not that Phase 1k's withheld medians should be republished.** The ratio is still above 1, so Phase
   1l's stop condition still binds, and §5 pre-committed that lifting a withholding is its own decision
   with its own registration.
+
+---
+
+## Diagnostic, 2026-09-01: a fifth of the offset is where the surveying went
+
+**UNREGISTERED**, for the same reason and with the same standing as the one appended to Phase 1o: §5
+asked for no such test and it was run after the offset was seen.
+
+It is here because the results section answered #67 with *"a constant offset"* and stopped. An offset
+is a shape, not a mechanism, and the note said so — but naming a gap is not the same as looking into
+it. The most obvious mechanism is bookkeeping rather than protocol: a centroid is an **effort-weighted
+mean position**, so if one programme's effort drifts north relative to the other's, every species'
+centroid drifts with it by the same amount. That is precisely a constant rate offset that does not
+vary with detectability or with where a species lives.
+
+The consistency rule keeps a cell only where it was sampled in 80% of the years. It says nothing about
+how much effort each kept cell received in each year, and the centroid is weighted by exactly that.
+
+**So: each programme's own sampling centroid, with no species in it at all.**
+
+| | °latitude per decade |
+| --- | --- |
+| `sbs_point_counts` sampling drifts north at | **+0.0880** |
+| `sbs_fixed_routes` at | **+0.0515** |
+| **difference** | **+0.0365** |
+| the species-level offset to be explained | **+0.1688** |
+
+**Both programmes' effort is moving north, and point counts' is moving faster — in the same direction
+as its species-level excess.** The sign matching is what makes this a credible partial mechanism
+rather than a coincidence, and the size says how partial: **about 22% of the offset is where the
+surveying went.** The remaining 78% is not.
+
+Two things follow. The offset is *not* mostly bookkeeping, so "protocol" survives as the label for
+most of it. And a fifth of a published limit finding turns out to be an artefact of effort drift that
+the footprint rule was never designed to catch — which is worth knowing about the footprint rule as
+much as about Sweden, because every centroid in this project is weighted the same way.
+
+What this cannot do is name the other 78%. Candidates that would produce a rate offset and are not
+excluded: one protocol's detection changing over time, observer turnover with a spatial pattern, or a
+within-cell shift in where the walking happens that a one-degree cell cannot see. None is separable
+here, and the honest position is that a fifth is explained and the rest is not.
