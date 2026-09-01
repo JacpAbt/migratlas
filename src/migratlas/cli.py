@@ -760,6 +760,23 @@ def report_phase2c() -> None:
     print(phase2c.render())
 
 
+@report_app.command("predictions")
+def report_predictions() -> None:
+    """How often the registered predictions turned out wrong."""
+    from migratlas.reports import predictions  # noqa: PLC0415 -- heavy, and only this command
+
+    print(predictions.render())
+
+
+@report_app.command("phase3j")
+def report_phase3j() -> None:
+    """Is the marine null a mixture? Clusters by thermal exposure."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3j  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3j.render())
+
+
 @report_app.command("phase3h")
 def report_phase3h() -> None:
     """The pooled-response ladder: does predicting a region beat predicting a station?"""

@@ -1,0 +1,274 @@
+# Every registered prediction this project has graded, counted per phase.
+#
+# Why this file exists. The convention `CLAUDE.md` calls the most valuable thing in the repository is
+# pre-registration: numbered falsifiable predictions fixed before the data is fetched, then graded in
+# the same note whichever way they went. The project has been doing that for two months and had never
+# published how often it was wrong. A convention nobody scores is a habit.
+#
+# Why it is authored rather than parsed. The notes grade in prose and the prose is not uniform --
+# `GRADED TRUE`, `— HOLDS`, `**failed**`, `PART PASS`, `UNGRADEABLE` all appear, and eight notes use
+# wording an extractor misses entirely. A regex over that would enshrine the inconsistency and would
+# silently undercount: the first attempt found 65 graded predictions where a careful read finds 102.
+# So this is hand-authored from the notes, the way `registry.yaml` is hand-authored, and
+# `tests/test_predictions.py` is the drift guard -- every note must be listed here or excluded with a
+# reason, so a new phase cannot go uncounted.
+#
+# Counting rules, fixed here so they are not chosen per phase:
+#   * `true` and `false` are the note's own verdict on a numbered prediction. A "PART PASS" counts
+#     true, because the note reports it as met on its registered terms.
+#   * `ungradeable` is a prediction the phase registered and could not grade -- a fired stop condition
+#     above it, a floor that intersected below its own count, a secondary deliberately not run.
+#   * A two-sided prediction with no registered direction is `ungradeable`, not true: there was
+#     nothing to be wrong about.
+#   * `stop_conditions_fired` counts registered conditions that bound and changed what was published.
+#
+# The headline number is the failure rate over graded predictions. It is meant to be high: a
+# convention that only ever confirms was not testing anything.
+
+phases:
+  - note: phase1d-tracks.md
+    registered: 4
+    true_: 4
+    false_: 0
+    ungradeable: 0
+    stop_conditions_fired: 0
+
+  - note: phase1e-atlas.md
+    registered: 5
+    true_: 3
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 1
+    comment: >-
+      Prediction 5 is a PART PASS and counts true. The fired condition is the one that mattered: the
+      detection correction and the naive comparison agreed, so the interesting half was wrong.
+
+  - note: phase1f-atlas-surface.md
+    registered: 4
+    true_: 2
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 1
+    comment: >-
+      Both failures were thresholds mis-scaled by a factor of 512, and the note refuses to re-derive
+      them after the fact.
+
+  - note: phase1g-water.md
+    registered: 4
+    true_: 1
+    false_: 3
+    ungradeable: 0
+    stop_conditions_fired: 1
+
+  - note: phase1h-elk.md
+    registered: 4
+    true_: 3
+    false_: 0
+    ungradeable: 1
+    comment: >-
+      Prediction 3 was registered two-sided with no direction, on the stated ground that a guessed
+      prior would be worth nothing. It is ungradeable by the rule above rather than true.
+    stop_conditions_fired: 0
+
+  - note: phase1i-transfer.md
+    registered: 4
+    true_: 2
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 0
+
+  - note: phase1j-fourth-leg.md
+    registered: 6
+    true_: 1
+    false_: 2
+    ungradeable: 3
+    stop_conditions_fired: 2
+    comment: >-
+      Predictions 3, 4 and 5 were never computed: the ingest gate's condition fired first. Prediction
+      6 was graded on 2026-09-01, thirteen days later, and its consequence withdrew a published
+      comparison.
+
+  - note: phase1k-idle-networks.md
+    registered: 11
+    true_: 9
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 1
+    comment: >-
+      Eight from the original registration and three from the 2026-09-01 precision registration
+      appended to the same note.
+
+  - note: phase1l-paired-protocols.md
+    registered: 4
+    true_: 2
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 1
+
+  - note: phase1m-species-groups.md
+    registered: 4
+    true_: 2
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 1
+
+  - note: phase2a-timing.md
+    registered: 3
+    true_: 3
+    false_: 0
+    ungradeable: 0
+    stop_conditions_fired: 0
+
+  - note: phase2a-thermal.md
+    registered: 3
+    true_: 2
+    false_: 1
+    ungradeable: 0
+    stop_conditions_fired: 0
+
+  - note: phase2a-attribution.md
+    registered: 4
+    true_: 4
+    false_: 0
+    ungradeable: 0
+    stop_conditions_fired: 0
+    comment: >-
+      All four held, and the note says why that is weak evidence: prediction 3 was written as a check
+      on the extraction rather than as a discovery.
+
+  - note: phase2a-attrici.md
+    registered: 4
+    true_: 3
+    false_: 0
+    ungradeable: 1
+    stop_conditions_fired: 0
+    comment: Prediction 4 was unanswerable as written, and is recorded as moot rather than dropped.
+
+  - note: phase2c-timescale.md
+    registered: 6
+    true_: 4
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 0
+
+  - note: phase3a-skill.md
+    registered: 5
+    true_: 1
+    false_: 3
+    ungradeable: 1
+    stop_conditions_fired: 2
+
+  - note: phase3b-marine-scale.md
+    registered: 4
+    true_: 0
+    false_: 1
+    ungradeable: 3
+    stop_conditions_fired: 1
+
+  - note: phase3c-coupling.md
+    registered: 4
+    true_: 1
+    false_: 2
+    ungradeable: 1
+    stop_conditions_fired: 1
+
+  - note: phase3d-rehearsal.md
+    registered: 3
+    true_: 3
+    false_: 0
+    ungradeable: 0
+    stop_conditions_fired: 1
+    comment: >-
+      Every prediction held and the phase still refused its own licence -- the expected outcome was
+      that the pipeline would not beat chance, and it did not.
+
+  - note: phase3e-marine-oisst.md
+    registered: 5
+    true_: 3
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 0
+
+  - note: phase3f-response.md
+    registered: 6
+    true_: 0
+    false_: 1
+    ungradeable: 5
+    stop_conditions_fired: 1
+    comment: >-
+      The calibration rung fired on a contradiction inside the registration itself, so five arms were
+      measured and none interpreted.
+
+  - note: phase3g-oxygen.md
+    registered: 6
+    true_: 5
+    false_: 0
+    ungradeable: 1
+    stop_conditions_fired: 0
+    comment: >-
+      Every gradeable prediction true, and the phase published nothing: an unregistered leverage check
+      found one unit of sixteen carrying the result.
+
+  - note: phase3h-pooled-response.md
+    registered: 5
+    true_: 3
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 0
+
+  - note: phase3j-thermal-clusters.md
+    registered: 5
+    true_: 2
+    false_: 3
+    ungradeable: 0
+    stop_conditions_fired: 1
+
+  - note: forecast-a.md
+    registered: 5
+    true_: 4
+    false_: 1
+    ungradeable: 0
+    stop_conditions_fired: 0
+
+# Registered and not yet run. Counted as registered and nothing else, because a prediction that has
+# not met its data is not evidence either way -- and listing them is what stops a phase quietly
+# never being graded.
+pending:
+  - note: phase2b-ssf.md
+    registered: 4
+  - note: phase3i-neighbourhood.md
+    registered: 6
+
+# Not prediction-bearing, or grading in prose that predates the numbered convention. Listed so the
+# drift guard can tell "excluded on purpose" from "forgotten".
+excluded:
+  - note: phase1-phenology.md
+    why: >-
+      Phase 1a is a replication of a published result and predates the numbered convention. It carries
+      falsification tests and a permutation null rather than numbered predictions.
+  - note: phase1b-marine.md
+    why: >-
+      Four falsification checks fixed in advance and graded in prose rather than numbered and graded
+      individually. Counting them would mean deciding what each verdict was, which is authorship.
+  - note: phase1c-homogeneity.md
+    why: Tests A to D with predictions graded in prose, on the same reasoning as phase1b.
+  - note: counterfactual.md
+    why: A drawing decision, not a phase. It estimates nothing.
+  - note: detectability.md
+    why: Built after the fact and states so; every threshold in it is one an earlier phase published.
+  - note: geographic-coverage.md
+    why: An audit and a plan. Its corrections are to its own earlier claims, not graded predictions.
+  - note: covariate-survey-2026-08.md
+    why: A source survey. Verified catalogue facts, no estimand.
+  - note: covariate-survey-2026-08-addendum.md
+    why: As above.
+  - note: holdings-audit-2026-08.md
+    why: Classifies holdings and fits nothing, as its own status line says.
+  - note: literature-2026-07.md
+    why: A literature pass.
+  - note: literature-2026-08-coupling.md
+    why: A literature pass.
+  - note: phase2a-design.md
+    why: A design document that fixes model shape before any phase; its predictions live in the phases.
+  - note: tracks-and-sensitivity.md
+    why: A source assessment feeding phase1d, which carries the predictions.

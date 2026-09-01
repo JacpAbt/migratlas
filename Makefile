@@ -253,6 +253,14 @@ report-phase1m:  ## A level between one species and all of them?
 report-phase2c:  ## Is the thermal sensitivity a response, or a co-trend?
 	$(RUN) migratlas report phase2c
 
+.PHONY: report-predictions
+report-predictions:  ## How often the registered predictions turned out wrong
+	$(RUN) migratlas report predictions
+
+.PHONY: report-phase3j
+report-phase3j:  ## Is the marine null a mixture? Clusters by thermal exposure
+	$(RUN) migratlas report phase3j
+
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
 	$(RUN) migratlas report phase3h
