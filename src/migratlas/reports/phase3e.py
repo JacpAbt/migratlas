@@ -35,6 +35,9 @@ PREDICTED_MINIMUM_UNITS_3E: Final = 15
 MIN_CALIBRATION_PAIRS: Final = 2
 """A correlation over two points is a line through them, not a measurement."""
 
+MIN_SHARED_SURVEYS: Final = 3
+"""Surveys a taxon must appear in before it can separate the sea from the species."""
+
 
 @dataclass(frozen=True, slots=True)
 class Calibration:
@@ -243,3 +246,92 @@ def render() -> str:
             f"publishable: {'yes' if fit.leverage.publishable else 'NO'}).{named}"
         )
     return "\n".join(lines)
+
+
+# --- Unregistered diagnostics: why do the seas differ? -----------------------------------
+#
+# `seas-disagree` publishes Cochran's Q at 235.7 against a bar of 27.6 and a warming null, and the
+# note stopped there. Four measured drivers now fail to sort the units -- warming, depth, oxygen
+# after leverage, and Phase 3j's three cluster axes -- so "the seas differ" is a fact with no
+# explanation attached, which is the shape of an unfinished result rather than a caveated one.
+#
+# Both functions below are UNREGISTERED and can never be graded predictions: they were written after
+# the heterogeneity was published. Phase 3g's precedent governs how they may be read.
+
+
+def sampling_drift() -> pl.DataFrame:
+    """Where each survey's *sampling* went over time, with no fish in it at all.
+
+    The marine twin of `phase1n.sampling_drift`, and it is here because that one found a fifth of
+    the Swedish protocol offset was effort moving north rather than birds. A centroid is weighted by
+    catch per unit effort, so where the hauls happen moves it: a survey whose stations drift north
+    reports its fish drifting north.
+
+    The consistency rule keeps a cell only where it was sampled in 80% of the survey's years. It
+    says nothing about how many hauls each kept cell got in each year, and that is what a centroid
+    is weighted over.
+    """
+    from migratlas.metrics import range as range_metrics  # noqa: PLC0415 -- report sibling
+    from migratlas.reports import phase1b  # noqa: PLC0415 -- report sibling
+
+    cells = range_metrics.to_cells(phase1b.survey_unit(phase1b.load()))
+    rows: list[dict[str, object]] = []
+    for (name,), survey in cells.group_by(["survey_unit"], maintain_order=True):
+        restricted, footprint = range_metrics.consistent_footprint(survey)
+        if footprint.cells < range_metrics.MIN_CELLS:
+            continue
+        # Hauls, not catch: this is a question about where the ship went.
+        per_year = (
+            restricted.group_by("year")
+            .agg(latitude=pl.col("cell_latitude").mean(), hauls=pl.len())
+            .drop_nulls()
+            .sort("year")
+        )
+        if per_year.height < MIN_SEGMENT_YEARS:
+            continue
+        drift, _ = _trend_per_decade(per_year["year"].to_numpy(), per_year["latitude"].to_numpy())
+        rows.append({"survey_unit": str(name), "sampling_drift": drift})
+    return pl.DataFrame(rows)
+
+
+def sea_or_species() -> dict[str, float]:
+    """For species caught in several surveys: does the sea explain more than the species?
+
+    The marine twin of Phase 1l's pairing, and the question the owner asked of the birds. Surveys
+    reach -0.22 and +0.26 in opposite directions -- but different surveys hold different species, so
+    that spread could be the seas disagreeing or simply different animals living in different
+    places. Restricting to taxa caught in three or more surveys makes the two separable, because
+    then the same animal is measured in several seas.
+
+    Both shares use `phase1m._icc`, the project's own coherence measure, so they are comparable to
+    every grouping result elsewhere: group by taxon and the share is what the species explains,
+    group by survey and it is what the sea explains.
+    """
+    from migratlas.metrics import range as range_metrics  # noqa: PLC0415 -- report sibling
+    from migratlas.reports import phase1b, phase1m  # noqa: PLC0415 -- report siblings
+
+    cells = range_metrics.to_cells(phase1b.survey_unit(phase1b.load()))
+    _, pooled, _ = phase1b.analyse(cells)
+    if pooled.is_empty():
+        return {}
+
+    counts = pooled.group_by("taxon_key").agg(surveys=pl.col("survey_unit").n_unique())
+    shared = counts.filter(pl.col("surveys") >= MIN_SHARED_SURVEYS)["taxon_key"]
+    table = pooled.filter(pl.col("taxon_key").is_in(shared)).select(
+        slope=pl.col("per_decade"),
+        stderr=pl.col("stderr"),
+        taxon=pl.col("taxon_key").cast(pl.String),
+        survey=pl.col("survey_unit"),
+    )
+    if table.is_empty():
+        return {}
+
+    by_taxon = phase1m._icc(table.rename({"taxon": "group"}))  # noqa: SLF001 -- the project's own
+    by_survey = phase1m._icc(table.rename({"survey": "group"}))  # noqa: SLF001
+    return {
+        "pairs": float(table.height),
+        "taxa": float(table["taxon"].n_unique()),
+        "surveys": float(table["survey"].n_unique()),
+        "species_share": by_taxon[1],
+        "sea_share": by_survey[1],
+    }

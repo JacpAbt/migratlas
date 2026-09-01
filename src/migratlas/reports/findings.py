@@ -690,14 +690,15 @@ def _seas_finding() -> Finding | None:
         evidence_type=EvidenceType.SURVEY_INDEX.value,
         bias=SEAS_DISAGREE_BIAS,
         plain=(
-            "The seas are doing genuinely different things, not one thing with noise around it — "
-            "and how fast a sea warmed does not tell you whether its fish moved."
+            "Different fish move differently, and that matters more than which sea they are in. "
+            "How fast a sea warmed tells you almost nothing about whether its fish moved."
         ),
         matters=(
             "A single number for the ocean would erase this, and a single number is what a reader "
-            "wants. The seas disagree far beyond what sampling can explain, so any plan built on "
-            "an average is planning for a place that does not exist. And the obvious explanation "
-            "for who moved — whose water warmed most — is measured here and is not the answer."
+            "wants. But the useful half of the answer is which way to cut it: the animal explains "
+            "far more than the place, so a plan made sea by sea is planning on the weaker axis. "
+            "And the obvious explanation for who moved — whose water warmed most — is measured "
+            "here and is not the answer."
         ),
         plain_caveat=(
             "This says the seas differ and that temperature alone does not sort them. It does not "
@@ -708,7 +709,11 @@ def _seas_finding() -> Finding | None:
             f"Across {fit.units} shelf-survey segments the latitude trends are heterogeneous far "
             f"beyond sampling — Cochran's Q {fit.q_statistic:.1f} against a chi-square bar of "
             f"{fit.q_bar:.1f} — while warming does not predict which segments moved: "
-            f"{fit.temp_slope:+.3f} ± {fit.temp_ci:.3f} °latitude per °C, both per decade."
+            f"{fit.temp_slope:+.3f} ± {fit.temp_ci:.3f} °latitude per °C, both per decade. Two "
+            "things qualify that heterogeneity and both were measured after it was published: "
+            "about 45% of it is the surveys' own stations having drifted, which takes Q to 131, "
+            "and for the 297 species caught in three or more surveys the species explains 2.8 "
+            "times what the survey does."
         ),
         value=(
             f"Q {fit.q_statistic:.1f} against a bar of {fit.q_bar:.1f} across {fit.units} "
@@ -741,6 +746,16 @@ def _seas_finding() -> Finding | None:
         supporting=[
             "The heterogeneity survives ADR 0016: dropping any one of the segments leaves Q above "
             "its own recomputed bar, so this is not one extreme sea carrying a statistic.",
+            "It does not survive intact as a claim about oceans. Each survey's own mean haul "
+            "latitude was trended with no fish in it, and it correlates with that survey's fish "
+            "trend at +0.70 across eighteen surveys, with a slope near a half -- which is what an "
+            "effort-weighted centroid should give if the stations move and the fish do not follow. "
+            "Regressing it out takes Q from 236 to 131. The finding is smaller and it is about "
+            "surveys rather than seas.",
+            "The strongest explanatory axis in this project turned out to be sitting inside this "
+            "source unexamined: grouped by species rather than by survey, the coherence is 0.430 "
+            "against 0.156 -- higher than anything else measured here, and it says fish carry "
+            "consistent movement tendencies across the seas they live in.",
             f"Its margin against the weights is narrower than that, and is stated rather than "
             f"left implicit: Q clears while each survey's interval is understated by less than "
             f"{fit.q_robustness:.2f} times. Those intervals treat the species inside a survey as "
@@ -1450,7 +1465,11 @@ def collect() -> list[Finding]:
                 "deep it lives, no third moved differently from the others beyond what shuffling "
                 "the labels produces, and no grouping explained more than a twentieth of the "
                 "variation between pairs. A warming that hit some and spared the rest would look "
-                "like this median, and along these three axes it is not what is here."
+                "like this median, and along these three axes it is not what is here. What does "
+                "carry the spread is the animal: for the 297 species caught in three or more of "
+                "these surveys, grouping by species explains 2.8 times what grouping by survey "
+                "does, so a fish's movement tendency travels with it between seas better than any "
+                "property of the water tested here."
             ),
             method="docs/methods/phase1b-marine.md",
             direction="null",
