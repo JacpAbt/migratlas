@@ -1090,8 +1090,16 @@ test.describe("on a phone", () => {
       phone puts the globe on one leaf with the tools in a flap over its foot, because a clock on a
       separate leaf from the map it moves is not slow, it is pointless. So the tail of the book is a
       single leaf and this used to name a pair.
+
+      The side is deliberately not asserted. This read `["the-world:verso"]` and broke on the
+      twelfth claim landing, because one more leaf earlier in the book flips the parity of every
+      leaf after it -- so the old assertion pinned recto-or-verso while its own comment says the
+      intent is the *count*. Stated as the count it is also stronger: exactly one leaf belongs to
+      the world chapter, and it is the last one, which `slice(-1)` alone never checked.
     */
-    expect(state.leaves.slice(-1)).toEqual(["the-world:verso"]);
+    const worldLeaves = state.leaves.filter((leaf) => leaf.startsWith("the-world:"));
+    expect(worldLeaves, "the phone built the world as a spread rather than a leaf").toHaveLength(1);
+    expect(state.leaves.at(-1)).toBe(worldLeaves[0]);
     expect(state.written, "the phone is holding a map at the far end of the book").not.toContain(
       state.leaves.length - 1,
     );
