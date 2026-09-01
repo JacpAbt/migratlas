@@ -197,3 +197,96 @@ and it is fixed here rather than chosen against a result.
 - **Not timing.** A species that shifted its season rather than its position is invisible to this
   estimand, exactly as `MARINE_NULL_BIAS` already records.
 - **Not a licence to project.** No axis here is forecastable, and a cluster is not a mechanism.
+
+---
+
+# Results — run 2026-09-01
+
+`make report-phase3j`. Two consecutive runs are identical, checked before anything here was written
+down, because Phase 3f's null was irreproducible and measuring twice is the only thing that found it.
+
+**Calibration — PASS.** Pooling every pair with no clustering gives **−0.0110**, reproducing
+`marine-null`'s −0.011 to three significant figures, by calling `phase1b.analyse` itself.
+
+| axis | scale | pairs | surveys | low | mid | high | spread | null bar | | coherence | |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| thermal position | within survey | 1,722 | 17 | −0.0050 | −0.0316 | −0.0008 | **+0.0042** | 0.0275 | inside | **0.000** | below |
+| warming rate | across surveys | 2,240 | 23 | −0.0178 | −0.0318 | +0.0406 | **+0.0584** | 0.1035 | inside | 0.031 | below |
+| haul depth | across surveys | 2,170 | 22 | −0.0713 | +0.0330 | +0.0221 | **+0.0934** | 0.1030 | inside | 0.035 | below |
+
+## The answer
+
+**The marine null is not a mixture along any axis this lake can define.** No axis's tercile spread
+beats its own null, and no axis's coherence comes near the floor. Cut three ways by thermal exposure,
+`marine-null` stays what it was.
+
+That is a stronger statement than the null it tests. The owner's question was whether a warming that
+hit some units and not others could hide inside a flat median, and the honest answer is: not along
+where a species sits in its own survey's water, not along how fast that water warmed, and not along
+how deep it lives.
+
+## The predictions, graded
+
+**1 — TRUE.** The calibration reproduces −0.011 exactly, so the response is `marine-null`'s own and
+not a second copy of it.
+
+**2 — FALSE.** No axis's spread beats its own null. Depth comes closest and is still inside:
+**+0.0934 against a bar of 0.1030**, which is 91% of the way there and the reason this note says
+"not detected" rather than "absent".
+
+**3 — FALSE, and backwards.** The thermal-position axis was registered as the substantive
+expectation, on the argument that it is the only axis varying *within* a survey and so the only one
+free of "which survey contributed most pairs". It is the **least** coherent of the three at **0.000**
+— between-tercile variance is essentially nil. Within one trawl, where a species sits in its own
+survey's temperature range tells you nothing whatever about how its centroid moved.
+
+**4 — FALSE.** The best axis is depth at **0.035**, against Phase 1m's floor of 0.10. So this is
+Phase 1m's verdict in a second realm: on the axes obtainable here, a cluster is a precise measurement
+of a mixture.
+
+**5 — TRUE, on both survey-level axes and on the third as well.** Clustering the bootstrap on surveys
+rather than on pairs widens the interval by **3.1×** (warming), **3.0×** (depth) and **2.4×**
+(thermal), against a registered bar of two. Every pair inside one survey shares that survey's water,
+gear and footprint, and the price of ignoring that is now measured rather than argued.
+
+## The stop condition, and what it does
+
+§5 registered: *prediction 2 false → publish as a null about clustering: the marine null survives
+being cut three ways by thermal exposure, and `marine-null` gains that sentence rather than a hedge.*
+
+Applied. `marine-null`'s caveat now says the null was tested for mixture along three environmental
+axes and survived, and `seas-disagree`'s caveat — which pointed at this note as unrun — says it ran.
+
+**No new ledger entry.** §5 also pre-committed that one axis clearing a null out of three with
+coherence under the floor is not a finding; zero axes clearing is not a finding either, and a
+fourteenth entry saying "we looked and there was nothing" belongs inside the claim it qualifies
+rather than beside it.
+
+## Two things worth more than the gradings
+
+**Prediction 5 is the transferable result, and it is the second time this week.** Phase 1k's leg 2
+turned out to have an interval 4.5× too tight for the same reason — units treated as independent when
+they are not — and here the marine pairs come in at 3×. Two of the ledger's medians have now been
+measured on this and both were wrong in the direction that flatters. `atlas-no-net-change` is the
+third built the same way and is still unchecked.
+
+**And the thermal axis's exact zero is the sharpest single number here.** It is the axis the
+registration argued hardest for, on a design argument that still looks right: it varies within a
+survey, so it cannot be confounded with which survey contributed most pairs. It returned nothing at
+all. Whatever sorts a moving species from a staying one inside one trawl, it is not where that
+species sits in the water the trawl sampled.
+
+## What this does not establish
+
+- **Not that no clustering works.** Three environmental axes is three, and the taxonomic version —
+  family, order, migratory strategy — is #66's rank ingest and a different note. Phase 1m ruled out
+  the free taxonomic proxies; this rules out the free environmental ones.
+- **Not that warming does nothing.** `seas-disagree` already carries the null at unit level and this
+  adds that it does not hide in a subset along these axes. A driver acting through productivity,
+  fishing pressure, stratification or oxygen is untouched by any of it.
+- **Not the ocean.** `marine-null`'s scope, unchanged: northern shelf trawl surveys, bottom-dwelling
+  fish, where trawls can go.
+- **Not a thermal limit.** A within-survey percentile is a weak proxy for distance to a species'
+  thermal maximum, as §2 said before the run. The registration's own caveat stands: the literature's
+  quantity needs a physiological or global-range estimate this project does not hold, and a null
+  against a weak proxy is a weaker null than one against the real thing.

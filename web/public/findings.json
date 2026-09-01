@@ -66,7 +66,7 @@
    "plain_how": "Government research ships have been dragging the same nets over the same seabed for decades. For each species in each survey we followed the middle of where it was caught, year by year, and fitted how fast that middle was moving north or south. Then we looked at all of those fits together instead of collapsing them into one \u2014 the disagreement between them is the result.",
    "value": "median -0.011 \u00b0latitude per decade across 2,240 species-survey pairs",
    "scope": "29 harmonised scientific bottom-trawl surveys, North America and Europe, on consistently sampled cells only.",
-   "caveat": "A pooled median hides the variation worth predicting: individual surveys reach -0.22 and +0.26 \u00b0latitude per decade in opposite directions. The unit of analysis has to be the species in its region, not the ocean.",
+   "caveat": "A pooled median hides the variation worth predicting: individual surveys reach -0.22 and +0.26 \u00b0latitude per decade in opposite directions. The unit of analysis has to be the species in its region, not the ocean. And this null was tested for a mixture rather than left as an average: cut into thirds by where a species sits in its own survey's water, by how fast that water warmed, and by how deep it lives, no third moved differently from the others beyond what shuffling the labels produces, and no grouping explained more than a twentieth of the variation between pairs. A warming that hit some and spared the rest would look like this median, and along these three axes it is not what is here.",
    "method": "docs/methods/phase1b-marine.md",
    "realm": "marine",
    "taxon_scope": "exact",
@@ -429,12 +429,12 @@
    "key": "flight-advance",
    "plain": "British butterflies are flying about two days earlier every decade.",
    "matters": "Timing is where a warming year shows up first. This is the same question the radar answers over North America, asked of a completely different kind of animal with a completely different instrument, on a panel eighty times bigger.",
-   "claim": "Mean flight date across UK monitoring transects has advanced by 2.10 days per decade (median across 12,213 site-species-generation series, 95% CI -2.18 to -2.04), with 2,476 series beating their own year-shuffle null against a chance bar of 651.",
+   "claim": "Mean flight date across UK monitoring transects has advanced by 2.10 days per decade (median across 12,213 site-species-generation series, 95% CI -2.45 to -1.81 with taxa resampled rather than series), with 2,476 series beating their own year-shuffle null against a chance bar of 651.",
    "plain_caveat": "Most of these are butterflies that stay put, so this is when they emerge rather than when they travel. It is one country, and it is volunteers walking transects.",
    "plain_how": "Volunteers have walked the same transects in Britain since the scheme began, recording what they see. For each species at each site, the scheme records the middle of its flight period, and we asked whether that date has moved -- one straight line per site-species series, and only where fifteen years of it exist. Every series was also compared against itself with the years shuffled, so a series only counts if it beats its own noise.",
    "value": "-2.10 days per decade across 12,213 series (IQR -4.6 to +0.5)",
    "scope": "UK Butterfly Monitoring Scheme transects, 1973-2021, 12,213 site-species-generation series clearing fifteen years each, split generations kept apart from pooled-brood rows.",
-   "caveat": "The median hides a spread that is wider than itself: the interquartile range runs -4.6 to +0.5 days per decade, so a substantial minority of series are flying later, and this is a summary of series doing different things rather than one behaviour. No driver enters the fit, so it is a change and not an attribution -- that warming is the cause is the literature's expectation and is untested here. A mean flight date is one summary of a flight period, and a species whose season lengthened at one end without moving its centre reports nothing. And a flight period is not a migration: the comparison to nocturnal passage is a comparison of thermal tracking, not of the same behaviour. No ratio between the two is published: a mean and a median are commensurable only while the curve's shape holds still, and it did not. Withdrawing rather than caveating is Phase 1j's registered consequence.",
+   "caveat": "The median hides a spread that is wider than itself: the interquartile range runs -4.6 to +0.5 days per decade, so a substantial minority of series are flying later, and this is a summary of series doing different things rather than one behaviour. No driver enters the fit, so it is a change and not an attribution -- that warming is the cause is the literature's expectation and is untested here. A mean flight date is one summary of a flight period, and a species whose season lengthened at one end without moving its centre reports nothing. And a flight period is not a migration: the comparison to nocturnal passage is a comparison of thermal tracking, not of the same behaviour. No individual series is readable here: the median one sits 1.05 standard errors from zero, short of the two a single estimate needs, so this is a statement about a network and never about a site or a species. No ratio between the two is published: a mean and a median are commensurable only while the curve's shape holds still, and it did not. Withdrawing rather than caveating is Phase 1j's registered consequence.",
    "method": "docs/methods/phase1k-idle-networks.md",
    "realm": "terrestrial",
    "taxon_scope": "exact",
@@ -477,7 +477,8 @@
    "supporting": [
     "The phase's estimator reproduced two of this project's published numbers before touching a new source -- the marine median to three significant figures and the aerial slope to two -- by calling those reports rather than a copy of them.",
     "The comparison to the radar is withheld, and by a condition registered in Phase 1j before either number existed. What moved: flight-curve spread +0.097 [+0.051, +0.133] days per decade over 1973-2021; flight-period duration -0.201 [-0.408, -0.034] days per decade over 1995-2021. The interval resamples units as if independent, so it is if anything too tight -- which withholds more than a wider one would, and is the safe direction for a guard.",
-    "The estimand had to be reconstructed because the lake stores no flight date, and the first implementation fitted the wrong quantity; the correction is recorded in the method note rather than edited away."
+    "The estimand had to be reconstructed because the lake stores no flight date, and the first implementation fitted the wrong quantity; the correction is recorded in the method note rather than edited away.",
+    "The interval published here is 4.5 times the one a resample over series gives, and it is the wider of two clusterings rather than the convenient one: 12,213 series rest on 57 taxa and one national spring, so treating them as independent was the error. Registered as a prediction before it was measured, and it came in above the bracket's floor."
    ]
   },
   {
@@ -489,7 +490,7 @@
    "plain_how": "The same research trawls, cut a different way. Instead of asking how far fish moved on average, we asked whether the seas agree with each other at all \u2014 a formal test of whether eighteen surveys are one population with noise or genuinely different places. Then we asked whether the seas that warmed fastest were the seas whose fish moved furthest, using satellite temperature over each survey's own footprint.",
    "value": "Q 235.7 against a bar of 27.6 across 18 segments; warming +0.039 \u00b1 0.179 \u00b0lat per \u00b0C",
    "scope": "18 bottom-trawl survey segments, each its longest unbroken run under one gear clipped to the satellite era at twenty years or more, against a footprint-mean satellite sea-surface temperature. 11 surveys published as coverage instead.",
-   "caveat": "The warming null is an average over units that emphatically disagree, so it rules out warming as the sorter *on this axis at this unit* and not as a driver: something that moved a third of the pairs and left the rest alone produces this number, and the cluster test for that is registered in docs/methods/phase3j-thermal-clusters.md and not yet run. The registered depth interaction came out +0.176 \u00b1 0.131, the opposite sign to the prediction, and is reported as the graded failure it is rather than turned around into a story. The driver is a satellite reading the surface where the fish are on the bottom, bounded only by the two waters agreeing in direction at +0.216 across 10 surveys. And a segment is shorter than its survey's record, so the most recent years of the longest series go unused by this design.",
+   "caveat": "The warming null is an average over units that emphatically disagree, so it rules out warming as the sorter *on this axis at this unit* and not as a driver: something that moved a third of the pairs and left the rest alone produces this number, and the cluster test for that has since run: cut into thirds by thermal position, warming rate and depth, no third of the pairs moved differently beyond its own null and no axis explained more than a twentieth of the variation, so the null is not hiding a subset along any axis this lake can define. The registered depth interaction came out +0.176 \u00b1 0.131, the opposite sign to the prediction, and is reported as the graded failure it is rather than turned around into a story. The driver is a satellite reading the surface where the fish are on the bottom, bounded only by the two waters agreeing in direction at +0.216 across 10 surveys. And a segment is shorter than its survey's record, so the most recent years of the longest series go unused by this design.",
    "method": "docs/methods/phase3e-marine-oisst.md",
    "realm": "marine",
    "taxon_scope": "exact",
@@ -535,6 +536,62 @@
     "Five of five registered predictions were graded and two came back false, including the warming one this claim reports \u2014 the design was built to be able to say so.",
     "The satellite substitution was gated on a calibration fixed before any value was read: where a survey recorded its own water, the two had to agree in direction or nothing below was interpreted.",
     "An earlier version of this phase died on its own floor, with ten units against a registered twelve, because it required each survey to have recorded its own temperature. The salvage is what made eighteen possible and it is priced in the note."
+   ]
+  },
+  {
+   "key": "projection-mask",
+   "plain": "Under strong mitigation, about half these places stay inside the range we measured. Under every other scenario the warming runs off the end of it, and there we decline to guess.",
+   "matters": "A projection three degrees outside the range it was fitted in is not a cautious estimate. It is arithmetic wearing the clothes of evidence, and it is the single commonest way this kind of forecasting goes wrong. Publishing where the answer runs out is the result here, and it is a smaller map than anyone wants.",
+   "claim": "Of the scenario-and-horizon frames projected across 78 stations in the claim band, 3 of 8 have nothing sayable in them at all: the multi-model median warming reaches +7.10 \u00b0C against a fitted envelope whose upper bound is +1.74 \u00b0C. The best-covered frame is ssp126 at 2040-2059, sayable at 49% of stations, and the largest sayable shift anywhere is 1.14 days per the fitted response.",
+   "plain_caveat": "This projects only the part of the timing shift that follows temperature, which is about half of it. And it is not a forecast for any particular year \u2014 a response read forwards under a scenario and a prediction of next autumn are different things.",
+   "plain_how": "No new measurement and no model of our own. The relationship between a warm pre-season and an earlier passage was already fitted from thirty years of observations, over a range of temperatures those thirty years actually contained. We took published climate projections, asked how much warmer each scenario makes each station's pre-season, and then asked the only question that matters: is that warming inside the range the relationship was measured over? Where it is not, nothing is drawn.",
+   "value": "49% sayable at best (ssp126, 2040-2059); 3 of 8 frames entirely unsayable",
+   "scope": "78 radar stations between 37\u00b0N and 50\u00b0N, four SSPs and two twenty-year windows, each model's June-July anomaly against its own 1995-2014 baseline, masked against the 5th-to-95th band of the within-station departures the response was fitted over.",
+   "caveat": "The number a reader will reach for is the projected shift, and it is the one number here that misleads: masking removes every cell warmer than the envelope's edge, so the surviving cells are bunched against that edge and the median sayable shift sits near a day in every scenario at every horizon. Four scenarios that differ by four degrees of warming cannot imply the same shift \u2014 what they share is the mask. Read it as a bound on the thermal component, never as an expectation. That component is also only about half of the observed advance and the response behind it can be fitted on two timescales, so it carries its own range before any scenario is applied. Nothing here says the response stays linear outside the band, which is exactly what the mask declines to assert, and the model spread is wider than the response's own interval \u2014 which model you pick matters more than how well the response is known. And this is not a year-ahead forecast: interannual skill is absent at most of these stations, and a standing annual prediction was tested and refused on measured grounds.",
+   "method": "docs/methods/forecast-a.md",
+   "realm": "aerial",
+   "taxon_scope": "unattributed",
+   "evidence_type": "flux",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "The 78 radar stations between 37\u00b0N and 50\u00b0N, which is where the response function is published and nowhere else. Nothing here is projected outside that band, and the whole point of the claim is that a fitted line does not travel."
+    },
+    {
+     "domain": "temporal",
+     "status": "open",
+     "finding": "Every model's anomaly is taken against its own 1995-2014 baseline, which ends where CMIP6's historical runs end. The response it multiplies was fitted over 1995-2025, so the two windows do not coincide and the ratio construction is what makes that tolerable."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "open",
+     "finding": "The response is aerial reflectivity, which cannot tell a bird from a bat from an insect. A projection inherits that whole and adds nothing to it."
+    },
+    {
+     "domain": "environmental",
+     "status": "open",
+     "finding": "Wind, land use, light and the unexplained half of the observed advance are all held at no change, which is a claim about the future and not a neutral choice."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "Every row carries whether that station has any interannual skill at all, because a scenario response read forwards is not a year-ahead forecast and a reader who confuses them has been misled by presentation."
+    },
+    {
+     "domain": "phenological",
+     "status": "bounded",
+     "finding": "The response is a passage date, so this projects timing and nothing about abundance, route or destination."
+    }
+   ],
+   "specimen_key": null,
+   "specimen": "",
+   "direction": "limit",
+   "supporting": [
+    "The mask was applied before any projected value was reported, not after inspecting them, and the envelope, the windows, the member cap and the baseline were all fixed before a single scenario store was opened.",
+    "Four of five registered predictions held. The one that failed was the mid-century share under strong mitigation, short of a bar chosen for its roundness by one station, and it is recorded as false rather than rounded up.",
+    "The response function is read from the published fit rather than re-estimated here, so the projection and the ledger cannot disagree about the coefficient they share.",
+    "Every projected row carries whether its station has any interannual skill at all, because a scenario response and a year-ahead forecast are different objects and the difference is presentation's responsibility."
    ]
   },
   {
@@ -594,14 +651,14 @@
   },
   {
    "key": "transfer-fails",
-   "plain": "Two records on opposite sides of the world agreed about how animals follow a warming climate. The third, measured a different way, did not.",
-   "matters": "Almost every published forecast of where wildlife will go assumes a response measured in one place holds in another. It is an assumption because testing it needs several responses measured the same way, which is rare. Here the crossing that everyone worries about \u2014 hemisphere \u2014 turned out to be the one that held, and the one nobody names broke it.",
-   "claim": "Thermal tracking measured in the northern marine realm (-0.025) and the southern terrestrial realm (-0.014) cannot be told apart, while the aerial record (-0.706) differs from both. Responses transferred across the equator and failed to transfer across the kind of response being measured.",
+   "plain": "Two records on opposite sides of the world agreed that these animals barely follow the warming. The third found a large response, so what crossed the equator was an absence.",
+   "matters": "Almost every published forecast of where wildlife will go assumes a response measured in one place holds in another. It is an assumption because testing it needs several responses measured the same way, which is rare. This is three of them under one audit \u2014 and the honest result is that the test could not be run as intended, because two of the three had almost no response to carry across.",
+   "claim": "Thermal tracking measured in the northern marine realm (-0.025) and the southern terrestrial realm (-0.014) cannot be told apart, while the aerial record (-0.706) differs from both. But the two that agree sit within a few percent of no tracking on a scale where one is full tracking, so what agreed across the equator is a near-absence of response \u2014 and two near-zeros matching cannot establish that a response transfers. The one leg carrying a substantial response is the one that broke the agreement, which is the result this design can support.",
    "plain_caveat": "Three records is three points. The one that disagreed is also the only one measuring dates instead of places, and the only one from radar, and nothing here can separate those.",
    "plain_how": "A test of whether one realm's answer travels. Three bodies of evidence, and three runs: each time, fit on two of them and try to describe the third, which the model has never seen. Two of the three could be recovered that way. The one measured from the air could not, by an order of magnitude \u2014 which is the finding rather than a hitch in it.",
    "value": "hold-one-out error 0.68 for aerial-north against 0.06 and 0.02 for the other two",
    "scope": "69 radar stations between 37\u00b0N and 50\u00b0N, 1,426 species-and-survey pairs over northern-hemisphere shelf seas, and 523 species over 496 quarter-degree cells in southern Africa. Each leg's own window.",
-   "caveat": "This tests whether three measured responses agree, not whether a model fitted in one would work in another \u2014 a weaker question, and the only one three cases can answer. The two realms that agree do so at a median tracking of -0.025 and -0.014: both are indistinguishable from no tracking at all, so what transferred is an absence of response, which is a much cheaper thing to reproduce than a response. The aerial leg is the only one with a clear signal in it and the only one that failed, and it is also the only phenological leg, the only radar leg and the only one needing a seasonal temperature slope to reach common units \u2014 the pre-registration listed realm, hemisphere, instrument and decade as inseparable here and did not list response type, which is the axis the result fell on. That omission is recorded as a correction in the method note rather than edited away. Every leg divides by a temperature and none carries wind, land use or fishing pressure, so a realm moved by something else reports it as a failure to follow the heat.",
+   "caveat": "This tests whether three measured responses agree, not whether a model fitted in one would work in another \u2014 a weaker question, and the only one three cases can answer. And it could not be run as intended, because the two realms that agree do so at a median tracking of -0.025 and -0.014 on a scale where one is full tracking. The southern figure is not separable from zero at all; the marine one is, at about 2.3 standard errors, which makes it a measured near-absence rather than an unmeasurable one \u2014 and neither is a response. So what transferred is an absence, which is a far cheaper thing to reproduce, and the held-out prediction that succeeded predicted approximately nothing from two values near nothing. The aerial leg is the only one carrying a substantial response and the only one that failed, and it is also the only phenological leg, the only radar leg and the only one needing a seasonal temperature slope to reach common units \u2014 the pre-registration listed realm, hemisphere, instrument and decade as inseparable here and did not list response type, which is the axis the result fell on. That omission is recorded as a correction in the method note rather than edited away. Every leg divides by a temperature and none carries wind, land use or fishing pressure, so a realm moved by something else reports it as a failure to follow the heat.",
    "method": "docs/methods/phase1i-transfer.md",
    "realm": "all",
    "taxon_scope": "all",

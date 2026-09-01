@@ -724,8 +724,10 @@ def _seas_finding() -> Finding | None:
             "The warming null is an average over units that emphatically disagree, so it rules out "
             "warming as the sorter *on this axis at this unit* and not as a driver: something that "
             "moved a third of the pairs and left the rest alone produces this number, and the "
-            "cluster test for that is registered in docs/methods/phase3j-thermal-clusters.md and "
-            "not yet run. The registered depth interaction came out "
+            "cluster test for that has since run: cut into thirds by thermal position, warming "
+            "rate and depth, no third of the pairs moved differently beyond its own null and no "
+            "axis explained more than a twentieth of the variation, so the null is not hiding a "
+            "subset along any axis this lake can define. The registered depth interaction came out "
             f"{fit.interaction_slope:+.3f} ± {fit.interaction_ci:.3f}, the opposite sign to the "
             "prediction, and is reported as the graded failure it is rather than turned around "
             "into a story. The driver is a satellite reading the surface where the fish are on the "
@@ -821,9 +823,9 @@ def _projection_finding() -> Finding | None:
         evidence_type=EvidenceType.FLUX.value,
         bias=PROJECTION_MASK_BIAS,
         plain=(
-            "Under strong mitigation, about half these places sit inside the range we actually "
-            "measured by mid-century. Under every other scenario, and everywhere by late century, "
-            "the warming runs off the end of what was measured — and there we decline to guess."
+            "Under strong mitigation, about half these places stay inside the range we measured. "
+            "Under every other scenario the warming runs off the end of it, and there we decline "
+            "to guess."
         ),
         matters=(
             "A projection three degrees outside the range it was fitted in is not a cautious "
@@ -1061,6 +1063,8 @@ def _flight_finding() -> Finding | None:
     if flight is None:
         return None
 
+    published_width = flight.interval[1] - flight.interval[0]
+    widening = (flight.widest[1] - flight.widest[0]) / published_width if published_width else 1.0
     shape = phase1k.flight_shape()
     moved = [trend for trend in shape if not trend.flat]
     # An unevaluated guard is not a guard that passed: with no shape series the comparison is
@@ -1142,9 +1146,9 @@ def _flight_finding() -> Finding | None:
             f"Mean flight date across UK monitoring transects has advanced by "
             f"{abs(flight.median):.2f} days per decade (median across {flight.units:,} "
             f"site-species-generation series, 95% CI "
-            f"{flight.interval[0]:+.2f} to {flight.interval[1]:+.2f}), with "
-            f"{flight.significant:,} series beating their own year-shuffle null against a chance "
-            f"bar of {flight.bar:,}."
+            f"{flight.widest[0]:+.2f} to {flight.widest[1]:+.2f} with taxa resampled rather than "
+            f"series), with {flight.significant:,} series beating their own year-shuffle null "
+            f"against a chance bar of {flight.bar:,}."
         ),
         value=(
             f"{flight.median:+.2f} days per decade across {flight.units:,} series "
@@ -1164,7 +1168,10 @@ def _flight_finding() -> Finding | None:
             "untested here. A mean flight date is one summary of a flight period, and a species "
             "whose season lengthened at one end without moving its centre reports nothing. And a "
             "flight period is not a migration: the comparison to nocturnal passage is a comparison "
-            f"of thermal tracking, not of the same behaviour.{guard}"
+            f"of thermal tracking, not of the same behaviour. No individual series is readable "
+            f"here: the median one sits {flight.slope_vs_stderr:.2f} standard errors from zero, "
+            f"short of the two a single estimate needs, so this is a statement about a network and "
+            f"never about a site or a species.{guard}"
         ),
         method="docs/methods/phase1k-idle-networks.md",
         direction="change",
@@ -1176,6 +1183,11 @@ def _flight_finding() -> Finding | None:
             "The estimand had to be reconstructed because the lake stores no flight date, and the "
             "first implementation fitted the wrong quantity; the correction is recorded in the "
             "method note rather than edited away.",
+            f"The interval published here is {widening:.1f} times the one a resample over series "
+            f"gives, and it is the wider of two clusterings rather than the convenient one: "
+            f"{flight.units:,} series rest on {flight.taxa} taxa and one national spring, so "
+            f"treating them as independent was the error. Registered as a prediction before it was "
+            f"measured, and it came in above the bracket's floor.",
         ],
     )
 
@@ -1422,7 +1434,13 @@ def collect() -> list[Finding]:
             caveat=(
                 "A pooled median hides the variation worth predicting: individual surveys reach "
                 "-0.22 and +0.26 °latitude per decade in opposite directions. The unit of "
-                "analysis has to be the species in its region, not the ocean."
+                "analysis has to be the species in its region, not the ocean. And this null was "
+                "tested for a mixture rather than left as an average: cut into thirds by where a "
+                "species sits in its own survey's water, by how fast that water warmed, and by how "
+                "deep it lives, no third moved differently from the others beyond what shuffling "
+                "the labels produces, and no grouping explained more than a twentieth of the "
+                "variation between pairs. A warming that hit some and spared the rest would look "
+                "like this median, and along these three axes it is not what is here."
             ),
             method="docs/methods/phase1b-marine.md",
             direction="null",
@@ -1834,9 +1852,9 @@ def collect() -> list[Finding]:
             evidence_type="all",
             bias=TRANSFER_BIAS,
             plain=(
-                "Two records on opposite sides of the world agreed that the animals in them are "
-                "barely following the warming at all. The third, measured a different way, found a "
-                "large response — so what crossed the equator was an absence, not an answer."
+                "Two records on opposite sides of the world agreed that these animals barely "
+                "follow the warming. The third found a large response, so what crossed the "
+                "equator was an absence."
             ),
             matters=(
                 "Almost every published forecast of where wildlife will go assumes a response "

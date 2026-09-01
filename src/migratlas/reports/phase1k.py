@@ -91,11 +91,39 @@ class TimingResult:
     """The flight-date leg: Phase 1j's leg, on the unit Phase 1j declared."""
 
     units: int
+    taxa: int
+    """Distinct taxa behind the units, which is nearer the effective sample size."""
     median: float
     interval: tuple[float, float]
     iqr: tuple[float, float]
     significant: int
     bar: int
+    slope_vs_stderr: float
+    """Median |slope| over its own standard error. Phase 1l's number, for leg 2's unit.
+
+    Registered 2026-09-01: above two and a single site-species series is individually readable,
+    below it this network measures one series no better than the Swedish programmes measure one
+    species -- which is why Phase 1k's latitude medians are withheld.
+    """
+    taxon_interval: tuple[float, float]
+    """The median's interval with taxa resampled, not series."""
+    site_interval: tuple[float, float]
+    """The same with sites resampled. The wider of the two is the one that counts."""
+
+    @property
+    def widest(self) -> tuple[float, float]:
+        """The conservative interval, chosen by width rather than by which is convenient."""
+        pairs = [self.taxon_interval, self.site_interval, self.interval]
+        finite = [pair for pair in pairs if all(np.isfinite(pair))]
+        if not finite:
+            return self.interval
+        return max(finite, key=lambda pair: pair[1] - pair[0])
+
+    @property
+    def survives_dependence(self) -> bool:
+        """Whether the advance still excludes zero once dependence is admitted."""
+        low, high = self.widest
+        return high < 0.0 or low > 0.0
 
 
 def load_counts(source_id: str) -> pl.DataFrame:
@@ -183,6 +211,32 @@ def _median_interval(values: np.ndarray, *, name: str) -> tuple[float, float]:
     draws = np.empty(PERMUTATIONS, dtype=float)
     for draw in range(PERMUTATIONS):
         draws[draw] = float(np.median(rng.choice(values, size=values.size, replace=True)))
+    return (float(np.percentile(draws, 2.5)), float(np.percentile(draws, 97.5)))
+
+
+def _clustered_interval(
+    slopes: pl.DataFrame, groups: pl.Series, *, name: str
+) -> tuple[float, float]:
+    """A percentile bootstrap on the median, resampling whole clusters rather than rows.
+
+    Registered 2026-09-01. `_median_interval` resamples units, and 12,213 site-species-generation
+    units rest on 59 taxa and 3,144 sites: one species appears at hundreds of sites and responds to
+    a single national spring, so a resample over units admits far less dependence than there is.
+    Drawing whole clusters keeps each cluster's rows together, which is what makes the interval a
+    statement about the number of independent things rather than the number of rows.
+    """
+    values = slopes["per_decade"].to_numpy().astype(float)
+    keys = groups.to_numpy()
+    unique = np.unique(keys)
+    if unique.size < 2:  # noqa: PLR2004 -- one cluster has no interval
+        return (float("nan"), float("nan"))
+    members = [np.flatnonzero(keys == key) for key in unique]
+    rng = np.random.default_rng(_unit_seed(name))
+    draws = np.empty(PERMUTATIONS, dtype=float)
+    for draw in range(PERMUTATIONS):
+        picked = rng.integers(0, len(members), size=len(members))
+        rows = np.concatenate([members[index] for index in picked])
+        draws[draw] = float(np.median(values[rows]))
     return (float(np.percentile(draws, 2.5)), float(np.percentile(draws, 97.5)))
 
 
@@ -329,13 +383,25 @@ def timing() -> TimingResult | None:
     beat = graded.filter(pl.col("per_decade").abs() > pl.col("null_95"))
 
     values = slopes["per_decade"].to_numpy().astype(float)
+    # The unit key is `site:taxon:protocol`, so the two clusterings are already in it and no join
+    # is needed to recover them.
+    parts = slopes.with_columns(
+        site=pl.col("unit").str.split(":").list.get(0),
+        taxon=pl.col("unit").str.split(":").list.get(1),
+    )
+    ratios = (slopes["per_decade"] / slopes["stderr"]).abs().to_numpy().astype(float)
+    finite = ratios[np.isfinite(ratios)]
     return TimingResult(
         units=slopes.height,
+        taxa=int(parts["taxon"].n_unique()),
         median=float(np.median(values)),
         interval=_median_interval(values, name=f"{FLIGHT_NETWORK}:median"),
         iqr=iqr(values),
         significant=beat.height,
         bar=_binomial_bar(slopes.height),
+        slope_vs_stderr=float(np.median(finite)) if finite.size else float("nan"),
+        taxon_interval=_clustered_interval(slopes, parts["taxon"], name=f"{FLIGHT_NETWORK}:taxon"),
+        site_interval=_clustered_interval(slopes, parts["site"], name=f"{FLIGHT_NETWORK}:site"),
     )
 
 
@@ -497,6 +563,12 @@ def render() -> str:
             f"[{flight.interval[0]:+.3f}, {flight.interval[1]:+.3f}]",
             f"  IQR [{flight.iqr[0]:+.3f}, {flight.iqr[1]:+.3f}]",
             f"  beat own null: {flight.significant} of {flight.units}, chance bar {flight.bar}",
+            f"  median |slope| / its own standard error: {flight.slope_vs_stderr:.2f}",
+            f"  interval, taxa resampled: [{flight.taxon_interval[0]:+.3f}, "
+            f"{flight.taxon_interval[1]:+.3f}]",
+            f"  interval, sites resampled: [{flight.site_interval[0]:+.3f}, "
+            f"{flight.site_interval[1]:+.3f}]",
+            f"  widest interval excludes zero: {'yes' if flight.survives_dependence else 'NO'}",
         ]
         out += ["", "  Prediction 6 -- did the flight curve's shape trend?"]
         shape = flight_shape()

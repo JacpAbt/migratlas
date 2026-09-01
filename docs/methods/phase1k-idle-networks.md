@@ -480,3 +480,64 @@ throws it away.
   model.
 - **Nothing about the other networks.** Leg 1's medians are withheld on Phase 1l's stop condition and
   nothing here lifts that.
+
+## Results — run 2026-09-01
+
+| quantity | value |
+| --- | --- |
+| units | 12,213 over **59 taxa** and 3,144 sites |
+| median | **−2.104** days per decade, unmoved |
+| interval, series resampled (published until today) | −2.181 to −2.038, width **0.143** |
+| interval, **sites** resampled | −2.243 to −1.996, width 0.247 |
+| interval, **taxa** resampled | **−2.454 to −1.809**, width **0.645** |
+| widening against the published interval | **4.51×** |
+| median \|slope\| / its own standard error | **1.05** |
+
+### The predictions, graded
+
+**1 — TRUE, and worse than registered.** The median series sits **1.05** standard errors from zero,
+against the two a single estimate needs. Phase 1l's Swedish species trends sit at 1.69, so **a single
+flight-date series is less individually readable than a single species' latitude trend** — the
+network whose panel is eighty times larger measures its own unit rather less precisely, which is not
+what the panel size suggests.
+
+**2 — TRUE.** The taxon-clustered interval is **4.51×** the published one, above the registered floor
+of three. The site-clustered interval is 1.7×, so taxa are indeed the coarser dependence, as §
+registered in advance and as the "one national spring" argument implies.
+
+**3 — TRUE.** The median is −2.104 either way. Clustering changed the interval and not the estimate,
+which is what it should do and is the check that this is a dependence correction rather than a bug.
+
+### The stop condition, and what it does
+
+Registered: *prediction 1 true and the interval still excludes zero* → the finding stands as a
+**network median** and its caveat says explicitly that no individual series is readable.
+
+The widest interval is **−2.454 to −1.809** and excludes zero comfortably. So `flight-advance` stands,
+with three changes:
+
+- the published interval is now the **taxon-clustered** one, and the claim names the clustering;
+- the caveat states that the median series is 1.05 standard errors from zero, so this is a statement
+  about a network and never about a site or a species;
+- a supporting line carries the 4.51× and the reason, because a reader who saw the old interval
+  should be able to see that it moved and why.
+
+**The advance survives and the precision claim did not.** An interval of 0.143 days on a signal of
+2.104 was asserting a resolution this panel does not have, and the error was in the direction that
+flatters: too narrow, on the finding with the largest units count in the project.
+
+### What this says about the rest of the ledger
+
+Every other median-over-units in this ledger is built by the same `_median_interval`, which resamples
+units. Three of them are exposed on the same argument and none has been checked:
+
+| claim | unit | the dependence nobody has admitted |
+| --- | --- | --- |
+| `marine-null` | species × survey | every pair inside a survey shares one survey's water and gear |
+| `atlas-no-net-change` | species | every species shares one atlas's observer pool and one footprint |
+| `seas-disagree` | survey segment | the surveys are weighted by their own intervals, which are themselves unit-resampled |
+
+Phase 3j already registers the survey-clustered version for the marine pairs, so that one is in hand.
+The other two are not, and this note is the measurement that says how much it can matter: **4.5× on
+the one case where it has been looked at.** Recorded here rather than acted on, because widening three
+more published intervals is its own change with its own registration.
