@@ -62,6 +62,12 @@ class Regression:
     q_statistic: float
     q_bar: float
     heterogeneous: bool
+    q_survives: bool
+    """Whether Q still clears its bar with any one unit dropped, both recomputed.
+
+    ADR 0016 deferred extending its rule to a heterogeneity statistic to whichever phase published
+    one. Phase 3e is that phase, and this is the extension.
+    """
     temp_slope: float
     temp_ci: float
     interaction_slope: float
@@ -259,13 +265,42 @@ def _solve(fitted: Sequence[Unit]) -> tuple[float, float, float, float]:
     )
 
 
-def regression(fitted: list[Unit]) -> Regression:
-    """The one registered cross-unit fit: WLS with a depth interaction, and Cochran's Q."""
+def _heterogeneity(fitted: Sequence[Unit]) -> tuple[float, float]:
+    """Cochran's Q and its 95% chi-square bar, on whatever units are handed in.
+
+    Split out for the same reason `_solve` was: ADR 0016 left extending its rule to a heterogeneity
+    statistic as a decision for the phase that publishes one, and a statistic that cannot be
+    recomputed on a subset cannot have that decision made about it.
+    """
     y = np.array([u.latitude_trend for u in fitted])
     weights = np.array([1.0 / max((u.latitude_ci / 1.96) ** 2, 1e-6) for u in fitted])
     pooled = float(np.sum(weights * y) / np.sum(weights))
-    q = float(np.sum(weights * (y - pooled) ** 2))
-    q_bar = float(stats.chi2.ppf(0.95, len(fitted) - 1))
+    return (
+        float(np.sum(weights * (y - pooled) ** 2)),
+        float(stats.chi2.ppf(0.95, len(fitted) - 1)),
+    )
+
+
+def regression(fitted: list[Unit]) -> Regression:
+    """The one registered cross-unit fit: WLS with a depth interaction, and Cochran's Q."""
+    q, q_bar = _heterogeneity(fitted)
+
+    # ADR 0016 extended to Q, which that ADR explicitly deferred to whichever phase published a
+    # heterogeneity claim. Q is a sum over units, so one extreme sea can carry it exactly as one
+    # carried Phase 3g's slope -- and the bar moves with the unit count, so both halves are
+    # recomputed on every subset rather than the statistic being compared against a fixed bar.
+    q_survives = True
+    for index in range(len(fitted)):
+        rest = [unit for position, unit in enumerate(fitted) if position != index]
+        one_q, one_bar = _heterogeneity(rest)
+        if one_q <= one_bar:
+            log.info(
+                "dropping %s takes Q to %.1f against %.1f",
+                fitted[index].segment.survey,
+                one_q,
+                one_bar,
+            )
+            q_survives = False
 
     temp_slope, temp_ci, interaction_slope, interaction_ci = _solve(fitted)
     return Regression(
@@ -273,6 +308,7 @@ def regression(fitted: list[Unit]) -> Regression:
         q_statistic=q,
         q_bar=q_bar,
         heterogeneous=q > q_bar,
+        q_survives=q_survives,
         temp_slope=temp_slope,
         temp_ci=temp_ci,
         interaction_slope=interaction_slope,

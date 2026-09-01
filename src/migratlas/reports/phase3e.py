@@ -221,4 +221,20 @@ def render() -> str:
         f"Prediction 5 ({grade(len(fitted) >= PREDICTED_MINIMUM_UNITS_3E)}): {len(fitted)} "
         f"units entered against the predicted fifteen.",
     ]
+
+    # ADR 0016, and not a graded prediction: the registration asked for no leverage check, so this
+    # can only ever be a diagnostic. It is printed because this phase's heterogeneity result is the
+    # one owed to the ledger, and publishing a statistic over eighteen units without asking whether
+    # one of them carries it is what Phase 3g nearly did.
+    lines.append(
+        f"ADR 0016 — Q survives dropping any one unit: {'yes' if fit.q_survives else 'NO'}."
+    )
+    if fit.leverage is not None:
+        worst = fit.leverage.worst()
+        named = f" furthest is {worst[0]} at {worst[1]:+.3f} ± {worst[2]:.3f}" if worst else ""
+        lines.append(
+            f"ADR 0016 — the warming slope is a null, so it has no verdict to lose "
+            f"(clears zero: {'yes' if fit.leverage.clears_at_full else 'no'}; "
+            f"publishable: {'yes' if fit.leverage.publishable else 'NO'}).{named}"
+        )
     return "\n".join(lines)
