@@ -1092,8 +1092,14 @@ test("explore carries the tools, with the terms every drawn layer was published 
 
   // The clock reads as a date rather than as a day number, and without the stray punctuation a
   // trimmed shared formatter left behind.
+  //
+  // `\w{3,4}` and not `\w{3}`: `month: "short"` under en-GB abbreviates eleven months to three
+  // letters and September to four. Written as three, this passed every day of the year except in
+  // September, and it duly failed on 1 September against "1 Sept · week 35". The assertion is
+  // about the shape of the label rather than the width of a month name, so the range is the fix
+  // and not a wider pattern that would stop checking anything.
   const clockface = await panel.locator(".clockface").textContent();
-  expect(clockface).toMatch(/^\d{1,2} \w{3} · week \d{1,2}$/);
+  expect(clockface).toMatch(/^\d{1,2} \w{3,4} · week \d{1,2}$/);
 
   // Moving the slider moves the label, so the control is wired to the clock and not decorative.
   await panel.locator(".time input").fill("120");
