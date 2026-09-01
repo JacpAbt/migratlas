@@ -741,6 +741,13 @@ def _seas_finding() -> Finding | None:
         supporting=[
             "The heterogeneity survives ADR 0016: dropping any one of the segments leaves Q above "
             "its own recomputed bar, so this is not one extreme sea carrying a statistic.",
+            f"Its margin against the weights is narrower than that, and is stated rather than "
+            f"left implicit: Q clears while each survey's interval is understated by less than "
+            f"{fit.q_robustness:.2f} times. Those intervals treat the species inside a survey as "
+            f"independent when they share its gear, footprint and water, and the comparable "
+            f"corrections this project has measured elsewhere run 2.4 to 4.5 times. Nobody has "
+            f"measured the factor for this quantity, so the honest position is that the "
+            f"heterogeneity is large and its clearance is not comfortable.",
             "The warming null has no verdict for a single unit to overturn, and the furthest any "
             "one segment moves it leaves it a null as well.",
             "Five of five registered predictions were graded and two came back false, including "
@@ -1011,9 +1018,12 @@ def _protocol_finding() -> Finding | None:
             f"The two readings a paired difference allows have been separated rather than left "
             f"open, from the standard errors the fits were already computing: {noise:.0f}% of the "
             f"raw disagreement is the two fits' own estimation error, so the remainder is a real "
-            f"difference in what the programmes measure. What that remainder is made of is not "
-            f"resolved: footprints were left unequal on purpose (33 consistently sampled cells "
-            f"against 84), so part of it is geography rather than protocol. The sign "
+            f"difference in what the programmes measure. It is not geography: matching the two "
+            f"footprints cell for cell leaves the ratio where it was, because the smaller "
+            f"programme's cells turn out to be 97% nested inside the larger one's rather than "
+            f"beside them. And the remainder is a constant offset -- point counts read about a "
+            f"sixth of a degree per decade more northward movement than fixed routes, by the same "
+            f"amount whether a species is easy to count or hard, northern or southern. The sign "
             f"disagreements are softer than they read: {split.flips_explained} of "
             f"{split.flips} involve at least one estimate that cannot be told apart from zero, "
             f"which two weak readings of a near-zero trend do as a matter of course. The reason "

@@ -1,5 +1,6 @@
 """GBIF Backbone client. The project's taxonomy spine for every kingdom."""
 
+import logging
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -12,6 +13,8 @@ USER_AGENT: Final = "migratlas/0.1 (+https://github.com/JacpAbt/migratlas)"
 
 _ACCEPTABLE_MATCHES: Final = frozenset({"EXACT", "FUZZY"})
 _MIN_CONFIDENCE: Final = 90
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,3 +190,61 @@ def titlecase(name: str) -> str:
     """Capitalise each word without mangling hyphens or apostrophes the way
     ``str.title()`` does (it turns "Swainson's" into "Swainson'S")."""
     return " ".join(part[:1].upper() + part[1:] for part in name.split(" ") if part)
+
+
+# --- Higher ranks, for grouping rather than for identity -------------------------------------
+
+RANKS: Final[tuple[str, ...]] = ("family", "order", "class")
+"""The ranks Phase 1o groups on.
+
+`class` is carried because Phase 1k's synthesis wanted it and found it collinear with the network.
+It costs nothing to keep and the next such question will ask for it.
+"""
+
+
+def classification(http: httpx.Client, usage_key: int) -> dict[str, str]:
+    """The Backbone's higher ranks for a key this project already resolved.
+
+    Not a new source and not a new identity decision: the key was assigned by `match_name` and this
+    reads the classification the same API returns for it. Grouping is all it is for -- nothing
+    downstream of the ethics gate or the taxonomy spine reads these.
+
+    A key with no family comes back without one rather than raising. A missing rank is a species to
+    report and exclude from a grouping, where a raise would cost the other nine hundred.
+    """
+    response = http.get(f"/species/{usage_key}")
+    response.raise_for_status()
+    payload: dict[str, Any] = response.json()
+    return {rank: str(payload[rank]) for rank in RANKS if payload.get(rank)}
+
+
+def classifications(keys: list[int]) -> dict[int, dict[str, str]]:
+    """Every key's higher ranks, cached to disk on first fetch.
+
+    The same shape as the per-source `*_taxon_keys.json` caches, and for the same reason: a thousand
+    Backbone calls should happen once. Keyed by usage key rather than by name, because a key is what
+    the lake stores and two names can share one.
+    """
+    import json  # noqa: PLC0415 -- one function, stdlib
+
+    from migratlas.config import get_settings  # noqa: PLC0415 -- avoids an import cycle
+
+    cache = get_settings().cache_dir / "taxon_ranks.json"
+    known: dict[str, dict[str, str]] = {}
+    if cache.exists():
+        known = json.loads(cache.read_text(encoding="utf-8"))
+
+    missing = [key for key in keys if str(key) not in known]
+    if missing:
+        log.info("resolving higher ranks for %d of %d keys", len(missing), len(keys))
+        with client() as http:
+            for key in missing:
+                try:
+                    known[str(key)] = classification(http, key)
+                except httpx.HTTPError, KeyError, ValueError:
+                    log.warning("no Backbone classification for key %d", key)
+                    known[str(key)] = {}
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(known, indent=1, sort_keys=True), encoding="utf-8")
+
+    return {int(key): ranks for key, ranks in known.items() if int(key) in set(keys)}

@@ -760,6 +760,24 @@ def report_phase2c() -> None:
     print(phase2c.render())
 
 
+@report_app.command("phase1o")
+def report_phase1o() -> None:
+    """Is the level between one species and all of them a taxonomic one?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase1o  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase1o.render())
+
+
+@report_app.command("phase1n")
+def report_phase1n() -> None:
+    """With the footprint held equal, what is the protocol difference made of?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase1n  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase1n.render())
+
+
 @report_app.command("predictions")
 def report_predictions() -> None:
     """How often the registered predictions turned out wrong."""

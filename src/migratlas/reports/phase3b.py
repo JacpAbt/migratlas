@@ -80,6 +80,23 @@ class Regression:
     this by hand, after its result was in, and the answer decided what it could claim.
     """
 
+    @property
+    def q_robustness(self) -> float:
+        """How badly the per-unit intervals must be understated before Q stops clearing its bar.
+
+        Closed form, because Q is a sum of inverse-variance weights: multiply every unit's interval
+        by `k` and every weight falls by `k**2`, so Q falls by `k**2` while the chi-square bar does
+        not move. Q clears while `k < sqrt(Q / bar)`.
+
+        Why it is worth reporting. Each unit's interval is `1.96 * sd / sqrt(species)` over the
+        species inside that survey, which assumes those species are independent -- and they
+        share the survey's gear, footprint and water. Understated weights inflate Q, so a
+        heterogeneity claim needs to say how much room it has, not only that it cleared.
+        """
+        import math  # noqa: PLC0415 -- one caller, and the import documents the arithmetic
+
+        return math.sqrt(self.q_statistic / self.q_bar) if self.q_bar > 0 else float("nan")
+
 
 def gear_by_year(restricted: pl.DataFrame) -> pl.DataFrame:
     """A year's gear: the one with the most hauls, ties broken lexicographically.

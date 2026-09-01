@@ -8,7 +8,8 @@
 # Why it is authored rather than parsed. The notes grade in prose and the prose is not uniform --
 # `GRADED TRUE`, `— HOLDS`, `**failed**`, `PART PASS`, `UNGRADEABLE` all appear, and eight notes use
 # wording an extractor misses entirely. A regex over that would enshrine the inconsistency and would
-# silently undercount: the first attempt found 65 graded predictions where a careful read finds 102.
+# silently undercount -- the first attempt found 65 graded predictions where a careful read of the
+# same notes found half again as many. The total is computed from the entries below, not typed here.
 # So this is hand-authored from the notes, the way `registry.yaml` is hand-authored, and
 # `tests/test_predictions.py` is the drift guard -- every note must be listed here or excluded with a
 # reason, so a new phase cannot go uncounted.
@@ -222,6 +223,29 @@ phases:
     false_: 3
     ungradeable: 0
     stop_conditions_fired: 1
+
+  - note: phase1n-shared-footprint.md
+    registered: 6
+    true_: 4
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 1
+    comment: >-
+      Prediction 3 failed in the useful direction: restricting to the shared footprint did not lower
+      the ratio, because the two footprints turned out to be 97% nested rather than overlapping. The
+      fired condition is the one that answers #67 -- both covariate slopes null, so the remainder is
+      a constant offset.
+
+  - note: phase1o-taxonomic-groups.md
+    registered: 5
+    true_: 4
+    false_: 1
+    ungradeable: 0
+    stop_conditions_fired: 0
+    comment: >-
+      Prediction 3 failed by 0.001, in the network whose coherence the note argues is least
+      trustworthy. The registered degeneracy condition did not fire: the largest order holds 51-53%
+      of each panel, under its two-thirds threshold.
 
   - note: forecast-a.md
     registered: 5

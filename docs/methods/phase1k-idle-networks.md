@@ -541,3 +541,32 @@ Phase 3j already registers the survey-clustered version for the marine pairs, so
 The other two are not, and this note is the measurement that says how much it can matter: **4.5× on
 the one case where it has been looked at.** Recorded here rather than acted on, because widening three
 more published intervals is its own change with its own registration.
+
+### Correction, 2026-09-01: two of those three rows were wrong
+
+Checked the same day rather than left standing, and only one of the three carries the exposure this
+table claims.
+
+**`atlas-no-net-change` is not exposed.** It publishes a median and its **deciles** — order
+statistics of the observed 512 species — and not a bootstrap interval. Deciles assume nothing about
+independence, so there is nothing to widen, and a null reported beside a visible spread cannot be
+read as more precise than it is. The row was written from the shape of the other two rather than from
+the claim.
+
+**`seas-disagree` is exposed, and by a different mechanism than the row states.** Its intervals are
+not unit-resampled; each is `1.96 · sd/√species` over the species inside one survey, which is a
+normal approximation treating those species as independent when they share the survey's gear,
+footprint and water. That matters because those intervals are the *weights* in Cochran's Q, and
+understated weights inflate it.
+
+How much room the claim has is a closed form rather than a simulation. Q is a sum of inverse-variance
+weights, so multiplying every interval by `k` divides Q by `k²` while the chi-square bar does not
+move: **Q clears while `k < √(Q/bar) = √(235.7/27.6) = 2.92`.**
+
+That is not a comfortable margin. The comparable clustering corrections this project has now measured
+run **2.4× (thermal pairs), 3.0× (depth), 3.1× (warming) and 4.5× (flight dates)** — three of the
+four exceed 2.92. The quantities are not identical, so this is not a refutation; it is the statement
+that the heterogeneity's clearance sits inside the range where a dependence correction of the size
+seen elsewhere here would remove it, and that nobody has measured the factor for *this* quantity.
+`seas-disagree` carries it now, and `phase3b.Regression.q_robustness` computes it on every fit so the
+next heterogeneity claim states its margin without being asked.

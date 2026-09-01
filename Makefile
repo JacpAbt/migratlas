@@ -253,6 +253,14 @@ report-phase1m:  ## A level between one species and all of them?
 report-phase2c:  ## Is the thermal sensitivity a response, or a co-trend?
 	$(RUN) migratlas report phase2c
 
+.PHONY: report-phase1o
+report-phase1o:  ## Is the level between one species and all of them a taxonomic one?
+	$(RUN) migratlas report phase1o
+
+.PHONY: report-phase1n
+report-phase1n:  ## Footprint held equal: what is the protocol difference made of?
+	$(RUN) migratlas report phase1n
+
 .PHONY: report-predictions
 report-predictions:  ## How often the registered predictions turned out wrong
 	$(RUN) migratlas report predictions

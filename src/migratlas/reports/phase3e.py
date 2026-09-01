@@ -229,6 +229,11 @@ def render() -> str:
     lines.append(
         f"ADR 0016 — Q survives dropping any one unit: {'yes' if fit.q_survives else 'NO'}."
     )
+    lines.append(
+        f"Weight sensitivity — Q clears its bar while the per-unit intervals are understated by "
+        f"less than {fit.q_robustness:.2f}x. Comparable clustering corrections measured elsewhere "
+        f"in this project run 2.4x to 4.5x."
+    )
     if fit.leverage is not None:
         worst = fit.leverage.worst()
         named = f" furthest is {worst[0]} at {worst[1]:+.3f} ± {worst[2]:.3f}" if worst else ""
