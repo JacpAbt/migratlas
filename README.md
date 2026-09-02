@@ -4,7 +4,7 @@ A field notebook about animal movement — where animals go, how it has changed 
 driving the change, and where the evidence runs out. The whole world map is in the back pocket.
 
 > **Status: v1.0.0.** 13 findings published and recomputed from the lake on every build, across
-> 3 realms and 35 registered sources. Live at
+> 3 realms and 36 registered sources. Live at
 > [jacpabt.github.io/migratlas](https://jacpabt.github.io/migratlas).
 > The counts are guarded by `tests/test_readme_status.py` — they drifted twice when typed freehand.
 

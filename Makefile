@@ -177,6 +177,10 @@ ingest-era5:  ## ERA5 monthly precipitation at the radar stations -> lake (drive
 ingest-era5-south:  ## ERA5 monthly temperature at the atlas cells -> lake (driver samples)
 	$(RUN) migratlas ingest-era5-south
 
+.PHONY: ingest-era5-uk
+ingest-era5-uk:  ## ERA5 monthly temperature at the butterfly transects -> lake (driver samples)
+	$(RUN) migratlas ingest-era5-uk
+
 .PHONY: build-findings
 build-findings:  ## Recompute what the research established, for the globe to render
 	$(RUN) migratlas build-findings
@@ -272,6 +276,10 @@ report-phase3j:  ## Is the marine null a mixture? Clusters by thermal exposure
 .PHONY: report-phase3k
 report-phase3k:  ## Is the marine signal a property of the species rather than of the sea?
 	$(RUN) migratlas report phase3k
+
+.PHONY: report-phase2d
+report-phase2d:  ## Does the butterflies' flight date follow the temperature, per species?
+	$(RUN) migratlas report phase2d
 
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?

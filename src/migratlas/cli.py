@@ -376,6 +376,42 @@ def ingest_era5_south() -> None:
     print(f"run {result.run_id}")
 
 
+@app.command("ingest-era5-uk")
+def ingest_era5_uk() -> None:
+    """ERA5 monthly 2 m temperature at every UKBMS transect the lake holds (driver samples).
+
+    Phase 2d's driver: months 1-8 of 1973-2021 over Britain and Ireland, so a two-month
+    pre-season exists for a species-generation whichever month it flies. Its own source id,
+    for `era5_south`'s reason -- a second box under `era5` would replace the North American
+    years it shares.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.evidence import EvidenceType  # noqa: PLC0415 -- one command needs it
+    from migratlas.features.annotate import Point  # noqa: PLC0415
+    from migratlas.lake.reader import scan  # noqa: PLC0415
+
+    sites = (
+        scan(EvidenceType.SURVEY_INDEX, source_id="ukbms_phenology")
+        .select("site_id", "site_latitude", "site_longitude")
+        .unique(subset=["site_id"])
+        .collect()
+    )
+    points = [
+        Point(site_id=str(site), latitude=float(lat), longitude=float(lon))
+        for site, lat, lon in sites.iter_rows()
+    ]
+    result = era5.ingest(
+        points,
+        list(range(1973, 2022)),
+        list(range(1, 9)),
+        fields=("temperature",),
+        area=era5.UK_AREA,
+        source_id="era5_uk",
+    )
+    print(f"{result.rows:,} rows over {len(points)} sites -> {result.path}")
+    print(f"run {result.run_id}")
+
+
 @app.command("ingest-narr")
 def ingest_narr(
     start: Annotated[int, typer.Option(help="First year, inclusive.")] = 1995,
@@ -802,6 +838,15 @@ def report_phase3k() -> None:
     from migratlas.reports import phase3k  # noqa: PLC0415 -- heavy, and only this command
 
     print(phase3k.render())
+
+
+@report_app.command("phase2d")
+def report_phase2d() -> None:
+    """Does the butterflies' flight date follow the temperature, per species?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2d  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2d.render())
 
 
 @report_app.command("phase3h")

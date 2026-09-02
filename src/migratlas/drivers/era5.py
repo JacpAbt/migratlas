@@ -85,6 +85,10 @@ CONUS_AREA: Final[Area] = (50.0, -125.0, 24.0, -66.0)
 # southern box written north-first reads backwards to anyone used to the CONUS one above it.
 SABAP_AREA: Final[Area] = (-21.0, 17.0, -36.0, 34.0)
 
+# Britain and Ireland with a degree of margin, for the butterflies' pre-season. North first,
+# like the CONUS box above it.
+UK_AREA: Final[Area] = (61.0, -11.0, 49.0, 2.5)
+
 POLL_SECONDS: Final = 15.0
 POLL_LIMIT: Final = 240
 """One hour of waiting. A monthly-mean request for one variable is usually served from cache in
