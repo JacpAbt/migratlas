@@ -97,6 +97,40 @@ outlier. The count of taxa this admits is a graded prediction.
 
 ---
 
+## 3a. Amendments, written while implementing and before the registered run
+
+Four things §2 and §3 under-specified. All four were settled before any fit — no drift covariate had
+been joined to any unit and no coherence had been computed on any five-survey panel when these were
+written — and each would otherwise have been a silent choice inside the code.
+
+**A. The drift covariate is trended over the unit's own clipped segment, as distinct haul positions.**
+§2 says "the survey's own mean-haul-latitude trend". The 2026-09-01 diagnostic trended it over the
+survey's whole consistent record, as a mean over catch rows. The response it sits beside is measured
+over the segment Phase 3e clipped to the satellite era, so the covariate is trended over the same
+years — Phase 3j's amendment A, for Phase 3j's reason — and over the distinct positions hauled in
+each year rather than over catch rows, because a mean over rows weights a haul by how many taxa it
+caught, and this is a question about where the ship went. Prediction 2 was written against the
+diagnostic's +0.699 and is a weaker check for this change, which is stated rather than hidden.
+
+**B. The residual Q's bar has `units − 3` degrees of freedom.** The plain Q loses one for the pooled
+mean; the residual loses one per fitted parameter — intercept, drift, warming. "Still clears its
+bar" in prediction 3 means clears that bar, and ADR 0016's extension to Q recomputes both statistic
+and bar with each unit dropped, as `phase3b.regression` does for the plain Q. The residual's weight
+margin is `sqrt(Q / bar)` on the same arithmetic as `Regression.q_robustness`.
+
+**C. "Falls below the 0.10 floor under the clustered interval" means the lower 2.5th percentile of the
+survey-clustered bootstrap of the species coherence is below 0.10.** Prediction 5's factor of two is
+graded on the point estimates, with both intervals printed beside it. 1,000 draws per interval,
+seeded by `crc32` of the quantity's name mixed with `SEED = 1`, as Phase 3j seeds its nulls.
+
+**D. Estimand B's panel is `marine-null`'s own pooled table**, from `phase1b.analyse` on the same
+cells, keyed on `taxon_key` rather than on the label — 95 keys carry two or more verbatim names
+across sources, and a species split by spelling would read as two species that disagree — and
+filtered to taxa in five or more surveys. Its pooled median is printed beside the registered
+calibration as a second check that the table is the published one; it grades nothing.
+
+---
+
 ## 4. Predictions
 
 Marked as check or discovery, because three of these are things the diagnostics already indicated and

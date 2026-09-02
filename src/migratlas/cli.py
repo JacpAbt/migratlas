@@ -795,6 +795,15 @@ def report_phase3j() -> None:
     print(phase3j.render())
 
 
+@report_app.command("phase3k")
+def report_phase3k() -> None:
+    """Is the marine signal a property of the species rather than of the sea?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3k  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3k.render())
+
+
 @report_app.command("phase3h")
 def report_phase3h() -> None:
     """The pooled-response ladder: does predicting a region beat predicting a station?"""

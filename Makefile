@@ -269,6 +269,10 @@ report-predictions:  ## How often the registered predictions turned out wrong
 report-phase3j:  ## Is the marine null a mixture? Clusters by thermal exposure
 	$(RUN) migratlas report phase3j
 
+.PHONY: report-phase3k
+report-phase3k:  ## Is the marine signal a property of the species rather than of the sea?
+	$(RUN) migratlas report phase3k
+
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
 	$(RUN) migratlas report phase3h
