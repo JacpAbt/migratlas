@@ -227,3 +227,154 @@ Marked check or discovery, as Phase 3k marked its own.
 - **Not a licence to project.** A response read forwards is Forecast A's question and needs its mask.
 - **Not the third leg of the spine.** Whether species differ in *when* says nothing about whether the
   animal organises *where*, which Phase 3k has just answered in the negative for the marine record.
+
+---
+
+# Results — run 2026-09-02
+
+`make report-phase2d`. Two consecutive runs are identical on every line, checked before anything
+here was written down. The fetch landed the same afternoon: one 1.5 MiB file from the Copernicus
+queue, 3,144 sites, 1,232,448 monthly rows, landed as `era5_uk`.
+
+**Calibration — PASS.** `phase1k.timing()` returns **−2.1043** against the published −2.104.
+
+**Coverage — landed.** 3,144 of 3,144 transects matched an ERA5 cell, every one within 30 km, the
+furthest at 16.1 km.
+
+## The units
+
+**75 species-generations clear the floors**; 10 are published as coverage, all ten under the
+fifteen-year floor. No unit's median flight fell too early for a pre-season, so the window rule
+never returned nothing. Windows ran from February–March (the Peacock's post-winter flight) to
+June–July (the second generations and the late fliers).
+
+| quantity | value |
+| --- | --- |
+| median `S`, arm B (year term) | **−4.70** days per °C, units-bootstrap **[−4.98, −4.23]** |
+| median `S`, arm A (no year term) | −4.80 |
+| units whose year-clustered interval excludes zero | **60 of 75**, every one of them negative (counted from the printed intervals) |
+| median `W` | **+0.337** °C per decade [+0.310, +0.352] |
+| Cochran's Q across the 75 responses | **206.1** against a bar of 95.1 (74 degrees of freedom) |
+| thermal share `median(S × W) / median(A)` | **0.75**, with median `A` −2.05 days per decade |
+| migrants against residents, median `S` | −1.77 (3 units) against −4.83 (72 units) |
+
+The strongest clear response is *Leptidea sinapis* at −7.72 [−11.75, −4.25]; the weakest is the
+second generation of *Lycaena phlaeas* at +1.17 [−1.53, +2.61], the one unit whose point estimate is
+positive, and it is not clear of zero.
+
+## The answer
+
+**The butterflies' flight date follows the warmth of the months before it, at seven times the radar's
+response, and the response is the species'.**
+
+A spring one degree warmer brings the median species' flight forward by **4.7 days**, against 0.66
+days of autumn passage per degree over the radar. Adding the year term moves the median from −4.80
+to −4.70 — a tenth of a day — so the co-trend Phase 2c measured as small on the radar is small here
+too, on a different animal and a different instrument. Sixty of the seventy-five units clear zero on
+an interval clustered on year, and all sixty are negative.
+
+**Three quarters of the advance is the size the response predicts.** The pre-season warmed by
+0.34 °C per decade across the units, `S × W` puts the median predicted advance near −1.6 days per
+decade, and the median observed advance is −2.05: a share of **0.75**, against the radar's 51–54%.
+The remaining quarter is the residual `b`, and naming it would be inventing it, as Phase 2c said of
+the radar's half.
+
+**And the responses differ between species beyond their own error.** Cochran's Q is 206.1 against
+95.1: the 75 responses are not one number with noise. That is prediction 5, the substantive one, and
+it is the first test ADR 0018 decision 2 has had — the animal is the unit of *when*. Where Phase 3k
+found the marine where-shifts no more the species' than the sea's, the butterflies' when-shifts are
+emphatically the species'.
+
+**UNREGISTERED, seen in the table and not predicted anywhere:** for the nine multivoltine species
+with both generations in the panel, the **first generation responds more strongly than the second in
+all nine** — *Lasiommata megera* −6.86 against −2.79, *Celastrina argiolus* −6.16 against −1.76,
+*Lycaena phlaeas* −5.44 against +1.17, *Pieris rapae* −5.08 against −2.53, *Pieris napi* −4.86
+against −2.53, *Pieris brassicae* −4.52 against −2.91, *Polyommatus bellargus* −5.18 against −2.25,
+*Aricia agestis* −4.57 against −2.12, *Cupido minimus* −4.12 against −2.88, *Polyommatus icarus*
+−4.57 against −3.28. And for the two univoltines whose adults overwinter, the order **reverses**: the
+Brimstone's post-winter flight responds at −3.42 and its summer emergence at −5.12, the Peacock's at
+−1.96 and −4.18. A fresh generation emerging responds to the warmth that developed it; an
+overwintered adult reappearing responds less; a second generation, developing through a summer that
+is warm anyway, responds less than a first developing through a spring that varies. That is a
+mechanism-shaped pattern and it was not registered, so it is a diagnostic: eleven of eleven pairs in
+the direction development-not-reappearance predicts, and a successor's prediction rather than a
+result.
+
+**The migrants respond less**, at −1.77 against −4.83, on three units: *Vanessa cardui* at −4.16 is
+clear of zero, *Vanessa atalanta* at −1.24 and *Colias croceus* at −1.77 are not. Registered weakly
+and graded as registered; three units are three units.
+
+**Five remnant units are noise and are left in.** For five of the split species the scheme carries
+site-years where it separated no brood, and those rows form a plain `pollard-walk` unit of 17 to 19
+years and 11 to 35 sites beside the species' generations — intervals tens of days wide, and no site
+series long enough for an `A`. They clear the registered floors, enter the median with a weight in Q
+near nothing, and are named here rather than removed, because removing them after seeing them is the
+move §5 forbids. A floor on the number of site series with fifteen years would have excluded them;
+it was not registered.
+
+## The predictions, graded
+
+**1 — TRUE** (check). 3,144 of 3,144 within 30 km.
+
+**2 — TRUE** (check). −2.1043.
+
+**3 — TRUE** (discovery on the number). −4.70 [−4.98, −4.23], below −0.66 by a factor of seven.
+
+**4 — TRUE** (check). +0.337 [+0.310, +0.352].
+
+**5 — TRUE** (the discovery). Q 206.1 against 95.1.
+
+**6 — TRUE** (discovery). 0.75 against 0.54.
+
+**7 — TRUE** (check on direction). |−4.70| < |−4.80|, by a tenth.
+
+**8 — TRUE** (secondary, weak). −1.77 against −4.83 on three units.
+
+**Eight of eight, and that is the tail the prediction ledger says to be suspicious of.** Four were
+checks on the route and the arithmetic (1, 2, 4, 7). Two were registered in the direction the
+literature has reported for twenty-five years (3, 6). One rests on three units (8). The prediction
+that carried the phase's weight is 5, and its pass is the result; had it failed, the note would be
+saying that the species respond alike and decision 2 had lost its first test.
+
+## Stop conditions
+
+None fired. The registered consequence of prediction 3 holding is that `flight-advance` gains the
+response: its claim, its caveat and its environmental bias domain — which said *no driver enters
+this* — now carry the median response, its interval, the share and the heterogeneity, computed at
+build from this module rather than typed. **No new ledger entry.** ADR 0018 decision 5 makes the book
+arc the place where *why it changed* grows, and a claim without a chapter fails the build.
+
+## What this does to ADR 0018
+
+**The first leg now stands on two instruments in two realms.** Radar autumn passage at −0.62 to
+−0.66 days per °C with a thermal share of 51–54%; butterfly flight at −4.70 with a share of 0.75.
+Timing follows the temperature before it, and does so more tightly in an ectotherm whose development
+is thermal than in a nocturnal migrant whose departure is partly photoperiod's.
+
+**Decision 2 passed its first test.** The responses are the species' — Q 206 against 95 — which is
+what *most migrations are animal specific* predicts for *when*. Phase 3k found the opposite for
+*where* in the marine record. The spine's sentence sharpens rather than breaks: **when is the
+animal's and follows temperature; where is not organised by the animal beyond what the sea is, and
+does not follow warming.** The synthesis, #76, is unblocked.
+
+## What the successor has to fix
+
+1. **Register the generation gradient** — a fresh generation responds, an overwintered adult
+   reappearing responds less — and test it on degree-days rather than monthly means, which is the
+   mechanism's own quantity.
+2. **A floor on site series with fifteen years**, so that every unit carries an `A` and the remnant
+   units above do not enter. Not applied here; it was not registered.
+3. **The report should print the count of units clear of zero.** The 60 above was counted from the
+   printed intervals; a count is a computed quantity and belongs in the output.
+4. **#47.** This is the second responsive system the transfer test needed. Re-running Phase 1i with
+   a butterfly leg is its own registration and inherits Phase 1j's window and conversion rules.
+
+## What this does not establish
+
+- **Not causation.** A response function: nitrogen, land use and recorder behaviour that trend with
+  British springs survive every arm.
+- **Not degree-days**, and so not the mechanism, only its monthly shadow.
+- **Not migration.** Seventy-two of the seventy-five units are residents; this is when they emerge.
+- **Not the other realms, and not the south.** One island, one scheme.
+- **Not the third leg.** Species differing in *when* says nothing about *where*.
+- **Not a licence to project.** A response read forwards is Forecast A's question.

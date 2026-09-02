@@ -260,6 +260,18 @@ phases:
       between-group share has a chance level near (k - 1) / n, which put the two groupings level
       once counted. The 2.8x published on 2026-09-01 is withdrawn from two findings.
 
+  - note: phase2d-flight-response.md
+    registered: 8
+    true_: 8
+    false_: 0
+    ungradeable: 0
+    stop_conditions_fired: 0
+    comment: >-
+      Eight of eight, and the note says why that is weaker than it sounds: four were checks on the
+      route and the arithmetic, two were registered in the direction the literature has reported for
+      decades, one rests on three migrant units. The one that carried weight is prediction 5 --
+      Cochran's Q 206.1 against 95.1 across 75 species-generation responses -- and it is the result.
+
   - note: forecast-a.md
     registered: 5
     true_: 4
@@ -271,8 +283,6 @@ phases:
 # not met its data is not evidence either way -- and listing them is what stops a phase quietly
 # never being graded.
 pending:
-  - note: phase2d-flight-response.md
-    registered: 8
   - note: phase2b-ssf.md
     registered: 4
   - note: phase3i-neighbourhood.md

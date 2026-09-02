@@ -1153,6 +1153,59 @@ def _flight_finding() -> Finding | None:
     if flight is None:
         return None
 
+    from migratlas.reports import phase2d  # noqa: PLC0415 -- heavy, and only this claim
+
+    # Phase 2d's response, calibrated against the very `timing` this claim is built on. The
+    # environmental domain said "no driver enters this" until 2026-09-02; what replaces it is
+    # computed here, and the sentences go when the response stops clearing zero.
+    response = phase2d.collect(timing=flight)
+    pooled = response.pooled if response is not None and response.calibrated else None
+    thermal = pooled is not None and pooled.negative_and_clear
+    follows = " Their dates follow how warm the spring before was." if thermal else ""
+    if thermal and pooled is not None and response is not None:
+        thermal_caveat = (
+            f"The response to pre-season temperature is measured and it is not a cause -- a date "
+            f"regressed on a temperature at the same place -- and {pooled.share:.0%} of the "
+            f"advance is the size that response predicts from the warming."
+        )
+        thermal_claim = (
+            f" The date follows the pre-season temperature at {pooled.median_b:+.2f} days per °C, "
+            f"the median over {pooled.units} species-generations."
+        )
+        environmental = BiasDomain(
+            "environmental",
+            "bounded",
+            f"Pre-season temperature enters as a driver in Phase 2d: {pooled.median_b:+.2f} days "
+            f"per °C, fitted within site with a year term. A response and not a cause -- nitrogen, "
+            f"land use and recorder behaviour that trend with British springs survive the fit.",
+        )
+        thermal_bullets = [
+            f"Phase 2d fitted the response per species-generation with site intercepts and a year "
+            f"term, intervals clustered on year: median {pooled.median_b:+.2f} days per °C "
+            f"[{pooled.interval_b[0]:+.2f}, {pooled.interval_b[1]:+.2f}] over {pooled.units} "
+            f"units, {response.clear} of them clear of zero and every one of those negative. The "
+            f"year term moved the median by {abs(pooled.median_a - pooled.median_b):.2f}, so the "
+            f"co-trend is small here as it was on the radar.",
+            f"The responses are the species': Cochran's Q {pooled.q_statistic:.1f} against a bar "
+            f"of {pooled.q_bar:.1f}, so they are not one number with noise. The pre-season warmed "
+            f"{pooled.median_warming:+.2f} °C per decade, and the response predicts "
+            f"{pooled.share:.0%} of the observed advance against about half for the radar.",
+        ]
+    else:
+        thermal_caveat = (
+            "No driver enters the fit, so it is a change and not an attribution -- that warming is "
+            "the cause is the literature's expectation and is untested here."
+        )
+        thermal_claim = ""
+        environmental = BiasDomain(
+            "environmental",
+            "open",
+            "No driver enters this. That the advance tracks warming is the literature's "
+            "expectation and is not tested here, so the finding is a change and not an "
+            "attribution.",
+        )
+        thermal_bullets = []
+
     published_width = flight.interval[1] - flight.interval[0]
     widening = (flight.widest[1] - flight.widest[0]) / published_width if published_width else 1.0
     shape = phase1k.flight_shape()
@@ -1213,12 +1266,19 @@ def _flight_finding() -> Finding | None:
         realm=Realm.TERRESTRIAL.value,
         taxon_scope=TaxonScope.EXACT.value,
         evidence_type=EvidenceType.SURVEY_INDEX.value,
-        bias=FLIGHT_BIAS,
-        plain=(f"British butterflies are flying about two days earlier every decade{comparison}."),
+        bias=[
+            environmental if domain.domain == "environmental" else domain for domain in FLIGHT_BIAS
+        ],
+        plain=(
+            f"British butterflies are flying about two days earlier every decade{comparison}."
+            f"{follows}"
+        ),
         matters=(
-            "Timing is where a warming year shows up first. This is the same question the radar "
-            "answers over North America, asked of a completely different kind of animal with a "
-            "completely different instrument, on a panel eighty times bigger."
+            "Timing is where a warming year shows up first, and for an animal that lives a few "
+            "weeks as an adult, emerging into the wrong fortnight is the whole of the stake. This "
+            "is the same question the radar answers over North America, asked of a completely "
+            "different kind of animal with a completely different instrument, on a panel eighty "
+            "times bigger."
         ),
         plain_caveat=(
             "Most of these are butterflies that stay put, so this is when they emerge rather than "
@@ -1238,7 +1298,7 @@ def _flight_finding() -> Finding | None:
             f"site-species-generation series, 95% CI "
             f"{flight.widest[0]:+.2f} to {flight.widest[1]:+.2f} with taxa resampled rather than "
             f"series), with {flight.significant:,} series beating their own year-shuffle null "
-            f"against a chance bar of {flight.bar:,}."
+            f"against a chance bar of {flight.bar:,}.{thermal_claim}"
         ),
         value=(
             f"{flight.median:+.2f} days per decade across {flight.units:,} series "
@@ -1253,9 +1313,8 @@ def _flight_finding() -> Finding | None:
             "The median hides a spread that is wider than itself: the interquartile range runs "
             f"{flight.iqr[0]:+.1f} to {flight.iqr[1]:+.1f} days per decade, so a substantial "
             "minority of series are flying later, and this is a summary of series doing different "
-            "things rather than one behaviour. No driver enters the fit, so it is a change and not "
-            "an attribution -- that warming is the cause is the literature's expectation and is "
-            "untested here. A mean flight date is one summary of a flight period, and a species "
+            f"things rather than one behaviour. {thermal_caveat} A mean flight date is one summary "
+            "of a flight period, and a species "
             "whose season lengthened at one end without moving its centre reports nothing. And a "
             "flight period is not a migration: the comparison to nocturnal passage is a comparison "
             f"of thermal tracking, not of the same behaviour. No individual series is readable "
@@ -1278,6 +1337,7 @@ def _flight_finding() -> Finding | None:
             f"{flight.units:,} series rest on {flight.taxa} taxa and one national spring, so "
             f"treating them as independent was the error. Registered as a prediction before it was "
             f"measured, and it came in above the bracket's floor.",
+            *thermal_bullets,
         ],
     )
 

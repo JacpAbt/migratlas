@@ -41,6 +41,8 @@ from migratlas.models.influence import SMALL_PANEL, Influence, leave_one_out
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from migratlas.reports.phase1k import TimingResult
+
 log = logging.getLogger(__name__)
 
 SOURCE: Final = "ukbms_phenology"
@@ -224,6 +226,12 @@ class Phase2d:
     @property
     def calibrated(self) -> bool:
         return abs(self.calibration - CALIBRATION_MEDIAN) < CALIBRATION_TOLERANCE
+
+    @property
+    def clear(self) -> int:
+        """Units whose year-clustered interval excludes zero. A count is a computed quantity and
+        belongs in the output; the first run's 60 of 75 was counted off the printed intervals."""
+        return sum(1 for unit in self.units if unit.clears_zero)
 
 
 def _seed(name: str) -> int:
@@ -555,11 +563,17 @@ def pooled(units: Sequence[UnitResponse], *, draws: int = DRAWS) -> Pooled | Non
 # --- The phase ------------------------------------------------------------------------------
 
 
-def collect(*, draws: int = DRAWS) -> Phase2d | None:
-    """Calibrate against `flight-advance`, then every unit, then the pooled summary."""
-    from migratlas.reports import phase1k  # noqa: PLC0415 -- heavy, and only the calibration
+def collect(*, draws: int = DRAWS, timing: TimingResult | None = None) -> Phase2d | None:
+    """Calibrate against `flight-advance`, then every unit, then the pooled summary.
 
-    timing = phase1k.timing()
+    `timing` lets the ledger hand in the `phase1k.timing()` it has already computed for
+    `flight-advance`, so the calibration is against that very object rather than a second run of
+    twelve thousand fits and their nulls.
+    """
+    if timing is None:
+        from migratlas.reports import phase1k  # noqa: PLC0415 -- heavy, and only the calibration
+
+        timing = phase1k.timing()
     if timing is None:
         log.warning("phase2d: phase1k.timing() returned nothing, so there is no calibration")
         return None
@@ -611,7 +625,10 @@ def render() -> str:
     if not read.calibrated:
         return "\n".join([*out, "VERDICT: calibration FAILED -- nothing above it is interpreted."])
 
-    out.append(f"Units -- {len(read.units)} clear the floors, {read.dropped} published as coverage")
+    out.append(
+        f"Units -- {len(read.units)} clear the floors, {read.dropped} published as coverage; "
+        f"{read.clear} of {len(read.units)} have a year-clustered interval excluding zero"
+    )
     for u in sorted(read.units, key=lambda u: u.response_b):
         flag = ", migrant" if u.migrant else ""
         out.append(

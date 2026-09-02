@@ -143,3 +143,20 @@ groupings of very different sizes on one scale for a week, in three phases and t
 findings. What changes is that the spine's third leg is a hypothesis with no evidence for it in this
 lake, and the synthesis note (#76) must say so or drop it. The first leg is still untested and the
 second is still measured nulls; the book waits on both as before.
+
+## Amendment, 2026-09-02, later the same day, after Phase 2d ran
+
+The first leg now stands on two instruments in two realms. The butterflies' flight date follows the
+pre-season temperature at **−4.70 days per °C** (units-bootstrap [−4.98, −4.23] over 75
+species-generations, 60 of them clear of zero on a year-clustered interval and every one negative),
+seven times the radar's −0.66; the pre-season warmed +0.34 °C per decade and the response predicts
+**three quarters** of the observed advance against the radar's half. Eight of eight predictions held,
+and the note says why that is weaker than it sounds.
+
+Decision 2 passed its first test: the responses are the species' — Cochran's Q 206.1 against 95.1 —
+where Phase 3k found the marine where-shifts no more the species' than the sea's. So the spine's
+sentence sharpens rather than breaks: **when is the animal's and follows temperature; where is not
+organised by the animal beyond what the sea is, and does not follow warming.** The synthesis note is
+unblocked and is next. One unregistered pattern goes to it as a candidate prediction rather than a
+claim: in all nine multivoltine species the first generation responds more than the second, and in
+both overwintering univoltines the order reverses — development responds, reappearance less so.
