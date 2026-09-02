@@ -247,6 +247,19 @@ phases:
       trustworthy. The registered degeneracy condition did not fire: the largest order holds 51-53%
       of each panel, under its two-thirds threshold.
 
+  - note: phase3k-species-not-seas.md
+    registered: 6
+    true_: 5
+    false_: 1
+    ungradeable: 0
+    stop_conditions_fired: 0
+    comment: >-
+      Prediction 5 failed: species coherence led survey coherence by 1.83 against a registered two.
+      No registered stop condition fired, and two unregistered diagnostics then decided what the
+      phase may claim -- the bootstrap intervals sat above their own point estimates, and a
+      between-group share has a chance level near (k - 1) / n, which put the two groupings level
+      once counted. The 2.8x published on 2026-09-01 is withdrawn from two findings.
+
   - note: forecast-a.md
     registered: 5
     true_: 4
@@ -258,8 +271,8 @@ phases:
 # not met its data is not evidence either way -- and listing them is what stops a phase quietly
 # never being graded.
 pending:
-  - note: phase3k-species-not-seas.md
-    registered: 6
+  - note: phase2d-flight-response.md
+    registered: 8
   - note: phase2b-ssf.md
     registered: 4
   - note: phase3i-neighbourhood.md

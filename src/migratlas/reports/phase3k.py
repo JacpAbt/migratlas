@@ -153,6 +153,40 @@ class Coherence:
 
 
 @dataclass(frozen=True, slots=True)
+class Chance:
+    """UNREGISTERED. What a between-group share is worth once the number of groups is counted.
+
+    `_icc`'s between-group share is a one-way ANOVA's unadjusted R-squared, and an unadjusted
+    R-squared with `k` groups over `n` rows has a null expectation near `(k - 1) / n`. A grouping
+    into 171 species over 1,148 pairs therefore *starts* at about 0.15 with the labels shuffled,
+    where a grouping into 23 surveys starts near 0.02 -- so the two coherences the registration
+    compares are not on one scale, and neither is any coherence this project has set against
+    Phase 1m's fixed floor of 0.10. Found by reading this phase's own output: the point estimates
+    sat below their own bootstrap intervals, which is what duplicated rows do to a variance share.
+
+    The permutation below shuffles the grouping's labels *within the other grouping* -- species
+    labels within each survey, survey labels within each species -- so each survey keeps its own
+    slopes and each species keeps its own, and only the alignment being tested is broken.
+    """
+
+    grouping: str
+    observed: float
+    closed_form: float
+    """The `(k - 1) / n` expectation, scaled by the same noise correction as the observed value."""
+    null_median: float
+    null_95: float
+
+    @property
+    def excess(self) -> float:
+        """Observed coherence over its own permutation median. The comparable quantity."""
+        return self.observed - self.null_median
+
+    @property
+    def beats_chance(self) -> bool:
+        return self.observed > self.null_95
+
+
+@dataclass(frozen=True, slots=True)
 class SpeciesFit:
     """Estimand B: does the species explain the spread, or the sea?"""
 
@@ -164,6 +198,8 @@ class SpeciesFit:
     table, printed beside the registered calibration and graded nowhere."""
     by_species: Coherence
     by_survey: Coherence
+    species_chance: Chance | None = None
+    survey_chance: Chance | None = None
 
     @property
     def ratio(self) -> float:
@@ -394,8 +430,42 @@ def coherence(table: pl.DataFrame, grouping: str, *, draws: int = DRAWS) -> Cohe
     )
 
 
+def chance_level(table: pl.DataFrame, grouping: str, *, draws: int = DRAWS) -> Chance:
+    """UNREGISTERED: the coherence a grouping reaches with its labels shuffled.
+
+    Shuffled within the *other* grouping, so the structure not under test is preserved. Cannot be a
+    graded prediction -- §3 asked for no null on the coherence, and this was written after the
+    bootstrap intervals were seen sitting above their own point estimates.
+    """
+    other = SURVEY if grouping == SPECIES else SPECIES
+    rng = np.random.default_rng(_seed(f"{grouping}:chance"))
+    labels = table[grouping].to_numpy().copy()
+    keys = table[other].to_numpy()
+    blocks = [np.flatnonzero(keys == key) for key in np.unique(keys)]
+    values = np.empty(draws, dtype=float)
+    for draw in range(draws):
+        shuffled = labels.copy()
+        for block in blocks:
+            shuffled[block] = rng.permutation(labels[block])
+        values[draw] = _icc(table.with_columns(group=pl.Series(shuffled)))[1]
+
+    raw, corrected = _icc(table.rename({grouping: "group"}))
+    scale = corrected / raw if raw > 0 and np.isfinite(corrected) else float("nan")
+    groups = table[grouping].n_unique()
+    # A panel whose spread is all estimation error has no corrected variance to apportion, and
+    # `_icc` says so with NaN on every draw. Read as "no chance level" rather than warned about.
+    finite = values[np.isfinite(values)]
+    return Chance(
+        grouping=grouping,
+        observed=corrected,
+        closed_form=float((groups - 1) / table.height * scale),
+        null_median=float(np.median(finite)) if finite.size else float("nan"),
+        null_95=float(np.percentile(finite, 95)) if finite.size else float("nan"),
+    )
+
+
 def fit_species(pooled: pl.DataFrame, *, draws: int = DRAWS) -> SpeciesFit | None:
-    """Estimand B end to end."""
+    """Estimand B end to end, with the unregistered chance level beside each coherence."""
     table = shared_panel(pooled)
     if table.is_empty():
         log.warning("phase3k: no taxon is caught in %d surveys", MIN_SHARED_SURVEYS)
@@ -407,6 +477,8 @@ def fit_species(pooled: pl.DataFrame, *, draws: int = DRAWS) -> SpeciesFit | Non
         pooled_median=float(np.median(pooled["per_decade"].to_numpy().astype(float))),
         by_species=coherence(table, SPECIES, draws=draws),
         by_survey=coherence(table, SURVEY, draws=draws),
+        species_chance=chance_level(table, SPECIES, draws=draws),
+        survey_chance=chance_level(table, SURVEY, draws=draws),
     )
 
 
@@ -514,8 +586,18 @@ def render() -> str:
             f"{'species leads' if sp.species_leads else 'does NOT lead by two'}",
             f"  species coherence clears {COHERENCE_FLOOR:.2f} under the clustered interval: "
             f"{'yes' if sp.floor_holds_clustered else 'NO'}",
-            "",
         ]
+        for chance in (sp.species_chance, sp.survey_chance):
+            if chance is None:
+                continue
+            out.append(
+                f"  UNREGISTERED chance level, by {chance.grouping}: labels shuffled give "
+                f"{chance.null_median:.3f} (95th {chance.null_95:.3f}; closed form "
+                f"{chance.closed_form:.3f}); observed {chance.observed:.3f} is "
+                f"{chance.excess:+.3f} over chance and "
+                f"{'BEATS' if chance.beats_chance else 'does NOT beat'} its 95th percentile"
+            )
+        out.append("")
 
     verdict = []
     if read.drift is not None:

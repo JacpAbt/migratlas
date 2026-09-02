@@ -75,9 +75,19 @@ def test_fit_drift_refuses_a_panel_too_small_for_three_parameters() -> None:
 
 
 def _pairs(
-    *, species_effect: float, survey_effect: float, surveys: int = 12, taxa: int = 40
+    *,
+    species_effect: float,
+    survey_effect: float,
+    surveys: int = 12,
+    taxa: int = 40,
+    noise: float = 0.02,
 ) -> pl.DataFrame:
-    """Every taxon in every survey, with a tendency per taxon and a tendency per survey."""
+    """Every taxon in every survey, with a tendency per taxon and a tendency per survey.
+
+    `noise` is scatter that belongs to neither grouping. Left at the stated standard error it is
+    all estimation error and the corrected coherence has nothing to apportion; the chance-level
+    tests raise it so that there is real spread for a shuffled grouping to claim a share of.
+    """
     rng = np.random.default_rng(7)
     species = rng.normal(0.0, species_effect, size=taxa) if species_effect else np.zeros(taxa)
     seas = rng.normal(0.0, survey_effect, size=surveys) if survey_effect else np.zeros(surveys)
@@ -86,7 +96,7 @@ def _pairs(
         for t in range(taxa):
             rows.append(
                 {
-                    "per_decade": float(species[t] + seas[s] + rng.normal(0.0, 0.02)),
+                    "per_decade": float(species[t] + seas[s] + rng.normal(0.0, noise)),
                     "stderr": 0.02,
                     "taxon_key": 1000 + t,
                     "survey_unit": f"S{s:02d}",
@@ -127,6 +137,43 @@ def test_a_survey_clustered_interval_is_wider_where_surveys_differ() -> None:
     naive = phase3k.bootstrap(table, phase3k.SPECIES, clustered=False, draws=100)
     clustered = phase3k.bootstrap(table, phase3k.SPECIES, clustered=True, draws=100)
     assert clustered[1] - clustered[0] > naive[1] - naive[0]
+
+
+def test_chance_level_rises_with_the_number_of_groups() -> None:
+    """The reason a fixed coherence floor is not one bar.
+
+    With the labels shuffled, a grouping into many small groups scores higher than a grouping
+    into few large ones -- a one-way R-squared with k groups over n rows expects about (k-1)/n
+    under the null. The permutation and the closed form should agree on that ordering.
+    """
+    table = phase3k.shared_panel(_pairs(species_effect=0.0, survey_effect=0.0, noise=0.1))
+    many = phase3k.chance_level(table, phase3k.SPECIES, draws=100)
+    few = phase3k.chance_level(table, phase3k.SURVEY, draws=100)
+
+    assert many.null_median > few.null_median
+    assert many.closed_form > few.closed_form
+    assert many.null_median == pytest.approx(many.closed_form, abs=0.05)
+
+
+def test_a_real_species_tendency_beats_its_chance_level() -> None:
+    table = phase3k.shared_panel(_pairs(species_effect=0.2, survey_effect=0.0, noise=0.1))
+    chance = phase3k.chance_level(table, phase3k.SPECIES, draws=100)
+    assert chance.beats_chance
+    assert chance.excess > 0.3
+
+
+def test_no_tendency_stays_inside_its_chance_level() -> None:
+    table = phase3k.shared_panel(_pairs(species_effect=0.0, survey_effect=0.0, noise=0.1))
+    chance = phase3k.chance_level(table, phase3k.SPECIES, draws=100)
+    assert not chance.beats_chance
+
+
+def test_a_panel_that_is_all_estimation_error_has_no_chance_level() -> None:
+    """`_icc` returns NaN where there is no corrected variance, and the diagnostic must say so."""
+    table = phase3k.shared_panel(_pairs(species_effect=0.0, survey_effect=0.0))
+    chance = phase3k.chance_level(table, phase3k.SPECIES, draws=20)
+    assert not np.isfinite(chance.null_median)
+    assert not chance.beats_chance
 
 
 def test_a_bootstrap_is_a_property_of_its_quantity() -> None:

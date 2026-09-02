@@ -123,3 +123,23 @@ trying to say.
 - It does not retract the methodological phases. The audits found real defects — a circularity that
   was small, intervals that were 3 to 4.5 times too tight, a leverage rule that was missing — and
   the ledger is truer for them. What changes is how the next question is chosen.
+
+## Amendment, 2026-09-02, the same day, after Phase 3k ran
+
+The spine's third leg lost the evidence it was written on, within hours. Its marine support was the
+unregistered diagnostic that species coherence is 0.43 against 0.16 for surveys. Phase 3k's
+registered version came in at 0.326 against 0.178 — 1.83 times, under the registered two — and then
+an unregistered check found that a between-group share has a chance level near `(k − 1) / n`, so 171
+species over 1,148 pairs *start* at 0.20 with their labels shuffled where 23 surveys start at 0.04.
+Over chance the species carries +0.12 and the survey +0.14. The animal and the sea explain about the
+same, and the 2.8 times was mostly the number of groups. Phase 1o's family coherences were measured
+against the same fixed floor with 14 to 30 groups, and are exposed to the same correction; that is
+now #78.
+
+Two things stand and one changes. Decision 2 stands: it is about a species' *response* to a driver,
+and every quantity in Phase 3k is a *trend*, so the decision has not yet been tested. The
+methodological lesson stands and is the sharper one — the project's coherence instrument compared
+groupings of very different sizes on one scale for a week, in three phases and two published
+findings. What changes is that the spine's third leg is a hypothesis with no evidence for it in this
+lake, and the synthesis note (#76) must say so or drop it. The first leg is still untested and the
+second is still measured nulls; the book waits on both as before.

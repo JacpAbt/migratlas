@@ -32,6 +32,8 @@ from migratlas.lake.reader import sources as lake_sources
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from migratlas.reports.phase3k import SpeciesFit
+
 log = logging.getLogger(__name__)
 
 SCHEMA_VERSION: Final = 4
@@ -653,6 +655,39 @@ SEAS_DISAGREE_BIAS: Final = _domains(
 )
 
 
+def _sorting_sentence(sorted_by: SpeciesFit | None) -> str:
+    """Whether the animal or the sea carries the marine spread, from Phase 3k, in one sentence.
+
+    Two coherences with very different group counts are not on one scale: a between-group share has
+    a chance level near (k - 1) / n, so the sentence quotes each grouping's excess over its own
+    shuffled-label baseline rather than the raw pair. The 2.8x this caveat carried on 2026-09-01
+    compared 297 groups against 23 and is withdrawn here. "Neither leads" is decided against the
+    permutation spread rather than by a typed threshold: two excesses closer together than the
+    wider null's own 95th-to-median gap are not distinguishable by this instrument.
+    """
+    if sorted_by is None or sorted_by.species_chance is None or sorted_by.survey_chance is None:
+        return (
+            "Whether the spread belongs to the animal or to the sea was asked and could not be "
+            "answered on this panel."
+        )
+    species, survey = sorted_by.species_chance, sorted_by.survey_chance
+    noise = max(species.null_95 - species.null_median, survey.null_95 - survey.null_median)
+    if abs(species.excess - survey.excess) < noise:
+        leader = "neither leads"
+    elif species.excess > survey.excess:
+        leader = "the animal leads"
+    else:
+        leader = "the sea leads"
+    return (
+        f"Whether the spread belongs to the animal or to the sea was asked for the "
+        f"{sorted_by.taxa} species caught in five or more surveys: grouped by species the "
+        f"coherence is {sorted_by.by_species.corrected:.2f} and grouped by survey "
+        f"{sorted_by.by_survey.corrected:.2f}, but a grouping into many small groups scores high "
+        f"with its labels shuffled, and over their own chance levels the two carry "
+        f"{species.excess:+.2f} and {survey.excess:+.2f}. Both are real, and {leader}."
+    )
+
+
 def _seas_finding() -> Finding | None:
     """Phase 3e's established result, owed to the ledger since the presentation arc closed.
 
@@ -661,7 +696,8 @@ def _seas_finding() -> Finding | None:
     claim -- the heterogeneity without the null reads as "warming redistributes fish unevenly",
     and the null without the heterogeneity reads as "warming does nothing".
     """
-    from migratlas.reports import phase3b, phase3e  # noqa: PLC0415 -- heavy, and only this claim
+    from migratlas.metrics import range as range_metrics  # noqa: PLC0415 -- heavy
+    from migratlas.reports import phase1b, phase3b, phase3e, phase3k  # noqa: PLC0415 -- heavy
 
     fitted, coverage, calibration = phase3e.units_3e()
     if not calibration.passes or len(fitted) < phase3b.MIN_UNITS:
@@ -675,6 +711,21 @@ def _seas_finding() -> Finding | None:
     if not fit.q_survives:
         log.warning("seas-disagree withheld: Q does not survive dropping one unit")
         return None
+    # Phase 3k's registered design: the stations' own movement as a coefficient rather than a
+    # correction. The claim states what survives it, so a fit that cannot be made withholds the
+    # claim rather than publishing the sentence from before that phase ran.
+    drift = phase3k.fit_drift(
+        phase3k.drift_units(fitted, range_metrics.to_cells(phase1b.survey_unit(phase1b.load())))
+    )
+    if drift is None:
+        log.warning("seas-disagree withheld: the registered drift fit could not be made")
+        return None
+    # A null that clears zero with one unit dropped is a null worth describing as fragile. Computed
+    # from the leave-one-out rather than typed, so the sentence goes when the fragility does.
+    fragile = drift.warming_leverage is not None and any(
+        clears for _, _, _, clears in drift.warming_leverage.survivals
+    )
+    sign = "negative" if drift.warming_slope < 0 else "positive"
 
     return Finding(
         key="seas-disagree",
@@ -690,30 +741,31 @@ def _seas_finding() -> Finding | None:
         evidence_type=EvidenceType.SURVEY_INDEX.value,
         bias=SEAS_DISAGREE_BIAS,
         plain=(
-            "Different fish move differently, and that matters more than which sea they are in. "
-            "How fast a sea warmed tells you almost nothing about whether its fish moved."
+            "Most of what these surveys report as fish moving is where the ships went. What is "
+            "left still differs from sea to sea, and how fast a sea warmed does not sort it."
         ),
         matters=(
             "A single number for the ocean would erase this, and a single number is what a reader "
-            "wants. But the useful half of the answer is which way to cut it: the animal explains "
-            "far more than the place, so a plan made sea by sea is planning on the weaker axis. "
-            "And the obvious explanation for who moved — whose water warmed most — is measured "
-            "here and is not the answer."
+            "wants. The useful half of the answer is how much of the disagreement is the surveying "
+            "rather than the sea: most of it, which is a warning about every centroid on this "
+            "site. And the obvious explanation for who moved — whose water warmed most — is "
+            "measured here and is not the answer."
         ),
         plain_caveat=(
-            "This says the seas differ and that temperature alone does not sort them. It does not "
-            "say what does. A warming that moved some kinds of fish and left others alone would "
-            "look like this too, and that has not been tested yet."
+            "This says the seas still differ after their own station drift is taken out, and that "
+            "temperature does not sort them. It does not say what does. Whether the fish or the "
+            "sea carries the difference was asked, and once chance is counted the two explain "
+            "about the same."
         ),
         claim=(
             f"Across {fit.units} shelf-survey segments the latitude trends are heterogeneous far "
             f"beyond sampling — Cochran's Q {fit.q_statistic:.1f} against a chi-square bar of "
             f"{fit.q_bar:.1f} — while warming does not predict which segments moved: "
-            f"{fit.temp_slope:+.3f} ± {fit.temp_ci:.3f} °latitude per °C, both per decade. Two "
-            "things qualify that heterogeneity and both were measured after it was published: "
-            "about 45% of it is the surveys' own stations having drifted, which takes Q to 131, "
-            "and for the 297 species caught in three or more surveys the species explains 2.8 "
-            "times what the survey does."
+            f"{fit.temp_slope:+.3f} ± {fit.temp_ci:.3f} °latitude per °C, both per decade. With "
+            "each survey's own sampling drift in the design, a degree of station movement carries "
+            f"{drift.drift_slope:+.2f} ± {drift.drift_ci:.2f} degrees of reported movement, the "
+            f"residual heterogeneity is Q {drift.residual_q:.1f} against {drift.residual_bar:.1f}, "
+            f"and warming stays null at {drift.warming_slope:+.3f} ± {drift.warming_ci:.3f}."
         ),
         value=(
             f"Q {fit.q_statistic:.1f} against a bar of {fit.q_bar:.1f} across {fit.units} "
@@ -726,36 +778,44 @@ def _seas_finding() -> Finding | None:
             f"instead."
         ),
         caveat=(
-            "The warming null is an average over units that emphatically disagree, so it rules out "
-            "warming as the sorter *on this axis at this unit* and not as a driver: something that "
-            "moved a third of the pairs and left the rest alone produces this number, and the "
-            "cluster test for that has since run: cut into thirds by thermal position, warming "
-            "rate and depth, no third of the pairs moved differently beyond its own null and no "
-            "axis explained more than a twentieth of the variation, so the null is not hiding a "
-            "subset along any axis this lake can define. The registered depth interaction came out "
+            "The heterogeneity that survives the stations' own movement is about a third of the "
+            f"published Q, and it clears its bar by a weight margin of {drift.residual_margin:.2f} "
+            "times while the dependence corrections this project has measured on comparable "
+            "intervals run 2.4 to 4.5 times — so it clears, and not comfortably. The warming null "
+            "is an average over units that disagree, so it rules out warming as the sorter on this "
+            f"axis at this unit, not as a driver; with the drift in the design its sign is {sign}"
+            + (
+                ", and dropping one segment takes it clear of zero, stated rather than read"
+                if fragile
+                else ""
+            )
+            + ". Cut in thirds by thermal position, warming rate and depth, no third of the pairs "
+            "moved differently beyond its own null, so the null is not hiding a subset along any "
+            "axis this lake can define. The registered depth interaction came out "
             f"{fit.interaction_slope:+.3f} ± {fit.interaction_ci:.3f}, the opposite sign to the "
-            "prediction, and is reported as the graded failure it is rather than turned around "
-            "into a story. The driver is a satellite reading the surface where the fish are on the "
-            "bottom, bounded only by the two waters agreeing in direction at "
-            f"{calibration.correlation:+.3f} across {calibration.units} surveys. And a segment is "
-            "shorter than its survey's record, so the most recent years of the longest series go "
-            "unused by this design."
+            "prediction, and is reported as the graded failure it is. The driver is a satellite "
+            "reading the surface where the fish are on the bottom, bounded only by the two waters "
+            f"agreeing in direction at {calibration.correlation:+.3f} across {calibration.units} "
+            "surveys."
         ),
         method="docs/methods/phase3e-marine-oisst.md",
         direction="limit",
         supporting=[
             "The heterogeneity survives ADR 0016: dropping any one of the segments leaves Q above "
             "its own recomputed bar, so this is not one extreme sea carrying a statistic.",
-            "It does not survive intact as a claim about oceans. Each survey's own mean haul "
-            "latitude was trended with no fish in it, and it correlates with that survey's fish "
-            "trend at +0.70 across eighteen surveys, with a slope near a half -- which is what an "
-            "effort-weighted centroid should give if the stations move and the fish do not follow. "
-            "Regressing it out takes Q from 236 to 131. The finding is smaller and it is about "
-            "surveys rather than seas.",
-            "The strongest explanatory axis in this project turned out to be sitting inside this "
-            "source unexamined: grouped by species rather than by survey, the coherence is 0.430 "
-            "against 0.156 -- higher than anything else measured here, and it says fish carry "
-            "consistent movement tendencies across the seas they live in.",
+            "It does not survive intact as a claim about oceans. With each survey's own station "
+            "drift as a coefficient rather than a correction, a degree of station movement carries "
+            f"{drift.drift_slope:+.2f} ± {drift.drift_ci:.2f} degrees of reported movement -- "
+            "nearly one for one -- and the heterogeneity left over is "
+            f"Q {drift.residual_q:.1f} against {drift.residual_bar:.1f}, surviving the loss of any "
+            "one segment. The finding is about a third the size it was published at and it is "
+            "about surveys rather than seas.",
+            "Whether the animal or the sea carries the spread was asked at a five-survey floor, "
+            "and the two came out about level once the number of groups was counted -- a "
+            "between-group share scores high with its labels shuffled when the groups are many "
+            "and small. The marine-null claim carries that measurement. The sentence this claim "
+            "published on 2026-09-01, that the species explains 2.8 times what the survey does, "
+            "compared 297 groups against 23 and is withdrawn.",
             f"Its margin against the weights is narrower than that, and is stated rather than "
             f"left implicit: Q clears while each survey's interval is understated by less than "
             f"{fit.q_robustness:.2f} times. Those intervals treat the species inside a survey as "
@@ -1029,14 +1089,16 @@ def _protocol_finding() -> Finding | None:
             f"species with the window held common, of which {split.species} carry a standard "
             f"error on both sides and enter the decomposition."
         ),
+        # The footprint sentence lives in `supporting` rather than here. This record page overran
+        # its leaf by 19px at 1600x900 with it, found by the browser guard on 2026-09-02 -- an
+        # overrun the commit that added the sentence shipped without running the guard -- and the
+        # fix is the one the attribution's overrun taught: move the sentence to a page with room.
         caveat=(
             f"The two readings a paired difference allows have been separated rather than left "
             f"open, from the standard errors the fits were already computing: {noise:.0f}% of the "
             f"raw disagreement is the two fits' own estimation error, so the remainder is a real "
-            f"difference in what the programmes measure. It is not geography: matching the two "
-            f"footprints cell for cell leaves the ratio where it was, because the smaller "
-            f"programme's cells turn out to be 97% nested inside the larger one's rather than "
-            f"beside them. And the remainder is a constant offset -- point counts read about a "
+            f"difference in what the programmes measure. And the remainder is a constant offset -- "
+            f"point counts read about a "
             f"sixth of a degree per decade more northward movement than fixed routes, by the same "
             f"amount whether a species is easy to count or hard, northern or southern. The sign "
             f"disagreements are softer than they read: {split.flips_explained} of "
@@ -1054,6 +1116,9 @@ def _protocol_finding() -> Finding | None:
             "The pairing was run because an earlier version of this diagnosis compared two "
             "network averages over different species mixtures, which is the error it was warning "
             "about; removing the mixture made the disagreement larger rather than smaller.",
+            "It is not geography: matching the two footprints cell for cell leaves the ratio where "
+            "it was, because the smaller programme's cells turn out to be 97% nested inside the "
+            "larger one's rather than beside them.",
             "Two of the phase's four registered predictions were graded false, and they fired "
             "the stop condition that withholds the distribution results this claim replaces.",
             "A successor grouped the same species by where they live and recomputed the ratio "
@@ -1398,7 +1463,7 @@ def collect() -> list[Finding]:
     # Imported here rather than at module scope: the reports import this module's siblings,
     # so a top-level import would close a cycle.
     from migratlas.metrics import range as range_metrics  # noqa: PLC0415
-    from migratlas.reports import phase1b  # noqa: PLC0415
+    from migratlas.reports import phase1b, phase3k  # noqa: PLC0415
     from migratlas.reports.phase1 import AUTUMN  # noqa: PLC0415
 
     _, first_year, last_year = _radar_coverage()
@@ -1432,8 +1497,8 @@ def collect() -> list[Finding]:
             evidence_type=EvidenceType.SURVEY_INDEX.value,
             bias=MARINE_NULL_BIAS,
             plain=(
-                "Fish are not all moving towards the poles. Different seas are doing different "
-                "things, and some are doing the opposite of others."
+                "Fish are not all moving towards the poles. Different surveys report different "
+                "directions, and much of that is where the ships went, not where the fish did."
             ),
             matters=(
                 '"Fish are moving polewards as the sea warms" is one of the best-known '
@@ -1465,11 +1530,8 @@ def collect() -> list[Finding]:
                 "deep it lives, no third moved differently from the others beyond what shuffling "
                 "the labels produces, and no grouping explained more than a twentieth of the "
                 "variation between pairs. A warming that hit some and spared the rest would look "
-                "like this median, and along these three axes it is not what is here. What does "
-                "carry the spread is the animal: for the 297 species caught in three or more of "
-                "these surveys, grouping by species explains 2.8 times what grouping by survey "
-                "does, so a fish's movement tendency travels with it between seas better than any "
-                "property of the water tested here."
+                "like this median, and along these three axes it is not what is here. "
+                + _sorting_sentence(phase3k.fit_species(pooled))
             ),
             method="docs/methods/phase1b-marine.md",
             direction="null",
@@ -1921,6 +1983,10 @@ def collect() -> list[Finding]:
                 f"shelf seas, and {by_realm[phase1i.TERRESTRIAL].n} species over 496 "
                 "quarter-degree cells in southern Africa. Each leg's own window."
             ),
+            # Two sentences live in `supporting` rather than here: the near-absence figures and the
+            # correction's recording. This record page overran its leaf by 71px at 1600x900 and
+            # 20px at 1280x800 with them, found by the browser guard on 2026-09-02 after the commit
+            # that added them shipped without running it. Moved to a page with room, not trimmed.
             caveat=(
                 "This tests whether three measured responses agree, not whether a model fitted in "
                 "one would work in another — a weaker question, and the only one three cases can "
@@ -1928,10 +1994,7 @@ def collect() -> list[Finding]:
                 "so at a median tracking of "
                 f"{by_realm[phase1i.MARINE].median:+.3f} and "
                 f"{by_realm[phase1i.TERRESTRIAL].median:+.3f} on a scale where one is full "
-                "tracking. The southern figure is not separable from zero at all; the marine one "
-                f"is, at about {marine_sigma:.1f} "
-                "standard errors, which makes it a measured near-absence rather than an "
-                "unmeasurable one — and neither is a response. So what transferred is an absence, "
+                "tracking. So what transferred is an absence, "
                 "which is a far cheaper thing to reproduce, and the held-out prediction that "
                 "succeeded predicted approximately nothing from two values near nothing. The "
                 "aerial leg is the only one carrying a substantial response and the only one that "
@@ -1939,8 +2002,7 @@ def collect() -> list[Finding]:
                 "phenological leg, the only radar leg and the only one needing a seasonal "
                 "temperature slope to reach common units — the pre-registration listed realm, "
                 "hemisphere, instrument and decade as inseparable here and did not list response "
-                "type, which is the axis the result fell on. That omission is recorded as a "
-                "correction in the method note rather than edited away. Every leg divides by a "
+                "type, which is the axis the result fell on. Every leg divides by a "
                 "temperature and none carries wind, land use or fishing pressure, so a realm moved "
                 "by something else reports it as a failure to follow the heat."
             ),
@@ -1957,6 +2019,11 @@ def collect() -> list[Finding]:
                 f"{max(pair.gap for pair in transfer.pairs):.2f} from both."
                 if agreed
                 else "Every pair of realms is distinguishable.",
+                "The southern figure is not separable from zero at all; the marine one is, at "
+                f"about {marine_sigma:.1f} standard errors, which makes it a measured near-absence "
+                "rather than an unmeasurable one — and neither is a response.",
+                "That omission is recorded as a correction in the method note rather than edited "
+                "away.",
                 "Agreement is not only in the centre: predicting the southern atlas from the "
                 f"other two puts {coverage_of(phase1i.TERRESTRIAL):.1%} of it inside the "
                 "predicted interquartile range, against the 50% a correct prediction would give, "
