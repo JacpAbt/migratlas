@@ -364,11 +364,13 @@ def ingest_era5_south() -> None:
         for lat, lon in cells.select("cell_lat", "cell_lon").iter_rows()
     ]
     years = [*range(1987, 1992), *range(2008, 2013)]
+    # Phase 2g added precipitation; both fields land in this one call because a write
+    # replaces the partitions it touches, and the temperature is re-read from the cache.
     result = era5.ingest(
         points,
         years,
         list(range(1, 13)),
-        fields=("temperature",),
+        fields=("temperature", "precipitation"),
         area=era5.SABAP_AREA,
         source_id="era5_south",
     )
@@ -870,6 +872,15 @@ def report_phase2f() -> None:
     from migratlas.reports import phase2f  # noqa: PLC0415 -- heavy, and only this command
 
     print(phase2f.render())
+
+
+@report_app.command("phase2g")
+def report_phase2g() -> None:
+    """Did the cells that got wetter gain birds? The southern atlas's rain."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2g  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2g.render())
 
 
 @report_app.command("phase3h")

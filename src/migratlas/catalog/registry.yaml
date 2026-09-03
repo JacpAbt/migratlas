@@ -344,7 +344,8 @@ sources:
       this under `era5` deleted five years of the North American record twice before it was
       given an id of its own. Sampled at the 496 quarter-degree cells of the SABAP common
       footprint, monthly, for 1987–1991 and 2008–2012 — the two atlas epochs and nothing
-      between them, so this record cannot describe the nineteen years it skips. A reanalysis
+      between them, so this record cannot describe the nineteen years it skips. Two fields
+      since Phase 2g: 2 m temperature and total precipitation, landed in one call. A reanalysis
       is a model constrained by observations, and southern Africa is more sparsely observed
       than North America, so the constraint is weaker here than the same product is there.
     added: 2026-08-07

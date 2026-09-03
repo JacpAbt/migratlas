@@ -289,6 +289,10 @@ report-phase2e:  ## Is where an animal moved the population's, rather than the s
 report-phase2f:  ## Does when an animal moves have more than one cue?
 	$(RUN) migratlas report phase2f
 
+.PHONY: report-phase2g
+report-phase2g:  ## Did the cells that got wetter gain birds? The southern atlas's rain
+	$(RUN) migratlas report phase2g
+
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
 	$(RUN) migratlas report phase3h
