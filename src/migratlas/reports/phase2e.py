@@ -348,9 +348,18 @@ def axis(table: pl.DataFrame, name: str, *, response: str) -> Axis | None:
 
 
 def leg(name: str, table: pl.DataFrame, *, draws: int = DRAWS) -> Leg | None:
-    """One record, all four questions."""
+    """One record, all four questions.
+
+    The table is sorted first. Phase 3f's correction 1, met again: every null here draws its
+    permutations from a stream seeded by the axis name, and a join's row order is not stable between
+    runs, so the same seed landed on differently ordered rows and the null bars moved in their third
+    decimal while every observed spread stayed put. The first two runs of this phase found it.
+    """
     if table.is_empty():
         return None
+    # All three keys: 95 taxon keys carry two or more verbatim labels (TASKS #3), and a sort on
+    # the key alone left those rows tied and the bird nulls still moving in their third decimal.
+    table = table.sort(["survey_unit", "taxon_key", "taxon_label"])
     size = axis(table, SIZE, response="|L|")
     precision = axis(table, PRECISION, response="|L|")
     signed = axis(table, ABUNDANCE, response="L")
@@ -373,7 +382,7 @@ def numbers_by_species(table: pl.DataFrame, *, draws: int = DRAWS) -> phase3k.Sp
 
     Phase 3k's estimand B, on `N` rather than on `L`.
     """
-    pooled_like = table.select(
+    pooled_like = table.sort(["survey_unit", "taxon_key", "taxon_label"]).select(
         per_decade=pl.col(ABUNDANCE),
         stderr=pl.col("abundance_se"),
         taxon_key=pl.col("taxon_key"),
