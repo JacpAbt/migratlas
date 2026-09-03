@@ -35,13 +35,20 @@ ADR 0018 carries a dated amendment. #75 ran the same day too, and the first leg 
 instruments: the butterflies' flight follows the spring before it at −4.70 days per °C over 75
 species-generations, three quarters of their advance is the size that response predicts, and the
 responses are the species'. #76 is written: six claims with their evidence class, `n` and kill
-condition, four forward predictions, and the chapter table the book is written from. Next is #77,
-the book's second arc, which is the owner's to open.
+condition, four forward predictions, and the chapter table the book is written from. #77, the
+book's second arc, is the owner's to open.
+
+The owner's question of 2026-09-03, *is it just the temperature really?* The record already said
+no in four places — a residual of a quarter to a half of every timing change, an unexplained step,
+seven where-nulls against warming — and every why-fit so far was one driver against a date. Three
+studies opened in order: whether a where-shift is the population's (#80), whether a when-shift has
+more than one cue (#81), and the southern atlas's rain (#82) if the first two land quickly.
 
 ## Queued, with a reason to wait
 
 | # | Item | Why it waits |
 | --- | --- | --- |
+| 80 | Phase 2e: is where an animal moved the population's? | The owner's question of 2026-09-03 — *is it just the temperature really?* — answered first on the leg of the spine with no explanation at all. Every driver tried against *where* was a property of the environment; this is the first that is a property of the population. Registered before any abundance trend was fitted in [`phase2e-population-shifts.md`](methods/phase2e-population-shifts.md): per species in its survey, the latitude trend `L` beside the log-index trend `N` (summed catch per unit effort over the year's events, divided by the events) and the extent trend `E`, on `marine-null`'s 2,240 pairs and Phase 1m's three bird tables. Phase 3j's terciles and nulls with a population axis, a precision-axis control registered with the magnitude test because rarity inflates both `|L|` and `|N|`, and Phase 3k's chance-levelled species-against-survey coherence on `N`. Seven predictions; the stop condition names what claim 2 gains if the population is not the answer either. Runner built; the run is next. |
 | 77 | The book's second arc: the story | ADR 0018 decision 5. Chapters by the spine's questions rather than the ledger's `direction` field, a synthesis page after the results-free opening, an opener per chapter, a bridge per claim naming the claim that raised it, and `matters` rewritten for what the result means to the animal. Keeps the decisions of 2026-08-21 and the voice. Waits on #76; its build-time ADR is its own to write. |
 | 78 | Chance-level every coherence this project has published | Phase 3k found that `phase1m._icc`'s between-group share has a null expectation near (k−1)/n, so Phase 1m's fixed floor of 0.10 means different things at 10 groups and at 171. Phase 1o's family coherences (14–30 groups over 127–459 species, chance roughly 0.06–0.10 raw) and Phase 1m's and 3j's axes need their permutation nulls before any of them is read again, and the floor should become an excess over chance. Also owed: an interval on a variance share that does not duplicate rows — a jackknife over the clustering unit, or a permutation test in place of an interval. Pre-register the re-reading; regrading is not editing. |
 | 79 | Grade the synthesis' three Phase 2d predictions | [`synthesis-2026-09.md`](methods/synthesis-2026-09.md) registers, before any of them has run: a degree-day refit of Phase 2d from daily ERA5 (the mechanism's own quantity; kills claim 1's second leg if the median response is inside zero); the generation gradient — first generation responds more than the second in at least eight of nine multivoltines, and the post-winter flight less than the summer emergence in both overwintering univoltines; and a common-window refit of every unit on April–May, whose Q must still clear its bar or the *when* half of claim 3 is withdrawn. Three registrations, one at a time, each pre-registered in its own note before its fetch or refit. |

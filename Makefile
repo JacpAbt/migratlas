@@ -281,6 +281,10 @@ report-phase3k:  ## Is the marine signal a property of the species rather than o
 report-phase2d:  ## Does the butterflies' flight date follow the temperature, per species?
 	$(RUN) migratlas report phase2d
 
+.PHONY: report-phase2e
+report-phase2e:  ## Is where an animal moved the population's, rather than the sea's?
+	$(RUN) migratlas report phase2e
+
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
 	$(RUN) migratlas report phase3h
