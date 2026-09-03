@@ -72,6 +72,15 @@ FIELDS: Final[dict[str, Field]] = {
         unit="degC",
         offset=-273.15,
     ),
+    "radiation": Field(
+        cds_name="surface_solar_radiation_downwards",
+        canonical="surface_solar_radiation_downwards",
+        unit="W m-2",
+        # The monthly-mean product carries the daily accumulation in joules per square
+        # metre; dividing by the seconds in a day gives the mean flux, which is what a
+        # reader and a regression both expect a radiation to be.
+        scale=1.0 / 86400.0,
+    ),
 }
 
 # North, west, south, east -- the order CDS wants, which is not the order anyone says them in.

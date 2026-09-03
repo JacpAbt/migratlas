@@ -285,6 +285,10 @@ report-phase2d:  ## Does the butterflies' flight date follow the temperature, pe
 report-phase2e:  ## Is where an animal moved the population's, rather than the sea's?
 	$(RUN) migratlas report phase2e
 
+.PHONY: report-phase2f
+report-phase2f:  ## Does when an animal moves have more than one cue?
+	$(RUN) migratlas report phase2f
+
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
 	$(RUN) migratlas report phase3h

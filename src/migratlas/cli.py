@@ -384,6 +384,11 @@ def ingest_era5_uk() -> None:
     pre-season exists for a species-generation whichever month it flies. Its own source id,
     for `era5_south`'s reason -- a second box under `era5` would replace the North American
     years it shares.
+
+    Phase 2f added precipitation and radiation, and all three fields land in this one call
+    for the lake's reason: a write replaces the partitions it touches, so landing the two new
+    fields alone would have deleted the temperature. The temperature file is re-read from the
+    archive's cache rather than fetched again.
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     from migratlas.evidence import EvidenceType  # noqa: PLC0415 -- one command needs it
@@ -404,7 +409,7 @@ def ingest_era5_uk() -> None:
         points,
         list(range(1973, 2022)),
         list(range(1, 9)),
-        fields=("temperature",),
+        fields=("temperature", "precipitation", "radiation"),
         area=era5.UK_AREA,
         source_id="era5_uk",
     )
@@ -856,6 +861,15 @@ def report_phase2e() -> None:
     from migratlas.reports import phase2e  # noqa: PLC0415 -- heavy, and only this command
 
     print(phase2e.render())
+
+
+@report_app.command("phase2f")
+def report_phase2f() -> None:
+    """Does when an animal moves have more than one cue?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2f  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2f.render())
 
 
 @report_app.command("phase3h")

@@ -381,7 +381,8 @@ sources:
       the partitions it touches. Sampled at every UKBMS transect the lake holds, monthly,
       January to August of 1973–2021, so that a two-month pre-season exists for a
       species-generation whichever month it flies; nothing from September to December is here
-      and nothing about the flight season itself is meant to be. A quarter-degree cell is a
+      and nothing about the flight season itself is meant to be. Three fields since Phase 2f:
+      2 m temperature, total precipitation, and downward solar radiation as a mean flux. A quarter-degree cell is a
       blunt reading of a transect's microclimate, and a coastal site may match a cell that is
       mostly sea; the match distance is recorded and no site is dropped for it. Registered
       2026-09-02 by `phase2d-flight-response.md` before any value was fetched.
