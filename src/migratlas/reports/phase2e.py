@@ -357,9 +357,11 @@ def leg(name: str, table: pl.DataFrame, *, draws: int = DRAWS) -> Leg | None:
     """
     if table.is_empty():
         return None
-    # All three keys: 95 taxon keys carry two or more verbatim labels (TASKS #3), and a sort on
-    # the key alone left those rows tied and the bird nulls still moving in their third decimal.
-    table = table.sort(["survey_unit", "taxon_key", "taxon_label"])
+    # Every key and then the values themselves: 95 taxon keys carry two or more verbatim labels
+    # (TASKS #3), a sort on the key alone left those rows tied, and a sort on the labels too left
+    # two `bbs` bars moving in their fourth decimal. The order is a function of the data now, not of
+    # the join, which is the only thing that makes a seeded shuffle a property of the unit.
+    table = table.sort(["survey_unit", "taxon_key", "taxon_label", "slope", "stderr"])
     size = axis(table, SIZE, response="|L|")
     precision = axis(table, PRECISION, response="|L|")
     signed = axis(table, ABUNDANCE, response="L")
@@ -382,7 +384,7 @@ def numbers_by_species(table: pl.DataFrame, *, draws: int = DRAWS) -> phase3k.Sp
 
     Phase 3k's estimand B, on `N` rather than on `L`.
     """
-    pooled_like = table.sort(["survey_unit", "taxon_key", "taxon_label"]).select(
+    pooled_like = table.sort(["survey_unit", "taxon_key", "taxon_label", ABUNDANCE]).select(
         per_decade=pl.col(ABUNDANCE),
         stderr=pl.col("abundance_se"),
         taxon_key=pl.col("taxon_key"),

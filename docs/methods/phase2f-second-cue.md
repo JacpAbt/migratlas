@@ -143,6 +143,21 @@ Cochran's Q across the units' coefficients, weighted by their errors, as Phase 2
 
 ---
 
+## 3a. Amendment, written while implementing and before the registered run
+
+**A. The arms are compared on the rows every driver has.** The green-up record runs 1982 to 2022; the
+radar's passage dates run to 2025 and the butterflies' flight dates from 1973. The first attempt at a
+run required a green-up value for every row of a unit, and every one of the 78 stations lost the
+driver -- three years at the end of a thirty-one-year record were enough. So, per unit: a driver is
+*available* if it has fifteen or more distinct years of finite values; every arm, arm T included, is
+fitted and its held-out error taken on the rows on which every available driver is finite; and the
+**calibration is arm T on the unit's full panel**, which is what Phase 2c and Phase 2d published.
+An arm's improvement over arm T is therefore a like-for-like comparison on one set of rows, and the
+number of years those rows span is reported beside it. Nothing about the drivers, the windows, the
+arms or the bars changes.
+
+---
+
 ## 4. Predictions
 
 1. **Calibration.** Arm T reproduces −0.624 and −4.70 to three significant figures. *Check.*

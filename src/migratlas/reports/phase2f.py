@@ -150,6 +150,22 @@ class Panel:
             fixed={name: values[rows] for name, values in self.fixed.items()},
         )
 
+    def available(self, names: Sequence[str]) -> tuple[str, ...]:
+        """The drivers with at least `MIN_YEARS` distinct years of finite values."""
+        return tuple(
+            name
+            for name in names
+            if name in self.drivers
+            and np.unique(self.year[np.isfinite(self.drivers[name])]).size >= MIN_YEARS
+        )
+
+    def common(self, names: Sequence[str]) -> Panel:
+        """The rows on which every named driver is finite -- the rows the arms are compared on."""
+        keep = np.ones(self.site.size, dtype=bool)
+        for name in names:
+            keep &= np.isfinite(self.drivers[name])
+        return self.take(np.flatnonzero(keep))
+
 
 @dataclass(frozen=True, slots=True)
 class ArmFit:
@@ -342,13 +358,39 @@ def held_out_rmse(panel: Panel, arm: tuple[str, ...]) -> float:
 
 
 def unit_result(panel: Panel, key: Key, spec: Spec, *, draws: int = DRAWS) -> UnitResult:
-    """Every arm the record asks for, on one unit."""
+    """Every arm the record asks for, on one unit.
+
+    Amendment A in the note: the green-up record runs 1982-2022 and the responses run past both
+    ends, so the arms are fitted and compared on the rows every available driver has -- arm T
+    included -- and a driver with fewer than `MIN_YEARS` finite years is not available to this unit.
+    The calibration is arm T on the full panel, which is what the parent phases published.
+    """
+    wanted = tuple(dict.fromkeys(name for arm in spec.arms for name in ARMS[arm]))
+    available = panel.available(wanted)
+    common = panel.common(available)
     fits: dict[str, ArmFit] = {}
+    full_t = fit(panel, (T,))
+    if full_t is not None:
+        fits["T_full"] = ArmFit(
+            arm="T_full",
+            coefficients={T: float(full_t[0])},
+            added=None,
+            added_interval=(float("nan"), float("nan")),
+            held_out_rmse=float("nan"),
+        )
+    if np.unique(common.year).size < MIN_YEARS:
+        return UnitResult(
+            unit=key.unit,
+            label=key.label,
+            years=int(np.unique(panel.year).size),
+            sites=int(np.unique(panel.site).size),
+            arms=fits,
+        )
     for arm in spec.arms:
         drivers = ARMS[arm]
-        if any(name not in panel.drivers for name in drivers):
+        if any(name not in available for name in drivers):
             continue
-        solution = fit(panel, drivers)
+        solution = fit(common, drivers)
         if solution is None:
             continue
         coefficients = {name: float(solution[k]) for k, name in enumerate(drivers)}
@@ -357,22 +399,22 @@ def unit_result(panel: Panel, key: Key, spec: Spec, *, draws: int = DRAWS) -> Un
         if added is not None:
             index = drivers.index(added)
             interval = (
-                _year_interval(panel, drivers, index, name=key.unit, draws=draws)
+                _year_interval(common, drivers, index, name=key.unit, draws=draws)
                 if spec.clustered
-                else _ols_interval(panel, drivers, index)
+                else _ols_interval(common, drivers, index)
             )
         fits[arm] = ArmFit(
             arm=arm,
             coefficients=coefficients,
             added=added,
             added_interval=interval,
-            held_out_rmse=held_out_rmse(panel, drivers),
+            held_out_rmse=held_out_rmse(common, drivers),
         )
     return UnitResult(
         unit=key.unit,
         label=key.label,
-        years=int(np.unique(panel.year).size),
-        sites=int(np.unique(panel.site).size),
+        years=int(np.unique(common.year).size),
+        sites=int(np.unique(common.site).size),
         arms=fits,
     )
 
@@ -644,7 +686,8 @@ def record(spec: Spec, units: Sequence[UnitResult], *, calibration: float, draws
 
 
 def _calibration(units: Sequence[UnitResult], *, mean: bool) -> float:
-    values = np.array([u.arms["T"].coefficients[T] for u in units if "T" in u.arms])
+    """Arm T on each unit's full panel, pooled the way the parent phase pooled it."""
+    values = np.array([u.arms["T_full"].coefficients[T] for u in units if "T_full" in u.arms])
     if values.size == 0:
         return float("nan")
     return float(np.mean(values)) if mean else float(np.median(values))
