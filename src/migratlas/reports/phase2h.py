@@ -61,7 +61,9 @@ CALIBRATION: Final[dict[str, float]] = {
 }
 """Phase 1b's published per-unit medians, for the four seasonal units it happened to print."""
 CALIBRATION_TOLERANCE: Final = 0.02
-"""Loose on purpose: Phase 1b's per-unit break-term treatment is not re-derived here."""
+"""Registered loose because Phase 1b's break term was not re-derived. Correction 1 derives it:
+the miss it left on BITS-1 was 0.085, four times this tolerance, and not absorbable by widening
+one."""
 
 MIN_YEARS: Final = 15
 """A species needs this many usable years in every season of its family. Phase 1b's floor."""
@@ -240,9 +242,33 @@ def season_series(cells: pl.DataFrame) -> pl.DataFrame:
     return centroids(cells, group_by=GROUP)
 
 
-def season_trends(series: pl.DataFrame) -> pl.DataFrame:
-    """A per-decade latitude trend per species per season, with its standard error."""
-    return shift_per_decade(series, column=LATITUDE, group_by=GROUP, min_years=MIN_YEARS)
+def season_trends(series: pl.DataFrame, cells: pl.DataFrame) -> pl.DataFrame:
+    """A per-decade latitude trend per species per season, with its standard error.
+
+    Correction 1 in the note: each season carries a break term at its *own* gear change year,
+    the way Phase 1b fits every unit. A gear change inside one season of a family and not the
+    other puts a step in one centroid, and this design would have read that step as a phase cut.
+    """
+    out: list[pl.DataFrame] = []
+    for unit in series[UNIT].unique(maintain_order=True).to_list():
+        season = cells.filter(pl.col(UNIT) == unit)
+        trends = shift_per_decade(
+            series.filter(pl.col(UNIT) == unit),
+            column=LATITUDE,
+            group_by=TAXON,
+            min_years=MIN_YEARS,
+            break_year=phase1b.gear_change_year(season),
+        )
+        if not trends.is_empty():
+            out.append(
+                trends.with_columns(
+                    pl.lit(str(unit)).alias(UNIT),
+                    # A season that changed gear carries a float here and one that did not carries
+                    # nulls, and the two will not stack without being told they are the same type.
+                    pl.col("break_shift").cast(pl.Float64),
+                )
+            )
+    return pl.concat(out) if out else pl.DataFrame()
 
 
 # --- The statistics -------------------------------------------------------------------------
@@ -355,7 +381,13 @@ def split_half_control(cells: pl.DataFrame, unit: str) -> float | None:
         if series.is_empty():
             return None
         halves.append(
-            shift_per_decade(series, column=LATITUDE, group_by=TAXON, min_years=CONTROL_MIN_YEARS)
+            shift_per_decade(
+                series,
+                column=LATITUDE,
+                group_by=TAXON,
+                min_years=CONTROL_MIN_YEARS,
+                break_year=phase1b.gear_change_year(season),
+            )
         )
     if any(half.is_empty() for half in halves):
         return None
@@ -389,7 +421,7 @@ def family_result(frame: pl.DataFrame, name: str, units: tuple[str, ...]) -> Fam
     series = season_series(cells)
     if series.is_empty():
         return _empty(name, units, kept_cells, (lower, upper), "no species caught in every season")
-    trends = season_trends(series)
+    trends = season_trends(series, cells)
     results = species_results(series, trends)
     if len(results) < MIN_SPECIES:
         return _empty(
@@ -493,7 +525,9 @@ def calibration(frame: pl.DataFrame) -> dict[str, float]:
     """Each published unit's pooled median trend on its own footprint, with no seasonal restriction.
 
     This is Phase 1b's quantity recomputed through this module's call path. It is the one number
-    here that has a published value to miss.
+    here that has a published value to miss, and on the registered run it missed: BITS-1 came out
+    at -0.098 against a published -0.183, because Phase 1b fits a level shift at each unit's gear
+    change year and this did not. The break term is Phase 1b's own, called rather than restated.
     """
     out: dict[str, float] = {}
     for unit in CALIBRATION:
@@ -505,7 +539,11 @@ def calibration(frame: pl.DataFrame) -> dict[str, float]:
         if series.is_empty():
             continue
         trends = shift_per_decade(
-            series, column=LATITUDE, group_by=TAXON, min_years=phase1b.MIN_YEARS
+            series,
+            column=LATITUDE,
+            group_by=TAXON,
+            min_years=phase1b.MIN_YEARS,
+            break_year=phase1b.gear_change_year(restricted),
         )
         median = trends["per_decade"].median() if not trends.is_empty() else None
         if isinstance(median, (int, float)):

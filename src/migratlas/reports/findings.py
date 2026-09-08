@@ -718,6 +718,44 @@ def _population_sentence(pooled: pl.DataFrame) -> str:
     )
 
 
+def _season_sentence() -> str:
+    """Whether a species' trend depends on the season that measured it, from Phase 2h.
+
+    The one sentence `marine-null`'s caveat gains under Phase 2h's registered stop condition, and
+    it is a limit on the estimand rather than on the null: the pooled median stands, and what a
+    per-species trend *is* changes. The split-half figure is carried because without it a spread in
+    the standardised difference could be an autocorrelated centroid rather than a season.
+    """
+    from migratlas.reports import phase2h  # noqa: PLC0415 -- heavy, and only this claim
+
+    read = phase2h.collect()
+    if not read.calibrated:
+        return "Whether a trend depends on the season that measured it could not be calibrated."
+    passing = read.passing
+    if not passing or not read.controlled:
+        return (
+            "Whether a trend depends on the season that measured it was asked, and this "
+            "instrument could not separate it from a wandering centroid."
+        )
+    disagreeing = [family for family in passing if family.disagrees]
+    controls = [f.control_median for f in passing if f.control_median is not None]
+    if not disagreeing:
+        return (
+            f"And a trend does not depend on the season that measured it: in {len(passing)} "
+            "regions trawled in more than one season, the same species' two estimates agree "
+            "within their own errors."
+        )
+    correlations = [family.pair_correlation for family in disagreeing]
+    return (
+        f"And a trend depends on the season that measured it: in {len(disagreeing)} of "
+        f"{len(passing)} regions trawled in more than one season, the same species' two estimates "
+        "disagree beyond their own errors, ranking species alike at only "
+        f"{min(correlations):+.2f} to {max(correlations):+.2f} — while two halves of one season "
+        f"sit at {max(controls):.2f} of the error that would make it noise. Where a species is, as "
+        "measured here, is a property of the animal and the season that looked."
+    )
+
+
 def _rain_sentence() -> str:
     """Whether the southern cells that got wetter gained birds, from Phase 2g, in one sentence.
 
@@ -1660,6 +1698,8 @@ def collect() -> list[Finding]:
                 + _sorting_sentence(phase3k.fit_species(pooled))
                 + " "
                 + _population_sentence(pooled)
+                + " "
+                + _season_sentence()
             ),
             method="docs/methods/phase1b-marine.md",
             direction="null",

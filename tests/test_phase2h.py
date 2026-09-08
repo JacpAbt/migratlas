@@ -26,13 +26,14 @@ NOISE = 0.02
 """Without noise the fit is exact, its standard error is zero, and every species is dropped."""
 
 
-def _rows(
+def _rows(  # noqa: PLR0913 -- one knob per confound the design claims to handle
     *,
     trends: dict[str, dict[int, float]],
     offsets: dict[str, float] | None = None,
     units: tuple[str, ...] = ("A-1", "A-2"),
     cells: int = CELLS,
     noise: float = NOISE,
+    gear_change: tuple[str, int, float] | None = None,
 ) -> pl.DataFrame:
     """Survey rows whose weighted centroid sits exactly where each season's trend asks.
 
@@ -40,9 +41,12 @@ def _rows(
     mixture between the extreme cells, which puts the weighted mean at the target for any target
     inside the range and never asks for a negative weight. ``offsets`` shifts a whole season by a
     constant, which is the seasonal catchability confound the design claims cancels in a trend.
+    ``gear_change`` names a unit, the year a new gear appears in its ``protocol``, and the step it
+    puts in that season's centroid -- the confound correction 1 in the note exists for.
     """
     rng = np.random.default_rng(11)
     offsets = offsets or {}
+    changed_unit, changed_year, changed_step = gear_change or ("", 0, 0.0)
     latitudes = [50.5 + index for index in range(cells)]
     low, high = latitudes[0], latitudes[-1]
     centre = float(np.mean(latitudes))
@@ -51,10 +55,13 @@ def _rows(
         for taxon, per_unit in trends.items():
             key = abs(hash(taxon)) % 10_000
             for step in range(YEARS):
+                year = START + step
+                after_refit = unit == changed_unit and year >= changed_year
                 target = (
                     centre
                     + per_unit[units.index(unit)] * step / 10.0
                     + offsets.get(unit, 0.0)
+                    + (changed_step if after_refit else 0.0)
                     + (float(rng.normal(0.0, noise)) if noise else 0.0)
                 )
                 share = (target - low) / (high - low)
@@ -70,13 +77,13 @@ def _rows(
                     records.append(
                         {
                             "site_id": f"{unit}:{index}",
-                            "period_start": datetime(START + step, 3, 1, tzinfo=UTC),
+                            "period_start": datetime(year, 3, 1, tzinfo=UTC),
                             "site_longitude": 1.5,
                             "site_latitude": latitude,
                             "site_depth_m": 60.0,
                             "count": catch,
                             "effort": 1.0,
-                            "protocol": "gear=X",
+                            "protocol": f"gear={'Y' if after_refit else 'X'}",
                             "taxon_key": key,
                             "taxon_label": taxon,
                             "survey_unit": unit,
@@ -88,7 +95,7 @@ def _rows(
 def _results(frame: pl.DataFrame) -> list[phase2h.SpeciesResult]:
     cells, _, _, _ = phase2h.family_cells(frame, ("A-1", "A-2"))
     series = phase2h.season_series(cells)
-    return phase2h.species_results(series, phase2h.season_trends(series))
+    return phase2h.species_results(series, phase2h.season_trends(series, cells))
 
 
 def test_heterogeneity_is_zero_when_the_seasons_agree_and_large_when_they_do_not() -> None:
@@ -142,6 +149,24 @@ def test_a_seasonal_level_offset_does_not_disagree_but_shows_as_amplitude() -> N
     assert [abs(r.amplitude) for r in results] == pytest.approx([offset, offset], abs=0.05)
 
 
+def test_a_gear_change_in_one_season_only_is_not_read_as_a_disagreement() -> None:
+    """Correction 1. The registered run had no break term, so a refit in one season would have
+    put a step in one centroid and this design would have called it a phase cut."""
+    frame = _rows(
+        trends={"steady": {0: 0.30, 1: 0.30}, "also": {0: -0.20, 1: -0.20}},
+        gear_change=("A-2", START + YEARS // 2, 0.8),
+    )
+    assert max(r.root_q for r in _results(frame)) < 3.0
+    # And the step is really there: without the break term the same rows disagree loudly.
+    cells, _, _, _ = phase2h.family_cells(frame, ("A-1", "A-2"))
+    series = phase2h.season_series(cells)
+    naive = phase2h.species_results(
+        series,
+        phase2h.season_trends(series, cells.with_columns(protocol=pl.lit("gear=X"))),
+    )
+    assert max(r.root_q for r in naive) > 3.0
+
+
 def test_opposite_trends_between_seasons_raise_the_disagreement() -> None:
     results = _results(_rows(trends={"split": {0: 0.40, 1: -0.40}}))
     assert len(results) == 1
@@ -164,7 +189,7 @@ def test_the_pair_correlation_is_one_when_the_seasons_rank_species_alike() -> No
         }
     )
     cells, _, _, _ = phase2h.family_cells(frame, ("A-1", "A-2"))
-    trends = phase2h.season_trends(phase2h.season_series(cells))
+    trends = phase2h.season_trends(phase2h.season_series(cells), cells)
     assert phase2h.pair_correlation(trends, ("A-1", "A-2")) == pytest.approx(1.0)
 
 

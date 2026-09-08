@@ -185,7 +185,14 @@ no global poleward shift.**
 The footprint sensitivity check is the reassuring part: −0.010, −0.011 and −0.011 °/decade at 60%,
 80% and 95% consistency thresholds. The null is not an artefact of where the threshold was put.
 
-What is not null is the disagreement *between* surveys, which reaches opposite signs:
+What is not null is the disagreement *between* surveys, which reaches opposite signs.
+**Part of it is not between places at all.** Four of the seven units printed below are
+one season of a region trawled in two or three, and Phase 2h (2026-09-08) found that in
+six of six such families the same species' trend depends on which season measured it,
+beyond the two estimates' own errors. BITS-1 is the Baltic in February, SWC-IBTS-4 is
+west Scotland in autumn, GMEX-Fall is the Gulf of Mexico in autumn and NEUS-Spring is
+the northeast US in spring. This table was read as a geographic disagreement for six
+weeks; some of it is a seasonal one.
 
 | Survey unit | °lat/decade | m depth/decade | consistent cells | rows kept | years |
 | --- | --- | --- | --- | --- | --- |

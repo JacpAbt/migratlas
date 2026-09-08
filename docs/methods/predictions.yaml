@@ -311,6 +311,21 @@ phases:
       recorded: the radar's full arm asked for a column it never carries and printed NaN before the
       fix, and the note typed the chance bar as 8 where the function gives 7.
 
+  - note: phase2h-phase-cut.md
+    registered: 7
+    true_: 5
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 2
+    comment: >-
+      In all six passing families the same species' decadal latitude trend depends on which season
+      measured it, beyond the two estimates' own errors (Q clears its bar 6 of 6, by 1.25x to 2.15x),
+      and the split-half control is quiet at 0.51-0.79 against a bar of 1.2. The two failures are
+      both about the amplitude covariate, and prediction 5 failed by 0.001 on a null the correction
+      moved. Prediction 2 failed as registered -- Phase 1b fits a gear break and this did not, a
+      0.085 miss on BITS-1 -- and correction 1 put the break term into the calibration, the seasonal
+      trends and the control, because a refit inside one season would have read as a phase cut.
+
   - note: forecast-a.md
     registered: 5
     true_: 4
@@ -322,8 +337,6 @@ phases:
 # not met its data is not evidence either way -- and listing them is what stops a phase quietly
 # never being graded.
 pending:
-  - note: phase2h-phase-cut.md
-    registered: 7
   - note: synthesis-2026-09.md
     registered: 4
   - note: phase2b-ssf.md

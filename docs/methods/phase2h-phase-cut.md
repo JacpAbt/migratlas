@@ -215,3 +215,174 @@ Nothing about the families, floors, footprint rule, bars or predictions changes.
 - **Not the depth axis as a claim.** Phase 1b already reports depth and refuses to claim it; a
   one-degree cell can span a shelf break. Depth is reported here for the same reason and with the
   same refusal.
+
+---
+
+# Results — run 2026-09-08
+
+`make report-phase2h`, run as a pair twice: once as registered, which failed its calibration, and
+once after the correction below, which reproduced every published value exactly. Both pairs were
+identical line for line.
+
+## Correction 1 — the registered run did not fit the gear break, and the calibration caught it
+
+Prediction 2 **failed as registered**: BITS-1 came out at **−0.098** against a published **−0.183**,
+a miss of 0.085, four times the tolerance and not absorbable by widening one. The cause is that
+Phase 1b fits a level shift at each unit's own gear change year, read from `protocol`, and this
+module did not. The stop condition applied: **nothing above the calibration was interpreted, and the
+registered run's family numbers are recorded below as produced-and-not-graded.**
+
+**The correction is larger than the calibration, and that is the point.** A gear refit inside one
+season of a family and not the other puts a step in one of the two centroids, and this design would
+have read that step as a phase cut — the exact confound it exists to measure. So the break term now
+enters *three* places, all of them calling `phase1b.gear_change_year` rather than restating it: the
+calibration, each season's trend, and each half of the split-half control. This confound was not
+named in §2's known problems, which named the vessel effect and not the gear step, and that omission
+is recorded here rather than edited into the design.
+
+**What the correction moved.** Four of the six families' pooled Q did not change at all; two did,
+because only their units changed gear inside the shared span:
+
+| family | Q as registered | Q corrected | median \|z\| | verdict |
+| --- | --- | --- | --- | --- |
+| North Sea | 206.7 | 206.7 | 1.21 | unchanged |
+| west Scotland | 93.7 | 93.7 | 0.92 | unchanged |
+| Baltic | 83.6 | **68.5** | 1.09 → **0.79** | unchanged |
+| Gulf of Mexico | 328.9 | 328.9 | 0.85 | unchanged |
+| northeast US | 397.5 | **337.9** | 0.96 → **1.14** | unchanged |
+| southeast US | 292.2 | 292.2 | 1.20 | unchanged |
+
+No family's verdict moved. **One prediction's did**: prediction 5's correlation went from +0.172
+against a null ceiling of +0.141 (clearing it) to +0.161 against +0.162 (not clearing it, by
+0.001). It is graded on the corrected run, and a verdict resting on a margin of 0.001 is recorded
+as carrying no weight in either direction.
+
+## Coverage
+
+**Six of eight families pass**, exactly the registered floor. The two that fail are worth naming:
+
+| family | shared cells | shared years | species | outcome |
+| --- | --- | --- | --- | --- |
+| North Sea | 77 | 1991–2020 | 75 | passes |
+| west Scotland | 14 | 1990–2020 | 46 | passes |
+| Baltic | 19 | 1996–2020 | 39 | passes |
+| Gulf of Cádiz | **3** | 2004–2020 | 0 | dropped |
+| Gulf of Mexico | 19 | 1983–2024 | 171 | passes |
+| northeast US | 40 | 1968–2019 | 130 | passes |
+| southeast US | 14 | 1989–2019 | 80 | passes |
+| Scotian Shelf | **2** | 1979–1986 | 0 | dropped |
+
+**"The same region in two seasons" is often not the same water.** The Gulf of Cádiz keeps three
+cells of a footprint and the Scotian Shelf two: their seasonal surveys sail different ground, and
+the intersection that makes the comparison honest is what removes them. That is an instrument fact
+about seasonal survey pairs and it is reported rather than worked around.
+
+## Calibration — PASS, all four
+
+BITS-1 −0.183 against −0.183; GMEX-Fall −0.119 against −0.119; NEUS-Spring +0.101 against +0.101;
+SWC-IBTS-4 +0.258 against +0.258. Exact to three decimals through this module's own call path.
+
+## The answer
+
+| family | disagreement Q | bar | median \|z\| | split-half \|z\| | between-season ρ | median amplitude |
+| --- | --- | --- | --- | --- | --- | --- |
+| North Sea | **206.7** | 96.2 | 1.21 | 0.62 | +0.62 | +0.344° |
+| west Scotland | **93.7** | 62.8 | 0.92 | 0.51 | +0.54 | +0.199° |
+| Baltic | **68.5** | 54.6 | 0.79 | 0.59 | +0.30 | +0.122° |
+| Gulf of Mexico | **328.9** | 202.5 | 0.85 | 0.79 | +0.48 | +0.128° |
+| northeast US | **337.9** | 157.6 | 1.14 | 0.63 | +0.32 | +0.383° |
+| southeast US | **292.2** | 190.5 | 1.20 | 0.64 | +0.32 | +0.840° |
+
+**In all six regions, the same species' decadal latitude trend depends on which season measured it,
+beyond what the two estimates' own errors allow.** Six of six pooled Q values clear their
+chi-square bars, by margins of 1.25× to 2.15×.
+
+**And the control is quiet, which is what lets that be read.** The split-half median |z| runs 0.51
+to 0.79 against a registered bar of 1.2 — every one of them *below* 1, so on these series the
+least-squares trend error is if anything conservative rather than too small. The problem §2 named as
+the reason prediction 7 existed did not materialise, and the disagreement between seasons is
+therefore not the disagreement between two halves of one season.
+
+**The size of it.** A typical species' two seasons differ by about one standard error (median |z|
+0.79–1.21), so this is not every species disagreeing loudly; it is a distribution with a heavy tail,
+and the pooled Q clears because a substantial minority disagree strongly. The between-season rank
+correlation of a species' trend is **+0.30 to +0.62**. If a where-shift were a clean property of a
+species' range, two seasons of the same region should agree far better than that.
+
+**What it does not say.** It does not say the marine where-numbers are wrong. It says a single
+season's trend carries a season-specific component of a size comparable to its own standard error,
+and that a published per-species trend is therefore a property of a species *and a survey season*
+rather than of a species and a place.
+
+## The predictions, graded
+
+**1 — TRUE** (check). Six of eight families, the registered floor exactly.
+
+**2 — FALSE as registered, TRUE after correction 1.** Graded FALSE: the registration's own
+consequence fired and the correction it forced is recorded above rather than edited into §3.
+
+**3 — FALSE.** Both halves of the prediction hold in only **three** families against a floor of
+four: median amplitude clears 0.2° in the North Sea (+0.344), northeast US (+0.383) and southeast US
+(+0.840), and west Scotland (+0.199) misses by a thousandth of a degree. Amplitude's Q clears its
+bar in four families (North Sea, Baltic, northeast US, southeast US) and not in west Scotland or the
+Gulf of Mexico. **The likely reason is in the design and not the animals:** amplitude is measured on
+the *intersected* footprint, 14 to 77 cells, which is the part of the region both seasons trawl —
+precisely the water a seasonally moving fish is least likely to have left.
+
+**4 — TRUE**, in six of six against a floor of half. The registered expectation, and the one that
+carries the limit.
+
+**5 — FALSE**, by 0.001. Pooled Spearman between |amplitude| and |z| is **+0.161** against a
+within-family shuffle null of **[+0.014, +0.162]**. The null is worth reading: it is entirely
+positive, because shuffling inside a family removes the within-family relation and leaves the
+between-family alignment — families with larger amplitudes also have larger disagreements. So the
+pooled correlation is explained by differences *between* regions and not by a relation *inside*
+one. That is the confound the within-family null was registered to expose, and it exposed it.
+
+**6 — TRUE**, in six of six. Every between-season correlation is positive and every one is far
+below the 0.9 ceiling: a real shared shift plus a large season-specific part.
+
+**7 — TRUE.** Maximum split-half median |z| is 0.79 against a bar of 1.2.
+
+Five of seven, with one correction. The two that failed are both about *amplitude* — the covariate —
+and neither touches the primary estimand.
+
+## The stop conditions, and what they do
+
+- Prediction 1 held → the comparison was interpreted.
+- **Prediction 2 failed as registered → nothing was interpreted on that run**, and correction 1 is
+  recorded above with what it moved and what it did not.
+- Prediction 7 did not fire → prediction 4 is interpretable.
+- **Prediction 4 true and 7 quiet → the registered consequence applies.** Claim 2's marine leg gains
+  a phase-cut limit; `marine-null`'s caveat gains one computed sentence carrying the median
+  standardised disagreement and the number of families it holds in; and Phase 1b's between-survey
+  disagreement table gains a pointer saying that four of its seven printed units are one season of a
+  two-season family, and that six of six such families disagree with their own other season.
+- Prediction 5 changed no claim, as registered, and its margin is recorded as too thin to read.
+- No family, floor, window or bar was revisited after any number was seen. One correction is
+  recorded; it is not a revision.
+
+## What the successor has to fix
+
+1. **Amplitude on each season's own footprint, not the intersection.** The intersection is the water
+   both seasons trawl, which is where a seasonal migrant is least visible, and prediction 3 probably
+   failed on that. A per-season footprint with a stated non-comparability is the honest version.
+2. **Which species disagree, and whether that is a trait.** 541 species have a `z` and this note
+   publishes six medians. The animal-specific outlook says the tail is the result, and it needs a
+   trait table — depth range, spawning season, pelagic or demersal — which the lake does not hold.
+3. **A phase-aware trend.** If a season's trend carries a phenology component, the estimand worth
+   having is the trend in the *annual* centroid, which needs the seasons modelled jointly rather
+   than compared. That is a different note and a harder one.
+4. **The two dropped families** need a coarser cell or a stated sub-region, not a lower floor.
+
+## What this does not establish
+
+- **Not causation**, in either estimand.
+- **Not that a phase cut is the whole of the disagreement.** Gear is controlled by a break term,
+  vessels are not, and Phase 3k measured that the ships carry +0.82 degrees per degree of their own
+  movement. A season-specific vessel effect would look exactly like a phase cut here.
+- **Not a seasonal migration in absolute terms.** Catchability confounds amplitude, and amplitude
+  is only ever a covariate and a sign.
+- **Not the whole ocean.** Six continental-shelf trawl families, all northern-hemisphere.
+- **Not the other realms**, which have no seasonal replicate of this kind. That is why ADR 0019
+  registers two more tests.

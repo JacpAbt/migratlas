@@ -290,3 +290,39 @@ quantities (degree-days, rain-days, hours of sun), both of which forward predict
 at.
 
 The spine's sentence is unchanged by this amendment, and that is the amendment.
+
+---
+
+## Amendment, 2026-09-08: where is a property of a species and a survey season
+
+Phase 2h (#85) is ADR 0019's first test, and it found the limit it was registered to look for.
+Eight marine regions in the lake are trawled in two or three seasons; six pass a shared footprint
+and a shared year span; and in **six of six**, the same species' decadal latitude trend depends on
+which season measured it, beyond what the two estimates' own errors allow — Cochran's Q clears its
+bar by 1.25× to 2.15×, and the between-season rank correlation of a species' trend is only **+0.30
+to +0.62**. The split-half control, registered because a least-squares trend error is too small on
+an autocorrelated centroid, came in at **0.51–0.79 against a bar of 1.2** — below 1 everywhere, so
+the error model is conservative and the disagreement is not an artefact of it.
+
+**Claim 2's marine leg gains a limit, and it is a limit on the estimand rather than on the null.**
+The pooled marine where-null stands; what changes is what a per-species marine trend *is*. It is a
+property of a species and a survey season, and a single season's estimate carries a season-specific
+component of a size comparable to its own standard error. Phase 1b's headline — that survey units
+disagree, reaching opposite signs — now has a partial explanation nobody had asked for: four of the
+seven units in its printed table are one season of a two-season family.
+
+**What this does to the story.** ADR 0019 said the project had been measuring one instant and naming
+it the whole, and predicted that the marine leg's fixed survey date cuts the annual cycle at a phase.
+That prediction is now measured in six regions. It is the first time the state framing has produced a
+number rather than a re-reading, and it did so by putting one instrument against itself.
+
+**What it does not do.** It does not name the phase cut as the cause: gear is controlled by a break
+term, vessels are not, and a season-specific vessel effect would look identical. The amplitude half
+of the design failed its two predictions — measured on the intersected footprint, which is the water
+both seasons trawl and where a seasonal migrant is least visible — so *how far* these fish move
+within their year is still not measured here.
+
+The spine's sentence, with the marine leg's estimand named: **when is the animal's and follows
+temperature; whether it thrives is the animal's; how it answers a wet year is the animal's; where it
+is follows neither warming, nor its own numbers, nor the rain — and where it is, as this project
+measures it, is a property of the animal and the season that looked.**
