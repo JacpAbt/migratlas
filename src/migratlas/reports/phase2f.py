@@ -79,8 +79,8 @@ ARMS: Final[dict[str, tuple[str, ...]]] = {
     "TP": (T, P),
     "TR": (T, R),
     "TG": (T, G),
-    "all": (T, P, R, G),
 }
+"""The arms with a fixed driver list. Arm all is each record's own, from `Spec.drivers_of`."""
 PAIR: Final = 2
 """An arm of two drivers is temperature plus one added cue; only those carry an added
 coefficient."""
@@ -103,6 +103,16 @@ class Spec:
     improvement_bar: float
     clustered: bool
     """Year-clustered bootstrap intervals for a many-site unit; ordinary least squares for one."""
+
+    def drivers_of(self, arm: str) -> tuple[str, ...]:
+        """Arm all is temperature plus every cue this record asks: T+P+G for the radar, T+P+R+G
+        for the butterflies. The first registered run gave arm all one shared list of four, and the
+        radar, which never carries R, fitted no full model at any station."""
+        if arm != "all":
+            return ARMS[arm]
+        return tuple(
+            dict.fromkeys(name for other in self.arms if other != "all" for name in ARMS[other])
+        )
 
 
 RADAR_SPEC: Final = Spec(
@@ -365,7 +375,7 @@ def unit_result(panel: Panel, key: Key, spec: Spec, *, draws: int = DRAWS) -> Un
     included -- and a driver with fewer than `MIN_YEARS` finite years is not available to this unit.
     The calibration is arm T on the full panel, which is what the parent phases published.
     """
-    wanted = tuple(dict.fromkeys(name for arm in spec.arms for name in ARMS[arm]))
+    wanted = spec.drivers_of("all")
     available = panel.available(wanted)
     common = panel.common(available)
     fits: dict[str, ArmFit] = {}
@@ -387,7 +397,7 @@ def unit_result(panel: Panel, key: Key, spec: Spec, *, draws: int = DRAWS) -> Un
             arms=fits,
         )
     for arm in spec.arms:
-        drivers = ARMS[arm]
+        drivers = spec.drivers_of(arm)
         if any(name not in available for name in drivers):
             continue
         solution = fit(common, drivers)
@@ -483,14 +493,15 @@ def radar_panels() -> tuple[list[tuple[Key, Panel]], int]:
         fixed = {"support": rows["support"].to_numpy().astype(float)}
         if 0 < post.sum() < post.size:
             fixed["post_2012"] = post
+        # The green-up rides along with its gaps -- the record ends in 2022 -- and `Panel.available`
+        # decides per unit whether fifteen finite years remain; the first run demanded a value on
+        # every row and lost the driver at all 78 stations over three missing years.
         drivers = {
             T: rows["temperature"].to_numpy().astype(float),
             P: rows["precipitation"].to_numpy().astype(float),
+            G: rows["greenup"].to_numpy().astype(float),
         }
-        greenup = rows["greenup"].to_numpy().astype(float)
-        if np.isfinite(greenup).all():
-            drivers[G] = greenup
-        else:
+        if np.unique(years[np.isfinite(drivers[G])]).size < MIN_YEARS:
             without_green += 1
         out.append(
             (
@@ -586,15 +597,14 @@ def butterfly_panels() -> tuple[list[tuple[Key, Panel]], int]:
         ):
             continue
         _, site = np.unique(panel["site_id"].to_numpy(), return_inverse=True)
+        unit_years = panel["year"].to_numpy().astype(int)
         columns = {
             T: panel[T].to_numpy().astype(float),
             P: panel[P].to_numpy().astype(float),
             R: panel[R].to_numpy().astype(float),
+            G: panel["greenup"].to_numpy().astype(float),
         }
-        greenup = panel["greenup"].to_numpy().astype(float)
-        if np.isfinite(greenup).all():
-            columns[G] = greenup
-        else:
+        if np.unique(unit_years[np.isfinite(columns[G])]).size < MIN_YEARS:
             without_green += 1
         out.append(
             (
@@ -701,7 +711,7 @@ def collect(*, draws: int = DRAWS) -> Phase2f:
     ]
     radar = None
     if radar_units:
-        log.info("radar: %d stations, %d without a green-up cell", len(radar_units), lost)
+        log.info("radar: %d stations, %d without fifteen green-up years", len(radar_units), lost)
         # Phase 2c pools its arms as a mean, so the radar calibrates on the mean.
         radar = record(
             RADAR_SPEC,
@@ -716,7 +726,11 @@ def collect(*, draws: int = DRAWS) -> Phase2f:
     ]
     butterflies = None
     if butterfly_units:
-        log.info("butterflies: %d units, %d without a green-up cell", len(butterfly_units), lost_b)
+        log.info(
+            "butterflies: %d units, %d without fifteen green-up years",
+            len(butterfly_units),
+            lost_b,
+        )
         # Phase 2d pools as a median, so the butterflies calibrate on the median.
         butterflies = record(
             BUTTERFLY_SPEC,

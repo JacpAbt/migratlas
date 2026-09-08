@@ -117,6 +117,29 @@ def test_a_single_site_unit_gets_an_ordinary_least_squares_interval() -> None:
     assert result.arms["TP"].added_clear
 
 
+def test_the_full_arm_is_the_records_own_drivers() -> None:
+    """A radar station never carries R. The first run's shared arm all asked for it, and no station
+    fitted a full model, so the radar's full-model gain came out NaN."""
+    assert phase2f.RADAR_SPEC.drivers_of("all") == (phase2f.T, phase2f.P, phase2f.G)
+    assert phase2f.BUTTERFLY_SPEC.drivers_of("all") == (
+        phase2f.T,
+        phase2f.P,
+        phase2f.R,
+        phase2f.G,
+    )
+    full = _panel(temperature=-1.0, rain=2.0, shared_residual=0.0, single_site=True)
+    panel = phase2f.Panel(
+        site=full.site,
+        year=full.year,
+        response=full.response,
+        drivers={name: values for name, values in full.drivers.items() if name != phase2f.R},
+        fixed={},
+    )
+    result = phase2f.unit_result(panel, phase2f.Key("s", "s"), phase2f.RADAR_SPEC, draws=10)
+    assert "all" in result.arms
+    assert np.isfinite(result.improvement("all"))
+
+
 def test_the_green_up_cell_id_matches_the_drivers_own() -> None:
     assert phase2f._cell_of(51.7, -1.3) == "51.5,-1.5"
     assert phase2f._cell_of(42.0, -96.2) == "42.5,-96.5"

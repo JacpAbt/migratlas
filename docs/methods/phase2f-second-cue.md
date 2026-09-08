@@ -202,3 +202,123 @@ arms or the bars changes.
 - **Not the migrants.** Seventy-two of seventy-five butterfly units are residents.
 - **Not the radar's 2012 step**, which no arm here touches.
 - **Not the other realms.** Two timing records, both northern.
+
+---
+
+# Results — run 2026-09-03
+
+`make report-phase2f`, run as a pair after the fetch landed: 3,697,344 rows of `era5_uk` in one call,
+three fields at 3,144 cells over 392 months. The pair was identical line for line. Two corrections
+follow, both found in the pair's output and neither touching a window, driver, arm, floor or bar.
+
+**Correction 1 — the radar's full arm asked for a column the radar never carries.** Arm all was one
+shared list of four drivers; the radar's panels hold temperature, rain and green-up, so no station
+fitted a full model and its held-out gain printed `nan`. An impossible number is an instrument
+failure and was not scored either way. Arm all is now each record's own drivers — T+P+G for the
+radar, T+P+R+G for the butterflies — and the radar record was rerun as a pair, identical, with 65 of
+78 stations carrying the arm. The butterflies' arm is unchanged by construction, and the full report
+was run once more to show their lines byte-identical to the first pair.
+
+**Correction 2 — the note typed the chance bar wrong.** §2 says `phase3a.binomial_bar` gives 8 at 75
+and 8 at 78 units; the function it names returns 7 at both, and 6 at 65. The function is the bar, as
+registered; the typed figures were a pre-registration miscalculation, and every count below clears
+both.
+
+**Coverage — landed.** **Calibration — PASS, twice**: arm T on the full panels gives −0.624 against
+Phase 2c's −0.624 and −4.701 against Phase 2d's −4.70.
+
+## The butterflies — 75 species-generations
+
+| arm | added cue | clear of zero | bar | median coefficient | held-out improvement over T | Q against bar |
+| --- | --- | --- | --- | --- | --- | --- |
+| TP | pre-season rain, mm/day | **15** | 7 | **+1.14** d [+0.81, +1.30] | −0.2% | **103.2** / 95.1 |
+| TR | pre-season sunshine, W/m² | **20** | 7 | **−0.047** d [−0.084, −0.018] | −0.1% | 115.3 / 95.1 |
+| TG | green-up day of the cell | **11** | 7 | +0.016 d [+0.012, +0.024] | −0.1% | 106.2 / 95.1 |
+| all | every cue | — | — | — | **−0.1%** against a bar of 10% | — |
+
+## The radar — 78 stations
+
+| arm | added cue | clear of zero | bar | median coefficient | held-out improvement over T | Q against bar |
+| --- | --- | --- | --- | --- | --- | --- |
+| TP | June–July rain | 3 of 78 | 7 | −0.30 d [−0.41, +0.17] | −3.5% | 70.8 / 98.5 |
+| TG | green-up day of the cell | 2 of 65 | 6 | +0.026 d [−0.000, +0.050] | −3.2% | 42.4 / 83.7 |
+| all | both | — | — | — | **−7.5%** against a bar of 5% | — |
+
+## The answer
+
+**The second cues are there, and they add nothing.** Each of the three moved more butterfly species
+than chance would — twice the bar for rain, nearly three times for sunshine — and each in the
+direction the mechanism gives: a wetter pre-season delays flight by a day per mm/day, a brighter one
+advances it, a later green-up delays it. And a model carrying all four cues predicts a held-out year
+a tenth of a percent *worse* than temperature alone. That is not a contradiction; it is what §2 said a
+real but small cue would look like before any number was seen. Twenty years per unit is enough for
+a coefficient to clear its interval and not enough for it to earn back the variance it costs, and the
+year that was held out is held out for every site at once, so a national cue has nothing to
+generalise from. **Prediction 6 held, claim 1 stands as written, and no second cue is named in it.**
+
+**The radar's unexplained half is not summer rain and not spring green-up.** Neither moved more
+stations than chance, and both made held-out prediction worse; the full model is 7.5% worse than
+temperature alone. Claim 4's residual has two more things it is not, and still no name.
+
+**The rain response is the species'**, at Q 103 against 95 — a margin of 1.09×, the narrowest
+heterogeneity this project has published as a result, and it is reported as narrow. Sunshine and
+green-up are heterogeneous too, at 1.21× and 1.12×.
+
+**Three unregistered observations, labelled.** Green-up's direction was not registered and is
+positive: species fly later where their cell greened later, on top of temperature. The radar's rain
+coefficient is negative with an interval across zero. And sunshine, not rain, is the cue that moves
+the most species — the literature in §1 led with rain.
+
+## The predictions, graded
+
+**1 — TRUE** (check). −0.624 and −4.701.
+
+**2 — TRUE.** 15 of 75 against 7.
+
+**3 — TRUE.** +1.14 days per mm/day, [+0.81, +1.30].
+
+**4 — TRUE.** 20 of 75 against 7, median −0.047, [−0.084, −0.018]: brighter, earlier.
+
+**5 — TRUE**, after correction 1. 3 of 78 and 2 of 65 against 7 and 6; full-model gain −7.5%,
+under 5%.
+
+**6 — TRUE.** −0.1%, under 10%. Temperature stays the dominant cue.
+
+**7 — TRUE**, narrowly. Q 103.2 against 95.1.
+
+Seven of seven. Every prediction was written as the expectation and every expectation held, which
+is the outcome that teaches least; what the design bought is the pair of numbers no single fit gives
+— a cue that clears zero in twice the chance count and improves nothing — and that pair is the
+result.
+
+## The stop conditions, and what they do
+
+- Calibration held → everything was interpreted.
+- The UK fetch landed → both records ran.
+- Predictions 2, 4 and 5's butterfly half did not all fail → the "no second cue" condition did not
+  fire; claim 4 gains *not rain, not sunshine, not green-up on these windows* on evidence, not by
+  default.
+- **Prediction 6 held → claim 1 is not rewritten.** The synthesis gains a dated amendment saying so,
+  with the improvement the cues did not earn.
+- No window, driver, arm, floor or bar was revisited after any number was seen. Two corrections are
+  recorded above; neither is a revision.
+
+## What the successor has to fix
+
+1. **Degree-days, rain-days, hours of sun.** Monthly means are the mechanism's shadows (§2). The
+   synthesis's forward prediction 1 already owes the degree-day refit; the rain-day and sunshine-hour
+   refits belong beside it.
+2. **A held-out scheme with something to generalise from.** Leave-one-year-out with one national
+   spring holds out the whole country at once; a leave-one-*site*-out arm would ask whether a cue
+   fitted at nine transects predicts the tenth, which is the question a cue has to answer to earn a
+   place in claim 1.
+3. **The three unregistered observations** above, each as a registered prediction of its own.
+
+## What this does not establish
+
+- **Not causation.** Three correlates of a date at the same place.
+- **Not that the cues do nothing.** They clear zero; they do not predict. Those are different
+  sentences and this note says the second.
+- **Not the migrants.** Seventy-two of seventy-five butterfly units are residents.
+- **Not the radar's 2012 step**, which no arm touched.
+- **Not the other realms.** Two timing records, both northern.
