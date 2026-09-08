@@ -688,6 +688,72 @@ def _sorting_sentence(sorted_by: SpeciesFit | None) -> str:
     )
 
 
+def _population_sentence(pooled: pl.DataFrame) -> str:
+    """Whether the size of a shift follows the size of a change in numbers, from Phase 2e.
+
+    The one sentence `marine-null`'s caveat gains under Phase 2e's registered stop condition. Its
+    control is the point: a rare species has a noisy shift and a noisy abundance trend, and the
+    magnitude of a noisy estimate is inflated, so the abundance spread is set beside the same spread
+    cut on the trend's own precision -- and read as rarity where the precision spread is the larger.
+    """
+    from migratlas.reports import phase2e  # noqa: PLC0415 -- heavy, and only this claim
+
+    table, _ = phase2e.marine_panel(pooled=pooled)
+    leg = phase2e.leg(phase2e.MARINE, table)
+    if leg is None:
+        return (
+            "Whether the shifts follow the species' own changes in numbers was asked and could not "
+            "be answered on this panel."
+        )
+    if leg.size_survives_control:
+        return (
+            "Cut by the size of each species' own change in numbers, the shifts do sort: the "
+            f"spread is {leg.size.spread:+.3f} against {leg.precision.spread:+.3f} when cut by "
+            "the trends' own precision."
+        )
+    return (
+        "Nor do they follow numbers: cut by the size of each species' own change in abundance, the "
+        f"spread of shifts is {leg.size.spread:+.3f} against {leg.precision.spread:+.3f} when cut "
+        "by the trends' own precision, so what looked like abundance was rarity."
+    )
+
+
+def _rain_sentence() -> str:
+    """Whether the southern cells that got wetter gained birds, from Phase 2g, in one sentence.
+
+    The registered consequence of its prediction 3 failing: the atlas claim's caveat gains the
+    region's own driver as a named null at the cell level, beside the species-level count that says
+    what rain does to these birds is decided species by species and cancels in the total. Computed
+    here at build; the species count rests on cell-independent intervals, which the note says.
+    """
+    from migratlas.reports import phase1e, phase2g  # noqa: PLC0415 -- heavy, and only this claim
+
+    frame, coverage = phase2g.design()
+    if not coverage.landed:
+        return "Rainfall between the epochs was asked for and did not land at every cell."
+    cells = phase2g.cell_level(frame)
+    footprint = phase1e.footprint(phase1e.EPOCH_2)
+    species = phase2g.species_level(frame, phase2g.reporting_rates(footprint))
+    if cells.wetter_gained:
+        sentence = (
+            f"Rain between the epochs does explain part of the per-cell change: partial r "
+            f"{cells.main.partial_r:+.3f}, spectral p {cells.spectral_p:.2f}."
+        )
+    else:
+        sentence = (
+            f"Rain between the epochs does not explain the per-cell change either: partial r "
+            f"{cells.main.partial_r:+.3f}, spectral p {cells.spectral_p:.2f}."
+        )
+    if species is None:
+        return sentence
+    return (
+        f"{sentence} Yet {species.clear} of {len(species.responses)} species' reporting rates "
+        f"follow it beyond their own error against a chance bar of {species.bar}, in both "
+        "directions, so what rain does to these birds is decided species by species and cancels "
+        "in the total."
+    )
+
+
 def _seas_finding() -> Finding | None:
     """Phase 3e's established result, owed to the ledger since the presentation arc closed.
 
@@ -1592,6 +1658,8 @@ def collect() -> list[Finding]:
                 "variation between pairs. A warming that hit some and spared the rest would look "
                 "like this median, and along these three axes it is not what is here. "
                 + _sorting_sentence(phase3k.fit_species(pooled))
+                + " "
+                + _population_sentence(pooled)
             ),
             method="docs/methods/phase1b-marine.md",
             direction="null",
@@ -1927,7 +1995,7 @@ def collect() -> list[Finding]:
                 "unnecessary. Read the other way, that is why the number can be trusted: it does "
                 "not depend on the model. What it cannot do is separate a species that left from "
                 "one that stayed and was recorded differently in a landscape that changed around "
-                "it — no land-use covariate enters this, and attribution is a later note."
+                "it — no land-use covariate enters this. " + _rain_sentence()
             ),
             method="docs/methods/phase1e-atlas.md",
             direction="null",

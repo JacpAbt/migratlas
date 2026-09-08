@@ -220,3 +220,73 @@ chapter, a bridge per claim — is authored in `reports/` like every other sente
 | What can be predicted | Where does knowing the weather help? | 5 | `skill-sparse`, `projection-mask` |
 | What this cannot see | What bounds every claim above? | 6 | `coverage-bias`, `protocol-disagreement` |
 | The world | — | — | every published layer, and nothing argued over it |
+
+---
+
+## Amendment, 2026-09-03: the population is not the answer for *where*, and it is the answer for *numbers*
+
+Phase 2e (#80) asked the one question no phase had: whether a species' shift follows its own change
+in numbers. It does not, in any of four records, once rarity is controlled for — a noisy trend and a
+noisy abundance both have inflated magnitudes, and the spread cut on the trend's own precision was
+four to five times the spread cut on abundance. **Claim 2 gains its eighth named null: not the
+population's.** Growing species do not shift poleward more than declining ones anywhere.
+
+**Claim 3 gains a positive half it did not have.** The change in a species' *numbers* is the species'
+far more than the sea's: coherence 0.42 by species against 0.11 by survey over 171 taxa, and **+0.21
+against +0.04 over their own chance levels** — the largest excess this project has measured on any
+grouping. Who the animal is decides its timing response (claim 3, Phase 2d) and decides whether its
+numbers rise or fall (this), and does not decide where it moves. The spine's sentence now reads:
+**when is the animal's and follows temperature; whether it is thriving is the animal's; where it is
+follows neither warming nor its own numbers, and is not organised by the animal beyond what the sea
+is.** What drives the numbers is the next why, and it is not in this lake yet.
+
+---
+
+## Amendment, 2026-09-03: the south's own driver, and the third time the aggregate hid the species
+
+Phase 2g (#82) asked the southern atlas the question its region poses: did the cells that got wetter
+gain birds? They did not — coefficient −9 taxa per mm/day, spectral *p* 0.30 — and **claim 2 gains
+its southern leg's third named null: not rainfall between the epochs**, after water and heat. The
+wettest-quarter placebo fired the other way, wetter squares recording fewer taxa where rain is not
+what limits, and whether that is birds or atlassers is not separable.
+
+**Claim 3 gains its third instance.** 194 of 560 species' reporting rates follow the rain beyond
+their own error against a chance bar of 37, with a median of nought and a heterogeneity of Q 2,826
+against 615: as many species were recorded more where it got wetter as were recorded less, and the
+cell total cancels. Phase 2d found the timing response is the species'; Phase 2e found the change in
+numbers is the species'; this finds the rain response is the species', and the aggregate over
+species says nothing three times over. The count rests on cell-independent intervals and is an upper
+bound; the heterogeneity is not exposed the same way.
+
+The spine's sentence, as it stands after three studies asked of one question: **when is the
+animal's and follows temperature; whether it thrives is the animal's; how it answers a wet year is
+the animal's; where it is follows neither warming, nor its own numbers, nor the rain, and is not
+organised by the animal beyond what the sea is.** Every aggregate this project has published about
+*where* is an average over species that do not agree, and the next why is a trait table.
+
+---
+
+## Amendment, 2026-09-03: the second cues are there, and claim 1 keeps its one driver
+
+Phase 2f (#81) put rain, sunshine and green-up beside the temperature on both timing records, one at
+a time and together, and graded each cue on two numbers: whether its coefficient clears zero in more
+species than chance, and whether it improves the prediction of a held-out year. On the butterflies
+all three clear zero in more species than chance — 15, 20 and 11 of 75 against a bar of 7 — in the
+directions the mechanism gives, and the model with every cue predicts a held-out year 0.1% worse
+than temperature alone. **Claim 1 is not rewritten**: the response *when* follows is temperature,
+and the cues that are demonstrably there earn nothing beyond it at twenty years a species. **Claim 4
+gains two names for what the residual is not**: on the radar neither summer rain nor spring
+green-up moves more stations than chance, and the full model is 7.5% worse than temperature alone.
+
+**Claim 3 gains a fourth instance, narrowly.** The rain response is the species' at Q 103 against 95.
+It is the smallest margin this project has published as a result and is reported as such.
+
+**What this does to the story.** The animal-specific outlook now has a boundary as well as four
+instances. A species' *response* is the better-determined quantity — but a second cue that is real in
+every species' coefficient and worthless in every species' prediction says that "the species'" is not
+the same as "predictable from the species". The successor that matters is not a fourth driver; it is
+a held-out scheme with something to generalise from (leave-one-site-out) and the mechanism's own
+quantities (degree-days, rain-days, hours of sun), both of which forward prediction 1 already points
+at.
+
+The spine's sentence is unchanged by this amendment, and that is the amendment.

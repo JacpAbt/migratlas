@@ -181,3 +181,108 @@ readable here in a way #78 says it was not for 171 groups.
 - **Not the ocean or the continents:** northern shelf trawls, one North American and two Swedish
   bird schemes.
 - **Not timing.** Every quantity here is a place or a number, and the spine's *when* is untouched.
+
+---
+
+# Results — run 2026-09-03
+
+`make report-phase2e`, run in four pairs. The first three pairs agreed on every observed spread and
+every verdict and disagreed in the third or fourth decimal of a null bar — Phase 3f's correction 1,
+met again: a seeded shuffle applied to rows whose order a join did not fix. The sort now carries
+every key and the values themselves, and the fourth pair is identical line for line. Recorded here
+because the number that moved was the bar, never the answer, and because it took three tries.
+
+**Calibration — PASS.** The pooled marine median is −0.0110 against `marine-null`'s −0.011.
+
+## The four records
+
+| record | units | extent on abundance, rank *r* (null bar) | `\|L\|` by `\|N\|` spread (bar) | `\|L\|` by precision (bar) | `L` by signed `N` (bar) |
+| --- | --- | --- | --- | --- | --- |
+| trawls, 23 surveys | 2,242 pairs | **+0.837** (0.350) | +0.024 (0.020) beats | **+0.120** (0.021) beats | +0.001 (0.027) inside |
+| `bbs` | 552 species | **+0.746** (0.072) | +0.046 (0.068) inside | **+0.342** (0.070) beats | +0.043 (0.086) inside |
+| `sbs_point_counts` | 176 species | **+0.620** (0.124) | +0.161 (0.132) beats | **+0.344** (0.132) beats | +0.092 (0.162) inside |
+| `sbs_fixed_routes` | 197 species | **+0.659** (0.128) | +0.049 (0.077) inside | **+0.189** (0.076) beats | −0.035 (0.128) inside |
+
+Coherence of the `\|N\|` tercile grouping: 0.029 in the trawls, 0.023, 0.071 and 0.008 in the bird
+networks. Of the precision grouping: 0.284, 0.232, 0.236, 0.306.
+
+**Changes in numbers by species against by survey**, 171 taxa in five or more surveys, 1,148 pairs:
+coherence **0.423** grouped by species against **0.106** by survey; shuffled-label chance levels
+0.218 (95th percentile 0.248) and 0.063 (0.077); **+0.206 over chance against +0.043**.
+
+## The answer
+
+**Where a fish or a bird moved is not the population's either.** The index measures what it should —
+occupied cells follow numbers at a rank correlation of 0.62 to 0.84 in every record, far above every
+null bar — and then the size of a shift does not follow the size of a change in numbers. The
+abundance spread beats its null in the trawls and in one bird network, and in both the same spread
+cut on the latitude trend's *own precision* is four to five times larger. A rare species has a noisy
+shift and a noisy abundance trend, and the magnitude of a noisy estimate is inflated: what looked
+like abundance moving centroids was rarity inflating both. The registered control caught exactly the
+thing it was registered to catch. Direction follows nothing: growing species do not shift poleward
+more than declining ones in any of the four records.
+
+So the marine spread that Phase 3k left after the ships' own movement is now not the sea's, not the
+thermometer's, not the species' beyond chance, and not the population's. Claim 2 of the synthesis
+gains the named null its stop condition promised, and `marine-null`'s caveat gains one sentence,
+computed from this module at build.
+
+**And one thing is the species', emphatically: the change in numbers.** For the 171 taxa caught in
+five or more surveys, whether a fish's numbers rose or fell travels with the fish between seas —
+coherence 0.42 by species against 0.11 by survey, and once each is set against its own chance level,
+**+0.21 against +0.04**. That is the largest excess over chance this project has measured on any
+grouping, larger than the latitude shifts' +0.12, and it says that what drives a species' numbers on
+these shelves is a property of the species — its fishery, its life history, its food — far more than
+a property of the water it happens to be in. It is a *why*-shaped fact about numbers, not about
+places, and it belongs to claim 3 of the synthesis rather than to claim 2.
+
+## The predictions, graded
+
+**1 — TRUE** (check). −0.0110.
+
+**2 — TRUE** (check), in all four records: +0.837, +0.746, +0.620, +0.659 against bars of 0.350,
+0.072, 0.124 and 0.128. The index measures numbers.
+
+**3 — FALSE.** The trawl spread +0.024 beats its bar of 0.020 and the precision spread is +0.120.
+The magnitude association is rarity.
+
+**4 — FALSE.** No bird network survives the control; `sbs_point_counts` beats its null at +0.161 and
+its precision spread is +0.344.
+
+**5 — FALSE.** The signed spread is +0.001 against a bar of 0.027 in the trawls, and inside its bar
+in every bird network.
+
+**6 — FALSE.** The `\|N\|` grouping's coherence is 0.029 against Phase 3j's best thermal axis at
+0.035.
+
+**7 — TRUE** (discovery). +0.206 over chance by species against +0.043 by survey.
+
+Three of seven. The four that failed are the four about *where*; the one discovery that held is about
+*numbers*.
+
+## The stop conditions, and what they do
+
+- Calibration held and prediction 2 held in every record → everything was interpreted.
+- **Predictions 3 and 5 both failed in the marine record → the registered consequence applies.**
+  Claim 2 of the synthesis gains *and not the population's*, `marine-null`'s caveat gains one
+  sentence — the abundance spread beside the precision spread, so a reader sees why it is rarity —
+  and no eighth explanation is reached for here.
+- Prediction 3 passed on the spread and failed the control → published as rarity, as registered.
+
+## What the successor has to fix
+
+1. **Nothing on this axis.** Four records, one control, one answer; a fifth record would be a fifth
+   null.
+2. **Ask what drives the numbers**, since that is the species'. RAM Legacy's fishing pressure is a
+   nominated source and not in the lake; a species' fished status against its `N` is the next
+   registration this result licenses.
+3. **A sort is not a total order until the values are in it.** Every phase that seeds a shuffle by
+   name and applies it to joined rows carries this exposure; Phase 3j and Phase 3k do, and their
+   two-run checks passed by the luck of a stable order. Recorded as owed (#83).
+
+## What this does not establish
+
+- **Not causation.** Numbers and centroids come from the same rows; this is a decomposition.
+- **Not why numbers changed.** Fishing, habitat, prey and climate are all upstream of `N`.
+- **Not the rare species**, which the index floor removes.
+- **Not timing.** Every quantity here is a place or a number.

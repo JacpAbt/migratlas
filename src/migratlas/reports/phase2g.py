@@ -199,7 +199,11 @@ def design() -> tuple[pl.DataFrame, Coverage]:
             "site_id": [cell_site_id(c.cell_lat, c.cell_lon) for c in surface.cells],
         }
     )
-    joined = response.join(rain_change(), on="site_id", how="left")
+    # Sorted by cell, so the seeded spectral surrogates land on the same rows every run. Phase 1g
+    # recorded two of its own p-values moving by 0.02-0.03 between runs (TASKS #37) and left it
+    # unresolved; the first pair of runs here moved 0.278 to 0.287 and 0.007 to 0.004 for the same
+    # reason, with no verdict changing.
+    joined = response.join(rain_change(), on="site_id", how="left").sort(["cell_lat", "cell_lon"])
     with_rain = joined.drop_nulls(RAIN)
     complete = with_rain.filter(
         (pl.col("months_first") == MONTHS_PER_EPOCH) & (pl.col("months_second") == MONTHS_PER_EPOCH)

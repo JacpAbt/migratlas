@@ -272,6 +272,45 @@ phases:
       decades, one rests on three migrant units. The one that carried weight is prediction 5 --
       Cochran's Q 206.1 against 95.1 across 75 species-generation responses -- and it is the result.
 
+  - note: phase2e-population-shifts.md
+    registered: 7
+    true_: 3
+    false_: 4
+    ungradeable: 0
+    stop_conditions_fired: 1
+    comment: >-
+      The four predictions about *where* failed and the one discovery about *numbers* held. The
+      magnitude association beat its null in two records and the registered precision control was
+      four to five times larger in both, so it is rarity; the fired condition names where-shifts as
+      not the population's either. Changes in numbers are the species' at +0.21 over chance against
+      +0.04 for the sea.
+
+  - note: phase2g-southern-rain.md
+    registered: 7
+    true_: 5
+    false_: 2
+    ungradeable: 0
+    stop_conditions_fired: 1
+    comment: >-
+      The two predictions about the cells failed and the two discoveries about the species held. Rain
+      between the epochs does not explain the per-cell change (spectral p 0.30) and the wettest-quarter
+      placebo fired the wrong way; 194 of 560 species' reporting rates follow the rain beyond their own
+      error, in both directions, on intervals that assume the cells independent. The fired condition
+      names the southern leg's third null.
+
+  - note: phase2f-second-cue.md
+    registered: 7
+    true_: 7
+    false_: 0
+    ungradeable: 0
+    stop_conditions_fired: 0
+    comment: >-
+      Rain, sunshine and green-up each move more butterfly species than chance (15, 20 and 11 of 75
+      against 7) in the registered directions, and the model with all of them predicts a held-out year
+      0.1% worse than temperature alone; neither cue moves the radar's stations. Two corrections are
+      recorded: the radar's full arm asked for a column it never carries and printed NaN before the
+      fix, and the note typed the chance bar as 8 where the function gives 7.
+
   - note: forecast-a.md
     registered: 5
     true_: 4
@@ -283,12 +322,6 @@ phases:
 # not met its data is not evidence either way -- and listing them is what stops a phase quietly
 # never being graded.
 pending:
-  - note: phase2e-population-shifts.md
-    registered: 7
-  - note: phase2f-second-cue.md
-    registered: 7
-  - note: phase2g-southern-rain.md
-    registered: 7
   - note: synthesis-2026-09.md
     registered: 4
   - note: phase2b-ssf.md

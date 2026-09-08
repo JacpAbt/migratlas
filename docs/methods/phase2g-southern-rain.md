@@ -163,3 +163,115 @@ coefficient with a units-bootstrap interval; Cochran's Q across species.
 - **Not the north, nor the sea.** One region, two epochs, one driver.
 - **Not the migrants.** Most of these species are residents of the interior; the note says nothing
   about journeys.
+
+---
+
+# Results — run 2026-09-03
+
+`make report-phase2g`, run in two pairs. The first pair agreed on every coefficient and every verdict
+and moved two spectral p-values in the second decimal — 0.278 against 0.287, 0.007 against 0.004 —
+which is the instability Phase 1g recorded against itself in August (TASKS #37) and left unresolved:
+a seeded surrogate applied to cells whose order the surface did not fix. The frame is sorted by cell
+now, and the second pair is identical line for line. The fetch landed the same day: 119,040 rows,
+two fields, 496 cells, all 120 months at every cell.
+
+**Coverage — landed.** **Calibration — PASS**: Phase 1g's water partial *r* through the refactored
+path is −0.036 against its published −0.036.
+
+## The cells
+
+| quantity | value |
+| --- | --- |
+| rainfall change coefficient | **−8.98** taxa per mm/day |
+| partial *r*, conditioning on the change in cards | **−0.088** |
+| toroidal null | *p* 0.596, 76 cells usable per draw |
+| spectral null | *p* **0.299** |
+| naive *p*, kept and labelled as the wrong test | 0.111 |
+| leave-one-quadrant-out | −2.13, −15.32, −13.44, −2.86 — same sign |
+| placebo, wettest quarter by epoch-1 rain, 124 cells | coefficient **−28.7**, spectral *p* **0.007** |
+
+## The species
+
+| quantity | value |
+| --- | --- |
+| species with a rainfall coefficient | 560 |
+| clear of zero, on cell-independent intervals | **194** against a chance bar of 37 |
+| median coefficient | −0.0009 [−0.0028, +0.0011] per mm/day |
+| Cochran's Q across species | **2,825.8** against 615.1 |
+
+## The answer
+
+**The cells that got wetter did not gain birds, and the species did not agree about the rain.**
+
+At the cell level the region's own driver is the third named null on its where-change, after water
+and heat: the coefficient is negative, a third of a standard deviation of nothing, and neither spatial
+null comes near its bar. Wetter squares did not record more taxa. The placebo did not stay quiet
+either, and in the direction nobody registered: in the wettest quarter of the footprint, the squares
+that got wetter still recorded **fewer** taxa, at a spectral *p* of 0.007. Where rain is not what
+limits birds, more of it in the second epoch went with fewer species written down. Whether that is
+the birds or the atlassing — wet weather keeps observers in as surely as it keeps butterflies down —
+is not separable here, and it is recorded as an unregistered-direction result in a control subset,
+not as a finding.
+
+**And underneath the null, a third of the species follow the rain.** 194 of 560 have a reporting-rate
+response to the rainfall change that clears zero, against a chance bar of 37; the median across
+species is indistinguishable from nought; and the species differ beyond any error at Q 2,826 against
+615. Some species were recorded more where it got wetter and as many were recorded less, and the
+cell total — the sum over species — cancels to nothing. That is the animal-specific outlook doing
+work: the aggregate says rain does nothing, and the aggregate is wrong about every species in it.
+
+**One bound on the 194, stated rather than left.** Each species' interval treats 496 cells as
+independent. They are not — the spatial nulls exist because they are not — so the count clear of
+zero is inflated by an amount this design did not measure, and the chance bar of 37 assumes the same
+independence. A spatially honest per-species test, the spectral surrogate run per species, was not
+registered and is the successor's. The heterogeneity is not exposed the same way: species differing
+by a factor of four and a half in Q is not a spatial artefact.
+
+## The predictions, graded
+
+**1 — TRUE** (check). 496 of 496 cells, 120 of 120 months.
+
+**2 — TRUE** (check). −0.036.
+
+**3 — FALSE.** −8.98 taxa per mm/day, spectral *p* 0.299. Wetter cells did not gain taxa.
+
+**4 — TRUE**, and of a null: the sign survives losing any quadrant, and the sign is of nothing.
+
+**5 — FALSE.** The placebo is not quiet: −28.7, *p* 0.007, the opposite direction to the expectation
+it was written to guard.
+
+**6 — TRUE** (the animal-specific one). 194 against 37, on intervals that assume independence.
+
+**7 — TRUE.** Q 2,825.8 against 615.1.
+
+Five of seven. The two that failed are the two about the *cells*; the two discoveries about the
+*species* held.
+
+## The stop conditions, and what they do
+
+- Predictions 1 and 2 held → everything was interpreted.
+- **Prediction 3 failed → the registered consequence applies.** The southern leg has its third named
+  null after water and heat; claim 2 of the synthesis gains *and not rainfall between the epochs*;
+  the per-species half ran, and predictions 6 and 7 were graded on it.
+- Prediction 3 failed and 5 failed → no *rain-limited* reading is available, and none is offered.
+- `atlas-no-net-change`'s caveat gains one sentence, computed from this module at build: the
+  cell-level null and the species-level count, with the count's independence assumption named in
+  the note it points at.
+
+## What the successor has to fix
+
+1. **A per-species spatial null.** The spectral surrogate run once per species would give the 194 an
+   honest bar; the eigenvectors are one decomposition and the surrogates are matrix products, so it
+   is minutes and not hours.
+2. **Which species follow the rain which way.** 194 responses with a sign each is a table this note
+   does not publish, and the animal-specific outlook says it is the result. It needs a trait — diet,
+   water dependence, migrant or resident — to become a why, and the lake holds no trait table.
+3. **The wettest-quarter reversal** needs the effort record read differently: cards per month rather
+   than per epoch, to see whether wet months were atlassed less.
+
+## What this does not establish
+
+- **Not climate change.** Two runs of years, thirty years apart.
+- **Not causation.** Rain co-varies with grazing, fire, land use and the people who atlassed.
+- **Not the 194 as a count.** It is an upper bound on cell-independent intervals.
+- **Not the north, nor the sea.** One region, two epochs, one driver.

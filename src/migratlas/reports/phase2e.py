@@ -207,16 +207,19 @@ def _with_axes(table: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-def marine_panel() -> tuple[pl.DataFrame, float]:
+def marine_panel(*, pooled: pl.DataFrame | None = None) -> tuple[pl.DataFrame, float]:
     """Every species-survey pair with `L`, `N` and `E`, and the pooled median `L` to calibrate on.
 
     The response is `phase1b.analyse`'s own, so the calibration cannot pass against a copy; the
-    index is built on the same consistent footprint from the same rows.
+    index is built on the same consistent footprint from the same rows. The ledger hands in the
+    `pooled` table it has already computed for `marine-null`, so the sentence it publishes is about
+    that very table rather than a second run of the same analysis.
     """
     from migratlas.reports import phase1b  # noqa: PLC0415 -- heavy
 
     cells = range_metrics.to_cells(phase1b.survey_unit(phase1b.load()))
-    _, pooled, _ = phase1b.analyse(cells)
+    if pooled is None:
+        _, pooled, _ = phase1b.analyse(cells)
     if pooled.is_empty():
         return pl.DataFrame(), float("nan")
     calibration = float(np.median(pooled["per_decade"].to_numpy().astype(float)))
