@@ -367,10 +367,16 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
     if (request.url().includes("aerial-passage.geojson")) fetches += 1;
   });
 
-  const before = await weekIndex();
+  /*
+    The clock starts at today unless the URL pins it, so the starting week is whatever week the
+    suite is run in -- and on 8 September 2026 that was week 35, the week this test advances to.
+    The test failed that day and only that week. Both ends are driven now, so neither depends on
+    the date: two observed transitions instead of one, and the fetch counter covers both.
+  */
+  const slider = page.locator(".explore .time input");
   // Through the slider rather than a hook on `window`: the clock is internal to the shell
   // now, and driving it the way a visitor does tests the wiring as well as the filter.
-  await page.locator(".explore .time input").fill("250");
+  await slider.fill("100");
 
   /*
     An explicit deadline, because the default is five seconds and nobody chose it. See the note on
@@ -378,8 +384,11 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
   */
   await expect
     .poll(weekIndex, { message: "the clock moved and the layer did not", timeout: 30_000 })
+    .toBe("14");
+  await slider.fill("250");
+  await expect
+    .poll(weekIndex, { message: "the clock moved and the layer did not", timeout: 30_000 })
     .toBe("35");
-  expect(before).not.toBe("35");
   await expectDrawn(page, id);
   expect(fetches, "a week change must not refetch the layer").toBe(0);
 
