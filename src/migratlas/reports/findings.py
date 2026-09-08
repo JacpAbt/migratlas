@@ -1688,19 +1688,26 @@ def collect() -> list[Finding]:
             caveat=(
                 "A pooled median hides the variation worth predicting: individual surveys reach "
                 "-0.22 and +0.26 °latitude per decade in opposite directions. The unit of "
-                "analysis has to be the species in its region, not the ocean. And this null was "
-                "tested for a mixture rather than left as an average: cut into thirds by where a "
-                "species sits in its own survey's water, by how fast that water warmed, and by how "
-                "deep it lives, no third moved differently from the others beyond what shuffling "
-                "the labels produces, and no grouping explained more than a twentieth of the "
-                "variation between pairs. A warming that hit some and spared the rest would look "
-                "like this median, and along these three axes it is not what is here. "
+                "analysis has to be the species in its region, not the ocean. "
                 + _sorting_sentence(phase3k.fit_species(pooled))
                 + " "
                 + _population_sentence(pooled)
                 + " "
                 + _season_sentence()
             ),
+            # The mixture check moved here when Phase 2h's computed sentence pushed this record
+            # page 40px over at 1600x900. It is the oldest sentence in the caveat and the least
+            # load-bearing of them: a robustness check that came back null, where the three that
+            # stayed each name what the shifts do not follow.
+            supporting=[
+                "This null was tested for a mixture rather than left as an average: cut into "
+                "thirds by where a species sits in its own survey's water, by how fast that water "
+                "warmed, and by how deep it lives, no third moved differently from the others "
+                "beyond what shuffling the labels produces, and no grouping explained more than a "
+                "twentieth of the variation between pairs. A warming that hit some and spared the "
+                "rest would look like this median, and along these three axes it is not what is "
+                "here."
+            ],
             method="docs/methods/phase1b-marine.md",
             direction="null",
             specimen_key=exemplar[0] if exemplar else None,

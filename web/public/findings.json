@@ -66,7 +66,7 @@
    "plain_how": "Government research ships have been dragging the same nets over the same seabed for decades. For each species in each survey we followed the middle of where it was caught, year by year, and fitted how fast that middle was moving north or south. Then we looked at all of those fits together instead of collapsing them into one \u2014 the disagreement between them is the result.",
    "value": "median -0.011 \u00b0latitude per decade across 2,240 species-survey pairs",
    "scope": "29 harmonised scientific bottom-trawl surveys, North America and Europe, on consistently sampled cells only.",
-   "caveat": "A pooled median hides the variation worth predicting: individual surveys reach -0.22 and +0.26 \u00b0latitude per decade in opposite directions. The unit of analysis has to be the species in its region, not the ocean. And this null was tested for a mixture rather than left as an average: cut into thirds by where a species sits in its own survey's water, by how fast that water warmed, and by how deep it lives, no third moved differently from the others beyond what shuffling the labels produces, and no grouping explained more than a twentieth of the variation between pairs. A warming that hit some and spared the rest would look like this median, and along these three axes it is not what is here. Whether the spread belongs to the animal or to the sea was asked for the 171 species caught in five or more surveys: grouped by species the coherence is 0.33 and grouped by survey 0.18, but a grouping into many small groups scores high with its labels shuffled, and over their own chance levels the two carry +0.12 and +0.14. Both are real, and neither leads. Nor do they follow numbers: cut by the size of each species' own change in abundance, the spread of shifts is +0.024 against +0.120 when cut by the trends' own precision, so what looked like abundance was rarity.",
+   "caveat": "A pooled median hides the variation worth predicting: individual surveys reach -0.22 and +0.26 \u00b0latitude per decade in opposite directions. The unit of analysis has to be the species in its region, not the ocean. Whether the spread belongs to the animal or to the sea was asked for the 171 species caught in five or more surveys: grouped by species the coherence is 0.33 and grouped by survey 0.18, but a grouping into many small groups scores high with its labels shuffled, and over their own chance levels the two carry +0.12 and +0.14. Both are real, and neither leads. Nor do they follow numbers: cut by the size of each species' own change in abundance, the spread of shifts is +0.024 against +0.120 when cut by the trends' own precision, so what looked like abundance was rarity. And a trend depends on the season that measured it: in 6 of 6 regions trawled in more than one season, the same species' two estimates disagree beyond their own errors, ranking species alike at only +0.30 to +0.62 \u2014 while two halves of one season sit at 0.79 of the error that would make it noise. Where a species is, as measured here, is a property of the animal and the season that looked.",
    "method": "docs/methods/phase1b-marine.md",
    "realm": "marine",
    "taxon_scope": "exact",
@@ -106,7 +106,9 @@
    "specimen_key": 5216014,
    "specimen": "Raja montagui went north in one survey and south in another. Watch it happen.",
    "direction": "null",
-   "supporting": []
+   "supporting": [
+    "This null was tested for a mixture rather than left as an average: cut into thirds by where a species sits in its own survey's water, by how fast that water warmed, and by how deep it lives, no third moved differently from the others beyond what shuffling the labels produces, and no grouping explained more than a twentieth of the variation between pairs. A warming that hit some and spared the rest would look like this median, and along these three axes it is not what is here."
+   ]
   },
   {
    "key": "composition-stable",
