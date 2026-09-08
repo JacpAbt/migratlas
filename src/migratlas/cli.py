@@ -883,6 +883,15 @@ def report_phase2g() -> None:
     print(phase2g.render())
 
 
+@report_app.command("phase2h")
+def report_phase2h() -> None:
+    """Is a marine where-shift a range shift, or a cut through a season?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2h  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2h.render())
+
+
 @report_app.command("phase3h")
 def report_phase3h() -> None:
     """The pooled-response ladder: does predicting a region beat predicting a station?"""

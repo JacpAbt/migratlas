@@ -322,6 +322,8 @@ phases:
 # not met its data is not evidence either way -- and listing them is what stops a phase quietly
 # never being graded.
 pending:
+  - note: phase2h-phase-cut.md
+    registered: 7
   - note: synthesis-2026-09.md
     registered: 4
   - note: phase2b-ssf.md
