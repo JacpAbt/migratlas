@@ -326,3 +326,41 @@ The spine's sentence, with the marine leg's estimand named: **when is the animal
 temperature; whether it thrives is the animal's; how it answers a wet year is the animal's; where it
 is follows neither warming, nor its own numbers, nor the rain — and where it is, as this project
 measures it, is a property of the animal and the season that looked.**
+
+---
+
+## Amendment, 2026-09-13: the radar's date is a transition, and the front is mostly stationary
+
+Phase 2i (#86) put ADR 0019's second test to the radar and the registered expectation failed, which
+is the more useful outcome. Within each year the median passage date was regressed on latitude
+across a panel of stations present in all 31 years: the intercept is the date at the panel's mean
+latitude, the slope is days per degree, and the slope is the only place an accumulating travel time
+can live.
+
+**The slope did not move.** Its trend covers zero in both bands and does not hold its sign between
+them, and its 2012 step covers zero. **The intercept did.** Its 2012 step is +1.879 d against Phase
+1c's published +1.41 ± 0.66, and its trend is clear of zero. A step in the level and not in the
+gradient is latitude-flat, which is what a departure change or a fleet-wide instrument change looks
+like and is not what a travel time that accumulates down a flyway looks like.
+
+**Claim 4 gains a named null**: the residual and the step are *not the front's speed*. **Claim 1's
+radar leg gains a name**: it is a transition — a departure timing seen from downstream — so claim 1's
+three legs are three transition dates rather than a mixture of transit, emergence and bloom. ADR
+0019 said the book could not call them one thing until a test said so; the test says it can.
+
+**And the aerial state split has its number, whatever the rest did.** The median-passage isochrone
+crosses the band at **101 km a day** while the birds inside it fly at **32.1 km an hour** over a
+**12.1-hour** night: a duty cycle of **0.260**, so about three quarters of the autumn passage period
+does not move the front forward. It is a lower bound, because a south-south-west heading covers more
+ground than a degree of latitude counts. The registered bar was 0.25 and the measurement is 0.260,
+so the prediction is graded false while the quantity is published — the threshold and the substance
+disagree and the threshold was written first.
+
+**Two cautions carried forward.** The spring control's slope step matches autumn's to 0.005 and both
+cover zero, which is the artefact pattern the control was written to catch without the precision to
+call it. And this panel's intercept trend is about twice Phase 2a's published advance, which this
+note did not register as a calibration and should have; the nulls are nulls on a 46-of-145 survivor
+panel until that is reconciled.
+
+The spine's sentence is unchanged, and what changed is beneath it: **when is the animal's and
+follows temperature — and on the radar, *when* is when it left, not how it travelled.**

@@ -297,6 +297,10 @@ report-phase2g:  ## Did the cells that got wetter gain birds? The southern atlas
 report-phase2h:  ## Is a marine where-shift a range shift, or a cut through a season?
 	$(RUN) migratlas report phase2h
 
+.PHONY: report-phase2i
+report-phase2i:  ## Is the radar's residual in the front's speed, or in the departure?
+	$(RUN) migratlas report phase2i
+
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
 	$(RUN) migratlas report phase3h

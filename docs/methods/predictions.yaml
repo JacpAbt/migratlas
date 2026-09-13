@@ -326,6 +326,23 @@ phases:
       0.085 miss on BITS-1 -- and correction 1 put the break term into the calibration, the seasonal
       trends and the control, because a refit inside one season would have read as a phase cut.
 
+  - note: phase2i-front-speed.md
+    registered: 7
+    true_: 2
+    false_: 5
+    ungradeable: 0
+    stop_conditions_fired: 1
+    comment: >-
+      The front's speed did not change and the 2012 step is not in it: both slope intervals cover
+      zero in both bands and the trend does not hold its sign between them. The step is in the
+      intercept (+1.879 d against Phase 1c's published +1.41 +/- 0.66), which is latitude-flat and so
+      departure-side or instrumental. Claim 4's residual gains "not the front's speed" and claim 1's
+      radar leg is named a transition. The duty cycle is 0.260 against a registered bar of 0.25 --
+      graded false, and published anyway as the aerial state split. Prediction 5 failed because the
+      step's latitude pattern is not linear, which is the design's fault and the run's most useful
+      finding. The intercept trend is twice Phase 2a's published advance on this 46-station survivor
+      panel, recorded as unreconciled.
+
   - note: forecast-a.md
     registered: 5
     true_: 4

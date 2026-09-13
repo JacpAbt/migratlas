@@ -892,6 +892,15 @@ def report_phase2h() -> None:
     print(phase2h.render())
 
 
+@report_app.command("phase2i")
+def report_phase2i() -> None:
+    """Is the radar's residual in the front's speed, or in the departure?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2i  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2i.render())
+
+
 @report_app.command("phase3h")
 def report_phase3h() -> None:
     """The pooled-response ladder: does predicting a region beat predicting a station?"""
