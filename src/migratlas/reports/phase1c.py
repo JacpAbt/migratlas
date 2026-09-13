@@ -92,8 +92,11 @@ class BreakFit(NamedTuple):
     step: float
 
 
-def _fit_break(years: np.ndarray, response: np.ndarray, break_year: int) -> BreakFit | None:
+def fit_break(years: np.ndarray, response: np.ndarray, break_year: int) -> BreakFit | None:
     """Least squares ``response ~ 1 + year + post_break``, returning both coefficients.
+
+    Public because Phase 2i fits the same break to the latitude gradient of passage date, and a
+    second copy of this specification is a second thing that can move.
 
     ``phase1_robustness._slope`` fits the same design but returns only the trend, because
     there the step is a nuisance to absorb. Here the step *is* the object of study, so both
@@ -282,7 +285,7 @@ def speed_drift(*, max_year: int = 2025) -> list[str]:
             ):
                 if group.height < MIN_YEARS:
                     continue
-                fit = _fit_break(
+                fit = fit_break(
                     group["year"].to_numpy(),
                     group[column].to_numpy().astype(float),
                     FLEET_MIDPOINT_YEAR,
@@ -383,7 +386,7 @@ def screening(*, max_year: int = 2025) -> list[str]:
         ):
             if group.height < MIN_YEARS:
                 continue
-            phenology = _fit_break(
+            phenology = fit_break(
                 group["year"].to_numpy(),
                 group["q50_doy"].to_numpy().astype(float),
                 FLEET_MIDPOINT_YEAR,
@@ -391,7 +394,7 @@ def screening(*, max_year: int = 2025) -> list[str]:
             rain_group = fixed.filter(pl.col("station_id") == station).sort("year")
             if phenology is None or rain_group.height < MIN_YEARS:
                 continue
-            rain = _fit_break(
+            rain = fit_break(
                 rain_group["year"].to_numpy(),
                 rain_group["rain"].to_numpy().astype(float),
                 FLEET_MIDPOINT_YEAR,
@@ -531,7 +534,7 @@ def _speed_trend(per_station_year: pl.DataFrame, column: str) -> SpeedTrend | No
     ):
         if group.height < MIN_YEARS:
             continue
-        fit = _fit_break(
+        fit = fit_break(
             group["year"].to_numpy(),
             group[column].to_numpy().astype(float),
             FLEET_MIDPOINT_YEAR,
@@ -748,10 +751,10 @@ def weather_or_instrument(*, max_year: int = 2025) -> list[str]:
                 continue
             ordered = group.sort("year")
             years = ordered["year"].to_numpy()
-            screened = _fit_break(
+            screened = fit_break(
                 years, ordered["screened"].to_numpy().astype(float), FLEET_MIDPOINT_YEAR
             )
-            rainfall = _fit_break(
+            rainfall = fit_break(
                 years, ordered["rainfall"].to_numpy().astype(float), FLEET_MIDPOINT_YEAR
             )
             if screened is None or rainfall is None:
