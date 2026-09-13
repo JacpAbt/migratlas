@@ -343,6 +343,24 @@ phases:
       finding. The intercept trend is twice Phase 2a's published advance on this 46-station survivor
       panel, recorded as unreconciled.
 
+  - note: phase2j-two-states.md
+    registered: 7
+    true_: 4
+    false_: 3
+    ungradeable: 0
+    stop_conditions_fired: 2
+    comment: >-
+      The registered split did not appear: the long-step state is the majority state in all five
+      fitted sources (0.52-0.75 against a bar of 0.5), so at a one-to-seven-hour fix interval a
+      two-state mixture separates ordinary movement from unusually short steps rather than transit
+      from residence, and the labels are not supported. Within the split that does exist the two
+      herds answer snow in opposite directions -- the reindeer with both more time in the long-step
+      state and longer steps, the elk with shorter steps and no change in the time budget -- which a
+      displacement averages away, and Phase 3a's null did. The fix-rate control fired in two of five
+      sources, half vindicating Phase 1h's refusal of path lengths. Two corrections: the control gate
+      was stricter than the registration, and Cochran's Q was n(n-1) identically (1892 = 44x43,
+      1560 = 40x39), quarantined and recomputed from each animal's own residuals.
+
   - note: forecast-a.md
     registered: 5
     true_: 4

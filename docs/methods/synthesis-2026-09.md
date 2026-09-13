@@ -364,3 +364,33 @@ panel until that is reconciled.
 
 The spine's sentence is unchanged, and what changed is beneath it: **when is the animal's and
 follows temperature — and on the radar, *when* is when it left, not how it travelled.**
+
+---
+
+## Amendment, 2026-09-13: the terrestrial states do not separate, and two herds still disagree
+
+Phase 2j (#87) is ADR 0019's third test and the only one that was to observe both states directly.
+**It did not.** A two-state model fitted to 5.9M GPS fixes over five species separates a short-step
+state from a long-step state, and the long-step state is the *majority* state in every source
+(0.52–0.75). At a one-to-seven-hour fix interval an ungulate is almost never motionless between
+fixes, so the mixture finds ordinary movement against unusually short steps rather than transit
+against residence. **The terrestrial half of ADR 0019's conjecture has no measurement**, and the
+successor is a straightness ratio rather than a step length — a residence state that is bounded
+movement, not stillness.
+
+**What the run did find belongs to claim 3.** In a snowier winter the Svalbard reindeer spend more
+of their time in the long-step state *and* take longer steps; the Yahatinda elk take *shorter* steps
+with no detectable change in their time budget. Two herds, opposite signs, different components.
+Phase 1h measured the displacement in these two herds and Phase 3a found it answered nothing —
+because a displacement is the product of the two things that moved here, and a product of a rise and
+a fall averages to the null that was published. **Claim 3 gains a fifth instance and its first from
+a tracked animal**: who the animal is decides its response, and the aggregate that hid it this time
+was not a median over species but a multiplication inside one animal.
+
+**Two corrections are recorded in the note**, one of them a number this project must never publish:
+Cochran's Q came back as `n(n−1)` exactly — 1892 over 44 animals, 1560 over 40 — because a single
+pooled spread had been used as every animal's error. It was quarantined rather than scored, and
+recomputed from each animal's own residuals.
+
+The spine's sentence is unchanged. What ADR 0019 asked for is now measured in the air and refused on
+the ground: **the front is mostly stationary and the herds will not say.**

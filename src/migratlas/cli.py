@@ -901,6 +901,15 @@ def report_phase2i() -> None:
     print(phase2i.render())
 
 
+@report_app.command("phase2j")
+def report_phase2j() -> None:
+    """Does an animal answer a hard winter by staying less, or by moving faster?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2j  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2j.render())
+
+
 @report_app.command("phase3h")
 def report_phase3h() -> None:
     """The pooled-response ladder: does predicting a region beat predicting a station?"""

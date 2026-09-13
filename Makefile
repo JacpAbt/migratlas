@@ -301,6 +301,10 @@ report-phase2h:  ## Is a marine where-shift a range shift, or a cut through a se
 report-phase2i:  ## Is the radar's residual in the front's speed, or in the departure?
 	$(RUN) migratlas report phase2i
 
+.PHONY: report-phase2j
+report-phase2j:  ## Does an animal answer a hard winter by staying less, or by moving faster?
+	$(RUN) migratlas report phase2j
+
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?
 	$(RUN) migratlas report phase3h
