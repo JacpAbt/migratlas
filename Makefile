@@ -98,6 +98,10 @@ sandbox:  ## Recompute the analysis with each safeguard off -> web/public/sandbo
 introduction:  ## Publish the book's introduction -> web/public/introduction.json
 	$(RUN) migratlas build-introduction
 
+.PHONY: chapters
+chapters:  ## Publish the book's chapter openers -> web/public/chapters.json
+	$(RUN) migratlas build-chapters
+
 .PHONY: response
 response:  ## Publish the fitted response as a dial with its envelope -> web/public/response.json
 	$(RUN) migratlas build-response

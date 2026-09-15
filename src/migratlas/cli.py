@@ -606,6 +606,24 @@ def build_introduction() -> None:
     print(f"{published} findings, {realms} realms, {sources} sources -> {path}")
 
 
+@app.command("build-chapters")
+def build_chapters() -> None:
+    """Publish the book's chapter openers -> web/public/chapters.json.
+
+    The argument between the claims, authored in `reports/chapters.py` and rendered verbatim.
+    Every number in it is read from the published ledger, so an opener cannot quote a figure the
+    record pages no longer carry -- which is the way narration goes stale without anyone noticing.
+
+    Needs no lake, and needs `findings.json` to already be built.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import chapters  # noqa: PLC0415 -- one command needs it
+
+    openers = chapters.build()
+    path = chapters.write(openers)
+    print(f"{len(openers)} chapter openers -> {path}")
+
+
 @app.command("build-response")
 def build_response(
     out: Annotated[Path, typer.Option(help="Where to write the response document.")] = Path(

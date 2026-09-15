@@ -92,7 +92,7 @@ def build() -> Introduction:
     limits = pointing.get("limit", 0)
     return Introduction(
         schema_version=SCHEMA_VERSION,
-        title="What this is",
+        title="An animal's year",
         standfirst=(
             "This is a notebook about where animals go and what is changing it. Not a summary of "
             "the field — a record of what this project has actually measured, including the parts "

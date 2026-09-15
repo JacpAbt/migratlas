@@ -63,7 +63,10 @@ async function ready(page: Page): Promise<ReadyReport> {
   await page.goto("?debug=1#ch=the-world");
   await expect
     .poll(
-      () => page.evaluate(() => (window as unknown as Hook).migratlas?.loaded?.length ?? 0),
+      () =>
+        page.evaluate(
+          () => (window as unknown as Hook).migratlas?.loaded?.length ?? 0,
+        ),
       { timeout: 20_000 },
     )
     .toBeGreaterThan(0);
@@ -138,7 +141,10 @@ async function settle(page: Page): Promise<void> {
 /** How many features the last frame actually drew for a layer. */
 const rendered = (page: Page, layer: string): Promise<number> =>
   page.evaluate(
-    (id) => (window as unknown as Hook).migratlas.map.queryRenderedFeatures({ layers: [id] }).length,
+    (id) =>
+      (window as unknown as Hook).migratlas.map.queryRenderedFeatures({
+        layers: [id],
+      }).length,
     layer,
   );
 
@@ -154,7 +160,9 @@ async function diagnose(page: Page, layer: string): Promise<string> {
       visibility: spec?.layout?.visibility ?? "visible",
       // Narrowed rather than cast: `LayerSpecification` is a union and a background layer has no
       // filter at all, which the hand-written type this file used to carry could not express.
-      filter: JSON.stringify(spec && "filter" in spec ? spec.filter : undefined),
+      filter: JSON.stringify(
+        spec && "filter" in spec ? spec.filter : undefined,
+      ),
       sourceLoaded: map.isSourceLoaded(id),
       allLayers: map.queryRenderedFeatures().length,
     });
@@ -172,14 +180,19 @@ const DRAW_TIMEOUT_MS = 8000;
  */
 async function expectDrawn(page: Page, layer: string): Promise<void> {
   try {
-    await expect.poll(() => rendered(page, layer), { timeout: DRAW_TIMEOUT_MS }).toBeGreaterThan(0);
+    await expect
+      .poll(() => rendered(page, layer), { timeout: DRAW_TIMEOUT_MS })
+      .toBeGreaterThan(0);
   } catch (error) {
     // Reports state, not a cause. An earlier version asserted "never drew a feature" for any
     // failure here, including Playwright's own test deadline -- which sent one investigation
     // through two wrong hypotheses before a screenshot showed the layer drawing perfectly.
-    throw new Error(`${layer} had 0 rendered features. State: ${await diagnose(page, layer)}`, {
-      cause: error,
-    });
+    throw new Error(
+      `${layer} had 0 rendered features. State: ${await diagnose(page, layer)}`,
+      {
+        cause: error,
+      },
+    );
   }
 }
 
@@ -201,7 +214,12 @@ const mapLayerFor = (page: Page, name: string): Promise<string> =>
  * rather than from a second HTTP fetch of the layer file -- re-downloading what the page already
  * has cost six extra requests per run and reset the connection often enough to redden the suite.
  */
-async function focusOn(page: Page, report: ReadyReport, name: string, layerId: string): Promise<void> {
+async function focusOn(
+  page: Page,
+  report: ReadyReport,
+  name: string,
+  layerId: string,
+): Promise<void> {
   const center = report.centers[name];
   expect(center, `no centre reported for ${name}`).toBeDefined();
 
@@ -218,7 +236,9 @@ async function focusOn(page: Page, report: ReadyReport, name: string, layerId: s
     `the panel and the map never disagree` relies on.
   */
   const row = report.layers.indexOf(name);
-  expect(row, `${name} is not in the reported layers`).toBeGreaterThanOrEqual(0);
+  expect(row, `${name} is not in the reported layers`).toBeGreaterThanOrEqual(
+    0,
+  );
   const box = page.locator(".layers li").nth(row).locator("input");
   if (!(await box.isChecked())) await box.check();
   /*
@@ -232,7 +252,9 @@ async function focusOn(page: Page, report: ReadyReport, name: string, layerId: s
     scale, so `log2(window / map)` is exactly the correction.
   */
   const shrink = await page.evaluate(() => {
-    const canvas = document.querySelector(".globe canvas")?.getBoundingClientRect();
+    const canvas = document
+      .querySelector(".globe canvas")
+      ?.getBoundingClientRect();
     if (!canvas || canvas.width === 0) return 0;
     return Math.max(0, Math.log2(window.innerWidth / canvas.width));
   });
@@ -267,7 +289,6 @@ async function focusOn(page: Page, report: ReadyReport, name: string, layerId: s
     if (index === cameras.length - 1) await expectDrawn(page, layerId);
   }
 }
-
 
 test("the globe reaches a usable style with coastlines", async ({ page }) => {
   await ready(page);
@@ -323,7 +344,9 @@ test("every layer draws features once it is switched on", async ({ page }) => {
   }
 });
 
-test("the layer panel publishes its generalisation statement", async ({ page }) => {
+test("the layer panel publishes its generalisation statement", async ({
+  page,
+}) => {
   await ready(page);
   await explore(page);
 
@@ -343,10 +366,14 @@ test("the layer panel publishes its generalisation statement", async ({ page }) 
   await expect(page.locator(".explore .terms")).not.toBeEmpty();
 
   await page.locator(".maplibregl-ctrl-attrib-button").click();
-  await expect(page.locator(".maplibregl-ctrl-attrib-inner")).toContainText("resolution");
+  await expect(page.locator(".maplibregl-ctrl-attrib-inner")).toContainText(
+    "resolution",
+  );
 });
 
-test("advancing the clock re-times the series layer without rebuilding it", async ({ page }) => {
+test("advancing the clock re-times the series layer without rebuilding it", async ({
+  page,
+}) => {
   test.setTimeout(90_000);
   const report = await ready(page);
   await explore(page);
@@ -383,11 +410,17 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
     the darts' rotation poll for the flake that made the point.
   */
   await expect
-    .poll(weekIndex, { message: "the clock moved and the layer did not", timeout: 30_000 })
+    .poll(weekIndex, {
+      message: "the clock moved and the layer did not",
+      timeout: 30_000,
+    })
     .toBe("14");
   await slider.fill("250");
   await expect
-    .poll(weekIndex, { message: "the clock moved and the layer did not", timeout: 30_000 })
+    .poll(weekIndex, {
+      message: "the clock moved and the layer did not",
+      timeout: 30_000,
+    })
     .toBe("35");
   await expectDrawn(page, id);
   expect(fetches, "a week change must not refetch the layer").toBe(0);
@@ -395,13 +428,17 @@ test("advancing the clock re-times the series layer without rebuilding it", asyn
   // The same clock walks the ice: day 250 sits in September, and the contour's filter is
   // month-keyed because monthly is the finest wheel its product turns on.
   const iceMonth = await page.evaluate(() => {
-    const filter = (window as unknown as Hook).migratlas.map.getFilter("contour-sea-ice-edge");
+    const filter = (window as unknown as Hook).migratlas.map.getFilter(
+      "contour-sea-ice-edge",
+    );
     return JSON.stringify(filter);
   });
   expect(iceMonth).toContain("9");
 });
 
-test("the passage layer wears its measured direction, and the clock turns it", async ({ page }) => {
+test("the passage layer wears its measured direction, and the clock turns it", async ({
+  page,
+}) => {
   test.setTimeout(90_000);
   const report = await ready(page);
   await explore(page);
@@ -418,7 +455,10 @@ test("the passage layer wears its measured direction, and the clock turns it", a
       return {
         image: map.hasImage("flow-dart"),
         rotate: JSON.stringify(map.getLayoutProperty(layer, "icon-rotate")),
-        alignment: map.getLayoutProperty(layer, "icon-rotation-alignment") as string,
+        alignment: map.getLayoutProperty(
+          layer,
+          "icon-rotation-alignment",
+        ) as string,
         drawn: map.queryRenderedFeatures({ layers: [layer] }).length,
       };
     }, flow);
@@ -426,9 +466,15 @@ test("the passage layer wears its measured direction, and the clock turns it", a
   const before = await state();
   expect(before.image, "the dart image is registered").toBe(true);
   expect(before.rotate).toContain("dw");
-  expect(before.alignment, "a bearing is geographic, not a screen decoration").toBe("map");
+  expect(
+    before.alignment,
+    "a bearing is geographic, not a screen decoration",
+  ).toBe("map");
   await expect
-    .poll(async () => (await state()).drawn, { message: "no darts rendered", timeout: 30_000 })
+    .poll(async () => (await state()).drawn, {
+      message: "no darts rendered",
+      timeout: 30_000,
+    })
     .toBeGreaterThan(0);
 
   await page.locator(".explore .time input").fill("250");
@@ -471,7 +517,9 @@ test("a station popup states the caveat with the number", async ({ page }) => {
       canvas's own origin is the conversion, and the point handed back stays container-relative
       because that is what Playwright's `position` on the canvas wants.
     */
-    const canvas = document.querySelector(".globe canvas")!.getBoundingClientRect();
+    const canvas = document
+      .querySelector(".globe canvas")!
+      .getBoundingClientRect();
     /*
       Everything the map has put on top of itself, not a list of the ones that used to be in the way.
 
@@ -487,8 +535,13 @@ test("a station popup states the caveat with the number", async ({ page }) => {
       .map((node) => node.getBoundingClientRect())
       .filter((box) => box.width > 0 && box.height > 0);
 
-    for (const feature of map.queryRenderedFeatures({ layers: ["series-aerial-passage"] })) {
-      const at = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
+    for (const feature of map.queryRenderedFeatures({
+      layers: ["series-aerial-passage"],
+    })) {
+      const at = (feature.geometry as GeoJSON.Point).coordinates as [
+        number,
+        number,
+      ];
       const { x, y } = map.project(at);
       const onScreen = { x: x + canvas.left, y: y + canvas.top };
       const covered = panels.some(
@@ -537,7 +590,10 @@ test("a station popup states the caveat with the number", async ({ page }) => {
   expect(day.background).toBe(day.paper);
   expect(day.color).toBe(day.ink);
 
-  await page.locator(".surface").getByRole("radio", { name: "Night", exact: true }).check();
+  await page
+    .locator(".surface")
+    .getByRole("radio", { name: "Night", exact: true })
+    .check();
   await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
   const night = await rendered();
   expect(night.background).toBe(night.paper);
@@ -545,7 +601,9 @@ test("a station popup states the caveat with the number", async ({ page }) => {
   expect(night.background).not.toBe(day.background);
 });
 
-test("each counterfactual is drawn to the scatter, and both to one frame", async ({ page }) => {
+test("each counterfactual is drawn to the scatter, and both to one frame", async ({
+  page,
+}) => {
   // The two geometric properties worth pinning, measured off the rendered SVG rather than the source
   // numbers, because it is the pixels that would lie.
   //
@@ -573,7 +631,9 @@ test("each counterfactual is drawn to the scatter, and both to one frame", async
           Number(tick.getAttribute("y")),
         );
         return {
-          gap: Math.abs(y(".chart__line--observed") - y(".chart__line--counterfactual")),
+          gap: Math.abs(
+            y(".chart__line--observed") - y(".chart__line--counterfactual"),
+          ),
           scatter: Math.max(...dots) - Math.min(...dots),
           ticks: ticks.join(","),
         };
@@ -606,7 +666,10 @@ test("each counterfactual is drawn to the scatter, and both to one frame", async
   // And the gaps must render *differently*, because they are different sizes. Equal heights here
   // would mean the shared frame was defeated somewhere downstream of the ticks.
   const gaps = charts.map((chart) => Math.round(chart.gap));
-  expect(new Set(gaps).size, `both gaps render at ${gaps[0]}px`).toBeGreaterThan(1);
+  expect(
+    new Set(gaps).size,
+    `both gaps render at ${gaps[0]}px`,
+  ).toBeGreaterThan(1);
 });
 
 test("no ribbon is drawn past its own frame, and each shades where its evidence stops", async ({
@@ -621,20 +684,28 @@ test("no ribbon is drawn past its own frame, and each shades where its evidence 
   const readChart = () =>
     page.locator(".chart__svg").evaluateAll((nodes) =>
       nodes.map((node) => {
-      const box = (node as unknown as SVGSVGElement).viewBox.baseVal;
-      const labels = [...node.querySelectorAll<SVGTextElement>(".chart__label, .chart__rate")];
-      return {
-        overflowing: labels
-          .filter((label) => label.getBBox().x + label.getBBox().width > box.width)
-          .map((label) => label.textContent?.trim()),
-        // The plot's right edge, so a band can be told apart from no band at all.
-        band: node.querySelector<SVGRectElement>(".chart__beyond")?.x.baseVal.value ?? null,
-        lineEnds: [...node.querySelectorAll<SVGLineElement>(".chart__line")].map((line) =>
-          Math.round(line.x2.baseVal.value),
-        ),
-      };
-    }),
-  );
+        const box = (node as unknown as SVGSVGElement).viewBox.baseVal;
+        const labels = [
+          ...node.querySelectorAll<SVGTextElement>(
+            ".chart__label, .chart__rate",
+          ),
+        ];
+        return {
+          overflowing: labels
+            .filter(
+              (label) => label.getBBox().x + label.getBBox().width > box.width,
+            )
+            .map((label) => label.textContent?.trim()),
+          // The plot's right edge, so a band can be told apart from no band at all.
+          band:
+            node.querySelector<SVGRectElement>(".chart__beyond")?.x.baseVal
+              .value ?? null,
+          lineEnds: [
+            ...node.querySelectorAll<SVGLineElement>(".chart__line"),
+          ].map((line) => Math.round(line.x2.baseVal.value)),
+        };
+      }),
+    );
 
   const measured: Awaited<ReturnType<typeof readChart>> = [];
   for (const at of [0, 1, 2, 3]) {
@@ -645,7 +716,10 @@ test("no ribbon is drawn past its own frame, and each shades where its evidence 
   }
 
   for (const chart of measured) {
-    expect(chart.overflowing, "labels printing past the chart's own box").toEqual([]);
+    expect(
+      chart.overflowing,
+      "labels printing past the chart's own box",
+    ).toEqual([]);
     // Both lines in a ribbon end at the same x -- its window's end. One reaching further would be a
     // counterfactual drawn over years its own method never saw.
     expect(new Set(chart.lineEnds).size).toBe(1);
@@ -654,8 +728,14 @@ test("no ribbon is drawn past its own frame, and each shades where its evidence 
   // Every chart declares where its attribution stops, and they stop in different places: DAMIP's
   // share is fitted to 2014, ATTRICI's counterfactual series ends in 2019.
   const bands = measured.map((chart) => chart.band);
-  expect(bands.every((band) => band !== null), "a chart with no limit drawn").toBe(true);
-  expect(new Set(bands).size, "both charts shade from the same year").toBeGreaterThan(1);
+  expect(
+    bands.every((band) => band !== null),
+    "a chart with no limit drawn",
+  ).toBe(true);
+  expect(
+    new Set(bands).size,
+    "both charts shade from the same year",
+  ).toBeGreaterThan(1);
 
   // And the two labels say different things, because they are different kinds of limit -- a series
   // that ran out against a ratio carried past what fitted it.
@@ -663,7 +743,9 @@ test("no ribbon is drawn past its own frame, and each shades where its evidence 
   expect(new Set(said.map((text) => text.trim())).size).toBe(said.length);
 });
 
-test("the detectability layer draws, and most of it is not detectable", async ({ page }) => {
+test("the detectability layer draws, and most of it is not detectable", async ({
+  page,
+}) => {
   test.setTimeout(90_000);
   const report = await ready(page);
   await explore(page);
@@ -679,11 +761,19 @@ test("the detectability layer draws, and most of it is not detectable", async ({
   await expect(page.locator(".explore .key li")).toHaveCount(4);
   const shares = await page.locator(".explore .key em").allTextContents();
   const detectable = Number.parseFloat(shares[0] ?? "0");
-  expect(detectable, "nothing is detectable, so the layer is broken").toBeGreaterThan(0);
-  expect(detectable, "most of the world is detectable, which is not true").toBeLessThan(50);
+  expect(
+    detectable,
+    "nothing is detectable, so the layer is broken",
+  ).toBeGreaterThan(0);
+  expect(
+    detectable,
+    "most of the world is detectable, which is not true",
+  ).toBeLessThan(50);
 });
 
-test("a missing ledger says so rather than leaving a blank page", async ({ page }) => {
+test("a missing ledger says so rather than leaving a blank page", async ({
+  page,
+}) => {
   /*
     The old shell degraded to a globe with a broken panel, because layers were its subject. The
     book's subject is the claims, so there is nothing to carry on with -- and this test's own reason
@@ -694,7 +784,9 @@ test("a missing ledger says so rather than leaving a blank page", async ({ page 
     So the assertion changed shape and kept its point: the failure is *stated*. There is no
     half-working page to check, which is the honest outcome rather than a lesser one.
   */
-  await page.route("**/findings.json", (route) => route.fulfill({ status: 404, body: "" }));
+  await page.route("**/findings.json", (route) =>
+    route.fulfill({ status: 404, body: "" }),
+  );
   await page.goto("?debug=1#ch=the-world");
 
   const notice = page.locator(".boot-failure");
@@ -749,7 +841,9 @@ const BUDGET = {
 /** Data the page fetches for itself. The basemap is excluded: it is not ours and it is not built. */
 const PAYLOAD = /\/(layers\/.*|[^/]+)\.(geojson|json)$/;
 
-test("the published layers stay inside the performance budget", async ({ page }) => {
+test("the published layers stay inside the performance budget", async ({
+  page,
+}) => {
   // Must outlast its own readyMs ceiling by a clear margin, or the test dies before the assertion
   // it exists to make can fail. Raising that ceiling to 20s while leaving this on Playwright's 30s
   // default made the budget unfalsifiable and still red -- worst of both.
@@ -768,7 +862,10 @@ test("the published layers stay inside the performance budget", async ({ page })
       response
         .request()
         .sizes()
-        .then(({ responseBodySize }): [string, number] => [url.pathname, responseBodySize])
+        .then(({ responseBodySize }): [string, number] => [
+          url.pathname,
+          responseBodySize,
+        ])
         .catch((): [string, number] => [url.pathname, 0]),
     );
   });
@@ -785,7 +882,9 @@ test("the published layers stay inside the performance budget", async ({ page })
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("HeapProfiler.collectGarbage");
   const heapMb = await page.evaluate(() => {
-    const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
+    const memory = (
+      performance as Performance & { memory?: { usedJSHeapSize: number } }
+    ).memory;
     return memory ? memory.usedJSHeapSize / 1_048_576 : 0;
   });
   await cdp.detach();
@@ -793,10 +892,14 @@ test("the published layers stay inside the performance budget", async ({ page })
   const measured = await Promise.all(sizes);
   const payloadBytes = measured.reduce((sum, [, bytes]) => sum + bytes, 0);
 
-  expect(report.layers.length, "no layers means the budget proves nothing").toBeGreaterThan(0);
-  expect(payloadBytes, "measured no payload bytes, so the budget proves nothing").toBeGreaterThan(
-    100_000,
-  );
+  expect(
+    report.layers.length,
+    "no layers means the budget proves nothing",
+  ).toBeGreaterThan(0);
+  expect(
+    payloadBytes,
+    "measured no payload bytes, so the budget proves nothing",
+  ).toBeGreaterThan(100_000);
   expect(heapMb, `heap ${heapMb.toFixed(1)} MB`).toBeLessThan(BUDGET.heapMb);
   expect(readyMs, `ready in ${readyMs} ms`).toBeLessThan(BUDGET.readyMs);
   expect(
@@ -811,7 +914,9 @@ test("the published layers stay inside the performance budget", async ({ page })
   // which cost a bisect to find out that the hatch was 7 ms and the layers were loading one after
   // another. A number you cannot decompose is a number you cannot act on.
   const phases = await page.evaluate(
-    () => (window as unknown as { migratlas: { phases: Record<string, number> } }).migratlas.phases,
+    () =>
+      (window as unknown as { migratlas: { phases: Record<string, number> } })
+        .migratlas.phases,
   );
   const slowest = Object.entries(phases)
     .sort((a, b) => b[1] - a[1])
@@ -825,7 +930,9 @@ test("the published layers stay inside the performance budget", async ({ page })
   );
 });
 
-test("a gridded layer decodes to the cell count its sidecar declares", async ({ page }) => {
+test("a gridded layer decodes to the cell count its sidecar declares", async ({
+  page,
+}) => {
   // The grid format is an 8x compaction, which is only safe if it is exact. The Python side
   // pins the encoding; this pins the decoding against the same recorded cell count.
   const report = await ready(page);
@@ -836,7 +943,9 @@ test("a gridded layer decodes to the cell count its sidecar declares", async ({ 
     expect(meta.format).toBe("grid");
 
     const decoded = report.cells[name];
-    expect(decoded, `${name} decoded ${decoded} of ${meta.cells} cells`).toBe(meta.cells);
+    expect(decoded, `${name} decoded ${decoded} of ${meta.cells} cells`).toBe(
+      meta.cells,
+    );
   }
 });
 
@@ -849,7 +958,10 @@ test("searching a species draws its own surface", async ({ page }) => {
 
   const index = await page.request
     .get("taxon-index.json")
-    .then((r) => r.json() as Promise<{ taxa: { scientific: string; cells: number }[] }>);
+    .then(
+      (r) =>
+        r.json() as Promise<{ taxa: { scientific: string; cells: number }[] }>,
+    );
   expect(index.taxa.length).toBeGreaterThan(100);
 
   // The widest-ranging taxon is first, which makes this deterministic.
@@ -868,21 +980,28 @@ test("searching a species draws its own surface", async ({ page }) => {
   await expectDrawn(page, "selected-species");
   // Named back to the reader, with the layer it came from: a map that changed for no stated
   // reason is worse than one that did not change.
-  await expect(page.locator(".chosen")).toContainText(target.scientific.split(" ")[0]!);
+  await expect(page.locator(".chosen")).toContainText(
+    target.scientific.split(" ")[0]!,
+  );
 });
 
-test("a species shard is fetched only when a species is chosen", async ({ page }) => {
+test("a species shard is fetched only when a species is chosen", async ({
+  page,
+}) => {
   // 3,523 marine taxa at one degree are 9.1 MiB in total. Loading that for a search box would
   // blow the budget outright, so shards must stay lazy.
   const shardRequests: string[] = [];
   page.on("request", (request) => {
-    if (/species-\d\d\.json/.test(request.url())) shardRequests.push(request.url());
+    if (/species-\d\d\.json/.test(request.url()))
+      shardRequests.push(request.url());
   });
 
   await ready(page);
   await explore(page);
   await page.locator("#taxon-search").fill("zz-no-such-animal");
-  expect(shardRequests, "no shard should load before a selection").toHaveLength(0);
+  expect(shardRequests, "no shard should load before a selection").toHaveLength(
+    0,
+  );
 });
 
 test("the default build requests nothing off-origin", async ({ page }) => {
@@ -891,7 +1010,8 @@ test("the default build requests nothing off-origin", async ({ page }) => {
   // no coastlines. Nothing outside this app may be required to draw the map.
   const external: string[] = [];
   page.on("request", (request) => {
-    if (!request.url().startsWith("http://localhost")) external.push(request.url());
+    if (!request.url().startsWith("http://localhost"))
+      external.push(request.url());
   });
 
   const report = await ready(page);
@@ -910,10 +1030,14 @@ test("the default build requests nothing off-origin", async ({ page }) => {
   // leave this origin -- fonts, the layer JSONs, the bundled basemap -- has already happened, which
   // is exactly what `ready` waits for.
   await expectDrawn(page, "series-aerial-passage");
-  expect(external, `off-origin requests: ${external.join(", ")}`).toHaveLength(0);
+  expect(external, `off-origin requests: ${external.join(", ")}`).toHaveLength(
+    0,
+  );
 });
 
-test("the land is hatched, and the hatch tile meets its own edge", async ({ page }) => {
+test("the land is hatched, and the hatch tile meets its own edge", async ({
+  page,
+}) => {
   await ready(page);
 
   // The hatch is a repeating image rather than a fill colour, because MapLibre draws WebGL from
@@ -928,7 +1052,10 @@ test("the land is hatched, and the hatch tile meets its own edge", async ({ page
     };
   });
   expect(land.pattern, "the land is not hatched").toBe("land-hatch");
-  expect(land.colour, "no fill colour under the pattern to fall back to").toBeTruthy();
+  expect(
+    land.colour,
+    "no fill colour under the pattern to fall back to",
+  ).toBeTruthy();
   expect(land.registered, "the hatch image never reached the style").toBe(true);
 
   // And the part that is easy to get wrong and impossible to see: a tiled image has to meet its own
@@ -939,7 +1066,9 @@ test("the land is hatched, and the hatch tile meets its own edge", async ({ page
   // the tile. A seamless tile has a seam no worse than its own roughest interior column; a broken
   // one has an outlier there, and that is the whole test.
   const seam = await page.evaluate(() => {
-    const image = (window as unknown as Hook).migratlas.map.getImage("land-hatch");
+    const image = (window as unknown as Hook).migratlas.map.getImage(
+      "land-hatch",
+    );
     // MapLibre's own `RGBAImage`, which is `ImageData`'s shape without a colour space. Through
     // `unknown`, because the two do not overlap enough for a direct assertion and pretending they do
     // is how a real mismatch would slip through later.
@@ -947,12 +1076,14 @@ test("the land is hatched, and the hatch tile meets its own edge", async ({ page
     const at = (x: number, y: number) => data[(y * width + x) * 4]!;
     const between = (left: number, right: number) => {
       let total = 0;
-      for (let y = 0; y < height; y += 1) total += Math.abs(at(left, y) - at(right, y));
+      for (let y = 0; y < height; y += 1)
+        total += Math.abs(at(left, y) - at(right, y));
       return total / height;
     };
 
     let inside = 0;
-    for (let x = 0; x < width - 1; x += 1) inside = Math.max(inside, between(x, x + 1));
+    for (let x = 0; x < width - 1; x += 1)
+      inside = Math.max(inside, between(x, x + 1));
     return { across: between(width - 1, 0), inside };
   });
 
@@ -979,7 +1110,9 @@ test("the land is hatched, and the hatch tile meets its own edge", async ({ page
     const declared = String(map.getPaintProperty("land", "fill-color"));
     return {
       mean: total.map((sum) => Math.round(sum / count)),
-      land: [1, 3, 5].map((at) => Number.parseInt(declared.slice(at, at + 2), 16)),
+      land: [1, 3, 5].map((at) =>
+        Number.parseInt(declared.slice(at, at + 2), 16),
+      ),
     };
   });
 
@@ -1005,8 +1138,12 @@ test("the graticule is ruled by hand, bounded, and gone before it could mislead"
   });
 
   // Over the fill and under the ink, which is where a ruled grid sits on paper.
-  expect(grid.order.indexOf("graticule")).toBeGreaterThan(grid.order.indexOf("land"));
-  expect(grid.order.indexOf("graticule")).toBeLessThan(grid.order.indexOf("coast"));
+  expect(grid.order.indexOf("graticule")).toBeGreaterThan(
+    grid.order.indexOf("land"),
+  );
+  expect(grid.order.indexOf("graticule")).toBeLessThan(
+    grid.order.indexOf("coast"),
+  );
 
   // The honesty constraint, and the reason a wobble is allowed here at all: a graticule is a
   // coordinate claim -- a line that says "this is thirty degrees west" -- so a drawn one is only
@@ -1014,7 +1151,10 @@ test("the graticule is ruled by hand, bounded, and gone before it could mislead"
   // reach it before half a degree is a visible distance.
   const stops = grid.opacity as unknown[];
   const lastStop = Number(stops[stops.length - 2]);
-  expect(stops.at(-1), `the graticule never fades out: ${JSON.stringify(stops)}`).toBe(0);
+  expect(
+    stops.at(-1),
+    `the graticule never fades out: ${JSON.stringify(stops)}`,
+  ).toBe(0);
   expect(
     lastStop,
     `still drawn at zoom ${lastStop}, where half a degree is a visible distance`,
@@ -1027,26 +1167,39 @@ test("the graticule is ruled by hand, bounded, and gone before it could mislead"
   const source = graticuleSource() as { data: GeoJSON.FeatureCollection };
   const worst: Record<string, number> = { meridian: 0, parallel: 0 };
   for (const feature of source.data.features) {
-    const points = (feature.geometry as GeoJSON.LineString).coordinates as [number, number][];
+    const points = (feature.geometry as GeoJSON.LineString).coordinates as [
+      number,
+      number,
+    ][];
     const lons = points.map(([lon]) => lon);
     const lats = points.map(([, lat]) => lat);
     // A meridian varies in latitude by design and a parallel in longitude, so which axis carries
     // the claim is decided by which one spans the globe.
     const meridian = Math.max(...lats) - Math.min(...lats) > 90;
     const values = meridian ? lons : lats;
-    const nominal = Math.round(values.reduce((sum, v) => sum + v, 0) / values.length / 30) * 30;
+    const nominal =
+      Math.round(values.reduce((sum, v) => sum + v, 0) / values.length / 30) *
+      30;
     const off = Math.max(...values.map((v) => Math.abs(v - nominal)));
     const kind = meridian ? "meridian" : "parallel";
     worst[kind] = Math.max(worst[kind]!, off);
   }
 
   for (const [kind, off] of Object.entries(worst)) {
-    expect(off, `a ${kind} wanders ${off.toFixed(2)} degrees off true`).toBeLessThanOrEqual(0.6);
-    expect(off, `a ${kind} does not wander at all, so it is not drawn`).toBeGreaterThan(0.05);
+    expect(
+      off,
+      `a ${kind} wanders ${off.toFixed(2)} degrees off true`,
+    ).toBeLessThanOrEqual(0.6);
+    expect(
+      off,
+      `a ${kind} does not wander at all, so it is not drawn`,
+    ).toBeGreaterThan(0.05);
   }
 });
 
-test("the drawn coastline is bounded, and hands over to the surveyed one", async ({ page }) => {
+test("the drawn coastline is bounded, and hands over to the surveyed one", async ({
+  page,
+}) => {
   await ready(page);
 
   const coast = await page.evaluate(() => {
@@ -1067,25 +1220,36 @@ test("the drawn coastline is bounded, and hands over to the surveyed one", async
     };
     return {
       ids,
-      drawnAt: [0, 1.8, 2.2, 2.6, 4].map((zoom) => opacityAt("coast-drawn", zoom)),
+      drawnAt: [0, 1.8, 2.2, 2.6, 4].map((zoom) =>
+        opacityAt("coast-drawn", zoom),
+      ),
       trueAt: [0, 1.8, 2.2, 2.6, 4].map((zoom) => opacityAt("coast", zoom)),
     };
   });
 
   // Under the surveyed line, so the accurate one paints over the sketch rather than beneath it.
-  expect(coast.ids.indexOf("coast-drawn")).toBeLessThan(coast.ids.indexOf("coast"));
+  expect(coast.ids.indexOf("coast-drawn")).toBeLessThan(
+    coast.ids.indexOf("coast"),
+  );
 
   // The crossfade has to be complementary at every zoom sampled: there is no zoom at which the
   // globe has no coastline, and none at which the drawn one is still up after the surveyed one has
   // arrived. This is the assertion that makes the wobble defensible rather than merely small.
   for (const [index, drawn] of coast.drawnAt.entries()) {
     const surveyed = coast.trueAt[index]!;
-    expect(drawn + surveyed, `both coastlines faint together at sample ${index}`).toBeGreaterThan(
-      0.85,
-    );
+    expect(
+      drawn + surveyed,
+      `both coastlines faint together at sample ${index}`,
+    ).toBeGreaterThan(0.85);
   }
-  expect(coast.drawnAt.at(-1), "the sketch is still drawn where a reader could measure").toBe(0);
-  expect(coast.trueAt.at(-1), "the surveyed coastline never reaches full strength").toBe(1);
+  expect(
+    coast.drawnAt.at(-1),
+    "the sketch is still drawn where a reader could measure",
+  ).toBe(0);
+  expect(
+    coast.trueAt.at(-1),
+    "the surveyed coastline never reaches full strength",
+  ).toBe(1);
 
   // And the deviation itself, against the real Natural Earth geometry rather than a fixture: every
   // drawn vertex within JITTER of the shore it is a sketch of, and every small island at exactly
@@ -1099,7 +1263,8 @@ test("the drawn coastline is bounded, and hands over to the surveyed one", async
   for (const feature of land.features) {
     const geometry = feature.geometry;
     if (geometry.type === "Polygon") rings.push(...geometry.coordinates);
-    else if (geometry.type === "MultiPolygon") rings.push(...geometry.coordinates.flat());
+    else if (geometry.type === "MultiPolygon")
+      rings.push(...geometry.coordinates.flat());
   }
 
   let worst = 0;
@@ -1112,8 +1277,11 @@ test("the drawn coastline is bounded, and hands over to the surveyed one", async
       Math.max(...lons) - Math.min(...lons) < MIN_EXTENT &&
       Math.max(...lats) - Math.min(...lats) < MIN_EXTENT;
     for (let pass = 0; pass < (small ? 1 : 2); pass += 1) {
-      const stroke = (drawn.features[cursor]!.geometry as GeoJSON.LineString).coordinates;
-      expect(stroke.length, "a pass changed the vertex count of its ring").toBe(ring.length);
+      const stroke = (drawn.features[cursor]!.geometry as GeoJSON.LineString)
+        .coordinates;
+      expect(stroke.length, "a pass changed the vertex count of its ring").toBe(
+        ring.length,
+      );
       let off = 0;
       for (const [index, [lon, lat]] of stroke.entries()) {
         const [trueLon, trueLat] = ring[index] as [number, number];
@@ -1128,12 +1296,19 @@ test("the drawn coastline is bounded, and hands over to the surveyed one", async
     }
   }
 
-  expect(cursor, "the sketch and the survey disagree about how many rings there are").toBe(
-    drawn.features.length,
-  );
-  expect(worst, `a drawn shore is ${worst.toFixed(3)} degrees off true`).toBeLessThanOrEqual(JITTER);
+  expect(
+    cursor,
+    "the sketch and the survey disagree about how many rings there are",
+  ).toBe(drawn.features.length);
+  expect(
+    worst,
+    `a drawn shore is ${worst.toFixed(3)} degrees off true`,
+  ).toBeLessThanOrEqual(JITTER);
   expect(worst, "nothing wobbled, so nothing was drawn").toBeGreaterThan(0.1);
-  expect(untouched, "no island was small enough to be left alone").toBeGreaterThan(0);
+  expect(
+    untouched,
+    "no island was small enough to be left alone",
+  ).toBeGreaterThan(0);
 });
 
 test("the drawn shore wobbles the same amount in both directions, at every latitude", async () => {
@@ -1158,7 +1333,8 @@ test("the drawn shore wobbles the same amount in both directions, at every latit
   for (const feature of land.features) {
     const geometry = feature.geometry;
     if (geometry.type === "Polygon") rings.push(...geometry.coordinates);
-    else if (geometry.type === "MultiPolygon") rings.push(...geometry.coordinates.flat());
+    else if (geometry.type === "MultiPolygon")
+      rings.push(...geometry.coordinates.flat());
   }
 
   const KM_PER_DEGREE = 111.195;
@@ -1171,14 +1347,18 @@ test("the drawn shore wobbles the same amount in both directions, at every latit
       Math.max(...lons) - Math.min(...lons) < MIN_EXTENT &&
       Math.max(...lats) - Math.min(...lats) < MIN_EXTENT;
     for (let pass = 0; pass < (small ? 1 : 2); pass += 1) {
-      const stroke = (drawn.features[cursor]!.geometry as GeoJSON.LineString).coordinates;
+      const stroke = (drawn.features[cursor]!.geometry as GeoJSON.LineString)
+        .coordinates;
       cursor += 1;
       if (small) continue;
       for (const [index, [lon, lat]] of stroke.entries()) {
         const [trueLon, trueLat] = ring[index] as [number, number];
         const band = Math.min(80, Math.floor(Math.abs(trueLat) / 10) * 10);
         const seen = bands.get(band) ?? { east: 0, north: 0, n: 0 };
-        seen.east += Math.abs(lon! - trueLon) * KM_PER_DEGREE * Math.cos((trueLat * Math.PI) / 180);
+        seen.east +=
+          Math.abs(lon! - trueLon) *
+          KM_PER_DEGREE *
+          Math.cos((trueLat * Math.PI) / 180);
         seen.north += Math.abs(lat! - trueLat) * KM_PER_DEGREE;
         seen.n += 1;
         bands.set(band, seen);
@@ -1189,9 +1369,15 @@ test("the drawn shore wobbles the same amount in both directions, at every latit
   // The high-latitude bands are the ones that were wrong and the ones the herd layers need.
   for (const band of [60, 70, 80]) {
     const seen = bands.get(band);
-    expect(seen, `no coastline vertices in the ${band}-degree band`).toBeTruthy();
+    expect(
+      seen,
+      `no coastline vertices in the ${band}-degree band`,
+    ).toBeTruthy();
     const ratio = seen!.north / seen!.east;
-    expect(ratio, `at ${band}N the wobble is ${ratio.toFixed(2)}x taller than wide`).toBeLessThan(2);
+    expect(
+      ratio,
+      `at ${band}N the wobble is ${ratio.toFixed(2)}x taller than wide`,
+    ).toBeLessThan(2);
     expect(
       ratio,
       `at ${band}N the wobble is ${(1 / ratio).toFixed(2)}x wider than tall`,
@@ -1199,7 +1385,9 @@ test("the drawn shore wobbles the same amount in both directions, at every latit
   }
 });
 
-test("the panel and the map never disagree about what is drawn", async ({ page }) => {
+test("the panel and the map never disagree about what is drawn", async ({
+  page,
+}) => {
   /*
     Ninety seconds, like every other test in this file that drives the map.
 
@@ -1231,17 +1419,24 @@ test("the panel and the map never disagree about what is drawn", async ({ page }
   const compare = () =>
     page.evaluate(() => {
       const { map, loaded } = (window as unknown as Hook).migratlas;
-      const boxes = [...document.querySelectorAll<HTMLInputElement>(".layers input")];
+      const boxes = [
+        ...document.querySelectorAll<HTMLInputElement>(".layers input"),
+      ];
       return loaded.map((layer, index) => {
         const id =
           map
             .getStyle()
             .layers.map((entry: { id: string }) => entry.id)
-            .find((entry: string) => entry === layer.meta.name || entry.endsWith(`-${layer.meta.name}`)) ??
-          "";
+            .find(
+              (entry: string) =>
+                entry === layer.meta.name ||
+                entry.endsWith(`-${layer.meta.name}`),
+            ) ?? "";
         return {
           name: layer.meta.name,
-          drawn: id ? (map.getLayoutProperty(id, "visibility") ?? "visible") !== "none" : false,
+          drawn: id
+            ? (map.getLayoutProperty(id, "visibility") ?? "visible") !== "none"
+            : false,
           ticked: boxes[index]?.checked ?? null,
         };
       });
@@ -1256,7 +1451,9 @@ test("the panel and the map never disagree about what is drawn", async ({ page }
   // was drawn over everything else.
   const disagreed = onArrival.filter((layer) => layer.drawn !== layer.ticked);
   expect(
-    disagreed.map((l) => `${l.name}: drawn=${l.drawn} ticked=${String(l.ticked)}`),
+    disagreed.map(
+      (l) => `${l.name}: drawn=${l.drawn} ticked=${String(l.ticked)}`,
+    ),
     "the panel and the map disagree on arrival",
   ).toEqual([]);
 
@@ -1272,16 +1469,23 @@ test("the panel and the map never disagree about what is drawn", async ({ page }
     the darts' rotation poll for the flake that made the point.
   */
   await expect
-    .poll(async () => (await compare()).filter((layer) => layer.drawn !== layer.ticked).length, {
-      message: "a ticked layer is not drawn",
-      timeout: 60_000,
-    })
+    .poll(
+      async () =>
+        (await compare()).filter((layer) => layer.drawn !== layer.ticked)
+          .length,
+      {
+        message: "a ticked layer is not drawn",
+        timeout: 60_000,
+      },
+    )
     .toBe(0);
 
   // Every one of them actually moved, or the loop above proved nothing.
   const afterward = await compare();
   for (const [index, layer] of afterward.entries()) {
-    expect(layer.ticked, `${layer.name} did not toggle`).not.toBe(onArrival[index]!.ticked);
+    expect(layer.ticked, `${layer.name} did not toggle`).not.toBe(
+      onArrival[index]!.ticked,
+    );
   }
 });
 
@@ -1295,7 +1499,9 @@ test("the panel and the map never disagree about what is drawn", async ({ page }
  * negative number is NaN, so handing this layer to that path would silently blank every cell that
  * fell. The manifest declares the scale and this asserts the declaration was honoured.
  */
-test("the atlas surface draws its losses and its gains apart", async ({ page }) => {
+test("the atlas surface draws its losses and its gains apart", async ({
+  page,
+}) => {
   await ready(page);
   // `ready` returns on the first layer to land, and explore is what loads the rest. Then polled,
   // because a fetch of 496 cells finishing is not the same event as the style having the layer.
@@ -1304,7 +1510,11 @@ test("the atlas surface draws its losses and its gains apart", async ({ page }) 
     .poll(
       () =>
         page.evaluate(() =>
-          Boolean((window as unknown as Hook).migratlas.map.getLayer("surface-atlas-taxa-change")),
+          Boolean(
+            (window as unknown as Hook).migratlas.map.getLayer(
+              "surface-atlas-taxa-change",
+            ),
+          ),
         ),
       { timeout: 20_000 },
     )
@@ -1312,14 +1522,18 @@ test("the atlas surface draws its losses and its gains apart", async ({ page }) 
 
   const drawn = await page.evaluate(async () => {
     const { map } = (window as unknown as Hook).migratlas;
-    const manifest = (await fetch("layers/manifest.json").then((r) => r.json())) as {
+    const manifest = (await fetch("layers/manifest.json").then((r) =>
+      r.json(),
+    )) as {
       name: string;
       scale: string;
     }[];
     const entry = manifest.find((one) => one.name === "atlas-taxa-change");
     // From the published grid rather than out of MapLibre's source object: `_data` is private and
     // absent in v6, and what matters is what was *published* anyway.
-    const grid = (await fetch("layers/atlas-taxa-change.grid.json").then((r) => r.json())) as {
+    const grid = (await fetch("layers/atlas-taxa-change.grid.json").then((r) =>
+      r.json(),
+    )) as {
       v: number[];
     };
     const values = grid.v;
@@ -1328,8 +1542,12 @@ test("the atlas surface draws its losses and its gains apart", async ({ page }) 
       declared: entry?.scale,
       layer: Boolean(map.getLayer("surface-atlas-taxa-change")),
       colour: map.getPaintProperty("surface-atlas-taxa-change", "circle-color"),
-      stroke: map.getPaintProperty("surface-atlas-taxa-change", "circle-stroke-width"),
-      expanded: loaded.find((one) => one.meta.name === "atlas-taxa-change")?.cells ?? 0,
+      stroke: map.getPaintProperty(
+        "surface-atlas-taxa-change",
+        "circle-stroke-width",
+      ),
+      expanded:
+        loaded.find((one) => one.meta.name === "atlas-taxa-change")?.cells ?? 0,
       cells: values.length,
       losses: values.filter((value) => value < 0).length,
       gains: values.filter((value) => value > 0).length,
@@ -1337,31 +1555,46 @@ test("the atlas surface draws its losses and its gains apart", async ({ page }) 
     };
   });
 
-  expect(drawn.declared, "the manifest no longer declares this layer diverging").toBe("diverging");
+  expect(
+    drawn.declared,
+    "the manifest no longer declares this layer diverging",
+  ).toBe("diverging");
   expect(drawn.layer, "the atlas surface never reached the style").toBe(true);
-  expect(drawn.cells, "no cells in the published atlas grid").toBeGreaterThan(400);
+  expect(drawn.cells, "no cells in the published atlas grid").toBeGreaterThan(
+    400,
+  );
   expect(drawn.finite, "a cell carries a non-finite value").toBe(true);
   // Every published cell has to survive the grid decode. A mismatch here is the trap
   // `gridToFeatures` throws on, seen from the other side.
-  expect(drawn.expanded, "the grid decoded to a different number of cells").toBe(drawn.cells);
+  expect(
+    drawn.expanded,
+    "the grid decoded to a different number of cells",
+  ).toBe(drawn.cells);
 
   // Both directions are present in the data, so both have to be distinguishable in the paint.
-  expect(drawn.losses, "no cells lost taxa, which the surface says is most of them").toBeGreaterThan(
-    50,
-  );
+  expect(
+    drawn.losses,
+    "no cells lost taxa, which the surface says is most of them",
+  ).toBeGreaterThan(50);
   expect(drawn.gains, "no cells gained taxa").toBeGreaterThan(10);
 
   // The colour ramp must read the raw value. `log10` here would mean the sequential painter got it.
   const colour = JSON.stringify(drawn.colour);
-  expect(colour, "the change layer is painted on a count's log10 ramp").not.toContain("log10");
-  expect(colour, "the ramp does not reach below zero, so a loss cannot be coloured as one").toContain(
-    "-",
-  );
+  expect(
+    colour,
+    "the change layer is painted on a count's log10 ramp",
+  ).not.toContain("log10");
+  expect(
+    colour,
+    "the ramp does not reach below zero, so a loss cannot be coloured as one",
+  ).toContain("-");
 
   // Direction is carried by a second channel as well as by hue: losses are ringed, gains solid.
   // A diverging ramp alone is exactly the comparison a red-green reader cannot make.
-  expect(JSON.stringify(drawn.stroke), "losses are not ringed, so direction rests on hue alone")
-    .toContain("case");
+  expect(
+    JSON.stringify(drawn.stroke),
+    "losses are not ringed, so direction rests on hue alone",
+  ).toContain("case");
 });
 
 /*
@@ -1405,7 +1638,9 @@ test("the world chapter carries a live map, its controls, and the clock in its U
     which is why that state is module level, and this is the assertion that catches it if it stops
     being: the controls stay on "bringing the map up" forever while the map is already up.
   */
-  await expect(page.locator(".page--verso input[type=checkbox]").first()).toBeVisible({
+  await expect(
+    page.locator(".page--verso input[type=checkbox]").first(),
+  ).toBeVisible({
     timeout: 30_000,
   });
   await expect(page.locator(".world__waiting")).toHaveCount(0);
@@ -1428,12 +1663,16 @@ test("the world chapter carries a live map, its controls, and the clock in its U
     hash before writing to it. A `goto` sets the hash directly and discards `d`, which would be
     testing the address bar rather than the rule.
   */
-  await page.locator(".tab", { hasText: "Changed" }).click();
+  await page.locator(".tab", { hasText: "The calendar" }).click();
   await expect(page).toHaveURL(/[#&]ch=what-changed/);
   await expect(page).toHaveURL(/[#&]d=/);
-  await expect(page.locator(".page--verso")).toContainText("What changed");
+  await expect(page.locator(".page--verso")).toContainText(
+    "The calendar moved",
+  );
 });
-test("on a phone the world is one leaf, and the map stays under the flap", async ({ page }) => {
+test("on a phone the world is one leaf, and the map stays under the flap", async ({
+  page,
+}) => {
   /*
     ADR 0015 decision 8, closed. It recorded this as deliberately open: the spread gives the tools the
     left page and the map the right, and a phone showing one page at a time therefore put the clock on
@@ -1454,7 +1693,9 @@ test("on a phone the world is one leaf, and the map stays under the flap", async
   await page.goto("?debug=1#ch=the-world");
 
   // One leaf for the whole chapter, and the map is on it.
-  await expect(page.locator("[data-leaf][data-chapter='the-world']")).toHaveCount(1);
+  await expect(
+    page.locator("[data-leaf][data-chapter='the-world']"),
+  ).toHaveCount(1);
   const clock = page.locator(".flap .time input").first();
   await expect(clock).toBeVisible({ timeout: 30_000 });
   await expect(page.locator(".globe canvas")).toBeVisible({ timeout: 30_000 });
@@ -1466,17 +1707,30 @@ test("on a phone the world is one leaf, and the map stays under the flap", async
   */
   const peek = await page.evaluate(() => {
     const flap = document.querySelector(".flap")!.getBoundingClientRect();
-    const canvas = document.querySelector(".globe canvas")!.getBoundingClientRect();
-    const track = document.querySelector(".flap .time input")!.getBoundingClientRect();
+    const canvas = document
+      .querySelector(".globe canvas")!
+      .getBoundingClientRect();
+    const track = document
+      .querySelector(".flap .time input")!
+      .getBoundingClientRect();
     return {
-      mapShare: (Math.min(canvas.bottom, flap.top) - canvas.top) / window.innerHeight,
+      mapShare:
+        (Math.min(canvas.bottom, flap.top) - canvas.top) / window.innerHeight,
       clockUnderFlapTop: track.top >= flap.top,
       clockOnScreen: track.bottom <= window.innerHeight,
     };
   });
-  expect(peek.mapShare, `only ${Math.round(peek.mapShare * 100)}% of the leaf is map`).toBeGreaterThan(0.6);
-  expect(peek.clockUnderFlapTop, "the clock is drawn outside the flap that holds it").toBe(true);
-  expect(peek.clockOnScreen, "the clock is off the bottom of the screen").toBe(true);
+  expect(
+    peek.mapShare,
+    `only ${Math.round(peek.mapShare * 100)}% of the leaf is map`,
+  ).toBeGreaterThan(0.6);
+  expect(
+    peek.clockUnderFlapTop,
+    "the clock is drawn outside the flap that holds it",
+  ).toBe(true);
+  expect(peek.clockOnScreen, "the clock is off the bottom of the screen").toBe(
+    true,
+  );
 
   // No layer list at a peek: it is the second question, and it is one tap away.
   await expect(page.locator(".flap .layers li")).toHaveCount(0);
@@ -1493,7 +1747,9 @@ test("on a phone the world is one leaf, and the map stays under the flap", async
   await page.locator(".flap__grip").click();
   await expect(page.locator(".flap .layers li").first()).toBeVisible();
   await page.locator(".flap__grip").click();
-  await expect(page.locator(".flap .search, .flap input[type='search']").first()).toBeVisible();
+  await expect(
+    page.locator(".flap .search, .flap input[type='search']").first(),
+  ).toBeVisible();
   await page.locator(".flap__grip").click();
   await expect(page.locator(".flap .layers li")).toHaveCount(0);
 
@@ -1502,7 +1758,9 @@ test("on a phone the world is one leaf, and the map stays under the flap", async
   // The flap never covers the folio or the realm tabs: the page's own foot is furniture, not canvas.
   const clear = await page.evaluate(() => {
     const flap = document.querySelector(".flap")!.getBoundingClientRect();
-    const folio = document.querySelector("[data-chapter='the-world'] .page__folio")?.getBoundingClientRect();
+    const folio = document
+      .querySelector("[data-chapter='the-world'] .page__folio")
+      ?.getBoundingClientRect();
     const realms = document.querySelector(".realms")?.getBoundingClientRect();
     return {
       folio: folio ? flap.bottom <= folio.top + 2 : true,

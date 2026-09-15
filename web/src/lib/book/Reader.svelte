@@ -4,6 +4,7 @@
   import Figure from "./Figure.svelte";
   import Introduction from "./Introduction.svelte";
   import Leaves from "./Leaves.svelte";
+  import Opener from "./Opener.svelte";
   import Settings from "./Settings.svelte";
   import World from "./World.svelte";
   import Claim from "../claim/Claim.svelte";
@@ -11,6 +12,7 @@
   import Margin from "../claim/Margin.svelte";
   import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
+  import { openerOf, type ChaptersDocument } from "./chapters";
   import { leavesOf, openingOf, spreadsOf, type Panel } from "./pages";
   import { world as pocket } from "./pocket.svelte";
   import type { IntroductionDocument } from "./introduction";
@@ -23,13 +25,14 @@
     findings,
     base,
     opening,
+    chapterProse,
     safeguards,
     dial,
   }: {
     findings: Finding[];
     base: string;
     /*
-      The three documents the pagination is computed from, loaded in `main.ts` before this mounts.
+      The four documents the pagination is computed from, loaded in `main.ts` before this mounts.
 
       They used to be fetched here, on the argument that the book should open on a claim without
       waiting for a document only the introduction needs. That argument died with pagination: the
@@ -39,11 +42,18 @@
       later. All three together are 18 KB.
     */
     opening: IntroductionDocument | null;
+    chapterProse: ChaptersDocument | null;
     safeguards: SandboxDocument | null;
     dial: ResponseDocument | null;
   } = $props();
 
-  const sources = $derived({ findings, introduction: opening, safeguards, dial });
+  const sources = $derived({
+    findings,
+    introduction: opening,
+    chapters: chapterProse,
+    safeguards,
+    dial,
+  });
 
   /*
     The same book, arranged twice, and the routing works over whichever one is mounted.
@@ -288,6 +298,16 @@
 {#snippet leaf(panel: Panel, _side: "verso" | "recto")}
   {#if panel.kind === "opening"}
     <Introduction document_={opening} opening />
+  {:else if panel.kind === "opener"}
+    {@const written = openerOf(chapterProse, panel.slug)}
+    {#if written}
+      <Opener
+        chapter={panel.chapter}
+        opener={written}
+        from={panel.from}
+        to={panel.to}
+      />
+    {/if}
   {:else if panel.kind === "intro"}
     <Introduction document_={opening} from={panel.from} to={panel.to} />
   {:else if panel.kind === "world"}
