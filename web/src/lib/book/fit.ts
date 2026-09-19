@@ -166,11 +166,43 @@ const measured = new Map<string, number>();
  */
 const CACHE_MAX = 400;
 
+/**
+ * Whether the book's own faces have arrived, and why nothing is believed until they have.
+ *
+ * How many lines a paragraph takes is a fact about a font, so a fit measured against the fallback
+ * is a fit of the wrong page -- and the fallback is taller here, so a page measures full, declines
+ * to grow, and caches that. Nothing afterwards disturbs it: swapping a face changes text metrics
+ * without mutating the DOM or resizing the leaf, so neither observer fires, and the spread the
+ * reader lands on keeps the fallback's answer for the rest of the session.
+ *
+ * Found in the browser and not in the suite, which is the part worth remembering. Playwright
+ * navigates with the faces already in cache and applied before the app renders, so every page
+ * measured correctly there; the same page loaded in the pane cached a refusal to grow and sat at
+ * 1.00 where a settled font gives it 1.22.
+ */
+let settled = false;
+
+/** The live pages, so the one answer that arrives late can reach all of them. */
+const waiting = new Set<() => void>();
+
+if (typeof document !== "undefined" && document.fonts) {
+  void document.fonts.ready.then(() => {
+    settled = true;
+    // Everything in it was measured against the wrong face.
+    measured.clear();
+    for (const again of waiting) again();
+  });
+} else {
+  settled = true;
+}
+
 function signatureOf(inner: HTMLElement, room: number): string {
   return `${Math.round(room)}|${(inner.textContent ?? "").trim()}`;
 }
 
 function remember(signature: string, step: number): void {
+  // A measurement taken against the fallback face is applied but never kept.
+  if (!settled) return;
   if (measured.size >= CACHE_MAX) measured.clear();
   measured.set(signature, step);
 }
@@ -217,6 +249,7 @@ export function fit(inner: HTMLElement, on: boolean): { destroy: () => void } {
   };
 
   schedule();
+  waiting.add(schedule);
   const changes = new MutationObserver(schedule);
   changes.observe(inner, { childList: true, subtree: true, characterData: true });
 
@@ -233,6 +266,7 @@ export function fit(inner: HTMLElement, on: boolean): { destroy: () => void } {
 
   return {
     destroy() {
+      waiting.delete(schedule);
       changes.disconnect();
       resizes.disconnect();
     },
