@@ -97,7 +97,7 @@
     -->
     <ul class="plate__key">
       <li><span class="key__mark key__mark--here"></span>The ground this claim is about</li>
-      <li><span class="key__mark key__mark--land"></span>Coastlines, drawn rather than plotted</li>
+      <li><span class="key__mark key__mark--land"></span>Coastlines</li>
       <li><span class="key__mark key__mark--grid"></span>The graticule, every 30 degrees</li>
     </ul>
 

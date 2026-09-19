@@ -59,6 +59,15 @@
       aria-label={side === "recto" ? "Turn the page" : "Turn back"}
       onclick={onturn}
     >
+      <!--
+        The arrow, because the folio alone did not read as a control.
+
+        It was a page number that happened to be clickable and turned rust on hover, which is a
+        thing a reader finds only by accident -- the owner read the book as going chapter to
+        chapter, since the thumb tabs were the only navigation that looked like navigation. The
+        mark points the way the page goes and sits at rest rather than on hover, which is the
+        whole point of it.
+      -->
       {String(folio).padStart(3, "0")} · migratlas
     </button>
   {:else if folio !== null}
@@ -135,6 +144,33 @@
   .page__folio--turn:hover,
   .page__folio--turn:focus-visible {
     color: var(--rust);
+  }
+
+  /*
+    The arrow is drawn, not written.
+
+    A `<span>` inside the button put it in `textContent`, and the folio guard reads the number by
+    splitting that on its first space -- so every verso came back `NaN` and the suite caught it. A
+    pseudo-element is the mark without the text, which is what it always was: set in the hand face
+    because somebody drew it in a margin, and present at rest because a control nobody can see is
+    the thing the owner found missing.
+  */
+  .page__folio--turn::before,
+  .page__folio--turn::after {
+    font-family: var(--font-hand);
+    font-size: 1.25em;
+    line-height: 1;
+    vertical-align: -0.08em;
+  }
+
+  .page--verso .page__folio--turn::before {
+    content: "‹";
+    margin-right: 0.35em;
+  }
+
+  .page--recto .page__folio--turn::after {
+    content: "›";
+    margin-left: 0.35em;
   }
 
   .page--verso .page__folio {

@@ -343,7 +343,19 @@ test("a visitor lands on the story, and its first claim is one turn away", async
     what they still are.
   */
   await expect(page.locator(".opener__question").first()).not.toBeEmpty();
-  await open(page, "#ch=what-changed&p=2");
+
+  /*
+    The claim is found in the layout rather than at a page number typed here: claims flow within a
+    chapter now, so an offset moves whenever the account before it gains a paragraph.
+  */
+  const { ARRIVAL_KEY: arrival } = await import("../src/lib/story");
+  await open(
+    page,
+    addressOf(
+      await layout(),
+      (panel) => panel.kind === "finding" && panel.key === arrival,
+    ),
+  );
 
   /*
     The claim, why it matters and its caveat, on the page a visitor lands on -- and the number one

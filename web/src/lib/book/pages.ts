@@ -82,6 +82,7 @@ export type Panel =
    */
   | { kind: "bias"; key: string; part: "all" | "first" | "rest" }
   | { kind: "survived"; key: string }
+
   /** One knob or one refusal, from whichever of the two documents keys it to this claim. */
   | {
       kind: "panel";
@@ -244,6 +245,20 @@ function claimPages(key: string, sources: Sources, narrow: boolean): Panel[] {
         ] as Panel[])
       : ([{ kind: "record", key, part: "all" }] as Panel[])),
   );
+  /*
+    The audit stays two pages on a spread, and the attempt to make it one is recorded here.
+
+    Measured at 1600x900, the bias page and the survived page sit at about half a leaf each, which
+    is twenty-six pages of the book at 50% fill and the largest block of air left in it. Merging
+    them is one line, because `Margin.svelte` already renders both halves when asked for neither --
+    and it put five of thirteen claims over the leaf by 70 to 296px. A character budget did not
+    save it either: the height follows the *number* of bias rows rather than their length, so the
+    budget that cleared the overflow merged only three claims and carried a measurement that would
+    rot the first time a claim gained a domain.
+
+    So this needs the panel to get shorter rather than the pagination to get cleverer, which is a
+    change to `Margin.svelte` and a decision about what an audit shows at a glance.
+  */
   pages.push(
     ...(narrow
       ? ([
@@ -446,20 +461,40 @@ export function spreadsOf(
   chapters: readonly Chapter[] = CHAPTERS,
   realm = "",
 ): readonly Spread[] {
+  /*
+    A chapter folds once, and this is the change that stopped the book wasting paper.
+
+    Each section used to fold on its own, so a claim with an odd number of pages ended on a blank
+    recto and the next claim began on the verso after it. Measured at 1600x900 that put a page of
+    nothing in roughly one spread in seven -- 5% fill, and a reader turning to it sees the book
+    has given up rather than that a claim has ended. Collecting a chapter's pages before folding
+    lets a claim's last page face the next claim's first, which is what a book does.
+
+    What it gives up is a claim always opening on a verso. That convention is worth a blank page
+    at a chapter break and is not worth one at every claim, so the chapter still starts where it
+    starts and the claims inside it now run on.
+  */
   const out: Spread[] = [];
   let chapter: Chapter | null = null;
+  let pages: Panel[] = [];
   let at = 0;
 
+  const flush = (): void => {
+    if (chapter === null || pages.length === 0) return;
+    out.push(...fold(chapter, pages, at));
+    pages = [];
+  };
+
   for (const section of sectionsOf(sources, chapters, realm, false)) {
-    // `at` is the offset within the chapter, so it restarts where the chapter does.
     if (section.chapter !== chapter) {
+      flush();
       chapter = section.chapter;
+      // `at` is the offset within the chapter, so it restarts where the chapter does.
       at = 0;
     }
-    const spreads = fold(section.chapter, section.pages, at);
-    out.push(...spreads);
-    at += spreads.length;
+    pages.push(...section.pages);
   }
+  flush();
 
   return out;
 }

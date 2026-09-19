@@ -142,7 +142,17 @@ test("the book opens as a spread of two pages with a tab per chapter", async ({
   await expect(page.locator(".page--verso")).toContainText(
     "The calendar moved",
   );
-  await openBook(page, "#ch=what-changed&p=2");
+  /*
+    And the claim is where the layout says it is, rather than at a page number typed here. Claims
+    flow within a chapter now -- one no longer starts on a verso, so its offset moves whenever the
+    account before it gains a paragraph, and a hard-coded `p=` is a test that fails for a reason
+    that is not a defect.
+  */
+  const first = addressOf(
+    await layout(),
+    (panel) => panel.kind === "finding" && panel.key === "autumn-advance",
+  );
+  await openBook(page, first);
   await expect(page.locator(".spread")).toContainText(
     "Whatever flies over the middle",
   );
