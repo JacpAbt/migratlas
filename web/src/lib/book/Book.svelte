@@ -294,7 +294,6 @@
     position: relative;
     width: calc(var(--book-h) * var(--ratio));
     aspect-ratio: var(--ratio);
-    perspective: 2800px;
   }
 
   .block {
@@ -357,6 +356,35 @@
     inset: 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
+    /*
+      The perspective lives here, on the element that also clips, and both halves of that are the
+      fix for what the owner called "some small clipping while I switch pages".
+
+      It was declared on `.book`, one generation too far up: perspective applies to an element's
+      own children, and the leaf is a grandchild through this grid. So the book asked for a 3D turn
+      and got none -- `rotateY` on a flat element is a horizontal squash, and the turning sheet was
+      the outgoing page compressed sideways while a strip of the page beneath showed at the outer
+      edge with its lines cut off mid-letter. Nothing about that reads as paper.
+
+      Moved down one level the sheet genuinely lifts: the free edge comes toward the reader and is
+      drawn larger than the bound edge, so the page beneath is something a sheet is rising off
+      rather than something with a slice missing.
+
+      It has to be clipped for the same reason, because a foreshortened sheet is *bigger* than the
+      page it came from: measured across the turn it reaches 17px past the outer edge and further
+      past the head and the foot, onto the desk and under the type controls. `overflow: clip` here
+      is what `.book` cannot do -- the filter tabs hang below that block by design -- and it is
+      safe on this element in particular: the rule that flattens 3D applies to an element's own
+      `transform-style`, and this one has nothing to preserve. The leaf below still does, for its
+      two faces.
+
+      What it costs is a third of the way through the turn, where the lifted sheet is drawn taller
+      than the book and loses about 30px at the head. That is inherent rather than unfixed: a sheet
+      near the eye *is* bigger, and the two alternatives are letting it run over the controls or
+      going back to a squash.
+    */
+    perspective: 2800px;
+    overflow: clip;
     background: var(--paper);
     border: 1px solid var(--rule);
     box-shadow:
