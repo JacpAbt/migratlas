@@ -112,6 +112,7 @@
       {#if current}
         <Page
           side="verso"
+          fitted
           folio={numbers[0]}
           onturn={index > 0 ? () => go(index - 1) : undefined}
         >
@@ -119,6 +120,7 @@
         </Page>
         <Page
           side="recto"
+          fitted
           folio={numbers[1]}
           onturn={index < spreads.length - 1 ? () => go(index + 1) : undefined}
         >
@@ -129,16 +131,16 @@
       {#if leaving && current}
         <!-- The outgoing page, held on the half the leaf is about to land on. -->
         <div class="stale stale--{arriving}" aria-hidden="true">
-          <Page side={arriving} fill>{@render page(leaving.spread[arriving], arriving)}</Page>
+          <Page side={arriving} fill fitted>{@render page(leaving.spread[arriving], arriving)}</Page>
         </div>
         <!-- The shadow the turning page throws: a sibling, because a child would rotate with it. -->
         <div class="cast cast--{lifted}" aria-hidden="true"></div>
         <div class="leaf leaf--{lifted}" aria-hidden="true">
           <div class="leaf__face leaf__front">
-            <Page side={lifted} fill>{@render page(leaving.spread[lifted], lifted)}</Page>
+            <Page side={lifted} fill fitted>{@render page(leaving.spread[lifted], lifted)}</Page>
           </div>
           <div class="leaf__face leaf__back">
-            <Page side={arriving} fill>{@render page(current[arriving], arriving)}</Page>
+            <Page side={arriving} fill fitted>{@render page(current[arriving], arriving)}</Page>
           </div>
         </div>
       {/if}
@@ -238,12 +240,38 @@
       CSS cannot divide a length by a length, so this is `--book-h / n` rather than a ratio applied
       to the token. That is also why each line repeats the hand factor it needs.
     */
-    --size-claim: clamp(1.08rem, calc(var(--book-h) / 26.9 * var(--font-scale-hand)), 2.6rem);
-    --size-lede: clamp(0.86rem, calc(var(--book-h) / 50.2 * var(--font-scale-hand)), 1.5rem);
-    --size-body: clamp(0.73rem, calc(var(--book-h) / 59.5), 1.15rem);
-    --size-value: clamp(0.98rem, calc(var(--book-h) / 41.8), 1.7rem);
-    --size-margin: clamp(0.56rem, calc(var(--book-h) / 85.6), 0.82rem);
-    --size-label: clamp(0.53rem, calc(var(--book-h) / 91.2), 0.76rem);
+    /*
+      Declared twice, and the `-page` half is what a page is allowed to grow.
+
+      A custom property is substituted where it is *declared*, so `calc(var(--size-body) * ...)` on
+      a descendant cannot reach back to this one -- it is a cycle and CSS drops the whole
+      declaration. The base names give `.page__inner` something to multiply, and the plain names
+      stay for the book's own furniture, which does not grow: the thumb tabs and the filter are the
+      same size on every page or they are not an index.
+    */
+    --size-claim-page: clamp(1.08rem, calc(var(--book-h) / 26.9 * var(--font-scale-hand)), 2.6rem);
+    --size-lede-page: clamp(0.86rem, calc(var(--book-h) / 50.2 * var(--font-scale-hand)), 1.5rem);
+    --size-body-page: clamp(0.73rem, calc(var(--book-h) / 59.5), 1.15rem);
+    --size-value-page: clamp(0.98rem, calc(var(--book-h) / 41.8), 1.7rem);
+    --size-margin-page: clamp(0.56rem, calc(var(--book-h) / 85.6), 0.82rem);
+    --size-label-page: clamp(0.53rem, calc(var(--book-h) / 91.2), 0.76rem);
+
+    --size-claim: var(--size-claim-page);
+    --size-lede: var(--size-lede-page);
+    --size-body: var(--size-body-page);
+    --size-value: var(--size-value-page);
+    --size-margin: var(--size-margin-page);
+    --size-label: var(--size-label-page);
+
+    /* The air a page may grow, captured here so the multiplication downstream has something to
+       multiply. These read whatever the reader's type choice left on `:root`, so a fitted page
+       grows the dyslexia setting's leading rather than the default's. */
+    --leading-body-page: var(--leading-body);
+    --leading-hand-page: var(--leading-hand);
+    --gap-hair-page: var(--gap-hair);
+    --gap-tight-page: var(--gap-tight);
+    --gap-page: var(--gap);
+    --gap-wide-page: var(--gap-wide);
     /* As large as the window allows in both axes, so it fills a wide monitor and still cannot run
        off the bottom of a short one. The subtraction is the chrome above it. */
     /*
@@ -291,6 +319,37 @@
         color-mix(in srgb, var(--rule) 55%, transparent) 3px 4px
       ),
       var(--paper);
+  }
+
+  /*
+    A fitted page: the two numbers `fit.ts` measures, and everything that follows from them.
+
+    Declared here rather than in `Page.svelte` because only the spread is fitted -- a phone leaf is
+    a scroll-snap track with its own reading size and nothing to fill -- and because the base names
+    it multiplies are the book's. `:global` on the inner is the price of reaching a child
+    component's element; the selector is still anchored to `.spread`, so nothing outside this book
+    can match it.
+
+    Both default to 1, so a page renders correctly before the first measurement and stays correct
+    if scripting never runs.
+  */
+  .spread :global(.page__inner) {
+    --fit-air: 1;
+    --fit-type: 1;
+
+    --leading-body: calc(var(--leading-body-page) * var(--fit-air));
+    --leading-hand: calc(var(--leading-hand-page) * var(--fit-air));
+    --gap-hair: calc(var(--gap-hair-page) * var(--fit-air));
+    --gap-tight: calc(var(--gap-tight-page) * var(--fit-air));
+    --gap: calc(var(--gap-page) * var(--fit-air));
+    --gap-wide: calc(var(--gap-wide-page) * var(--fit-air));
+
+    --size-claim: calc(var(--size-claim-page) * var(--fit-type));
+    --size-lede: calc(var(--size-lede-page) * var(--fit-type));
+    --size-body: calc(var(--size-body-page) * var(--fit-type));
+    --size-value: calc(var(--size-value-page) * var(--fit-type));
+    --size-margin: calc(var(--size-margin-page) * var(--fit-type));
+    --size-label: calc(var(--size-label-page) * var(--fit-type));
   }
 
   .spread {
