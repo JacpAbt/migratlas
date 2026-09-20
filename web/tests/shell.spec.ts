@@ -336,13 +336,13 @@ test("a visitor lands on the story, and its first claim is one turn away", async
   await arrive(page);
 
   /*
-    Where a visitor lands, after the second arc: the first chapter's account of itself, in the
-    plain register, with the figures it rests on named at its foot. The claim that used to be here
-    is the spread after it, and the rest of this test is unchanged -- what it guards is that the
-    number and the caveat are a page turn away rather than behind a disclosure, and a page turn is
-    what they still are.
+    Where a visitor lands: the front of the book, which says what a migration is and carries no
+    result. It landed on the first chapter's account until a first reading found that a visitor
+    with no address never saw the one page written for them. The claim is found below by address,
+    and the rest of this test is unchanged -- what it guards is that the number and the caveat are
+    page turns away rather than behind a disclosure, and page turns are what they still are.
   */
-  await expect(page.locator(".opener__question").first()).not.toBeEmpty();
+  await expect(page.locator(".intro__standfirst").first()).not.toBeEmpty();
 
   /*
     The claim is found in the layout rather than at a page number typed here: claims flow within a

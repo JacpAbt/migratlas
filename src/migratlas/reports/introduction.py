@@ -169,16 +169,6 @@ def build() -> Introduction:
                 ),
             ),
             Passage(
-                heading="Every claim carries its own scope",
-                body=(
-                    "A number here always arrives with what it covers and what it does not. The "
-                    "autumn timing result is about 78 radar stations between 37 and 50 degrees "
-                    "north, and it says so; it is not a statement about a continent, or about "
-                    "birds, because the radar cannot tell a bird from a bat. Where the scope is "
-                    "narrow the page says so rather than rounding it up."
-                ),
-            ),
-            Passage(
                 heading="The results that found nothing are here too",
                 body=(
                     f"{nulls} of the findings report no change and {limits} report a limit on what "
@@ -188,14 +178,22 @@ def build() -> Introduction:
                     "surveys disagree even about which way fish are moving."
                 ),
             ),
+            # One passage where there were two. Seven passages paginate to a last page holding one
+            # of them, facing blank paper; the owner's levers for an empty page are a larger hand,
+            # a true drawing or a merged panel, and these two were one thought -- what a number
+            # covers, and what would make it mislead you -- said in two places.
             Passage(
-                heading="A caveat is not an apology",
+                heading="Every claim carries its scope, and its caveat",
                 body=(
-                    "Beside each number is a line saying what would have to be true for it to "
-                    "mislead you. Read it as part of the result rather than as hedging: it is "
-                    "there because the alternative is a reader who trusts the figure further than "
-                    "the evidence goes. Where a prediction was made and graded, the grade stands "
-                    "whichever way it went."
+                    "A number here always arrives with what it covers and what it does not. The "
+                    "autumn timing result is about 78 radar stations between 37 and 50 degrees "
+                    "north, and it says so; it is not a statement about a continent, or about "
+                    "birds, because the radar cannot tell a bird from a bat. And beside each "
+                    "number is a line saying what would have to be true for it to mislead you. "
+                    "Read it as part of the result rather than as hedging: it is there because "
+                    "the alternative is a reader who trusts the figure further than the evidence "
+                    "goes. Where a prediction was made and graded, the grade stands whichever way "
+                    "it went."
                 ),
             ),
             Passage(

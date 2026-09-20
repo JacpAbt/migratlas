@@ -134,14 +134,15 @@ test("the book opens as a spread of two pages with a tab per chapter", async ({
   expect(tabs.map((t) => t.trim())).toEqual(CHAPTERS.map((c) => c.tab));
 
   /*
-    The book opens each chapter on its own account of itself, and the claims follow. Until the
-    second arc this asserted a claim here, which is what the book used to open on -- the change
-    is the point of the arc rather than a casualty of it, so the claim is asserted where it now
-    is instead of being dropped.
+    The book opens at its front. It opened on the first chapter with claims until a first reading
+    found that a visitor with no address never saw the introduction -- the one page written for
+    them, with no result on it. The standfirst is on the verso because the opening leaf is the
+    inside of the cover, as `folio(0)` records.
   */
   await expect(page.locator(".page--verso")).toContainText(
-    "The calendar moved",
+    "This is a notebook about where animals go",
   );
+  await expect(page.locator(".tab.is-on")).toHaveText("Start here");
   /*
     And the claim is where the layout says it is, rather than at a page number typed here. Claims
     flow within a chapter now -- one no longer starts on a verso, so its offset moves whenever the
@@ -1203,6 +1204,23 @@ test.describe("on a phone", () => {
     expect(state.railWidth - state.leafWidth).toBeGreaterThan(8);
   });
 
+  test("a tap on the fore-edge turns the leaf, and the address follows", async ({
+    page,
+  }) => {
+    /*
+      The swipe is the turn, and the peek of the next leaf is its only hint. A first reading on a
+      phone did not find it, so each edge now carries a mark that turns the leaf when tapped -- the
+      same job the folio arrow does on the spread. The address is asserted because `goTo` writes
+      the leaf and the URL follows from the scroll settling, which is the path a swipe takes too.
+    */
+    await openLeaves(page, "#ch=what-changed");
+    await expect(page.locator(".turn--back")).toBeVisible();
+    await page.locator(".turn--on").click();
+    await expect(page).toHaveURL(/[#&]p=1(&|$)/);
+    await page.locator(".turn--back").click();
+    await expect(page).toHaveURL(/[#&]p=0(&|$)/);
+  });
+
   test("a leaf got the measurements a page needs", async ({ page }) => {
     /*
       `Page` reads `--page-pad` from whatever it is mounted in, and `Book` is where that used to be
@@ -1252,7 +1270,9 @@ test.describe("on a phone", () => {
   test("the swipe is the page turn, and where it stops goes in the URL", async ({
     page,
   }) => {
-    await openLeaves(page);
+    // From the first chapter with claims, by address: the book opens at its front now, and this
+    // test is about the swipe between two chapters rather than about where a visitor lands.
+    await openLeaves(page, "#ch=what-changed");
     await expect(page.locator(".thumb__word")).toHaveText("Earlier?");
 
     // The first leaf of "What we cannot see", found from the phone's own pagination.

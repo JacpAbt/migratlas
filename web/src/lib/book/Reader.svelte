@@ -173,7 +173,13 @@
       if (at >= 0) return at;
     }
 
-    const slug = chapterAt(params.get(CHAPTER_PARAM))?.slug ?? CHAPTERS[1]!.slug;
+    /*
+      No address means the front of the book. This defaulted to the first chapter *with claims*,
+      which was right when the introduction was a page about how to read a ledger and wrong once
+      the owner made it the page that says what a migration is: a first-time visitor opened onto
+      "The calendar moved" and never saw the page written for them.
+    */
+    const slug = chapterAt(params.get(CHAPTER_PARAM))?.slug ?? CHAPTERS[0]!.slug;
     const first = openingOf(pages, slug);
     const into = Number.parseInt(params.get(PAGE_PARAM) ?? "0", 10);
     if (!Number.isFinite(into) || into <= 0) return first;
@@ -243,7 +249,7 @@
    * sees it, it is the filtered pagination and not the one that was on screen a line ago.
    */
   function filter(slug: string): void {
-    const chapter = pages[open]?.chapter.slug ?? CHAPTERS[1]!.slug;
+    const chapter = pages[open]?.chapter.slug ?? CHAPTERS[0]!.slug;
     realm = slug;
     show(openingOf(pages, chapter));
   }
