@@ -32,7 +32,7 @@
   <Rule seed="how-{finding.key}" {draw} />
 
   <a class="how__method" href={`${REPOSITORY}${finding.method}`} rel="noopener" target="_blank">
-    Method and pre-registration
+    The plan, written down before we looked
   </a>
 
   <!--

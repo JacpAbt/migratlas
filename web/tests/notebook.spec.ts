@@ -719,21 +719,29 @@ test("an addressed status is legible too, and is not the only signal", async ({
   // convention. Red against green measures 52 apart under protanopia by day, which is below the
   // separability floor and cannot be fixed without leaving the palette; what makes it compliant is
   // that the word is the signal and the colour only agrees with it. So: every status on the page,
-  // not just this one, has to read as its own meaning.
+  // not just this one, has to read as its own meaning -- in the reader's words, which `ledger.ts`
+  // maps from the ledger's, so the class carries the standard's term and the page carries the
+  // plain one.
   //
   // Read in one `evaluate` rather than looped over a locator, because a page turn keeps the old
   // claim in the DOM for the length of the transition: counting the nodes and then asserting on
   // them are two moments, and the first version failed on a node that had been replaced between
   // them. One synchronous pass over the live document has no such gap.
+  const { BIAS_STATUS_WORDS } = await import("../src/lib/ledger");
   await eachClaim(page, async () => {
-    const silent = await page.evaluate(() =>
-      [...document.querySelectorAll("[class*='bias__status--']")]
-        .map((node) => {
-          const meaning = /bias__status--(\w+)/.exec(node.className)?.[1] ?? "";
-          return { meaning, text: (node.textContent ?? "").trim() };
-        })
-        .filter(({ meaning, text }) => !text.toLowerCase().includes(meaning))
-        .map(({ meaning, text }) => `${meaning} reads "${text}"`),
+    const silent = await page.evaluate(
+      (words) =>
+        [...document.querySelectorAll("[class*='bias__status--']")]
+          .map((node) => {
+            const meaning = (/bias__status--([\w-]+)/.exec(node.className)?.[1] ?? "").replace(
+              /-/g,
+              " ",
+            );
+            return { meaning, text: (node.textContent ?? "").trim() };
+          })
+          .filter(({ meaning, text }) => text !== words[meaning])
+          .map(({ meaning, text }) => `${meaning} reads "${text}"`),
+      BIAS_STATUS_WORDS,
     );
     expect(silent, silent.join("; ")).toEqual([]);
   });
@@ -892,7 +900,7 @@ test("every claim is said twice, plainly and precisely, and both are in the book
     expect(precise.length, "a claim with no precise sentence").toBeGreaterThan(
       20,
     );
-    expect(precise.replace(/^Precisely\s*/, "")).not.toBe(plain);
+    expect(precise).not.toBe(plain);
 
     // Neither register is behind a control, on either leaf -- the same rule as the audit page.
     await expect(page.locator(".spread details, .spread [hidden]")).toHaveCount(

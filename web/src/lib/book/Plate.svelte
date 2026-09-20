@@ -98,13 +98,15 @@
     <ul class="plate__key">
       <li><span class="key__mark key__mark--here"></span>The ground this claim is about</li>
       <li><span class="key__mark key__mark--land"></span>Coastlines</li>
-      <li><span class="key__mark key__mark--grid"></span>The graticule, every 30 degrees</li>
+      <li><span class="key__mark key__mark--grid"></span>Grid lines, every 30 degrees</li>
     </ul>
 
     <span class="plate__scope">{finding.scope}</span>
     <!-- Where the measurement itself is, since this sheet carries none of it. The plates exist so a
          claim chapter need not boot a globe, and that trade is only honest if the globe is named. -->
-    <span class="plate__elsewhere">The measured layers are in the world chapter.</span>
+    <span class="plate__elsewhere"
+      >The records themselves are drawn on the globe, in the last chapter.</span
+    >
   </figcaption>
 </figure>
 

@@ -2,7 +2,7 @@
   import Ticked from "../notebook/Ticked.svelte";
   import Rule from "../notebook/Rule.svelte";
   import { BRACKET_WIDTH, bracket } from "../notebook/ink";
-  import type { Finding } from "../ledger";
+  import { BIAS_DOMAIN_WORDS, BIAS_STATUS_WORDS, type Finding } from "../ledger";
 
   let {
     finding,
@@ -52,9 +52,11 @@
     return slice === "first" ? finding.bias.slice(0, half) : finding.bias.slice(half);
   });
 
-  /* The heading says which half. "Risk of bias" twice in two swipes reads as a repeated page rather
+  /* The heading says which half: the same words twice in two swipes read as a repeated page rather
      than as a continued one. */
-  const heading = $derived(slice === "rest" ? "Risk of bias, continued" : "Risk of bias");
+  const heading = $derived(
+    slice === "rest" ? "How this could mislead you, continued" : "How this could mislead you",
+  );
 </script>
 
 <!--
@@ -82,9 +84,9 @@
       <h3>{heading}</h3>
       <dl class="bias">
         {#each shown as domain (domain.domain)}
-          <dt class="bias__domain">{domain.domain}</dt>
+          <dt class="bias__domain">{BIAS_DOMAIN_WORDS[domain.domain] ?? domain.domain}</dt>
           <dd class="bias__status bias__status--{domain.status.replace(/ /g, '-')}">
-            {domain.status}
+            {BIAS_STATUS_WORDS[domain.status] ?? domain.status}
           </dd>
           <dd class="bias__finding">{domain.finding}</dd>
         {/each}
@@ -94,7 +96,7 @@
 
     {#if part !== "bias" && finding.supporting.length > 0}
       <section>
-        <h3>Survived</h3>
+        <h3>What we tried to break it with</h3>
         <Rule seed={`${finding.key}-survived`} tone="rule" />
         <ul class="survived">
           {#each finding.supporting as line (line)}

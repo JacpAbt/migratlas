@@ -342,7 +342,7 @@ test("the plate is drawn, and its marks are named", async ({ page }) => {
   await expect(page.locator(".plate__key li")).toHaveCount(marks.length);
   // The measurement is not on this sheet, and the plate says where it is instead of implying it is.
   await expect(page.locator(".plate__elsewhere")).toContainText(
-    "world chapter",
+    "drawn on the globe",
   );
 });
 

@@ -209,8 +209,8 @@ def build(ledger: dict[str, dict[str, object]] | None = None) -> list[Opener]:
                 (
                     "So we started asking what decides. If it were the place, a rule learned in "
                     "one part of the world ought to work in another, and we tried exactly that: "
-                    "took the response measured in one realm and used it to predict the next. It "
-                    "misses by roughly ten times what it should."
+                    "took the response measured in one kind of record and used it to predict "
+                    "another. It misses by roughly ten times what it should."
                 ),
                 (
                     "Which points at the animal, and every time we have been able to check, the "
@@ -253,7 +253,7 @@ def build(ledger: dict[str, dict[str, object]] | None = None) -> list[Opener]:
                     "question is what the middle of this century looks like, most of the honest "
                     "answer is about where our evidence stops rather than about skill: for a good "
                     "share of the futures we were asked to project, the right answer is that we "
-                    "cannot say. We publish that mask as a finding of its own, because a "
+                    "cannot say. We publish that blank as a finding of its own, because a "
                     "projection without one is a claim about places nobody ever measured."
                 ),
             ],

@@ -57,8 +57,8 @@
   <section class="coverage" aria-label="Where change could be measured">
     {#if part === "all" || part === "measured" || part === "summary"}
     <p class="coverage__lead">
-      <strong>{detectable.toFixed(1)}%</strong> of the cells this lake covers could support a trend.
-      Switch the layer on to see where.
+      <strong>{detectable.toFixed(1)}%</strong> of the squares these records cover have been
+      counted often enough to show a change. The globe in the last chapter shows where.
     </p>
 
     <ul class="coverage__legend">
@@ -77,7 +77,7 @@
     <table class="coverage__sources">
       <caption>Per source, ordered by what it can support</caption>
       <thead>
-        <tr><th scope="col">Source</th><th scope="col">Realm</th><th scope="col">Best it can do</th></tr>
+        <tr><th scope="col">Source</th><th scope="col">Where</th><th scope="col">Best it can do</th></tr>
       </thead>
       <tbody>
         {#each doc.coverage as source (source.source_id)}
@@ -109,7 +109,7 @@
              on the first of them. -->
         {#if part !== "held-more"}
           <p class="held__lead">
-            {doc.withheld.length} source{doc.withheld.length === 1 ? "" : "s"} in this lake
+            {doc.withheld.length} source{doc.withheld.length === 1 ? "" : "s"} in these records
             {doc.withheld.length === 1 ? "is" : "are"} classified as high sensitivity. Individual
             locations are withheld entirely — not coarsened, not delayed. Nothing below is on the map.
           </p>
