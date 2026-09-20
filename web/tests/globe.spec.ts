@@ -1663,7 +1663,7 @@ test("the world chapter carries a live map, its controls, and the clock in its U
     hash before writing to it. A `goto` sets the hash directly and discards `d`, which would be
     testing the address bar rather than the rule.
   */
-  await page.locator(".tab", { hasText: "The calendar" }).click();
+  await page.locator(".tab", { hasText: "Earlier?" }).click();
   await expect(page).toHaveURL(/[#&]ch=what-changed/);
   await expect(page).toHaveURL(/[#&]d=/);
   await expect(page.locator(".page--verso")).toContainText(

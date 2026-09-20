@@ -253,6 +253,12 @@ export function exploreView(available: string[], zoom = 1.4): View {
  * `tab` is deliberately not `title`. A thumb tab carries a word and the page carries the sentence;
  * seven full titles set vertically ran past the foot of the book in the mock ADR 0015 records.
  *
+ * **The word is the question's, not the title's.** The first set -- `The clock`, `The map`, `No
+ * average`, `Cannot see` -- were the titles' subjects, and a first reading of the book took them
+ * for riddles: nothing on a tab said what a reader would find behind it. The chapters are asked as
+ * questions, so each tab now carries the question's own word and its question mark, and the two
+ * chapters that are not questions carry what they are: the way in, and the globe.
+ *
  * **Two claims moved house and the move is the argument.** `anthropogenic-share` leaves the timing
  * chapter for the one that asks what moved the clock, because attribution is the answer to *why*.
  * `seas-disagree` and `transfer-fails` come out of the limits and make a chapter of their own: that
@@ -283,46 +289,46 @@ export const CHAPTERS: readonly Chapter[] = [
   {
     slug: "how-to-read",
     title: "An animal's year",
-    tab: "The year",
+    tab: "Start here",
     keys: [],
   },
   {
     slug: "what-changed",
     title: "The calendar moved",
-    tab: "The calendar",
+    tab: "Earlier?",
     keys: ["autumn-advance", "flight-advance", "composition-stable"],
   },
   {
     slug: "why-it-changed",
     title: "Whose hand is on the clock",
-    tab: "The clock",
+    tab: "Why?",
     keys: ["anthropogenic-share"],
   },
   {
     slug: "what-did-not",
     title: "But the map stayed put",
-    tab: "The map",
+    tab: "Elsewhere?",
     keys: ["marine-null", "atlas-no-net-change", "displacement-flat"],
   },
   {
     slug: "no-average-animal",
     title: "There is no average animal",
-    tab: "No average",
+    tab: "Who decides?",
     keys: ["seas-disagree", "transfer-fails"],
   },
   {
     slug: "can-be-predicted",
     title: "What about next year?",
-    tab: "Next year",
+    tab: "Next year?",
     keys: ["skill-sparse", "projection-mask"],
   },
   {
     slug: "cannot-see",
     title: "What we cannot see",
-    tab: "Cannot see",
+    tab: "Blind spots",
     keys: ["coverage-bias", "protocol-disagreement"],
   },
-  { slug: "the-world", title: "The world", tab: "The world", keys: [] },
+  { slug: "the-world", title: "The world", tab: "The globe", keys: [] },
 ];
 
 /** The chapter carrying a claim, or undefined -- which the build guard turns into a failure. */

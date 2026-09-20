@@ -180,7 +180,7 @@ test("the chapter is in the URL, and a deep link opens it", async ({
   page,
 }) => {
   await openBook(page);
-  await page.locator(".tab", { hasText: "Cannot see" }).click();
+  await page.locator(".tab", { hasText: "Blind spots" }).click();
   /*
     The parameter, not its position. Once the world chapter mounts a `Clock` the hash also carries
     `d` and `t`, and `state/route.ts` says why that is right: the clock and the chapter share the
@@ -303,10 +303,10 @@ test("the turn clears itself even where the animation never fires", async ({
     that way in the mock, so it is asserted rather than assumed.
   */
   await openBook(page);
-  await page.locator(".tab", { hasText: "Next year" }).click();
+  await page.locator(".tab", { hasText: "Next year?" }).click();
   await expect(page.locator(".leaf")).toHaveCount(0, { timeout: 4000 });
   await expect(page.locator(".stale")).toHaveCount(0);
-  await expect(page.locator(".tab.is-on")).toHaveText("Next year");
+  await expect(page.locator(".tab.is-on")).toHaveText("Next year?");
 });
 
 test("the plate is drawn, and its marks are named", async ({ page }) => {
@@ -1253,7 +1253,7 @@ test.describe("on a phone", () => {
     page,
   }) => {
     await openLeaves(page);
-    await expect(page.locator(".thumb__word")).toHaveText("The calendar");
+    await expect(page.locator(".thumb__word")).toHaveText("Earlier?");
 
     // The first leaf of "What we cannot see", found from the phone's own pagination.
     const leaves = await leafLayout();
@@ -1261,11 +1261,11 @@ test.describe("on a phone", () => {
 
     await swipeTo(page, target);
     await expect(page).toHaveURL(/[#&]ch=cannot-see/);
-    await expect(page.locator(".thumb__word")).toHaveText("Cannot see");
+    await expect(page.locator(".thumb__word")).toHaveText("Blind spots");
 
     // Back is the reading and not the gesture: the rail follows the chapter out of the history.
     await page.goBack();
-    await expect(page.locator(".thumb__word")).toHaveText("The calendar");
+    await expect(page.locator(".thumb__word")).toHaveText("Earlier?");
     const state = await survey(page);
     const opened = leafOpening(leaves, "what-changed");
     expect(state.scrollLeft).toBe(state.offsets[opened]);
@@ -1526,7 +1526,7 @@ test.describe("on a phone", () => {
       await thumb.evaluate((node) => node.getBoundingClientRect().height),
     ).toBeGreaterThanOrEqual(44);
 
-    await tabs.filter({ hasText: "The map" }).click();
+    await tabs.filter({ hasText: "Elsewhere?" }).click();
     await expect(page).toHaveURL(/[#&]ch=what-did-not/);
     await expect(page.locator(".fan")).toHaveCount(0);
     const state = await survey(page);

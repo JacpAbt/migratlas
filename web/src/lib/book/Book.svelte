@@ -289,7 +289,13 @@
       how the overflow guard would start failing. As written, nothing below about a 1,050px-tall
       window changes at all.
     */
-    --book-h: min(calc(98vw / var(--ratio)), calc(100vh - 2.6rem), max(54rem, 82vh));
+    /*
+      The width term leaves the thumb tabs their room. At 98vw the book had ten pixels a side at
+      1024 wide, and the tabs -- which stand off the fore-edge by their own width -- hung off the
+      screen with their labels cut. Five rem is two tab widths and a little air, and at either
+      guarded size the book is height-bound, so nothing `pages.ts` measured moves.
+    */
+    --book-h: min(calc((100vw - 5rem) / var(--ratio)), calc(100vh - 2.6rem), max(54rem, 82vh));
 
     position: relative;
     width: calc(var(--book-h) * var(--ratio));
@@ -566,8 +572,15 @@
       window while the book kept shrinking around them.
     */
     font-family: var(--font-body);
-    font-size: clamp(0.7rem, calc(var(--book-h) / 42), 0.95rem);
+    /* The divisor is 50 rather than 42 because the tabs are one line now and cannot shrink: at a
+       597px book (1024x768) the eight labels sum to about 575px at this size, and would have run
+       84px past the book at the old one. Both guarded sizes sit on the ceiling either way. */
+    font-size: clamp(0.62rem, calc(var(--book-h) / 50), 0.95rem);
     writing-mode: vertical-rl;
+    /* One line each. A tab that wraps into two vertical lines widens off the fore-edge and shows a
+       reader its last word only, which is how "The calendar" became "calendar". */
+    white-space: nowrap;
+    flex: 0 0 auto;
     padding: 0.42em 0.72em;
     color: var(--ink);
     /* Coloured stock from the palette's own hues, mixed into the page's paper so it inverts with the
