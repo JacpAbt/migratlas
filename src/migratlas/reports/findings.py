@@ -851,8 +851,8 @@ def _seas_finding() -> Finding | None:
         matters=(
             "A single number for the ocean would erase this, and a single number is what a reader "
             "wants. The useful half of the answer is how much of the disagreement is the surveying "
-            "rather than the sea: most of it, which is a warning about every centroid on this "
-            "site. And the obvious explanation for who moved — whose water warmed most — is "
+            "rather than the sea: most of it, which is a warning about every range-centre on "
+            "this site. And the obvious explanation for who moved — whose water warmed most — is "
             "measured here and is not the answer."
         ),
         plain_caveat=(
@@ -1009,7 +1009,7 @@ def _projection_finding() -> Finding | None:
         evidence_type=EvidenceType.FLUX.value,
         bias=PROJECTION_MASK_BIAS,
         plain=(
-            "Under strong mitigation, about half these places stay inside the range we measured. "
+            "If emissions are cut hard, about half these places stay inside the range we measured. "
             "Under every other scenario the warming runs off the end of it, and there we decline "
             "to guess."
         ),
@@ -1386,10 +1386,10 @@ def _flight_finding() -> Finding | None:
         ),
         plain_caveat=(
             "Most of these are butterflies that stay put, so this is when they emerge rather than "
-            "when they travel. It is one country, and it is volunteers walking transects."
+            "when they travel. It is one country, and it is volunteers walking fixed routes."
         ),
         plain_how=(
-            "Volunteers have walked the same transects in Britain since the scheme began, "
+            "Volunteers have walked the same fixed routes in Britain since the scheme began, "
             "recording what they see. For each species at each site, the scheme records the middle "
             "of its flight period, and we asked whether that date has moved -- one straight line "
             "per site-species series, and only where fifteen years of it exist. Every series was "
@@ -1917,8 +1917,8 @@ def collect() -> list[Finding]:
         Finding(
             key="coverage-bias",
             plain_how=(
-                "No new measurement — a count of what this project holds. Every source with a "
-                "time axis was tallied by hemisphere, separating the records that describe "
+                "No new measurement — a count of what this project holds. Every record that "
+                "runs over time was tallied by hemisphere, separating the records that describe "
                 "animals from the records of weather and vegetation used to explain them. The "
                 "two shares are nothing like each other, and that gap bounds every question "
                 "that needs both halves at once."
@@ -2012,8 +2012,9 @@ def collect() -> list[Finding]:
                 "correcting for how hard people looked changes what you conclude."
             ),
             plain_caveat=(
-                "Two snapshots thirty years apart, in three countries, in the places volunteers "
-                "atlassed twice. It is a before and after, not a trend, and it is not Africa."
+                "Two snapshots thirty years apart, in three countries, in the map squares "
+                "volunteers covered twice. It is a before and after, not a trend, and it is not "
+                "Africa."
             ),
             claim=(
                 "Between the two southern African bird atlases there is no net change in "
@@ -2107,7 +2108,8 @@ def collect() -> list[Finding]:
         Finding(
             key="transfer-fails",
             plain_how=(
-                "A test of whether one realm's answer travels. Three bodies of evidence, and "
+                "A test of whether an answer from one kind of record carries to another. Three "
+                "bodies of evidence, and "
                 "three runs: each time, fit on two of them and try to describe the third, which "
                 "the model has never seen. Two of the three could be recovered that way. The "
                 "one measured from the air could not, by an order of magnitude — which is the "
@@ -2304,8 +2306,8 @@ def _displacement_finding() -> Finding | None:
             "The obvious measure of animal movement -- distance walked along the track -- "
             "mostly measures how often the collar spoke, which changed 104-fold over "
             "this record. The distance between winter and summer does not care how "
-            "often the collar spoke, and it has not changed. Six million fixes in this "
-            "project's lake carry that lesson for every collar study ever pooled."
+            "often the collar spoke, and it has not changed. Six million collar positions in "
+            "this project's records carry that lesson for every collar study ever pooled."
         ),
         plain_caveat=(
             "A change smaller than roughly a doubling per decade could not have been "
@@ -2507,11 +2509,11 @@ def _skill_finding() -> Finding:
             "Migration timing has shifted over thirty years, and it is tempting to assume the "
             "shift makes each year predictable. It does not: a trend and year-to-year "
             "predictability are different properties, and every forecast this site will ever "
-            "draw is licensed only where this map is not empty."
+            "draw is allowed only where this map is not empty."
         ),
         plain_caveat=(
-            "Tested with one deliberately simple model and seven registered inputs; a cleverer "
-            "model might do better, but it would be answering a different, unregistered "
+            "Tested with one deliberately simple model and seven inputs chosen in advance; a "
+            "cleverer model might do better, but it would be answering a different, unregistered "
             "question."
         ),
         claim=(
