@@ -19,8 +19,14 @@ export interface ChapterOpener {
   question: string;
   /** The account, a paragraph an entry. Carries no digits, by a rule the Python enforces. */
   paragraphs: string[];
-  /** The claims it rests on, each with its computed value. Every digit on the leaf. */
-  figures: string[];
+  /**
+   * The claims it rests on, by ledger key. Not rendered.
+   *
+   * This was `figures`, one `key — value` line per claim printed under the account in the mono face,
+   * and a first reading of the book met it as the first number in every chapter and took it for
+   * code. The values are on the record pages; the leaf keeps only the list, which the Python guards.
+   */
+  keys: string[];
 }
 
 export interface ChaptersDocument {
@@ -28,7 +34,7 @@ export interface ChaptersDocument {
   chapters: Record<string, ChapterOpener>;
 }
 
-export const CHAPTERS_SCHEMA = 3;
+export const CHAPTERS_SCHEMA = 4;
 
 export async function loadChapters(base: string): Promise<ChaptersDocument> {
   const response = await fetch(`${base}chapters.json`);

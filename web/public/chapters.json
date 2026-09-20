@@ -1,9 +1,9 @@
 {
   "chapters": {
     "can-be-predicted": {
-      "figures": [
-        "skill-sparse \u2014 autumn 20/143 stations above chance; spring 11/140 at the chance bar; regions 3/11, median +0.065",
-        "projection-mask \u2014 49% sayable at best (ssp126, 2040-2059); 3 of 8 frames entirely unsayable"
+      "keys": [
+        "skill-sparse",
+        "projection-mask"
       ],
       "paragraphs": [
         "No, and the honest version of that answer is more interesting than the answer. It is what we get asked most, and for a while we assumed the thirty-year trend meant we could. It does not, and the reason is worth a chapter.",
@@ -13,9 +13,9 @@
       "question": "Can you tell me when they will arrive next year?"
     },
     "cannot-see": {
-      "figures": [
-        "coverage-bias \u2014 19,742,318 of 55,680,454 time-series rows are southern (35.5%), against 148,642 of 14,923,687 driver samples (1.00%)",
-        "protocol-disagreement \u2014 method-to-species scatter 1.17x, estimation error removed from both; 24% of the raw disagreement is that error"
+      "keys": [
+        "coverage-bias",
+        "protocol-disagreement"
       ],
       "paragraphs": [
         "Two kinds of blindness, and we would rather hand them over than have somebody find them.",
@@ -26,9 +26,9 @@
       "question": "What did we get wrong, or never see at all?"
     },
     "no-average-animal": {
-      "figures": [
-        "seas-disagree \u2014 Q 235.7 against a bar of 27.6 across 18 segments; warming +0.039 \u00b1 0.179 \u00b0lat per \u00b0C",
-        "transfer-fails \u2014 hold-one-out error 0.68 for aerial-north against 0.06 and 0.02 for the other two"
+      "keys": [
+        "seas-disagree",
+        "transfer-fails"
       ],
       "paragraphs": [
         "Because the pile is the problem. Take eighteen stretches of shelf sea and ask each one which way its fish went. They will not agree \u2014 some north, some south, and far more lopsided than luck can produce. We checked whether the seas that warmed most were the ones heading furthest north. They were not. Add all of it together and it cancels, and the cancelling is what the last chapter was looking at. An average over animals that disagree is a number describing none of them.",
@@ -39,10 +39,10 @@
       "question": "Why does a pile of species add up to nothing?"
     },
     "what-changed": {
-      "figures": [
-        "autumn-advance \u2014 -0.56 \u00b1 0.25 days per decade",
-        "flight-advance \u2014 -2.10 days per decade across 12,213 series (IQR -4.6 to +0.5)",
-        "composition-stable \u2014 airspeed trend -0.06 \u00b1 0.08 m/s per decade (flat)"
+      "keys": [
+        "autumn-advance",
+        "flight-advance",
+        "composition-stable"
       ],
       "paragraphs": [
         "We started with the simplest question we could think of, because it is the one everybody asks first. Are they actually early, or does it only feel that way? The trouble is that almost nobody has watched any single animal for long enough to say. So we went looking for records kept by people who were not trying to answer this question at all.",
@@ -54,10 +54,10 @@
       "question": "Are animals really doing things earlier than they used to?"
     },
     "what-did-not": {
-      "figures": [
-        "marine-null \u2014 median -0.011 \u00b0latitude per decade across 2,240 species-survey pairs",
-        "atlas-no-net-change \u2014 median -0.007 change in occupancy probability, deciles -0.075 to +0.048, across 512 species on 496 shared cells",
-        "displacement-flat \u2014 -1.84 \u00b1 3.89 km per decade over 341 elk animal-years; +1.16 \u00b1 2.13 over 219 reindeer animal-years"
+      "keys": [
+        "marine-null",
+        "atlas-no-net-change",
+        "displacement-flat"
       ],
       "paragraphs": [
         "Here is what we expected, and what nearly everybody expects. The world warms; animals that can move follow the temperature they like; so over thirty years everything should be drifting toward the poles.",
@@ -68,8 +68,8 @@
       "question": "If they leave earlier, are they also living somewhere else?"
     },
     "why-it-changed": {
-      "figures": [
-        "anthropogenic-share \u2014 -0.30 days per decade of the -0.56 observed, 50%-53% of it"
+      "keys": [
+        "anthropogenic-share"
       ],
       "paragraphs": [
         "If an animal is early, something is telling it to be. The obvious suspect is warmth, and the obvious suspect turned out to be right \u2014 about halfway. Butterflies are the easy case, because a caterpillar is more or less built by the temperature it grows up in. Give a British butterfly one extra degree before its season and it flies about five days earlier, which covers roughly three quarters of everything that has happened to it. The birds are harder. The same degree of warmth buys around two thirds of a day \u2014 seven times weaker \u2014 and covers only about half of their change.",
@@ -79,5 +79,5 @@
       "question": "What is telling them to go early?"
     }
   },
-  "schema_version": 3
+  "schema_version": 4
 }

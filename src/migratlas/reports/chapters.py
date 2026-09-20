@@ -11,14 +11,17 @@ these say *we went looking* and *we did not find it* and *we thought that was th
 a week*, because all three are true, and because a reader told how a thing was found out can judge
 it for themselves.
 
-**The rule that keeps the voice honest: an opener contains no digits at all.** Every figure a
-reader meets on a chapter's opening leaf comes from `figures`, which is read from the ledger, which
-is recomputed from the lake on every build. The prose may say *about half a day* and *seven times
-weaker*; it may not say a number, because a number typed into narration is the one figure nobody
-checks and the first to go stale. `tests/test_chapters.py` enforces it.
+**The rule that keeps the voice honest: an opener contains no digits at all.** The prose may say
+*about half a day* and *seven times weaker*; it may not say a number, because a number typed into
+narration is the one figure nobody checks and the first to go stale. `tests/test_chapters.py`
+enforces it.
 
-That split is also what the owner asked for. The story is readable by anyone; the exact quantities
-sit underneath it, and the method that produced them is a page-turn away.
+The exact quantities used to close the leaf as a `figures` block -- one line per claim, the
+ledger's key and its value in the mono face. A first-time reader met `autumn-advance — -0.56 ± 0.25
+days per decade` as the first number in the book and read it as code, which it was. The block is
+gone: the digits live on the record page a few leaves on, where the reader who wants them is
+already looking for them. What the opener keeps is `keys`, the claims it rests on, so the guard
+that every published claim belongs to exactly one chapter's account survives the block it rode in.
 
 **The slugs are story.ts's, and a test holds the two lists together.** They are the book's stable
 identities and neither file may grow a chapter the other does not have.
@@ -30,9 +33,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-SCHEMA_VERSION: Final = 3
-"""Three: the account became a list of paragraphs, so a long chapter opening takes two leaves
-the way the introduction does rather than overflowing one."""
+SCHEMA_VERSION: Final = 4
+"""Four: `figures` became `keys`. The opener names the claims it rests on and prints none of their
+values; three made the account a list of paragraphs so a long opening takes two leaves."""
 
 PUBLIC: Final = Path("web/public")
 LEDGER: Final = PUBLIC / "findings.json"
@@ -52,29 +55,15 @@ class Opener:
 
     Carries no digits anywhere -- see the module docstring.
     """
-    figures: list[str]
-    """The claims this chapter rests on, each with its computed value. Every digit on the leaf."""
+    keys: list[str]
+    """The claims this chapter rests on, by ledger key. Named, never quoted: the leaf carries no
+    value, so nothing on it can go stale."""
 
 
 def _ledger() -> dict[str, dict[str, object]]:
     payload = json.loads(LEDGER.read_text(encoding="utf-8"))
     findings: list[dict[str, object]] = payload["findings"]
     return {str(finding["key"]): finding for finding in findings}
-
-
-def value_of(key: str, ledger: dict[str, dict[str, object]]) -> str:
-    """One claim's computed value string, or a marker saying the claim is not published.
-
-    Returning a marker rather than raising: a chapter whose claim was withheld should still open,
-    and `build` runs on every build including ones where a finding withheld itself.
-    """
-    finding = ledger.get(key)
-    return str(finding["value"]) if finding else "not published on this build"
-
-
-def figures_for(keys: list[str], ledger: dict[str, dict[str, object]]) -> list[str]:
-    """The figures line: one entry per claim the chapter rests on, value read from the ledger."""
-    return [f"{key} — {value_of(key, ledger)}" for key in keys]
 
 
 def slugs_in_story() -> list[str]:
@@ -86,10 +75,15 @@ def slugs_in_story() -> list[str]:
 
 
 def build(ledger: dict[str, dict[str, object]] | None = None) -> list[Opener]:
-    """The six chapters that carry claims. The way in and the way out have their own pages."""
+    """The six chapters that carry claims. The way in and the way out have their own pages.
+
+    `ledger` is read for one reason now: every key an opener names must be a published claim, and a
+    chapter resting on a claim the ledger stopped publishing should fail here rather than open onto
+    a record page that is not there.
+    """
     read = ledger if ledger is not None else _ledger()
 
-    return [
+    built = [
         Opener(
             slug="what-changed",
             question="Are animals really doing things earlier than they used to?",
@@ -125,7 +119,7 @@ def build(ledger: dict[str, dict[str, object]] | None = None) -> list[Opener]:
                     "took far longer."
                 ),
             ],
-            figures=figures_for(["autumn-advance", "flight-advance", "composition-stable"], read),
+            keys=["autumn-advance", "flight-advance", "composition-stable"],
         ),
         Opener(
             slug="why-it-changed",
@@ -157,7 +151,7 @@ def build(ledger: dict[str, dict[str, object]] | None = None) -> list[Opener]:
                     "is ours."
                 ),
             ],
-            figures=figures_for(["anthropogenic-share"], read),
+            keys=["anthropogenic-share"],
         ),
         Opener(
             slug="what-did-not",
@@ -191,7 +185,7 @@ def build(ledger: dict[str, dict[str, object]] | None = None) -> list[Opener]:
                     "is about why."
                 ),
             ],
-            figures=figures_for(["marine-null", "atlas-no-net-change", "displacement-flat"], read),
+            keys=["marine-null", "atlas-no-net-change", "displacement-flat"],
         ),
         Opener(
             slug="no-average-animal",
@@ -227,7 +221,7 @@ def build(ledger: dict[str, dict[str, object]] | None = None) -> list[Opener]:
                     "— is not something we have."
                 ),
             ],
-            figures=figures_for(["seas-disagree", "transfer-fails"], read),
+            keys=["seas-disagree", "transfer-fails"],
         ),
         Opener(
             slug="can-be-predicted",
@@ -257,7 +251,7 @@ def build(ledger: dict[str, dict[str, object]] | None = None) -> list[Opener]:
                     "projection without one is a claim about places nobody ever measured."
                 ),
             ],
-            figures=figures_for(["skill-sparse", "projection-mask"], read),
+            keys=["skill-sparse", "projection-mask"],
         ),
         Opener(
             slug="cannot-see",
@@ -288,9 +282,14 @@ def build(ledger: dict[str, dict[str, object]] | None = None) -> list[Opener]:
                     "and with the attempts that failed printed beside the ones that did not."
                 ),
             ],
-            figures=figures_for(["coverage-bias", "protocol-disagreement"], read),
+            keys=["coverage-bias", "protocol-disagreement"],
         ),
     ]
+    missing = [key for opener in built for key in opener.keys if key not in read]
+    if missing:
+        message = f"chapters rest on claims the ledger does not publish: {missing}"
+        raise ValueError(message)
+    return built
 
 
 def write(openers: list[Opener] | None = None) -> Path:
@@ -302,7 +301,7 @@ def write(openers: list[Opener] | None = None) -> Path:
             opener.slug: {
                 "question": opener.question,
                 "paragraphs": opener.paragraphs,
-                "figures": opener.figures,
+                "keys": opener.keys,
             }
             for opener in built
         },

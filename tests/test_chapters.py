@@ -55,7 +55,7 @@ def test_no_opener_carries_a_digit() -> None:
     """The rule the voice rests on.
 
     A number typed into narration is the one figure nobody checks and the first to go stale, so
-    the prose says "about half a day" and the figures line says -0.56. This is what makes the
+    the prose says "about half a day" and the record page says -0.56. This is what makes the
     plain register safe to write in: there is nothing in it that can quietly become wrong.
     """
     for opener in chapters.build(LEDGER):
@@ -65,25 +65,32 @@ def test_no_opener_carries_a_digit() -> None:
         assert not re.findall(r"\d", opener.question), opener.slug
 
 
-def test_every_figure_comes_from_the_ledger() -> None:
-    """And a claim the ledger stopped publishing shows as missing rather than as a stale figure."""
-    built = chapters.build(LEDGER)
-    joined = " ".join(figure for opener in built for figure in opener.figures)
-    assert "-0.56 days per decade" in joined
-    assert "Q 235.7 against 27.6" in joined
+def test_an_opener_quotes_no_value_from_the_ledger() -> None:
+    """The leaf names its claims and prints none of their numbers.
 
+    The figures block that used to close the opener was the first number a reader met and it read
+    as code. Its job -- every claim named in exactly one chapter -- is `keys` now, and a value on
+    the leaf would be a value the record page already carries, typed twice.
+    """
+    document = chapters.build(LEDGER)
+    for opener in document:
+        for key in opener.keys:
+            assert LEDGER[key]["value"] not in " ".join(opener.paragraphs), (opener.slug, key)
+
+
+def test_a_chapter_cannot_rest_on_a_claim_the_ledger_does_not_publish() -> None:
+    """Withdrawn from the ledger means withdrawn from the book, loudly, not a leaf that opens onto
+    a record page that is not there."""
     without = {k: v for k, v in LEDGER.items() if k != "seas-disagree"}
-    degraded = " ".join(figure for opener in chapters.build(without) for figure in opener.figures)
-    assert "Q 235.7 against 27.6" not in degraded
-    assert "not published on this build" in degraded
+    with pytest.raises(ValueError, match="seas-disagree"):
+        chapters.build(without)
 
 
-def test_every_claim_in_the_book_is_carried_by_exactly_one_chapters_figures() -> None:
-    """A figures line that forgot a claim is a chapter resting on evidence it never shows."""
+def test_every_claim_in_the_book_is_carried_by_exactly_one_chapter() -> None:
+    """A chapter that forgot a claim is a chapter resting on evidence it never shows."""
     counted: dict[str, int] = {}
     for opener in chapters.build(LEDGER):
-        for figure in opener.figures:
-            key = figure.split(" — ")[0]
+        for key in opener.keys:
             counted[key] = counted.get(key, 0) + 1
     assert set(counted) == set(LEDGER)
     assert set(counted.values()) == {1}
@@ -94,7 +101,7 @@ def test_an_opener_says_something_rather_than_naming_the_chapter_again() -> None
         assert opener.question.endswith("?")
         assert len(" ".join(opener.paragraphs)) > 400, opener.slug
         assert len(opener.paragraphs) > 1, opener.slug
-        assert opener.figures, opener.slug
+        assert opener.keys, opener.slug
 
 
 def test_the_document_round_trips(tmp_path: object, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -107,4 +114,5 @@ def test_the_document_round_trips(tmp_path: object, monkeypatch: pytest.MonkeyPa
     first = payload["chapters"][built[0].slug]
     assert first["question"] == built[0].question
     assert first["paragraphs"] == built[0].paragraphs
-    assert first["figures"] == built[0].figures
+    assert first["keys"] == built[0].keys
+    assert "figures" not in first

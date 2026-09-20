@@ -1109,16 +1109,14 @@ test("the opener is set on the page, question and all", async ({ page }) => {
   /*
     The account carries no digits at all -- the rule `chapters.py` is written under and
     `test_chapters.py` enforces, so the plain register has nothing in it that can quietly stop
-    being true. Every figure on the leaf sits in the apparatus below, read from the ledger,
-    which is why these two are asserted apart.
+    being true. Neither leaf of it, and nothing under it: the block of `key — value` lines that
+    used to close the account was the first number a reader met in every chapter, and it read as
+    code. The values are on the record pages.
   */
-  await expect(opener.first().locator(".opener__body").first()).not.toHaveText(
-    /\d/,
-  );
-  // The figures close the account, so they are on the leaf it ends on.
-  await expect(opener.last().locator(".opener__figures")).toContainText(
-    "2,240 species-survey pairs",
-  );
+  for (const leaf of await opener.all()) {
+    await expect(leaf).not.toHaveText(/\d/);
+  }
+  await expect(page.locator(".opener__figures")).toHaveCount(0);
 });
 
 test("a monitor gets the spread and only the spread", async ({ page }) => {
