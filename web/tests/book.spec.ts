@@ -1118,6 +1118,13 @@ test("the opener is set on the page, question and all", async ({ page }) => {
     await expect(leaf).not.toHaveText(/\d/);
   }
   await expect(page.locator(".opener__figures")).toHaveCount(0);
+  // What closes the account instead: the instruments its claims were measured with, drawn on the
+  // leaf the account ends on, and only there. "But the map stayed put" rests on a trawl, a grid
+  // and two collared herds, so at least two kinds are drawn.
+  await expect(opener.first().locator(".opener__doodles")).toHaveCount(0);
+  const drawn = opener.last().locator(".opener__doodles .instrument");
+  expect(await drawn.count()).toBeGreaterThanOrEqual(2);
+  await expect(opener.last().locator(".doodle figcaption").first()).not.toBeEmpty();
 });
 
 test("a monitor gets the spread and only the spread", async ({ page }) => {

@@ -19,7 +19,7 @@
   import type { ResponseDocument } from "../sandbox/response";
   import type { SandboxDocument } from "../sandbox/sandbox";
   import { CHAPTERS, chapterAt, chapterOf, realmAt } from "../story";
-  import type { Finding } from "../ledger";
+  import { instrumentFor, type Finding, type Instrument } from "../ledger";
 
   let {
     findings,
@@ -81,6 +81,24 @@
   );
 
   const of = (key: string): Finding | undefined => findings.find((f) => f.key === key);
+
+  /**
+   * The instruments a chapter's claims were measured with, each once, in the chapter's order.
+   *
+   * Read from the ledger through the opener's `keys` rather than declared beside the prose, so a
+   * chapter that gains a claim gains its drawing without anyone remembering to add it -- and a
+   * claim the ledger withholds takes its drawing with it.
+   */
+  function instrumentsOf(keys: string[]): Instrument[] {
+    const seen: Instrument[] = [];
+    for (const key of keys) {
+      const finding = of(key);
+      if (!finding) continue;
+      const kind = instrumentFor(finding);
+      if (!seen.includes(kind)) seen.push(kind);
+    }
+    return seen;
+  }
 
   /**
    * Plate numbers, counted in reading order over the whole book.
@@ -312,6 +330,7 @@
         opener={written}
         from={panel.from}
         to={panel.to}
+        instruments={instrumentsOf(written.keys)}
       />
     {/if}
   {:else if panel.kind === "intro"}
