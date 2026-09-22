@@ -4,16 +4,6 @@ Pre-registered in `docs/methods/phase2a-attrici.md`. Four predictions, one of wh
 condition: if the factual half of ISIMIP does not reproduce the ERA5 warming already in the lake at
 the same stations, the pair describes a different place and nothing here may be reported.
 
-The two counterfactuals answer different questions and this module does not average them.
-
-- **DAMIP** removes `f x S x W`, where `f` is the human share of the *ensemble-mean forced* warming.
-  Averaging fifteen models suppresses internal variability by construction, so what is left is close
-  to a pure forced response, and `f` came out at 0.98.
-- **ATTRICI** removes `S x (W_obsclim - W_counterclim)`, where the difference is the part of each
-  station's *actual* daily series that correlates with global mean temperature. A 25-year trend at
-  one 0.5-degree cell contains a great deal of internal variability, and only the GMT-correlated
-  part comes out.
-
 So a gap between them is expected rather than a fault, and the useful output is two numbers with an
 explanation of what each measures. The response function `S` is shared: it is fitted once in
 `phase2a_timing` on observations and reused here rather than refitted, so the only thing that

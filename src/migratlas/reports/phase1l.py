@@ -4,11 +4,6 @@ Pre-registered in ``docs/methods/phase1l-paired-protocols.md`` before any paired
 computed. Phase 1k compared two Swedish networks' medians and found them 3x apart; the owner's
 correction was that comparing two averages of *different species mixtures* is the error that
 comparison was warning about. This pairs by species instead, so composition cannot contribute.
-
-**The headline is a ratio**, not a difference: the spread of paired differences over the spread of
-the slopes themselves. Below 1 and the method matters less than which animal you look at, so the
-project's comparative claims are informative. Near or above 1 and every cross-unit claim here is
-partly reporting its instruments.
 """
 
 import logging

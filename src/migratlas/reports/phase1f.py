@@ -4,15 +4,6 @@ Pre-registered in `docs/methods/phase1f-atlas-surface.md`. Phase 1e answers "did
 and this answers "did this cell change", which is a different question with a different way of going
 wrong: a per-cell number can draw where the volunteers went instead of where the animals are. §5 of
 the note registers four stop conditions and the one that matters is the effort correlation.
-
-The estimand is the expected count of the *analysed* taxa present in a cell -- the ones Phase 1e
-could fit -- and not richness. Every scarce taxon is excluded by that floor, so the number is a
-floor on richness and moves for reasons richness would not.
-
-Nothing here is split by taxon, and that is the ethics constraint rather than a presentation choice:
-the registry classifies both atlases `low` rather than `not_sensitive` because some taxa are
-sensitive at fine scale, so a per-taxon per-cell surface would be a 27 km locator for each of them.
-The sum over ~500 taxa is not one.
 """
 
 import logging

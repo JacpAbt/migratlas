@@ -1,20 +1,5 @@
 """UK Butterfly Monitoring Scheme flight-period phenology, per `docs/methods/phase1j-fourth-leg.md`.
 
-The project's first insect series and the fourth leg of the transfer test: a timing record that is
-phenological like the radar and is not radar, which is the one axis `transfer-fails` could not
-separate.
-
-Three things here are decided in the method note rather than by this module, and each would be a
-silent error otherwise.
-
-**The day columns count from 1 April, not from 1 January.** The archive's own documentation says so
-with "20 = 20th April" as its example. Read as a day of year, every date lands about ninety days
-early and looks entirely plausible -- a Peacock flying in January rather than April.
-
-**The pooled brood row is dropped for the thirteen species that have their generations split.** For
-those, `BROOD = 0` is the whole flight season across two peaks and a trough, which is not a date any
-animal experienced. For every other species it is the only row there is, and it is kept.
-
 **`count` is days from first appearance to the mean flight date, not a day number.** `count` is this
 table's value column, where `sabap1` puts a reporting rate and `fishglob` a standardised index --
 every one of those an intensity. A day of year is a coordinate on the time axis instead, and

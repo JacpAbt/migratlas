@@ -5,19 +5,6 @@ The first version drew one chart with three lines. Two of those came from the sa
 were one piece of evidence drawn twice. `phase2a_attrici` replaced the second with a real
 independent counterfactual, and it disagrees with the first by a factor of 2.4.
 
-**So: two ribbons, one question each, two lines each.** Not one chart with four lines. Four lines
-where two nearly coincide and two sit far apart invites a reader to average them, and averaging is
-the one thing that must not happen here -- these are different quantities, not two estimates of one.
-
-| ribbon | question | how it answers |
-| --- | --- | --- |
-| DAMIP | no human *forcing* | fifteen models run without it |
-| ATTRICI | no *warming* | the observations, detrended against global mean temperature |
-
-**Neither counterfactual is flat, and that is still the point.** Each removes only what it
-attributes, and about half the observed advance does not track temperature at all. A flat
-counterfactual would claim that unexplained half is natural.
-
 **And each is drawn to the observed scatter, never to its own gap.** The DAMIP lines part by 0.89
 days over thirty years and the ATTRICI lines by less; a reader has to be able to see that one gap is
 smaller, which is impossible if each chart is rescaled to fill itself. Both use the same vertical

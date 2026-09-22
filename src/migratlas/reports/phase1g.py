@@ -5,10 +5,6 @@ ordinary p-value here is meaningless and looks fine. Both maps are spatially aut
 autocorrelated surfaces agree far more often than independent sampling implies. Significance is
 judged against nulls that keep the factor's spatial structure and destroy only its alignment with
 the response; the naive test is computed too and published beside them, labelled as the wrong one.
-
-The instrument is weak by construction and the note says so: the product compares 1984-1999 with
-2000-2021 against atlas windows of five years each, which attenuates. A surviving effect means
-something. A null means "not detectable with the only instrument available" and must say so.
 """
 
 import logging

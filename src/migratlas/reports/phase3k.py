@@ -4,12 +4,6 @@ Pre-registered in ``docs/methods/phase3k-species-not-seas.md`` on 2026-09-01, be
 this design. Two unregistered diagnostics are why it exists, and the note says which of its
 predictions are therefore checks rather than discoveries.
 
-**A. The heterogeneity, with the drift in the design.** `seas-disagree` publishes Cochran's Q over
-eighteen survey segments. A centroid is weighted by catch per unit effort, so where the hauls happen
-moves it, and each survey's own mean haul latitude per year -- with no animal in it -- is a
-covariate here, in the fit rather than regressed out afterwards. What survives is the between-survey
-variation that is not the stations moving.
-
 **B. The species, with a floor fixed in advance.** For taxa caught in at least five surveys, the
 coherence of their latitude trends grouped by species against grouped by survey, both through
 `phase1m._icc`, each with a survey-clustered bootstrap interval beside the naive one.

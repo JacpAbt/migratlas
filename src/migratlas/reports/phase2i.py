@@ -4,18 +4,6 @@ Pre-registered in ``docs/methods/phase2i-front-speed.md`` before any latitude gr
 date was fitted. A passage date is a transit observation whose cause sits upstream in a residence
 phase: it is the departure date plus the time spent getting there, and that time is flying and
 stopping over in alternation. Every driver ever fitted to this record was a residence-side driver.
-
-**The estimand is a gradient, not a date.** Within a year, across a panel of stations present in
-every year, the median passage date is regressed on latitude. The intercept is the date at the
-panel's mean latitude and the slope is days per degree -- the inverse of the speed at which the
-median-passage isochrone crosses the band. The band-average trend is the intercept's trend *by
-construction*, so this design does not partition the published residual; what it tests is whether
-anything **latitude-graded** lives in the slope, which is the only place a transit change can be.
-
-**The duty cycle is the number ADR 0019 asked for.** The front's speed divided by the flight speed
-measured inside it, over the night's own length, is the fraction of available darkness the front
-advances as if the birds had flown -- the residence share of transit. It is a lower bound, because
-one degree of latitude is less than the distance a south-south-west heading covers.
 """
 
 import logging

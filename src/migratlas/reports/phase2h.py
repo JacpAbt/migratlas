@@ -5,17 +5,6 @@ A bottom-trawl survey sails in a fixed season, so a species that moves within it
 at the same phase every time, and a change in *when* it arrives cannot be told from a change in
 *where* it lives. Eight regions in the lake are trawled in two or three seasons under separate
 survey unit ids, which makes the question answerable with the instrument that asked it.
-
-**The estimand that matters is the trend, not the centroid.** A seasonal difference in catchability
--- a fish on the bottom in winter and in midwater in summer -- moves a centroid with no animal
-having moved, and it is a *level* offset, so it cancels in a per-decade trend. That cancellation is
-the design: each species' trend is fitted once per season on the footprint and years the seasons
-share, and their disagreement is measured against their own errors.
-
-**The split-half control decides whether any of it can be read.** A least-squares trend error on an
-autocorrelated centroid series is too small, and a disagreement between seasons would look the same
-as a disagreement between two halves of one season. If the halves disagree as much, this instrument
-cannot separate a phase cut from a wandering centroid, and the note says so instead of claiming.
 """
 
 import logging

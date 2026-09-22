@@ -4,11 +4,6 @@ Pre-registered in `docs/methods/phase1h-elk.md`. The lake holds six million trac
 finding, because Phase 1d showed that swapping a radio collar for a GPS collar moves a measured
 migration date by 46.8 days. This asks whether anything survives that, using a measure the
 instrument cannot reach.
-
-A path length accumulates along a track, so it scales with how often the collar reported. A
-*displacement* between two calendar dates needs one fix near each and does not. Both are computed
-here on the same animals in the same years: the confounded one is published beside the robust one,
-which is what this project does when it has both.
 """
 
 import logging

@@ -2,12 +2,6 @@
 
 Pre-registered in docs/methods/phase2a-timing.md, including the three predictions, before the
 temperature was fetched.
-
-The test is arithmetic rather than a coefficient. Sensitivity S (days per degC, fitted within each
-station across years) times warming W (degC per decade, from ERA5) should reproduce the observed
-advance A (days per decade, from Phase 1a) if the advance is thermally driven. S x W is the
-explained share, and the honest halfway house to the DAMIP counterfactual that phase2a-design
-reserves the causal claim for.
 """
 
 import logging

@@ -1,15 +1,5 @@
 """Phase 3h, per `docs/methods/phase3h-pooled-response.md`: predict a region, not a station.
 
-Three arms, and the ladder climbs one step only. Arm A is Phase 3a's per-station fit and exists to
-calibrate the harness. Arm B changes the *response* to the regional mean and nothing else, which is
-the one thing Phase 3a, the 3d rehearsal and Phase 3f all held fixed while varying the predictor.
-Arm C adds the wind terms Phase 2a fitted and no skill harness in this project has ever seen.
-
-The licence for changing the response is `reports/response_floor.py`: a station's passage date moves
-4.37 days between years and up to 3.54 of that is measurement error, so at most a third of it was
-ever explainable, while a region's series is 65% shared signal. Every earlier attempt was fitting to
-a target that is mostly noise.
-
 The estimator is `models.skill.hindcast` verbatim in every arm -- no pooling, no spline, no new
 lambda rule. Phase 3f spent five rungs on estimator complexity and could interpret none of them;
 changing the response *and* the estimator would produce a difference nobody could attribute.

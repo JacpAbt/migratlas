@@ -1,22 +1,6 @@
 """Phase 2c -- is the thermal sensitivity a response, or a co-trend?
 
 Pre-registered in ``docs/methods/phase2c-timescale.md`` before any refit.
-
-The published ``S`` is a within-station slope over thirty-one years in which the response and the
-predictor both trend, fitted with no time term in its design, so it absorbs their shared trend.
-Write the model with a time term and the observed trend decomposes exactly::
-
-    passage(t)     = a + b*t + s*temperature(t) + (wind, break) + e
-    temperature(t) = c + w*t + u
-    =>  A = b + s*w
-
-Fitting ``s`` without the time term folds ``b`` -- everything non-thermal that moved over the
-record -- into the coefficient, and ``S x W`` then partly reproduces ``A`` by construction.
-
-**The deliverable is an interval on the explained share, not a corrected point estimate.** A
-secular response and a non-thermal process that trends the same way are the same column of this
-design matrix. One realised series over one region cannot separate them, so the two specifications
-bracket the answer and the bracket is the result.
 """
 
 import logging

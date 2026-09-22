@@ -1,19 +1,6 @@
 """Phase 1o -- is the level between one species and all of them a taxonomic one?
 
 Pre-registered in ``docs/methods/phase1o-taxonomic-groups.md`` before the rank lookup was fetched.
-
-Two phases closed the cheap ways. Phase 1m ruled out the free descriptive axes -- where a species
-lives and how widely it is spread cleared the 0.10 coherence floor in one network of three. Phase 3j
-ruled out the free environmental axes in another realm. What remains is the axis the literature
-actually uses, and it needed a rank lookup the lake did not hold.
-
-**Two thirds of #66, not all of it.** GBIF's Backbone is a taxonomy and says nothing about whether a
-bird migrates, so family and order are here and migratory strategy is not -- that needs a trait
-database, which is a new source and a different note.
-
-**Coherence is the primary and Phase 1m is why**: averaging *n* species raises the signal by about
-the square root of *n* whether or not they belong together, so a group signal without a coherence
-beside it is arithmetic wearing a result's clothes.
 """
 
 import logging

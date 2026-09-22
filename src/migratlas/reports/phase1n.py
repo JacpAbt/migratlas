@@ -2,16 +2,6 @@
 
 Pre-registered in ``docs/methods/phase1n-shared-footprint.md`` before any shared-cell
 restriction was computed.
-
-`protocol-disagreement` publishes a noise-corrected method-to-species scatter of 1.17 on a
-comparison where the two Swedish programmes were measured over **different areas** -- 33
-consistently sampled cells against 84. Phase 1l and Phase 1m both closed by naming that as the next
-thing to fix and neither did, so part of what the ledger calls protocol is geography and nobody
-knows what part.
-
-Then #67: a constant offset is a calibration and correctable; a difference that varies with
-something names that something. Both covariates here are properties of the *species* rather than of
-the difference, which is the circularity Phase 1m named and Phase 3i refused.
 """
 
 import logging

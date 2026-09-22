@@ -5,22 +5,6 @@ existed at a UK coordinate. The second of ADR 0018's two studies and the first t
 2: a species' *response* to a driver is fitted before any network number is, because a response
 pooled across every site a species occupies is well determined where that species' *trend* at one
 site is not -- Phase 1k measured a single flight-date series at 1.05 standard errors from zero.
-
-**The unit is a species-generation.** Its response `S` is days of flight-date shift per degC of
-pre-season warmth, fitted within site across years with a linear year term (arm B, the primary)
-and without one (arm A, the sensitivity), on Phase 2c's lesson that two trending series share a
-slope the coefficient will otherwise absorb. Its interval is clustered on **year**, because every
-site in Britain sees roughly the same spring and Phase 1k measured the price of pretending otherwise
-at 4.5 times on this very source.
-
-**The pre-season is fixed per unit by a rule, not chosen against a fit**: the two calendar months
-ending the month before the unit's climatological median flight month. It uses the unit's mean
-timing and nothing about its year-to-year variation, which is what keeps it non-circular.
-
-**Pooled across units** are a median with a bootstrap over units, Cochran's Q across the units'
-responses -- the registered test of whether the response is the species' -- and the thermal share
-`median(S x W) / median(A)`, a ratio of medians because a per-unit ratio is unstable where a trend
-is near zero.
 """
 
 import logging

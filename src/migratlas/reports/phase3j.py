@@ -2,20 +2,11 @@
 
 Pre-registered in ``docs/methods/phase3j-thermal-clusters.md`` before any cluster was formed.
 
-`marine-null` publishes a median of -0.011 deg latitude per decade over ~2,240 species-survey pairs
-with an interquartile range spanning zero, and `seas-disagree` has since established that the units
-behind it disagree emphatically while the thermometer does not sort them. A warming that moved a
-third of the pairs and left the rest alone produces exactly the number the ledger publishes, and
-nothing had tested that.
-
 **The primary quantity is coherence, not signal**, and Phase 1m is why: averaging seventeen species
 raises the signal by roughly the square root of seventeen whether or not they belong together, and
 its stop condition fired on exactly that. So the floor is Phase 1m's own 0.10, `_icc` is Phase 1m's
 own function, and one axis clearing a null out of three with coherence under the floor is
 pre-committed as not a finding.
-
-**No axis is a property of the response.** Grouping on how much something moved and then measuring
-how much the groups moved is the circularity Phase 1m named and Phase 3i refused.
 """
 
 import logging

@@ -5,13 +5,6 @@ track here. A displacement measures the product of how long an animal moved and 
 so an animal that covers the same ground by stopping less and one that covers it by moving faster
 are the same number to every fit this project has published. Phase 1h measured the displacement;
 this splits it.
-
-**Phase 1h's refusal is this module's hardest problem, and it is answered rather than ignored.** It
-chose displacement over path length because a path length tracks how often the collar fired. Three
-things are done about that and none is a fix: steps are kept only where the interval is within 20%
-of the source's own modal interval, the model is fitted per source so no interval is compared across
-sources, and the registered control asks whether an animal-year's travelling fraction correlates
-with that year's median fix interval at all. If it does, nothing here is read.
 """
 
 import logging

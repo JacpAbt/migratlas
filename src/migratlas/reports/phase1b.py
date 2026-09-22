@@ -4,10 +4,6 @@ Every choice here is fixed in docs/methods/phase1b-marine.md, written before thi
 footprint threshold, the CPUE weighting, the per-survey reporting, the gear break and the
 permutation null were all chosen in advance, so a result cannot be the product of picking the
 specification that produced one.
-
-Reported per survey unit and never pooled across them. NEUS-Fall and EBS are different oceans,
-different gear and different species pools, and a pooled centroid would mostly measure which
-survey contributed the most hauls in a given year.
 """
 
 import logging

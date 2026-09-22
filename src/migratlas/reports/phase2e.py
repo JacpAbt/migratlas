@@ -5,19 +5,6 @@ fitted. Every driver tried against *where* in this project has been a property o
 this is the first that is a property of the population. A species whose numbers rise occupies new
 cells and its centroid moves toward them; one whose numbers fall retreats toward wherever it
 persists. Neither needs a degree of warming.
-
-**Three quantities per unit**, the species in its survey, all on the consistent footprint the
-latitude trend was fitted on: `L`, the published latitude trend; `N`, the slope per decade of the
-log of the yearly index -- summed catch per unit effort over the year's sampling events, divided by
-the number of events; `E`, the slope of the log of the number of consistent cells the species was
-caught in.
-
-**The instruments are borrowed, not rebuilt**: Phase 3j's terciles, spreads and within-survey nulls
-with a population axis in place of a thermal one; Phase 1m's coherence; Phase 3k's species-against-
-survey coherence with its permutation chance level. The one new thing is the control the
-registration fixed with the test -- a rare species has a noisy `N` and a noisy `L`, and the
-magnitude of a noisy estimate is inflated, so the abundance spread counts only if it exceeds the
-same spread cut on the latitude trend's own precision.
 """
 
 import logging

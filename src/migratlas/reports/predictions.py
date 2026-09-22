@@ -1,18 +1,10 @@
 """How often this project's own registered predictions turned out wrong.
 
-The convention `CLAUDE.md` calls the most valuable thing in the repository is pre-registration:
-numbered falsifiable predictions fixed before the fetch, graded in the same note whichever way they
-went, and a wrong one recorded as a correction rather than edited away. The project had been doing
-that for two months and had never published the score.
-
 **A convention nobody scores is a habit.** This is the score, computed from
 ``docs/methods/predictions.yaml`` -- authored rather than parsed, because the notes grade in prose
 and eight of them use wording a regex misses entirely. `tests/test_predictions.py` is the drift
 guard: every method note must be listed as counted, pending or excluded-with-a-reason, so a phase
 cannot go uncounted by being forgotten.
-
-The failure rate is meant to be high. A registration that only ever confirms was not testing
-anything, and the interesting thing about this number is not its size but that it exists at all.
 """
 
 import logging
