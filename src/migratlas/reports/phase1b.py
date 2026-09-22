@@ -93,7 +93,8 @@ def gear_change_year(cells: pl.DataFrame) -> int | None:
     return int(changed["year"].to_numpy().min()) if changed.height else None
 
 
-def _mean_ci(values: np.ndarray) -> tuple[float, float]:
+def _median_ci(values: np.ndarray) -> tuple[float, float]:
+    """The median, and the interval of a *mean*: 1.96 SEM, which is narrow for a median."""
     if values.size == 0:
         return (float("nan"), float("nan"))
     ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size) if values.size > 1 else 0.0
@@ -160,7 +161,7 @@ def analyse(
             if "mean_depth" in series.columns
             else pl.DataFrame()
         )
-        median, ci = _mean_ci(latitude["per_decade"].to_numpy())
+        median, ci = _median_ci(latitude["per_decade"].to_numpy())
         results.append(
             SurveyResult(
                 survey_unit=str(unit),
@@ -234,7 +235,7 @@ def render() -> str:
         return "\n".join(out)
 
     shifts = pooled["per_decade"].to_numpy()
-    median, ci = _mean_ci(shifts)
+    median, ci = _median_ci(shifts)
     poleward = int((shifts > 0).sum())
     out += [
         "",
