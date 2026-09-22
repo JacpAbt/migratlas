@@ -232,29 +232,55 @@ interface Patch {
   sd: number;
 }
 
+/** The side of a 12px square of paper, which is enough grain to average and little enough to place. */
+const PATCH = 12;
+
 async function sheetPaper(page: Page): Promise<Patch> {
   /*
-    The foot of the facing page, which is blank paper.
+    A patch of the facing page that nothing is printed on, found rather than assumed.
 
-    It used to be the top-left of the old shell's torn sheet. In the book the paper is the spread's
-    own ground seen through a page, and the reliable patch of it is low on the recto: a plate is
-    landscape and top-aligned, so the bottom of a figure page carries nothing. Reading the paper on
-    one page and the ink on another is sound for the reason the header already gives -- the notebook
-    has one background everywhere, and `every surface that paints paper paints it the same way` is
-    the test that keeps that true.
+    It used to be a fixed point at half the width and 82% of the height, on the argument that "a
+    plate is landscape and top-aligned, so the bottom of a figure page carries nothing". That was
+    true of every figure page until one grew a chart above its plate, and then the patch landed on
+    the plate's own sheet -- `--plate-paper`, darker than the page by design -- so the ink on the
+    facing leaf was measured against a ground it is not printed on. The kicker came out at 4.30:1
+    against a floor of 4.5 without a single colour having changed.
+
+    So the square is searched for: the lowest one in the page that no painting element overlaps.
+    Painting means a leaf or a drawing -- a container's box covers its children and says nothing
+    about where the ink is, which is the same distinction `book/fit.ts` draws for the same reason.
+
+    Reading the paper on one page and the ink on another is still sound, for the reason the header
+    gives: the notebook has one background everywhere, and `every surface that paints paper paints
+    it the same way` is the test that keeps that true.
   */
-  const box = await page.locator(".spread > .page--recto").boundingBox();
-  expect(box, "no page to measure the paper on").toBeTruthy();
-  const shot = (
-    await page.screenshot({
-      clip: {
-        x: box!.x + box!.width * 0.5,
-        y: box!.y + box!.height * 0.82,
-        width: 12,
-        height: 12,
-      },
-    })
-  ).toString("base64");
+  const clip = await page.evaluate((size) => {
+    const inner = document.querySelector(".spread > .page--recto .page__inner");
+    if (!inner) return null;
+    const box = inner.getBoundingClientRect();
+    const painted = [...inner.querySelectorAll("*")]
+      .filter(
+        (node) => node.children.length === 0 || node.tagName.toLowerCase() === "svg",
+      )
+      .map((node) => node.getBoundingClientRect())
+      .filter((rect) => rect.width > 0 && rect.height > 0);
+    for (let y = box.bottom - size; y > box.top; y -= 4) {
+      for (const share of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+        const x = box.left + box.width * share - size / 2;
+        const clear = painted.every(
+          (rect) =>
+            rect.right <= x ||
+            rect.left >= x + size ||
+            rect.bottom <= y ||
+            rect.top >= y + size,
+        );
+        if (clear) return { x, y, width: size, height: size };
+      }
+    }
+    return null;
+  }, PATCH);
+  expect(clip, "no bare paper on the facing page to measure").toBeTruthy();
+  const shot = (await page.screenshot({ clip: clip! })).toString("base64");
 
   return page.evaluate(async (encoded) => {
     const image = new Image();

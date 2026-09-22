@@ -7,11 +7,14 @@
     finding,
     number,
     base,
+    compact = false,
   }: {
     finding: Finding;
     /** Plate number, so the caption can be cited. */
     number: number;
     base: string;
+    /** Under a chart rather than alone on the page: a smaller sheet, hung more crooked. */
+    compact?: boolean;
   } = $props();
 
   /*
@@ -65,7 +68,7 @@
   *lighter* by night -- a second sheet under a lamp is lighter than what it lies on, and mixing
   toward the sunken tone made it invisible on the dark palette.
 -->
-<figure class="plate">
+<figure class="plate" class:plate--compact={compact}>
   <!--
     The measurement is on the sheet, which is in normal flow, and not on an absolutely positioned
     child. `Sheet.svelte` binds a flow element for the same reason and works; binding the absolute
@@ -136,6 +139,22 @@
     position: absolute;
     inset: 0;
     display: block;
+  }
+
+  /*
+    Under a chart the sheet takes three fifths of the width and hangs at a steeper angle, set off
+    to the right the way a sketchbook's second sheet is taped in wherever there was room. The
+    caption keeps every line -- the key, the scope, where the records are -- because a smaller
+    map is not a less accountable one.
+  */
+  .plate--compact .plate__sheet {
+    width: 60%;
+    margin-left: auto;
+    transform: rotate(-2.6deg);
+  }
+
+  .plate--compact figcaption {
+    margin-top: var(--gap-tight);
   }
 
   .plate__failure {

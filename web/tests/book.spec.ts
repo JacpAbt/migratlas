@@ -327,7 +327,8 @@ test("the plate is drawn, and its marks are named", async ({ page }) => {
     await expect(page.locator(`.plate__sheet svg .${name}`)).toHaveCount(1);
   }
   // The caption cites the camera line `story.ts` already records and a test already guards.
-  await expect(page.locator("figcaption")).toContainText(
+  // Scoped to the plate: a headline page carries two figcaptions, the chart's reading and this.
+  await expect(page.locator(".plate figcaption")).toContainText(
     "bottom-trawl surveys",
   );
 
@@ -345,6 +346,37 @@ test("the plate is drawn, and its marks are named", async ({ page }) => {
   await expect(page.locator(".plate__elsewhere")).toContainText(
     "drawn on the globe",
   );
+});
+
+test("every headline the analyses drew is on its claim's figure page, over the plate", async ({
+  page,
+}) => {
+  /*
+    Two promises, one in each direction. A headline drawn for a claim `figures.ts` does not declare
+    would never reach a page; a declared claim with no headline falls back to the plate, which is
+    allowed, because an analysis may withhold. So the document is held to the declaration, and each
+    drawn chart is asserted where it is printed -- with the plate still under it.
+  */
+  test.setTimeout(120_000);
+  const { headlines } = JSON.parse(readFileSync("public/headline.json", "utf8")) as {
+    headlines: { key: string }[];
+  };
+  const { FIGURES } = await import("../src/lib/book/figures");
+  expect(headlines.length, "a document with nothing drawn in it").toBeGreaterThan(0);
+  const spreads = await layout();
+  for (const { key } of headlines) {
+    expect(FIGURES[key]?.kind, `${key} is drawn but not declared a headline figure`).toBe(
+      "headline",
+    );
+    const { at } = pageAt(
+      spreads,
+      (panel) => panel.kind === "figure" && panel.key === key,
+    );
+    await openBook(page, at);
+    await expect(page.locator(".headline__svg")).toBeVisible();
+    await expect(page.locator(".headline__reading")).not.toBeEmpty();
+    await expect(page.locator(".plate--compact .plate__sheet svg")).toBeVisible();
+  }
 });
 
 test("the plate's pen is the same weight at any window size", async ({
@@ -580,11 +612,11 @@ test("each claim's figure page carries the figure that claim actually has", asyn
 }) => {
   /*
     The routing that decides this is a handful of conditions, and a condition with no test is a
-    condition that flips. Two claims have a figure of their own -- the counterfactual ribbon and the
-    coverage assessment -- and `claim/Evidence.svelte` explains why only two: a chart per claim
-    would be decoration, since the nulls are all "indistinguishable from zero" and a flat line drawn
-    three times teaches nothing the value already said. Everything else gets the drawn plate, which
-    answers a different question.
+    condition that flips. There are three routes now. Two claims have a figure that carries an
+    argument of its own -- the counterfactual ribbon and the coverage assessment -- and those take
+    the page alone. Nine carry a headline chart with the plate under it, smaller and more crooked.
+    Two carry the plate by itself, because the transfer test is three numbers and the protocol
+    disagreement a ratio of two scatters, and no honest single picture holds either.
   */
   const spreads = await layout();
   const figureOf = (key: string) =>
@@ -598,15 +630,24 @@ test("each claim's figure page carries the figure that claim actually has", asyn
     await openBook(page, at);
     await expect(page.locator(`.page--${side} .figure h2`)).toHaveText(heading);
     await expect(page.locator(`.page--${side} .plate`)).toHaveCount(0);
+    await expect(page.locator(`.page--${side} .headline`)).toHaveCount(0);
     // One page, one thing: the dial is several leaves on, not stacked under the chart.
     await expect(page.locator(`.page--${side} .response`)).toHaveCount(0);
   }
 
+  // A headline claim: the result drawn, and the map of where it was measured taped in under it.
   const drawn = figureOf("autumn-advance");
   await openBook(page, drawn.at);
-  await expect(page.locator(`.page--${drawn.side} .plate`)).toHaveCount(1);
-  await expect(page.locator(`.page--${drawn.side} .figure`)).toHaveCount(0);
+  await expect(page.locator(`.page--${drawn.side} .headline__svg`)).toHaveCount(1);
+  await expect(page.locator(`.page--${drawn.side} .plate--compact`)).toHaveCount(1);
   await expect(page.locator(`.page--${drawn.side} .response`)).toHaveCount(0);
+
+  // And a claim with no chart of any kind: the plate, at full size, as it always was.
+  const bare = figureOf("transfer-fails");
+  await openBook(page, bare.at);
+  await expect(page.locator(`.page--${bare.side} .plate`)).toHaveCount(1);
+  await expect(page.locator(`.page--${bare.side} .plate--compact`)).toHaveCount(0);
+  await expect(page.locator(`.page--${bare.side} .headline`)).toHaveCount(0);
 });
 
 test("a figure that needs more than a page gets more, and its document agrees", async ({

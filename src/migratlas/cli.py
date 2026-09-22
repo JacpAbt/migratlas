@@ -606,6 +606,21 @@ def build_introduction() -> None:
     print(f"{published} findings, {realms} realms, {sources} sources -> {path}")
 
 
+@app.command("build-headline")
+def build_headline() -> None:
+    """Draw each claim's headline result -> web/public/headline.json.
+
+    One small chart per claim, computed by the same functions the ledger calls so a picture cannot
+    disagree with the sentence under it. Re-runs the analyses, so minutes rather than seconds, and
+    needs the lake.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import headline  # noqa: PLC0415 -- one command needs it
+
+    size = headline.write()
+    typer.echo(f"headline -> {headline.DOCUMENT} ({size / 1024:.1f} KiB)")
+
+
 @app.command("build-chapters")
 def build_chapters() -> None:
     """Publish the book's chapter openers -> web/public/chapters.json.

@@ -333,8 +333,13 @@ def calibrate_timing() -> tuple[float, bool]:
     return (mean, abs(mean - AUTUMN_ADVANCE_SLOPE) < AERIAL_TOLERANCE)
 
 
-def timing() -> TimingResult | None:
-    """Leg 2: the flight-date trend per site-species-generation, Phase 1j's declared unit."""
+def flight_slopes() -> tuple[pl.DataFrame, pl.DataFrame] | None:
+    """The per-unit flight-date slopes, and the series they were fitted on.
+
+    Split out of `timing` so `reports/headline.py` can draw the pile the median is taken over.
+    `timing` calls this and adds its nulls and intervals on top, so the two cannot disagree about
+    which units exist or what each one's slope is.
+    """
     frame = (
         scan(EvidenceType.SURVEY_INDEX, source_id=FLIGHT_NETWORK)
         .select("site_id", "period_start", "count", "protocol", "taxon_key", "year")
@@ -378,6 +383,15 @@ def timing() -> TimingResult | None:
     )
     if slopes.is_empty():
         return None
+    return slopes, kept
+
+
+def timing() -> TimingResult | None:
+    """Leg 2: the flight-date trend per site-species-generation, Phase 1j's declared unit."""
+    fitted = flight_slopes()
+    if fitted is None:
+        return None
+    slopes, kept = fitted
     nulls = _null_percentile(kept.rename({"flight_day": "mean_latitude"}), "mean_latitude", "unit")
     graded = slopes.join(nulls, on="unit", how="left")
     beat = graded.filter(pl.col("per_decade").abs() > pl.col("null_95"))

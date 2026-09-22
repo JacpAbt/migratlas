@@ -2355,8 +2355,13 @@ def _displacement_finding() -> Finding | None:
     )
 
 
-def _autumn_advance(first_year: int, last_year: int) -> Finding:
-    """The headline claim, recomputed from the station slopes on every build."""
+def autumn_band_slopes(last_year: int = 2025) -> tuple[float, float, int]:
+    """The headline number's arithmetic: mean station slope in the claim band, its 95% interval,
+    and how many stations it is over.
+
+    Split out of `_autumn_advance` so `reports/headline.py` can draw the same slope the ledger
+    publishes rather than fitting a second one to the drawn points.
+    """
     from migratlas.reports.phase1 import load_conus_nights, station_slopes  # noqa: PLC0415
 
     slopes = station_slopes(load_conus_nights(), max_year=last_year)
@@ -2368,6 +2373,12 @@ def _autumn_advance(first_year: int, last_year: int) -> Finding:
     values = autumn["days_per_decade"].to_numpy().astype(float)
     mean = float(values.mean())
     ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size)
+    return mean, ci, int(values.size)
+
+
+def _autumn_advance(first_year: int, last_year: int) -> Finding:
+    """The headline claim, recomputed from the station slopes on every build."""
+    mean, ci, stations = autumn_band_slopes(last_year)
     return Finding(
         key="autumn-advance",
         plain_how=(
@@ -2399,7 +2410,7 @@ def _autumn_advance(first_year: int, last_year: int) -> Finding:
         claim="Nocturnal autumn passage over the mid-latitude US is happening earlier.",
         value=f"{mean:+.2f} ± {ci:.2f} days per decade",
         scope=(
-            f"{autumn.height} US weather-radar stations between 37°N and 50°N, "
+            f"{stations} US weather-radar stations between 37°N and 50°N, "
             f"{first_year}-{last_year}. Not the whole continent: the southern bands carry a "
             "step change at 2012 that four candidate explanations have failed to account for."
         ),

@@ -548,6 +548,25 @@ def _speed_trend(per_station_year: pl.DataFrame, column: str) -> SpeedTrend | No
     return SpeedTrend(mean=mean, ci95=ci, level=level, stations=len(slopes))
 
 
+def airspeed_by_year(season: Season, *, max_year: int = 2025) -> pl.DataFrame | None:
+    """One row per year: the season's airspeed averaged over the stations that reported it.
+
+    The series `airspeed_trend` fits its per-station slopes on, reduced to a line a reader can see.
+    `reports/headline.py` draws it under the published drift; nothing here is a second fit.
+    """
+    nights = _airspeed_nights(max_year)
+    if nights.is_empty():
+        return None
+    per_station_year = _per_station_year(nights, season)
+    if per_station_year.is_empty():
+        return None
+    return (
+        per_station_year.group_by("year")
+        .agg(pl.col("airspeed").mean().alias("airspeed"), pl.len().alias("stations"))
+        .sort("year")
+    )
+
+
 def airspeed_trend(season: Season, *, max_year: int = 2025) -> SpeedTrend | None:
     """The airspeed drift for one season, as a number rather than as a line of a report.
 
