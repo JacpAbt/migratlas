@@ -1472,7 +1472,7 @@ test("switching a safeguard off moves the number and says which way", async ({
   const before = await knob.locator(".knob__value").textContent();
 
   await knob
-    .locator(".option", { hasText: "break at detected outage" })
+    .locator(".option", { hasText: "a step where each radar was upgraded" })
     .click();
   const after = await knob.locator(".knob__value").textContent();
   expect(after).not.toBe(before);

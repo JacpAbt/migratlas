@@ -62,7 +62,10 @@
 
   <p class="knob__plain">{knob.plain_why}</p>
   <p class="knob__why">{knob.why}</p>
+  <!-- The function that produced these runs, for the reader who wants to check them. At the foot
+       and said for what it is: a bare code path underlined in the body read as part of the lesson. -->
   <p class="knob__source">
+    <span class="knob__register">For the record</span>
     <a href={`${REPOSITORY}src/migratlas/reports/sandbox.py`} rel="noopener" target="_blank">
       <code>{knob.source}</code>
     </a>
@@ -181,8 +184,22 @@
   }
 
   .knob__source {
-    margin: var(--gap-hair) 0 0;
+    margin: var(--gap-tight) 0 0;
     font-size: 0.7rem;
+    color: var(--pencil);
+  }
+
+  .knob__register {
+    margin-right: var(--gap-tight);
+    font-family: var(--font-mono);
+    font-size: var(--size-label);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .knob__source a {
+    color: var(--pencil);
+    text-decoration-color: var(--rule);
   }
 
   code {

@@ -152,16 +152,20 @@ def speed_weighting(max_year: int) -> Knob:
     from migratlas.reports.phase1 import load_conus_nights, station_slopes  # noqa: PLC0415
 
     variants: list[Variant] = []
-    for key, quantity, note in (
+    # The label is what the setting *is*, not what the lake column is called: "reflectivity
+    # traffic" is the quantity's name and meant nothing to a reader switching between the two.
+    for key, quantity, label, note in (
         (
             "speed-weighted",
             "reflectivity_traffic",
+            "weighted by flight speed",
             "The published metric. Integrates reflectivity x speed x height, so it is a measure of "
             "traffic rather than of biomass.",
         ),
         (
             "speed-free",
             "reflectivity_hours",
+            "speed left out",
             "Drops the speed term. If the trend were an artefact of birds flying faster, it would "
             "weaken or vanish here.",
         ),
@@ -172,7 +176,7 @@ def speed_weighting(max_year: int) -> Knob:
         variants.append(
             Variant(
                 key=key,
-                label=quantity.replace("_", " "),
+                label=label,
                 value=mean,
                 ci95=ci,
                 unit="days per decade",
@@ -198,6 +202,16 @@ def speed_weighting(max_year: int) -> Knob:
         default="speed-weighted",
         variants=variants,
     )
+
+
+# The four ways of allowing for the radar upgrade, in the reader's words. Keyed by the name
+# `phase1_robustness.specification_estimates` gives each, which is also the variant's key.
+BREAK_LABELS: Final[dict[str, str]] = {
+    "no break term": "no allowance for the upgrade",
+    "break at detected outage": "a step where each radar was upgraded",
+    "common break at 2012": "one step for every radar, in 2012",
+    "transition 2011-2013 dropped": "the upgrade years left out",
+}
 
 
 def break_specification(max_year: int) -> Knob:
@@ -235,8 +249,10 @@ def break_specification(max_year: int) -> Knob:
 
     variants = [
         Variant(
+            # The key stays the specification's own name, so a link or a test that names a setting
+            # keeps working; the label is the same setting said to a reader.
             key=estimate.label.replace(" ", "-"),
-            label=estimate.label,
+            label=BREAK_LABELS.get(estimate.label, estimate.label),
             value=estimate.days_per_decade,
             ci95=estimate.ci95,
             unit="days per decade",
@@ -344,9 +360,9 @@ def survey_effort() -> Knob:
             Variant(
                 key=f"footprint-{consistency:g}",
                 label=(
-                    "no effort correction"
+                    "every cell the ships ever fished"
                     if consistency == 0
-                    else f"cells sampled in {consistency:.0%} of years"
+                    else f"only cells fished in {consistency:.0%} of years"
                 ),
                 value=float(np.median(values)) if values.size else float("nan"),
                 unit="degrees latitude per decade",

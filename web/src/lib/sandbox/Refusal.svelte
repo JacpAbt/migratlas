@@ -59,7 +59,7 @@
   <p class="refusal__verdict"><strong>Why it is not reported.</strong> {refusal.verdict}</p>
   <p class="refusal__method">
     <a href={`${REPOSITORY}${refusal.method}`} rel="noopener" target="_blank">
-      {refusal.method}
+      The plan, written down before we looked
     </a>
   </p>
 </section>
