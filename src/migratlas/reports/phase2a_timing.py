@@ -15,6 +15,7 @@ from migratlas.drivers import era5, narr
 from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan_dataset
+from migratlas.metrics.interval import mean_ci
 from migratlas.metrics.phenology import Season, passage_quantiles
 from migratlas.reports.phase1 import (
     AUTUMN,
@@ -284,13 +285,6 @@ def sensitivities() -> list[Sensitivity]:
     return results
 
 
-def _mean_ci(values: np.ndarray) -> tuple[float, float]:
-    if values.size == 0:
-        return (float("nan"), float("nan"))
-    ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size) if values.size > 1 else 0.0
-    return (float(values.mean()), ci)
-
-
 def render() -> str:
     out = [
         "Phase 2a, second link -- does warming explain the autumn advance?",
@@ -336,7 +330,7 @@ def render() -> str:
             continue
         pieces = []
         for column in ("per_degree", "warming", "explained", "observed"):
-            mean, ci = _mean_ci(band[column].to_numpy().astype(float))
+            mean, ci = mean_ci(band[column].to_numpy().astype(float))
             pieces.append(f"{mean:+7.3f}+-{ci:.2f}")
         marker = "  <- the claim" if (low, high) == CLAIM_BAND else ""
         out.append(f"  {low}-{high}N{'':<4} {band.height:>3}  " + "  ".join(pieces) + marker)
@@ -344,12 +338,12 @@ def render() -> str:
     claim = frame.filter(pl.col("latitude").is_between(*CLAIM_BAND, closed="left"))
     if not claim.is_empty():
         out += ["", "=" * 78, f"the claim band, {CLAIM_BAND[0]}-{CLAIM_BAND[1]}N", "=" * 78]
-        explained, explained_ci = _mean_ci(claim["explained"].to_numpy().astype(float))
-        observed, observed_ci = _mean_ci(claim["observed"].to_numpy().astype(float))
-        sensitivity, sensitivity_ci = _mean_ci(claim["per_degree"].to_numpy().astype(float))
-        warming, warming_ci = _mean_ci(claim["warming"].to_numpy().astype(float))
-        wind, wind_ci = _mean_ci(claim["per_wind"].to_numpy().astype(float))
-        collinear, collinear_ci = _mean_ci(claim["driver_correlation"].to_numpy().astype(float))
+        explained, explained_ci = mean_ci(claim["explained"].to_numpy().astype(float))
+        observed, observed_ci = mean_ci(claim["observed"].to_numpy().astype(float))
+        sensitivity, sensitivity_ci = mean_ci(claim["per_degree"].to_numpy().astype(float))
+        warming, warming_ci = mean_ci(claim["warming"].to_numpy().astype(float))
+        wind, wind_ci = mean_ci(claim["per_wind"].to_numpy().astype(float))
+        collinear, collinear_ci = mean_ci(claim["driver_correlation"].to_numpy().astype(float))
 
         out += [
             f"\n  sensitivity S    {sensitivity:+.3f} +/- {sensitivity_ci:.3f} days per degC",

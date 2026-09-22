@@ -29,6 +29,7 @@ import numpy as np
 import polars as pl
 
 from migratlas.constants import CLAIM_BAND  # the band the ledger publishes in
+from migratlas.metrics.interval import mean_ci
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -136,13 +137,6 @@ def _band(slopes: pl.DataFrame, *, season: str = "autumn", quantile: str = "q50_
     )["days_per_decade"]
 
 
-def _mean_ci(values: np.ndarray) -> tuple[float, float]:
-    if values.size == 0:
-        return (float("nan"), float("nan"))
-    ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size) if values.size > 1 else 0.0
-    return (float(values.mean()), ci)
-
-
 def speed_weighting(max_year: int) -> Knob:
     """Does the aerial trend depend on the metric being weighted by how fast things were flying?
 
@@ -172,7 +166,7 @@ def speed_weighting(max_year: int) -> Knob:
     ):
         slopes = station_slopes(load_conus_nights(quantity=quantity), max_year=max_year)
         values = _band(slopes).to_numpy().astype(float)
-        mean, ci = _mean_ci(values)
+        mean, ci = mean_ci(values)
         variants.append(
             Variant(
                 key=key,
@@ -298,7 +292,7 @@ def shuffled_years(max_year: int) -> Knob:
 
     nights = load_conus_nights("night")
     observed = _band(station_slopes(nights, max_year=max_year)).to_numpy().astype(float)
-    mean, ci = _mean_ci(observed)
+    mean, ci = mean_ci(observed)
     null_mean, low, high = permutation_null(seasonal_series(nights, max_year=max_year), "autumn")
 
     return Knob(

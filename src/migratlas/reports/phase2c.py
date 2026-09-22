@@ -11,6 +11,7 @@ import numpy as np
 import polars as pl
 
 from migratlas.constants import CLAIM_BAND
+from migratlas.metrics.interval import mean_ci
 from migratlas.reports.phase1 import MIN_YEARS
 from migratlas.reports.phase1_robustness import FLEET_MIDPOINT_YEAR
 from migratlas.reports.response_floor import MIN_STATIONS, region_of
@@ -191,14 +192,13 @@ def _fit_units(frame: pl.DataFrame, *, unit_column: str, response: str, arm: str
 
 def _pool(arm: str, label: str, fits: list[UnitFit]) -> ArmResult | None:
     """Mean across units with a 1.96 sigma/sqrt(n) interval -- the published table's aggregation."""
-    from migratlas.reports.phase2a_timing import _mean_ci  # noqa: PLC0415 -- see `collect`
 
     if not fits:
         return None
-    per_degree, per_degree_ci = _mean_ci(np.array([item.per_degree for item in fits]))
-    warming, _ = _mean_ci(np.array([item.warming_per_decade for item in fits]))
-    observed, _ = _mean_ci(np.array([item.observed_per_decade for item in fits]))
-    explained, explained_ci = _mean_ci(np.array([item.explained_per_decade for item in fits]))
+    per_degree, per_degree_ci = mean_ci(np.array([item.per_degree for item in fits]))
+    warming, _ = mean_ci(np.array([item.warming_per_decade for item in fits]))
+    observed, _ = mean_ci(np.array([item.observed_per_decade for item in fits]))
+    explained, explained_ci = mean_ci(np.array([item.explained_per_decade for item in fits]))
     return ArmResult(
         arm=arm,
         label=label,

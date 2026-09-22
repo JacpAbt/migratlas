@@ -14,6 +14,7 @@ from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.lake.reader import scan_dataset
 from migratlas.metrics import range as range_metrics
 from migratlas.metrics import thermal
+from migratlas.metrics.interval import mean_ci
 from migratlas.reports import phase1b
 
 log = logging.getLogger(__name__)
@@ -56,13 +57,6 @@ def load() -> pl.DataFrame:
     """
     frame = phase1b.survey_unit(phase1b.load())
     return frame.join(temperatures(), on="site_id", how="left")
-
-
-def _mean_ci(values: np.ndarray) -> tuple[float, float]:
-    if values.size == 0:
-        return (float("nan"), float("nan"))
-    ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size) if values.size > 1 else 0.0
-    return (float(values.mean()), ci)
 
 
 def analyse(cells: pl.DataFrame) -> tuple[list[str], pl.DataFrame]:
@@ -168,7 +162,7 @@ def by_which_axis(clean: pl.DataFrame) -> list[str]:
         ("latitude_shift", "latitude shift", "deg/dec"),
     ):
         values = usable[column].to_numpy().astype(float)
-        mean, ci = _mean_ci(values)
+        mean, ci = mean_ci(values)
         correlation = float(np.corrcoef(index, values)[0, 1])
         lines.append(
             f"    {label:<15} mean {mean:+7.3f} +/- {ci:.3f} {unit:<8} "
@@ -179,8 +173,8 @@ def by_which_axis(clean: pl.DataFrame) -> list[str]:
     deepened = usable.filter(pl.col("depth_shift") > 0)
     shoaled = usable.filter(pl.col("depth_shift") <= 0)
     if deepened.height and shoaled.height:
-        deep_mean, deep_ci = _mean_ci(deepened["index"].to_numpy().astype(float))
-        shoal_mean, shoal_ci = _mean_ci(shoaled["index"].to_numpy().astype(float))
+        deep_mean, deep_ci = mean_ci(deepened["index"].to_numpy().astype(float))
+        shoal_mean, shoal_ci = mean_ci(shoaled["index"].to_numpy().astype(float))
         lines.append(
             f"\n    deepened  (n={deepened.height:>4}): index {deep_mean:+.2f} +/- {deep_ci:.2f}"
         )
@@ -244,7 +238,7 @@ def render() -> str:
         if subset.is_empty():
             continue
         index = subset["index"].to_numpy().astype(float)
-        mean, ci = _mean_ci(index)
+        mean, ci = mean_ci(index)
         out.append(
             f"\n  {label}: median index {float(np.median(index)):+.2f}, "
             f"mean {mean:+.2f} +/- {ci:.2f}"
@@ -259,7 +253,7 @@ def render() -> str:
     for (raw_unit,), group in clean.group_by(["survey_unit"], maintain_order=True):
         unit = str(raw_unit)
         index = group["index"].to_numpy().astype(float)
-        mean, ci = _mean_ci(index)
+        mean, ci = mean_ci(index)
         ceiling = " [warm ceiling]" if bool(group["warm_ceiling"][0]) else ""
         out.append(
             f"  {unit:<14} n={group.height:>4}  median {float(np.median(index)):+.2f}  "

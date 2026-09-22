@@ -20,6 +20,7 @@ from migratlas.constants import CLAIM_BAND
 from migratlas.drivers import cmip6
 from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.lake.reader import scan_dataset
+from migratlas.metrics.interval import mean_ci
 from migratlas.reports.phase2a_timing import sensitivities
 
 log = logging.getLogger(__name__)
@@ -189,13 +190,6 @@ def trends(frame: pl.DataFrame, window: tuple[int, int]) -> list[Trend]:
     ]
 
 
-def _mean_ci(values: np.ndarray) -> tuple[float, float]:
-    if values.size == 0:
-        return (float("nan"), float("nan"))
-    ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size) if values.size > 1 else 0.0
-    return (float(values.mean()), ci)
-
-
 def by_model(fitted: list[Trend]) -> pl.DataFrame:
     """Members averaged within each model, then the two experiments put side by side.
 
@@ -230,8 +224,8 @@ def fraction(frame: pl.DataFrame, window: tuple[int, int]) -> Fraction | None:
 
     historical = models["historical"].to_numpy().astype(float)
     natural = models["natural"].to_numpy().astype(float)
-    hist_mean, hist_ci = _mean_ci(historical)
-    nat_mean, nat_ci = _mean_ci(natural)
+    hist_mean, hist_ci = mean_ci(historical)
+    nat_mean, nat_ci = mean_ci(natural)
 
     usable = historical > MIN_RATIO_WARMING
     per_model = ((historical[usable] - natural[usable]) / historical[usable]).tolist()
@@ -305,7 +299,7 @@ def observed() -> Observed | None:
     fitted = [item for item in sensitivities() if CLAIM_BAND[0] <= item.latitude < CLAIM_BAND[1]]
     if not fitted:
         return None
-    sensitivity, sensitivity_ci = _mean_ci(np.array([item.per_degree for item in fitted]))
+    sensitivity, sensitivity_ci = mean_ci(np.array([item.per_degree for item in fitted]))
     return Observed(
         sensitivity=sensitivity,
         sensitivity_ci95=sensitivity_ci,
