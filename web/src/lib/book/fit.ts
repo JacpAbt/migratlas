@@ -33,12 +33,40 @@
  */
 const AIR_MAX = 1.22;
 const TYPE_MAX = 1.16;
+/**
+ * And the two floors, which are the same trade in the other direction.
+ *
+ * A page that does not fit has to give something up, and the choice is between smaller type and a
+ * caveat the reader cannot see -- `pages.ts` refuses to drop a caveat to save a page, so it is the
+ * type. Air goes first and further, because closing the gaps between blocks costs a reader nothing
+ * until it starts to look like a mistake; the type itself stops at 0.88, which on this book's
+ * smallest page is about 10.3px of body text and the last size these faces stay legible at.
+ *
+ * Deliberately not enough to save every page. At 1024x768 the worst leaf is half again too tall,
+ * and a scale that swallowed that would put 8px type on the page -- so it keeps the floor and
+ * scrolls inside `.page__inner`, which is what that backstop has always been for.
+ */
+const AIR_MIN = 0.76;
+const TYPE_MIN = 0.84;
 
 /** How full is full. Not 1: a line of descenders against the foot of the page reads as cut off. */
 const TARGET = 0.94;
 
+/**
+ * And how full is too full: the page a reader would have to scroll.
+ *
+ * Separate from `TARGET` because they answer different questions. A page between the two is
+ * neither growing nor overflowing and is left exactly as it is -- pulling it back to `TARGET`
+ * would shrink pages that fit perfectly well, which a reader would see as the book changing size
+ * for no reason.
+ */
+const FULL = 1;
+
 /** Search resolution. Four probes cover it, and each probe is one layout flush. */
 const STEPS = 12;
+
+/** Probes below scale 1. Fewer, because the range below is narrower than the range above. */
+const SHRINK_STEPS = 8;
 
 /**
  * The bottom of the lowest thing on the page, relative to the top of its text.
@@ -100,10 +128,18 @@ function fillOf(inner: HTMLElement): number {
   return bottom === Number.NEGATIVE_INFINITY ? 0 : (bottom - top) / room;
 }
 
+/**
+ * Set the page's scale from a step, where zero is the size every budget was measured at.
+ *
+ * One function for both directions so there is one definition of what a step means, and the two
+ * ranges are divided separately because they hold different numbers of probes.
+ */
 function apply(inner: HTMLElement, step: number): void {
-  const at = step / STEPS;
-  inner.style.setProperty("--fit-air", (1 + (AIR_MAX - 1) * at).toFixed(4));
-  inner.style.setProperty("--fit-type", (1 + (TYPE_MAX - 1) * at).toFixed(4));
+  const at = step / (step < 0 ? SHRINK_STEPS : STEPS);
+  const air = step < 0 ? 1 - (1 - AIR_MIN) * -at : 1 + (AIR_MAX - 1) * at;
+  const type = step < 0 ? 1 - (1 - TYPE_MIN) * -at : 1 + (TYPE_MAX - 1) * at;
+  inner.style.setProperty("--fit-air", air.toFixed(4));
+  inner.style.setProperty("--fit-type", type.toFixed(4));
 }
 
 /**
@@ -126,8 +162,10 @@ function refit(inner: HTMLElement): void {
   }
 
   apply(inner, 0);
-  // A page that is already full, and the full-bleed ones that stand in for a page, are left alone.
-  if (fillOf(inner) <= TARGET) {
+  const fill = fillOf(inner);
+
+  if (fill <= TARGET) {
+    // Room to spare: write it larger, up to the step where it would stop fitting.
     let low = 0;
     let high = STEPS;
     while (low < high) {
@@ -140,6 +178,30 @@ function refit(inner: HTMLElement): void {
     remember(signature, low);
     return;
   }
+
+  if (fill > FULL) {
+    /*
+      Off the end of the leaf: write it smaller, down to the step where it comes back on.
+
+      The same search mirrored, and the same guarantee -- the answer is the *largest* step whose
+      measured content fits, so a page gives up the least it can. A page that does not fit even at
+      the floor keeps the floor, because smaller than that is unreadable and an unreadable page is
+      a worse answer than one the reader can scroll.
+    */
+    let low = -SHRINK_STEPS;
+    let high = 0;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      apply(inner, mid);
+      if (fillOf(inner) <= FULL) low = mid;
+      else high = mid - 1;
+    }
+    apply(inner, low);
+    remember(signature, low);
+    return;
+  }
+
+  // Between the two: full enough to leave alone, not so full that it spills.
   remember(signature, 0);
 }
 

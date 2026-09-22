@@ -110,6 +110,20 @@
     display: flex;
     flex-direction: column;
     padding: var(--page-pad);
+    /*
+      And the page number's corner, which the page may not write into.
+
+      `.page__folio` is absolutely positioned, so it contributes no layout height: without this the
+      last line of a page can print underneath it while `scrollHeight === clientHeight`, which is
+      exactly what the overflow guard compares and exactly why that guard never caught it. Measured
+      at 1280x720, a page `fit.ts` had grown to its target cleared the folio by -1px.
+
+      Composed from the tokens the folio is built from rather than guessed: its own padding twice
+      over, plus a line of the label size. So it tracks the folio if either ever changes, and it
+      costs every page about 42px of room -- which is why `fit.ts` learned to write smaller in the
+      same change.
+    */
+    padding-bottom: calc(var(--page-pad) + var(--gap) * 2 + var(--size-label) * 1.35);
     /* A backstop, not a feature. `pages.ts` puts one panel on a page precisely so this never
        engages, and `tests/book.spec.ts` walks all seventy pages at both supported sizes asserting
        that it does not. It stays because a reader at 200% zoom with a font this project did not

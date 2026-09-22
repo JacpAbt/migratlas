@@ -196,11 +196,20 @@
     color: var(--status-addressed);
   }
 
+  /*
+    Sized against the page, not against the root.
+
+    This and the list below were the last two text styles in the audit hardcoded in rem, and they
+    are the reason the fit could not move these pages: the panel neither grew on a tall window nor
+    shrank on a short one, so at 1024x768 the audit leaves were the largest block of overflow in
+    the book and the seas' list stayed 23px over at 1280x800 however small the rest was written.
+    1.21 of the margin size is the same 0.76rem at the window every budget was measured at.
+  */
   .bias__finding {
     grid-column: 1 / -1;
     margin: 0 0 var(--gap-tight);
     font-family: var(--font-body);
-    font-size: 0.76rem;
+    font-size: calc(var(--size-margin) * 1.21);
     line-height: 1.5;
     color: var(--pencil);
   }
@@ -218,7 +227,7 @@
     display: flex;
     gap: 0.3rem;
     font-family: var(--font-body);
-    font-size: 0.76rem;
+    font-size: calc(var(--size-margin) * 1.21);
     line-height: 1.5;
     margin-bottom: var(--gap-hair);
   }

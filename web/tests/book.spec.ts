@@ -1008,6 +1008,21 @@ for (const [width, height] of [
 for (const [width, height] of [
   [1600, 900],
   [1280, 800],
+  /*
+    And not 1024x768, which is the smallest window that still gets a spread rather than the phone.
+
+    A first reading of the book found 38 of its 112 pages running off the leaf there: 62rem is
+    where `Reader` hands over, so a 1024-wide desk is width-bound at 597px tall against 758 and
+    858, and the reading scale's floors were chosen for the taller two. Writing smaller, and
+    tying the audit's own type to the page, takes it to 12 -- and the twelve that are left are the
+    ones this change does not reach: eight safeguard and dial panels, the two counterfactual charts
+    and the two coverage pages, each of which sizes its own text in rem the way the audit used to.
+    Every record page, every audit page and every claim page now fits.
+
+    So the remaining work is the same fix again, panel by panel, and this size joins the walk when
+    it is done rather than being added as a failing guard. Until then the backstop in
+    `.page__inner` is what those twelve fall back on.
+  */
 ] as const) {
   test(`no page in the book overflows itself at ${width}x${height}`, async ({
     page,
@@ -1017,6 +1032,14 @@ for (const [width, height] of [
 
     const spreads = (await layout()).length;
     const over: string[] = [];
+    /*
+      And the other way a page can be too full, which `scrollHeight` cannot see.
+
+      The folio is absolutely positioned, so a page whose content reaches the bottom of its box
+      prints under the page number while measuring as a perfect fit. `.page__inner` reserves the
+      folio's band for that reason, and this is what holds the reservation to its job.
+    */
+    const under: string[] = [];
     const folios: number[] = [];
     let turned = 0;
 
@@ -1032,8 +1055,37 @@ for (const [width, height] of [
             .querySelector(`.spread > .page--${side} .page__folio`)
             ?.textContent?.trim()
             .split(" ")[0];
+          /*
+            The lowest mark that actually paints, against the top of the folio. Deep rather than
+            `scrollHeight`, for `fit.ts`'s reason: a flex column's scroll height is its client
+            height whenever the content is short, so the box says nothing about where the ink is.
+          */
+          const marks = [...inner.querySelectorAll("*")]
+            .filter(
+              (node) =>
+                node.children.length === 0 || node.tagName.toLowerCase() === "svg",
+            )
+            .map((node) => node.getBoundingClientRect())
+            .filter((rect) => rect.height > 0 && rect.width > 0);
+          const lowest = marks.length
+            ? Math.max(...marks.map((rect) => rect.bottom))
+            : Number.NEGATIVE_INFINITY;
+          const corner = document
+            .querySelector(`.spread > .page--${side} .page__folio`)
+            ?.getBoundingClientRect();
+          /*
+            The world's page is the one exception, and it is deliberate: the map fills that leaf
+            absolutely and `Page.svelte` gives the folio `z-index: 3` so the corner stays legible
+            over it. Its scale bar and its attribution sit low on the map by design, so measuring
+            them against the folio would be asking the globe to behave like a page of prose.
+          */
+          const fullBleed = inner.querySelector("canvas") !== null;
           return {
             over: inner.scrollHeight - inner.clientHeight,
+            under:
+              corner && Number.isFinite(lowest) && !fullBleed
+                ? Math.round(lowest - corner.top)
+                : 0,
             folio: folio ? Number.parseInt(folio, 10) : null,
             head: (inner.textContent ?? "")
               .trim()
@@ -1058,6 +1110,8 @@ for (const [width, height] of [
         // Two pixels of slack for sub-pixel layout, and no more: this is a budget, not a target.
         if (cell.over > 2)
           over.push(`${cell.folio} (${side}) by ${cell.over}px: ${cell.head}`);
+        if (cell.under > 2)
+          under.push(`${cell.folio} (${side}) by ${cell.under}px: ${cell.head}`);
         if (cell.folio !== null) folios.push(cell.folio);
       }
 
@@ -1089,6 +1143,10 @@ for (const [width, height] of [
     expect(
       over,
       `${over.length} of ${folios.length + 1} pages overflow`,
+    ).toEqual([]);
+    expect(
+      under,
+      `${under.length} pages print under their own folio`,
     ).toEqual([]);
     expect(turned + 1, "the corner did not reach every spread").toBe(spreads);
     // Folios in order and with no gap, which is the whole reason to print one.
