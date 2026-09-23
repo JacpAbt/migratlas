@@ -247,15 +247,47 @@ let settled = false;
 /** The live pages, so the one answer that arrives late can reach all of them. */
 const waiting = new Set<() => void>();
 
+/** Forget every answer and measure the live pages again: their type has changed under them. */
+function refitAll(): void {
+  measured.clear();
+  for (const again of waiting) again();
+}
+
 if (typeof document !== "undefined" && document.fonts) {
   void document.fonts.ready.then(() => {
     settled = true;
     // Everything in it was measured against the wrong face.
-    measured.clear();
-    for (const again of waiting) again();
+    refitAll();
   });
+  /*
+    And every face that lands afterwards, which `ready` never reports.
+
+    That promise resolves once, for the loads under way at the moment it is asked, and no face here
+    is preloaded: each is requested when text first needs it. So a face requested after `ready` had
+    settled landed with nothing to re-fit, and the page kept a scale measured against the fallback.
+    Main's first CI run found the title page 51px over its leaf at 1280x720 that way, on a tree two
+    earlier runs had passed -- the race goes whichever way a runner's timing and its fallback face
+    send it. `loadingdone` fires for every batch of faces that finishes, whenever that is.
+  */
+  document.fonts.addEventListener("loadingdone", refitAll);
 } else {
   settled = true;
+}
+
+/*
+  And every change of the type setting, which the pages' own observers cannot see.
+
+  A preset swaps the faces and the scale through `data-type` on the root element: custom properties
+  change, nothing inside `.page__inner` mutates and the leaf does not resize. Measured before this
+  existed: choosing the dyslexia setting on a fitted spread left both leaves at the hand's scale and
+  put the facing page 185px under its fold. The faces the new preset needs are then fetched, and
+  `loadingdone` above re-fits again once they land.
+*/
+if (typeof document !== "undefined" && typeof MutationObserver !== "undefined") {
+  new MutationObserver(refitAll).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-type"],
+  });
 }
 
 function signatureOf(inner: HTMLElement, room: number): string {
