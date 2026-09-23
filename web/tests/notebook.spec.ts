@@ -280,7 +280,28 @@ async function sheetPaper(page: Page): Promise<Patch> {
     return null;
   }, PATCH);
   expect(clip, "no bare paper on the facing page to measure").toBeTruthy();
-  const shot = (await page.screenshot({ clip: clip! })).toString("base64");
+
+  /*
+    The capture is retried, and nothing else is.
+
+    Three times on CI, in two commits a month apart -- 2026-08-22 on `d239f3c`, and both attempts
+    of #20's pull-request run on `fe43337` -- Chromium answered this call with `Protocol error
+    (Page.captureScreenshot): Unable to capture screenshot`, always in the addressed-status test,
+    while the push run of the same commit and every local run passed. That is the compositor
+    handing back no frame, not a reading of the paper, and why it does is not known. So a picture
+    that was never taken is asked for again after a pause; any other error, and a third refusal,
+    still fail the test, and a picture that was taken is measured once.
+  */
+  let shot = "";
+  for (let attempt = 1; ; attempt++) {
+    try {
+      shot = (await page.screenshot({ clip: clip! })).toString("base64");
+      break;
+    } catch (error) {
+      if (attempt === 3 || !String(error).includes("Unable to capture screenshot")) throw error;
+      await page.waitForTimeout(500);
+    }
+  }
 
   return page.evaluate(async (encoded) => {
     const image = new Image();
