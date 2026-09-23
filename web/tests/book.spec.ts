@@ -1225,6 +1225,76 @@ test("the opener is set on the page, question and all", async ({ page }) => {
   await expect(opener.last().locator(".doodle figcaption").first()).not.toBeEmpty();
 });
 
+// The value `tokens.css` keys on, and the word on the control a reader clicks.
+for (const [preset, label] of [
+  ["dyslexic", "Dyslexia"],
+  ["clear", "Clear"],
+] as const) {
+  test(`the spread is fitted again when the reader chooses the ${preset} type`, async ({
+    page,
+  }) => {
+    /*
+      The defect the rest of this suite cannot see, because every other test here reads the book in
+      the hand it was fitted in, with the faces already in cache.
+
+      A type setting swaps the faces and the scale through an attribute on the root, and the faces
+      it needs are fetched only then -- long after the one moment `fit.ts` used to re-measure, when
+      `document.fonts.ready` first resolved. Measured before the fix: choosing the dyslexia setting
+      on the title spread at 1280x720 left both leaves at the hand's scale and put the facing page
+      185px under its fold. Main's first CI run had already found the same gap by a different road
+      -- the title page 51px over, when a runner requested the hand's face after `ready` settled.
+
+      So: fit the spread in the hand, switch the way a reader would, let the new faces land, and
+      require that nothing overflows. Then switch back. Every face is loaded by then, so no load
+      event fires and only the watch on `data-type` can re-fit -- and a fit is a function of the
+      page, its room and its type, so the hand has to come back to the scale it started at.
+    */
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await openBook(page, "#ch=how-to-read&p=0");
+    await expect
+      .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+      .toBe("loaded");
+    const scales = () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll(".spread > .page .page__inner")]
+          .map((inner) => (inner as HTMLElement).style.getPropertyValue("--fit-type"))
+          .join(" "),
+      );
+    const inHand = await scales();
+
+    await page.locator(".type").getByRole("radio", { name: label, exact: true }).check();
+    await expect(page.locator(":root")).toHaveAttribute("data-type", preset);
+    await expect
+      .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+      .toBe("loaded");
+
+    const overflow = () =>
+      page.evaluate(() =>
+        Math.max(
+          ...[...document.querySelectorAll(".spread > .page .page__inner")].map(
+            (inner) => inner.scrollHeight - inner.clientHeight,
+          ),
+        ),
+      );
+    await expect
+      .poll(overflow, {
+        timeout: 10_000,
+        message: `the spread kept the hand's fit after the ${preset} type was chosen`,
+      })
+      .toBeLessThanOrEqual(2);
+
+    await page.locator(".type").getByRole("radio", { name: "Hand", exact: true }).check();
+    await expect(page.locator(":root")).toHaveAttribute("data-type", "hand");
+    await expect
+      .poll(scales, {
+        timeout: 10_000,
+        message: `the spread kept the ${preset} fit after the hand was chosen again`,
+      })
+      .toBe(inHand);
+  });
+}
+
 test("a monitor gets the spread and only the spread", async ({ page }) => {
   // The two containers are a choice, not a fallback: mounting both would run the world chapter's
   // map twice and put two of every page in the accessibility tree.
