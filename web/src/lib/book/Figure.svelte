@@ -118,6 +118,15 @@
 {/if}
 
 <style>
+  /*
+    Every size here is a multiple of `--size-margin`, not a rem.
+
+    Sized in rem, this component's text neither grew on a tall window nor shrank on a short one, so
+    `fit.ts` could scale everything on its page except the words -- and its pages were among the
+    last to run off the leaf at 1280x720 and 1024x768. Each factor is the old rem over 0.66, the
+    token's root value, so a phone -- which reads the root tokens -- is exactly as it was, and on
+    the spread the words follow the page like everything else on it.
+  */
   .figure {
     display: flex;
     flex-direction: column;
@@ -134,7 +143,7 @@
     font-weight: 400;
     /* Above ADR 0007's 20px floor for the hand face, and below the claim's own heading, so the
        figure reads as part of the claim rather than as a second claim. */
-    font-size: 1.35rem;
+    font-size: calc(var(--size-margin) * 2.05);
     line-height: var(--leading-hand);
   }
 

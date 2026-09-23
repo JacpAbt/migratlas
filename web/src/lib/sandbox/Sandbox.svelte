@@ -77,6 +77,15 @@
 {/if}
 
 <style>
+  /*
+    Every size here is a multiple of `--size-margin`, not a rem.
+
+    Sized in rem, this component's text neither grew on a tall window nor shrank on a short one, so
+    `fit.ts` could scale everything on its page except the words -- and its pages were among the
+    last to run off the leaf at 1280x720 and 1024x768. Each factor is the old rem over 0.66, the
+    token's root value, so a phone -- which reads the root tokens -- is exactly as it was, and on
+    the spread the words follow the page like everything else on it.
+  */
   .sandbox {
     margin-top: var(--gap-wide);
     padding-top: var(--gap);
@@ -87,7 +96,7 @@
     margin: 0;
     font-family: var(--font-hand);
     font-weight: 400;
-    font-size: calc(1.35rem * var(--font-scale-hand));
+    font-size: calc(var(--size-margin) * 2.05 * var(--font-scale-hand));
     line-height: var(--leading-hand);
   }
 
@@ -98,7 +107,7 @@
 
   .sandbox__lead {
     margin: 0 0 var(--gap);
-    font-size: 0.82rem;
+    font-size: calc(var(--size-margin) * 1.24);
     line-height: 1.55;
     color: var(--ink-soft);
   }

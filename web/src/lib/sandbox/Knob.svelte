@@ -73,6 +73,15 @@
 </div>
 
 <style>
+  /*
+    Every size here is a multiple of `--size-margin`, not a rem.
+
+    Sized in rem, this component's text neither grew on a tall window nor shrank on a short one, so
+    `fit.ts` could scale everything on its page except the words -- and its pages were among the
+    last to run off the leaf at 1280x720 and 1024x768. Each factor is the old rem over 0.66, the
+    token's root value, so a phone -- which reads the root tokens -- is exactly as it was, and on
+    the spread the words follow the page like everything else on it.
+  */
   .knob {
     padding-top: var(--gap);
     border-top: 1px dotted var(--rule);
@@ -80,7 +89,7 @@
 
   .knob__question {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: calc(var(--size-margin) * 1.36);
     font-weight: 600;
     color: var(--ink);
   }
@@ -103,7 +112,7 @@
     padding: 0.2rem 0.55rem;
     border: 0;
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: calc(var(--size-margin) * 1.06);
     color: var(--ink-soft);
     cursor: pointer;
   }
@@ -149,7 +158,7 @@
     margin: var(--gap-tight) 0 0;
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 1.25rem;
+    font-size: calc(var(--size-margin) * 1.89);
     color: var(--rust);
     font-variant-numeric: tabular-nums;
   }
@@ -162,7 +171,7 @@
   .knob__delta {
     margin: 1px 0 0;
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: calc(var(--size-margin) * 1.06);
     color: var(--ink-soft);
   }
 
@@ -178,14 +187,14 @@
   .knob__note,
   .knob__why {
     margin: var(--gap-tight) 0 0;
-    font-size: 0.76rem;
+    font-size: calc(var(--size-margin) * 1.15);
     line-height: 1.5;
     color: var(--pencil);
   }
 
   .knob__source {
     margin: var(--gap-tight) 0 0;
-    font-size: 0.7rem;
+    font-size: calc(var(--size-margin) * 1.06);
     color: var(--pencil);
   }
 
@@ -204,7 +213,7 @@
 
   code {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: calc(var(--size-margin) * 1.03);
   }
 
   /* The lesson first. A knob whose point is only made in the paragraph below it is a slider. */

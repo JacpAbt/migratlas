@@ -17,16 +17,15 @@
     under it lands in the same place. The strip is the exception in height only: eighteen named
     bars need more rows than a pile needs bars.
 
-    Both numbers are measured against the folio rather than chosen. The page number is absolutely
-    positioned, so it takes no layout height and the overflow guard cannot see a caption printing
-    underneath it -- at 1280x800 a plate page cleared it by 216px and the eighteen-bar strip, at
-    twenty pixels a row, by -34. Seventeen a row and 280 tall is what puts every chart page back
-    above it, and `book.spec.ts` measures the clearance rather than trusting these.
+    Both numbers are measured rather than chosen. The eighteen-bar strip was 34px under its own
+    folio at twenty pixels a row, and 25px over its leaf at 1024x768 at seventeen; fifteen is what
+    fits it on the narrowest spread, where the chart is drawn about 400px wide and a row of fifteen
+    viewBox units is still taller than the 11-unit label in it.
   */
   const BOX = { width: 640, height: 280 };
   const PAD = { top: 18, right: 150, bottom: 42, left: 60 };
-  /** One named bar's row. Tighter than the 13px labels want, and taller than they need. */
-  const ROW = 17;
+  /** One named bar's row, in viewBox units: a little more than the label, and no more. */
+  const ROW = 15;
 
   const chart = $derived(headline.chart);
   const plotWidth = BOX.width - PAD.left - PAD.right;

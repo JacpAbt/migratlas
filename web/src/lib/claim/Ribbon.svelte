@@ -109,6 +109,15 @@
 </div>
 
 <style>
+  /*
+    Every size here is a multiple of `--size-margin`, not a rem.
+
+    Sized in rem, this component's text neither grew on a tall window nor shrank on a short one, so
+    `fit.ts` could scale everything on its page except the words -- and its pages were among the
+    last to run off the leaf at 1280x720 and 1024x768. Each factor is the old rem over 0.66, the
+    token's root value, so a phone -- which reads the root tokens -- is exactly as it was, and on
+    the spread the words follow the page like everything else on it.
+  */
   /* Stacked, never side by side. The claim body is about 31rem wide, so two 640-unit charts beside
      each other would be 240px each -- and stacking is the better comparison anyway: both charts
      share one frame, so a reader compares the two gaps by looking straight down. */
@@ -132,7 +141,7 @@
   .pair__gap h4 {
     margin: 0 0 var(--gap-tight);
     font-family: var(--font-hand);
-    font-size: calc(1.15rem * var(--font-scale-hand));
+    font-size: calc(var(--size-margin) * 1.74 * var(--font-scale-hand));
     font-weight: 400;
     line-height: var(--leading-hand);
   }
@@ -150,7 +159,7 @@
     padding-top: var(--gap-tight);
     border-top: 1px dotted var(--rule);
     color: var(--pencil);
-    font-size: 0.78rem;
+    font-size: calc(var(--size-margin) * 1.18);
     line-height: 1.5;
   }
 
@@ -158,7 +167,7 @@
     margin: var(--gap-tight) 0 0;
     padding-left: 1.1rem;
     color: var(--pencil);
-    font-size: 0.76rem;
+    font-size: calc(var(--size-margin) * 1.15);
     line-height: 1.5;
   }
 
@@ -177,7 +186,7 @@
      and the paragraph read as two different arguments rather than one said twice. */
   .pair__plain {
     color: var(--ink);
-    font-size: 1.02rem;
+    font-size: calc(var(--size-margin) * 1.55);
   }
 
   .pair__register {

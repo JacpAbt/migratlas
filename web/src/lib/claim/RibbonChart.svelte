@@ -187,6 +187,15 @@
 </figure>
 
 <style>
+  /*
+    Every size here is a multiple of `--size-margin`, not a rem.
+
+    Sized in rem, this component's text neither grew on a tall window nor shrank on a short one, so
+    `fit.ts` could scale everything on its page except the words -- and its pages were among the
+    last to run off the leaf at 1280x720 and 1024x768. Each factor is the old rem over 0.66, the
+    token's root value, so a phone -- which reads the root tokens -- is exactly as it was, and on
+    the spread the words follow the page like everything else on it.
+  */
   .chart {
     margin: 0;
   }
@@ -194,7 +203,7 @@
   .chart__ask h4 {
     margin: 0;
     font-family: var(--font-hand);
-    font-size: calc(1.1rem * var(--font-scale-hand));
+    font-size: calc(var(--size-margin) * 1.67 * var(--font-scale-hand));
     font-weight: 400;
     line-height: var(--leading-hand);
   }
@@ -202,7 +211,7 @@
   .chart__ask p {
     margin: var(--gap-hair) 0 var(--gap-tight);
     color: var(--ink-soft);
-    font-size: 0.78rem;
+    font-size: calc(var(--size-margin) * 1.18);
     line-height: 1.45;
   }
 
@@ -315,14 +324,14 @@
 
   .chart__size {
     margin: var(--gap-tight) 0 0;
-    font-size: 0.85rem;
+    font-size: calc(var(--size-margin) * 1.29);
     font-weight: 600;
   }
 
   .chart__aside {
     margin: var(--gap-tight) 0 0;
     color: var(--pencil);
-    font-size: 0.76rem;
+    font-size: calc(var(--size-margin) * 1.15);
     line-height: 1.5;
   }
 
@@ -333,7 +342,7 @@
 
   .chart__notes {
     margin: var(--gap) 0 0;
-    font-size: 0.76rem;
+    font-size: calc(var(--size-margin) * 1.15);
     line-height: 1.45;
   }
 

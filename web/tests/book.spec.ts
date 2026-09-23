@@ -1009,20 +1009,19 @@ for (const [width, height] of [
   [1600, 900],
   [1280, 800],
   /*
-    And not 1024x768, which is the smallest window that still gets a spread rather than the phone.
+    And three a reader is more likely to have than either of those.
 
-    A first reading of the book found 38 of its 112 pages running off the leaf there: 62rem is
-    where `Reader` hands over, so a 1024-wide desk is width-bound at 597px tall against 758 and
-    858, and the reading scale's floors were chosen for the taller two. Writing smaller, and
-    tying the audit's own type to the page, takes it to 12 -- and the twelve that are left are the
-    ones this change does not reach: eight safeguard and dial panels, the two counterfactual charts
-    and the two coverage pages, each of which sizes its own text in rem the way the audit used to.
-    Every record page, every audit page and every claim page now fits.
-
-    So the remaining work is the same fix again, panel by panel, and this size joins the walk when
-    it is done rather than being added as a failing guard. Until then the backstop in
-    `.page__inner` is what those twelve fall back on.
+    1366x768 and 1280x720 are the commonest laptop screens, and 1024x768 is the narrowest window
+    that still gets a spread rather than the phone: 62rem is where `Reader` hands over, so it is
+    width-bound at 597px tall against 758 and 858 above. The guard ran at the two taller sizes
+    only, and a first reading of the book found 38 of 112 pages off the leaf at 1024, five at
+    1280x720 and one at 1366x768 -- the reading scale's floors had been chosen for the taller two,
+    and half the panels set their type in rem so nothing could shrink it. `fit.ts` writes smaller
+    now and every panel reads the page's scale, and these three are what hold that true.
   */
+  [1366, 768],
+  [1280, 720],
+  [1024, 768],
 ] as const) {
   test(`no page in the book overflows itself at ${width}x${height}`, async ({
     page,
