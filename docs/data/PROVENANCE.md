@@ -23,6 +23,7 @@ each source carries its own terms.
 | [NCEP North American Regional Reanalysis — pressure-level winds, 1979–present](https://psl.noaa.gov/data/gridded/data.narr.html) | driver only | `aerial` | US Government work, public domain (17 U.S.C. §105) | permitted |
 | [ERA5 monthly averaged reanalysis on single levels, 1940–present](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [ERA5 monthly 2 m temperature over the southern African atlas footprint](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means) | driver only | `terrestrial` | CC BY 4.0 | permitted |
+| [ERA5 monthly 2 m temperature over Britain and Ireland, at the butterfly transects](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means) | driver only | `terrestrial` | CC BY 4.0 | permitted |
 | [CMIP6 DAMIP and historical — near-surface air temperature, detection and attribution](https://pcmdi.llnl.gov/CMIP6/) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [ISIMIP3a GSWP3-W5E5 — factual and ATTRICI counterfactual near-surface air temperature](https://data.isimip.org/search/climate_scenario/counterclim/) | driver only | `aerial` | CC BY 4.0 | permitted |
 | [JRC Global Surface Water — occurrence and occurrence change intensity, v1.4](https://global-surface-water.appspot.com/download) | driver only | `terrestrial` | Copernicus — free of charge, without restriction of use | permitted |
@@ -215,7 +216,26 @@ A reanalysis is a model constrained by observations, not a measurement, and ERA5
 
 **Caveats**
 
-The same product as `era5`, retrieved for a different box and registered separately — which is a lake constraint rather than a scientific one, and worth stating plainly. The lake partitions on (source_id, year) and a write replaces the partitions it touches, so two retrievals of one product that share a source id and a year cannot coexist: landing this under `era5` deleted five years of the North American record twice before it was given an id of its own. Sampled at the 496 quarter-degree cells of the SABAP common footprint, monthly, for 1987–1991 and 2008–2012 — the two atlas epochs and nothing between them, so this record cannot describe the nineteen years it skips. A reanalysis is a model constrained by observations, and southern Africa is more sparsely observed than North America, so the constraint is weaker here than the same product is there.
+The same product as `era5`, retrieved for a different box and registered separately — which is a lake constraint rather than a scientific one, and worth stating plainly. The lake partitions on (source_id, year) and a write replaces the partitions it touches, so two retrievals of one product that share a source id and a year cannot coexist: landing this under `era5` deleted five years of the North American record twice before it was given an id of its own. Sampled at the 496 quarter-degree cells of the SABAP common footprint, monthly, for 1987–1991 and 2008–2012 — the two atlas epochs and nothing between them, so this record cannot describe the nineteen years it skips. Two fields since Phase 2g: 2 m temperature and total precipitation, landed in one call. A reanalysis is a model constrained by observations, and southern Africa is more sparsely observed than North America, so the constraint is weaker here than the same product is there.
+
+## ERA5 monthly 2 m temperature over Britain and Ireland, at the butterfly transects
+
+- **id** `era5_uk`
+- **drivers only**, no evidence rows · **realm** `terrestrial`
+- **landing page** https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+  - CC BY 4.0 permits redistribution of derived products with attribution. Copernicus asks that products be credited to the Copernicus Climate Change Service and that neither the European Commission nor ECMWF be represented as endorsing the result.
+- **sensitivity** `not_sensitive` by default
+- **credential** `MIGRATLAS_CRED_CDS_TOKEN` required
+
+**Cite as**
+
+> Hersbach, H., Bell, B., Berrisford, P., Biavati, G., Horányi, A., Muñoz Sabater, J., Nicolas, J., Peubey, C., Radu, R., Rozum, I., Schepers, D., Simmons, A., Soci, C., Dee, D., Thépaut, J-N. (2023). ERA5 monthly averaged data on single levels from 1940 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS). https://doi.org/10.24381/cds.f17050d7
+
+**Caveats**
+
+The same product as `era5` and `era5_south`, retrieved for a third box and registered separately for the lake's reason: partitions are (source_id, year) and a write replaces the partitions it touches. Sampled at every UKBMS transect the lake holds, monthly, January to August of 1973–2021, so that a two-month pre-season exists for a species-generation whichever month it flies; nothing from September to December is here and nothing about the flight season itself is meant to be. Three fields since Phase 2f: 2 m temperature, total precipitation, and downward solar radiation as a mean flux. A quarter-degree cell is a blunt reading of a transect's microclimate, and a coastal site may match a cell that is mostly sea; the match distance is recorded and no site is dropped for it. Registered 2026-09-02 by `phase2d-flight-response.md` before any value was fetched.
 
 ## CMIP6 DAMIP and historical — near-surface air temperature, detection and attribution
 

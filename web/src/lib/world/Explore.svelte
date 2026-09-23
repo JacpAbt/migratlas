@@ -257,7 +257,9 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: var(--gap) var(--gap) var(--gap) calc(var(--gap) + 0.35rem);
+    /* The foot clears the folio, which is printed over this corner of the page: the layer terms
+       scrolled under "112 · migratlas" and read as two paragraphs printed on top of each other. */
+    padding: var(--gap) var(--gap) 2.6rem calc(var(--gap) + 0.35rem);
   }
 
   /*

@@ -5,10 +5,6 @@ ordinary p-value here is meaningless and looks fine. Both maps are spatially aut
 autocorrelated surfaces agree far more often than independent sampling implies. Significance is
 judged against nulls that keep the factor's spatial structure and destroy only its alignment with
 the response; the naive test is computed too and published beside them, labelled as the wrong one.
-
-The instrument is weak by construction and the note says so: the product compares 1984-1999 with
-2000-2021 against atlas windows of five years each, which attenuates. A surviving effect means
-something. A null means "not detectable with the only instrument available" and must say so.
 """
 
 import logging
@@ -120,10 +116,16 @@ def _partial(response: np.ndarray, water: np.ndarray, effort: np.ndarray) -> tup
     return float(slope[1]), float(np.corrcoef(left, right)[0, 1])
 
 
-def fit(frame: pl.DataFrame, response_column: str = "delta") -> Fit:
-    """Regress the per-cell change on water change, conditioned on the change in cards."""
+def fit(frame: pl.DataFrame, response_column: str = "delta", *, driver: str = "water") -> Fit:
+    """Regress the per-cell change on the driver's change, conditioned on the change in cards.
+
+    `driver` names the column, and defaults to the water this phase was written for. Phase 2g
+    asks the same question of rainfall and calls this rather than copying it, so the two phases
+    cannot drift apart in how they condition on effort. `Fit.water` keeps its name: it is the
+    coefficient on whichever driver was passed, and renaming a published field is not free.
+    """
     response = frame[response_column].to_numpy()
-    water = frame["water"].to_numpy()
+    water = frame[driver].to_numpy()
     effort = frame["effort"].to_numpy()
     slope, partial = _partial(response, water, effort)
     naive = stats.pearsonr(water, response)
@@ -150,7 +152,9 @@ def _grid_index(frame: pl.DataFrame, size: float) -> tuple[np.ndarray, np.ndarra
     )
 
 
-def toroidal_null(frame: pl.DataFrame, response_column: str = "delta") -> tuple[float, int]:
+def toroidal_null(
+    frame: pl.DataFrame, response_column: str = "delta", *, driver: str = "water"
+) -> tuple[float, int]:
     """Shift the whole water surface over the footprint and refit, keeping its structure intact.
 
     The factor is moved as one rigid sheet with wraparound, so every spatial property of the water
@@ -162,11 +166,11 @@ def toroidal_null(frame: pl.DataFrame, response_column: str = "delta") -> tuple[
     rows, columns = _grid_index(frame, phase1e.CELL_DEG)
     height, width = rows.max() + 1, columns.max() + 1
     sheet = np.full((height, width), np.nan)
-    sheet[rows, columns] = frame["water"].to_numpy()
+    sheet[rows, columns] = frame[driver].to_numpy()
 
     response = frame[response_column].to_numpy()
     effort = frame["effort"].to_numpy()
-    observed, _ = _partial(response, frame["water"].to_numpy(), effort)
+    observed, _ = _partial(response, frame[driver].to_numpy(), effort)
 
     rng = np.random.default_rng(SEED)
     extreme = 0
@@ -186,7 +190,7 @@ def toroidal_null(frame: pl.DataFrame, response_column: str = "delta") -> tuple[
     return (extreme + 1) / (DRAWS + 1), int(np.mean(used))
 
 
-def leave_one_quadrant_out(frame: pl.DataFrame) -> list[Fit]:
+def leave_one_quadrant_out(frame: pl.DataFrame, *, driver: str = "water") -> list[Fit]:
     """Prediction 3's stability check: refit with each quadrant of the footprint removed.
 
     Quadrants split at the footprint's median cell, which keeps the four removals comparable in
@@ -197,10 +201,12 @@ def leave_one_quadrant_out(frame: pl.DataFrame) -> list[Fit]:
     south = pl.col("cell_lat") <= lat_mid
     west = pl.col("cell_lon") <= lon_mid
     quadrants = (south & west, south & ~west, ~south & west, ~south & ~west)
-    return [fit(frame.filter(~quadrant)) for quadrant in quadrants]
+    return [fit(frame.filter(~quadrant), driver=driver) for quadrant in quadrants]
 
 
-def spectral_null(frame: pl.DataFrame, response_column: str = "delta") -> float:
+def spectral_null(
+    frame: pl.DataFrame, response_column: str = "delta", *, driver: str = "water"
+) -> float:
     """Moran spectral randomisation: surrogates with the factor's autocorrelation, not its map.
 
     A second null with a different failure mode, as registered. The toroidal shift preserves the
@@ -227,7 +233,7 @@ def spectral_null(frame: pl.DataFrame, response_column: str = "delta") -> float:
     centre = np.eye(frame.height) - np.ones((frame.height, frame.height)) / frame.height
     vectors = np.linalg.eigh(centre @ symmetric @ centre)[1]
 
-    water = frame["water"].to_numpy()
+    water = frame[driver].to_numpy()
     response = frame[response_column].to_numpy()
     effort = frame["effort"].to_numpy()
     observed, _ = _partial(response, water, effort)

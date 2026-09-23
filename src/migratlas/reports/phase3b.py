@@ -8,13 +8,17 @@ the break handling.
 
 import logging
 from dataclasses import dataclass
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import numpy as np
 import polars as pl
 from scipy import stats
 
 from migratlas.lake.reader import scan_dataset
+from migratlas.models.influence import Influence, leave_one_out
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 log = logging.getLogger(__name__)
 
@@ -58,10 +62,40 @@ class Regression:
     q_statistic: float
     q_bar: float
     heterogeneous: bool
+    q_survives: bool
+    """Whether Q still clears its bar with any one unit dropped, both recomputed.
+
+    ADR 0016 deferred extending its rule to a heterogeneity statistic to whichever phase published
+    one. Phase 3e is that phase, and this is the extension.
+    """
     temp_slope: float
     temp_ci: float
     interaction_slope: float
     interaction_ci: float
+    leverage: Influence | None
+    """ADR 0016: whether the warming slope survives losing any one unit.
+
+    Not a graded prediction anywhere -- it is a property of the estimate, computed on every fit so
+    that the next phase inherits the check rather than remembering to run it. Phase 3g had to ask
+    this by hand, after its result was in, and the answer decided what it could claim.
+    """
+
+    @property
+    def q_robustness(self) -> float:
+        """How badly the per-unit intervals must be understated before Q stops clearing its bar.
+
+        Closed form, because Q is a sum of inverse-variance weights: multiply every unit's interval
+        by `k` and every weight falls by `k**2`, so Q falls by `k**2` while the chi-square bar does
+        not move. Q clears while `k < sqrt(Q / bar)`.
+
+        Why it is worth reporting. Each unit's interval is `1.96 * sd / sqrt(species)` over the
+        species inside that survey, which assumes those species are independent -- and they
+        share the survey's gear, footprint and water. Understated weights inflate Q, so a
+        heterogeneity claim needs to say how much room it has, not only that it cleared.
+        """
+        import math  # noqa: PLC0415 -- one caller, and the import documents the arithmetic
+
+        return math.sqrt(self.q_statistic / self.q_bar) if self.q_bar > 0 else float("nan")
 
 
 def gear_by_year(restricted: pl.DataFrame) -> pl.DataFrame:
@@ -215,17 +249,18 @@ def units() -> tuple[list[Unit], list[str]]:
     return fitted, coverage
 
 
-def regression(fitted: list[Unit]) -> Regression:
-    """The one registered cross-unit fit: WLS with a depth interaction, and Cochran's Q."""
+def _solve(fitted: Sequence[Unit]) -> tuple[float, float, float, float]:
+    """The registered design, as two slopes and their half-widths.
+
+    Split out of `regression` so ADR 0016's leave-one-out can refit a subset through exactly the
+    same weights, standardisation and pseudoinverse. An analytic influence measure would assume
+    those three do not change when a row leaves, and all of them do.
+    """
     y = np.array([u.latitude_trend for u in fitted])
     weights = np.array([1.0 / max((u.latitude_ci / 1.96) ** 2, 1e-6) for u in fitted])
     temp = np.array([u.temperature_trend for u in fitted])
     depth = np.array([u.median_depth_m for u in fitted])
     depth_std = (depth - depth.mean()) / depth.std(ddof=1)
-
-    pooled = float(np.sum(weights * y) / np.sum(weights))
-    q = float(np.sum(weights * (y - pooled) ** 2))
-    q_bar = float(stats.chi2.ppf(0.95, len(fitted) - 1))
 
     design = np.column_stack([np.ones(len(y)), temp, temp * depth_std])
     root = np.sqrt(weights)
@@ -239,15 +274,67 @@ def regression(fitted: list[Unit]) -> Regression:
     covariance = sigma2 * np.linalg.pinv(design.T @ (design * weights[:, None]))
     errors = np.sqrt(np.diag(covariance))
 
+    return (
+        float(solution[1]),
+        float(1.96 * errors[1]),
+        float(solution[2]),
+        float(1.96 * errors[2]),
+    )
+
+
+def _heterogeneity(fitted: Sequence[Unit]) -> tuple[float, float]:
+    """Cochran's Q and its 95% chi-square bar, on whatever units are handed in.
+
+    Split out for the same reason `_solve` was: ADR 0016 left extending its rule to a heterogeneity
+    statistic as a decision for the phase that publishes one, and a statistic that cannot be
+    recomputed on a subset cannot have that decision made about it.
+    """
+    y = np.array([u.latitude_trend for u in fitted])
+    weights = np.array([1.0 / max((u.latitude_ci / 1.96) ** 2, 1e-6) for u in fitted])
+    pooled = float(np.sum(weights * y) / np.sum(weights))
+    return (
+        float(np.sum(weights * (y - pooled) ** 2)),
+        float(stats.chi2.ppf(0.95, len(fitted) - 1)),
+    )
+
+
+def regression(fitted: list[Unit]) -> Regression:
+    """The one registered cross-unit fit: WLS with a depth interaction, and Cochran's Q."""
+    q, q_bar = _heterogeneity(fitted)
+
+    # ADR 0016 extended to Q, which that ADR explicitly deferred to whichever phase published a
+    # heterogeneity claim. Q is a sum over units, so one extreme sea can carry it exactly as one
+    # carried Phase 3g's slope -- and the bar moves with the unit count, so both halves are
+    # recomputed on every subset rather than the statistic being compared against a fixed bar.
+    q_survives = True
+    for index in range(len(fitted)):
+        rest = [unit for position, unit in enumerate(fitted) if position != index]
+        one_q, one_bar = _heterogeneity(rest)
+        if one_q <= one_bar:
+            log.info(
+                "dropping %s takes Q to %.1f against %.1f",
+                fitted[index].segment.survey,
+                one_q,
+                one_bar,
+            )
+            q_survives = False
+
+    temp_slope, temp_ci, interaction_slope, interaction_ci = _solve(fitted)
     return Regression(
         units=len(fitted),
         q_statistic=q,
         q_bar=q_bar,
         heterogeneous=q > q_bar,
-        temp_slope=float(solution[1]),
-        temp_ci=float(1.96 * errors[1]),
-        interaction_slope=float(solution[2]),
-        interaction_ci=float(1.96 * errors[2]),
+        q_survives=q_survives,
+        temp_slope=temp_slope,
+        temp_ci=temp_ci,
+        interaction_slope=interaction_slope,
+        interaction_ci=interaction_ci,
+        leverage=leave_one_out(
+            fitted,
+            lambda subset: _solve(subset)[:2],
+            name=lambda unit: unit.segment.survey,
+        ),
     )
 
 

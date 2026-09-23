@@ -18,7 +18,8 @@ the band: `S` is published for 37-50°N, and `transfer-fails` measured hold-one-
 across realms, so the dial is scoped where the claim is.
 
 **No new science.** Every number here comes from `phase2a_timing.sensitivities()`, the fit that
-`anthropogenic-share` already rests on, aggregated by the same `_mean_ci` over the same claim band.
+`anthropogenic-share` already rests on, aggregated by the same `metrics.interval.mean_ci` over the
+same claim band.
 The dial reads that fit; it does not re-estimate it. If it did, the dial and the ledger would be
 free to disagree.
 
@@ -36,6 +37,7 @@ import numpy as np
 import polars as pl
 
 from migratlas.constants import CLAIM_BAND
+from migratlas.metrics.interval import mean_ci
 from migratlas.reports.sandbox import Knob, Refusal, Variant
 
 if TYPE_CHECKING:
@@ -236,10 +238,10 @@ class Fitted:
 
 def fitted_response() -> Fitted | None:
     """Read the published fit and measure its envelope. Reads the lake; estimates nothing."""
-    # Private names, imported rather than duplicated: the dial has to aggregate the fit exactly the
-    # way the published table does, and two copies of an aggregation are two things that drift.
+    # Imported rather than duplicated: the dial has to aggregate the fit exactly the way the
+    # published table does, and two copies of an aggregation are two things that drift. The
+    # estimator itself is `metrics.interval.mean_ci`, which the table uses too.
     from migratlas.reports.phase2a_timing import (  # noqa: PLC0415 -- heavy, and only here
-        _mean_ci,
         pre_season_temperature,
         sensitivities,
         wind_support,
@@ -251,8 +253,8 @@ def fitted_response() -> Fitted | None:
         return None
 
     in_band = {item.station_id for item in fitted}
-    thermal, thermal_ci = _mean_ci(np.array([item.per_degree for item in fitted]))
-    wind, wind_ci = _mean_ci(np.array([item.per_wind for item in fitted]))
+    thermal, thermal_ci = mean_ci(np.array([item.per_degree for item in fitted]))
+    wind, wind_ci = mean_ci(np.array([item.per_wind for item in fitted]))
     return Fitted(
         stations=len(fitted),
         thermal=thermal,

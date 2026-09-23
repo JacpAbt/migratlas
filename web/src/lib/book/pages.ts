@@ -35,6 +35,7 @@
  * reintroduces the scrollbar.
  */
 
+import { openerOf, type ChaptersDocument } from "./chapters";
 import type { IntroductionDocument } from "./introduction";
 import type { SandboxDocument } from "../sandbox/sandbox";
 import { figurePages } from "./figures";
@@ -46,6 +47,10 @@ import type { Finding } from "../ledger";
 /** One page's worth of one thing. */
 export type Panel =
   | { kind: "opening" }
+  /* A chapter's account of itself, before any of its claims makes it. Paginated like the
+     introduction, because three of them overflowed a single leaf at 1280x800 and the book's
+     answer to prose that will not fit is another leaf rather than a shorter sentence. */
+  | { kind: "opener"; slug: string; chapter: string; from: number; to: number }
   | { kind: "intro"; from: number; to: number }
   /**
    * What was found: the sentence, and why it matters -- one page, or two.
@@ -77,8 +82,15 @@ export type Panel =
    */
   | { kind: "bias"; key: string; part: "all" | "first" | "rest" }
   | { kind: "survived"; key: string }
+
   /** One knob or one refusal, from whichever of the two documents keys it to this claim. */
-  | { kind: "panel"; doc: "safeguards" | "dial"; key: string; part: "knobs" | "refusals"; at: number }
+  | {
+      kind: "panel";
+      doc: "safeguards" | "dial";
+      key: string;
+      part: "knobs" | "refusals";
+      at: number;
+    }
   /**
    * The world: its map, its tools, or both on one leaf.
    *
@@ -154,11 +166,17 @@ const PASSAGES_PER_LEAF = 1;
 export interface Sources {
   findings: readonly Finding[];
   introduction: IntroductionDocument | null;
+  chapters: ChaptersDocument | null;
   safeguards: SandboxDocument | null;
   dial: SandboxDocument | null;
 }
 
-function pair(chapter: Chapter, at: number, verso: Panel, recto: Panel): Spread {
+function pair(
+  chapter: Chapter,
+  at: number,
+  verso: Panel,
+  recto: Panel,
+): Spread {
   return { chapter, at, verso, recto };
 }
 
@@ -169,11 +187,20 @@ function pair(chapter: Chapter, at: number, verso: Panel, recto: Panel): Spread 
   thing either: a spread whose left page ends one argument and whose right page starts another reads
   as one argument with a non-sequitur in it. Blank paper in a sketchbook is not a defect.
 */
-function fold(chapter: Chapter, pages: readonly Panel[], from: number): Spread[] {
+function fold(
+  chapter: Chapter,
+  pages: readonly Panel[],
+  from: number,
+): Spread[] {
   const spreads: Spread[] = [];
   for (let page = 0; page < pages.length; page += 2) {
     spreads.push(
-      pair(chapter, from + spreads.length, pages[page]!, pages[page + 1] ?? { kind: "blank" }),
+      pair(
+        chapter,
+        from + spreads.length,
+        pages[page]!,
+        pages[page + 1] ?? { kind: "blank" },
+      ),
     );
   }
   return spreads;
@@ -202,8 +229,13 @@ function claimPages(key: string, sources: Sources, narrow: boolean): Panel[] {
         { kind: "finding", key, part: "matters" },
         { kind: "how", key },
       ]
-    : [{ kind: "finding", key, part: "all" }, { kind: "how", key }];
-  figurePages(key, narrow).forEach((_page, at) => pages.push({ kind: "figure", key, at }));
+    : [
+        { kind: "finding", key, part: "all" },
+        { kind: "how", key },
+      ];
+  figurePages(key, narrow).forEach((_page, at) =>
+    pages.push({ kind: "figure", key, at }),
+  );
   // The record is one page on a spread and two on a phone. Its own seam, stated where the panel is.
   pages.push(
     ...(narrow
@@ -213,6 +245,20 @@ function claimPages(key: string, sources: Sources, narrow: boolean): Panel[] {
         ] as Panel[])
       : ([{ kind: "record", key, part: "all" }] as Panel[])),
   );
+  /*
+    The audit stays two pages on a spread, and the attempt to make it one is recorded here.
+
+    Measured at 1600x900, the bias page and the survived page sit at about half a leaf each, which
+    is twenty-six pages of the book at 50% fill and the largest block of air left in it. Merging
+    them is one line, because `Margin.svelte` already renders both halves when asked for neither --
+    and it put five of thirteen claims over the leaf by 70 to 296px. A character budget did not
+    save it either: the height follows the *number* of bias rows rather than their length, so the
+    budget that cleared the overflow merged only three claims and carried a measurement that would
+    rot the first time a claim gained a domain.
+
+    So this needs the panel to get shorter rather than the pagination to get cleverer, which is a
+    change to `Margin.svelte` and a decision about what an audit shows at a glance.
+  */
   pages.push(
     ...(narrow
       ? ([
@@ -234,8 +280,18 @@ function claimPages(key: string, sources: Sources, narrow: boolean): Panel[] {
     everything; the test that opens the dial is what said so.
   */
   for (const source of [
-    { doc: "safeguards" as const, held: sources.safeguards, knobs: knobsFor, refusals: refusalsFor },
-    { doc: "dial" as const, held: sources.dial, knobs: dialsFor, refusals: dialRefusalsFor },
+    {
+      doc: "safeguards" as const,
+      held: sources.safeguards,
+      knobs: knobsFor,
+      refusals: refusalsFor,
+    },
+    {
+      doc: "dial" as const,
+      held: sources.dial,
+      knobs: dialsFor,
+      refusals: dialRefusalsFor,
+    },
   ]) {
     for (const [part, items] of [
       ["knobs", source.knobs(source.held, key)],
@@ -258,7 +314,50 @@ function claimPages(key: string, sources: Sources, narrow: boolean): Panel[] {
  * nothing at all. A phone test looking for content on the leaf before the second chapter is what
  * found it.
  */
-function introPages(doc: IntroductionDocument | null, narrow: boolean): Panel[] {
+/**
+ * A chapter's account, across as many leaves as its paragraphs need.
+ *
+ * The same shape as `introPages` and for the same reason: the figures ride on the last page, so a
+ * reader who turns away after the first half of an argument has not been shown half a table.
+ */
+/*
+  Two paragraphs to a page and one to a phone leaf, measured the way `PASSAGES_PER_PAGE` was.
+
+  Three was the first guess and it was one too many: a chapter whose account is exactly three
+  paragraphs put all three on one leaf together with its question and its figures, and ran 8px
+  over at 1280x800. The question heads the account and the figures close it, so the page that
+  carries either has less room for prose than a page in the middle -- and rather than special-case
+  those two, the budget is the one a first or last page can hold.
+*/
+const OPENER_PER_PAGE = 2;
+const OPENER_PER_LEAF = 1;
+
+function openerPages(
+  slug: string,
+  chapter: string,
+  paragraphs: number,
+  narrow: boolean,
+): Panel[] {
+  const each = narrow ? OPENER_PER_LEAF : OPENER_PER_PAGE;
+  const pages: Panel[] = [];
+  for (let from = 0; from < paragraphs; from += each) {
+    pages.push({
+      kind: "opener",
+      slug,
+      chapter,
+      from,
+      to: Math.min(from + each, paragraphs),
+    });
+  }
+  return pages.length > 0
+    ? pages
+    : [{ kind: "opener", slug, chapter, from: 0, to: 0 }];
+}
+
+function introPages(
+  doc: IntroductionDocument | null,
+  narrow: boolean,
+): Panel[] {
   const passages = doc?.passages.length ?? 0;
   const each = narrow ? PASSAGES_PER_LEAF : PASSAGES_PER_PAGE;
   const pages: Panel[] = [{ kind: "opening" }];
@@ -309,9 +408,29 @@ function sectionsOf(
       (key) => sources.findings.find((finding) => finding.key === key) ?? [],
     );
 
+    /*
+      The opener leads its chapter, and only when the chapter has something to open onto. A realm
+      filter that empties a chapter gets the `absent` leaf below instead: an argument about claims
+      followed by a page saying none of them were measured here reads as a promise withdrawn.
+    */
+    const drawnFindings = published.filter((finding) =>
+      inRealm(finding, realm),
+    );
+    const opener = openerOf(sources.chapters, chapter.slug);
+    if (opener && drawnFindings.length > 0) {
+      out.push({
+        chapter,
+        pages: openerPages(
+          chapter.slug,
+          chapter.title,
+          opener.paragraphs.length,
+          narrow,
+        ),
+      });
+    }
+
     let drawn = 0;
-    for (const finding of published) {
-      if (!inRealm(finding, realm)) continue;
+    for (const finding of drawnFindings) {
       out.push({ chapter, pages: claimPages(finding.key, sources, narrow) });
       drawn += 1;
     }
@@ -342,20 +461,40 @@ export function spreadsOf(
   chapters: readonly Chapter[] = CHAPTERS,
   realm = "",
 ): readonly Spread[] {
+  /*
+    A chapter folds once, and this is the change that stopped the book wasting paper.
+
+    Each section used to fold on its own, so a claim with an odd number of pages ended on a blank
+    recto and the next claim began on the verso after it. Measured at 1600x900 that put a page of
+    nothing in roughly one spread in seven -- 5% fill, and a reader turning to it sees the book
+    has given up rather than that a claim has ended. Collecting a chapter's pages before folding
+    lets a claim's last page face the next claim's first, which is what a book does.
+
+    What it gives up is a claim always opening on a verso. That convention is worth a blank page
+    at a chapter break and is not worth one at every claim, so the chapter still starts where it
+    starts and the claims inside it now run on.
+  */
   const out: Spread[] = [];
   let chapter: Chapter | null = null;
+  let pages: Panel[] = [];
   let at = 0;
 
+  const flush = (): void => {
+    if (chapter === null || pages.length === 0) return;
+    out.push(...fold(chapter, pages, at));
+    pages = [];
+  };
+
   for (const section of sectionsOf(sources, chapters, realm, false)) {
-    // `at` is the offset within the chapter, so it restarts where the chapter does.
     if (section.chapter !== chapter) {
+      flush();
       chapter = section.chapter;
+      // `at` is the offset within the chapter, so it restarts where the chapter does.
       at = 0;
     }
-    const spreads = fold(section.chapter, section.pages, at);
-    out.push(...spreads);
-    at += spreads.length;
+    pages.push(...section.pages);
   }
+  flush();
 
   return out;
 }
@@ -388,7 +527,12 @@ export function leavesOf(
     for (const panel of section.pages) {
       // The first leaf of the book is a title page and carries no number, which is the convention
       // the spread already keeps -- `folio(0)` returns null for its verso for the same reason.
-      out.push({ chapter: section.chapter, at, panel, folio: out.length === 0 ? null : out.length });
+      out.push({
+        chapter: section.chapter,
+        at,
+        panel,
+        folio: out.length === 0 ? null : out.length,
+      });
       at += 1;
     }
   }

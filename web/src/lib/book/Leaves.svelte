@@ -218,6 +218,25 @@
     <div class="rail__stop" aria-hidden="true"></div>
   </div>
 
+  <!--
+    A mark at each edge that turns the leaf when tapped.
+
+    The swipe is the page turn and the next leaf's edge is meant to say so, but a first reading on
+    a phone stopped on leaf three: nothing on screen looked like a control, and a tap on the edge
+    did nothing. The spread has its folio arrow for exactly this; a leaf has these. Small, because
+    the whole edge as a hit target would take taps meant for the words under it.
+  -->
+  {#if at > 0}
+    <button type="button" class="turn turn--back" aria-label="Turn back" onclick={() => goTo(at - 1)}>
+      ‹
+    </button>
+  {/if}
+  {#if at < leaves.length - 1}
+    <button type="button" class="turn turn--on" aria-label="Turn the page" onclick={() => goTo(at + 1)}>
+      ›
+    </button>
+  {/if}
+
   {#if fanned}
     <button
       type="button"
@@ -356,6 +375,32 @@
 
   .rail__stop {
     flex: 0 0 var(--peek);
+  }
+
+  /* The turn marks: the folio arrow's glyph, at the middle of each edge, a thumb's width square. */
+  .turn {
+    position: absolute;
+    top: 50%;
+    z-index: 3;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--pencil);
+    font-family: var(--font-hand);
+    font-size: 1.7rem;
+    line-height: 1;
+    transform: translateY(-50%);
+    cursor: pointer;
+  }
+
+  .turn--back {
+    left: 0;
+  }
+
+  .turn--on {
+    right: 0;
   }
 
   .shade {

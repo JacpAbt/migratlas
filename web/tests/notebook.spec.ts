@@ -50,10 +50,12 @@ const AA_LARGE = 3;
  * pointing at the wrong leaf.
  */
 function documents(): Sources {
-  const read = (name: string) => JSON.parse(readFileSync(`public/${name}`, "utf8"));
+  const read = (name: string) =>
+    JSON.parse(readFileSync(`public/${name}`, "utf8"));
   return {
     findings: read("findings.json").findings,
     introduction: read("introduction.json"),
+    chapters: read("chapters.json"),
     safeguards: read("sandbox.json"),
     dial: read("response.json"),
   };
@@ -89,7 +91,10 @@ interface ClaimPages {
  * pretending otherwise -- by asserting only what happens to share a page -- is how the audit would
  * quietly stop being checked.
  */
-async function eachClaim(page: Page, visit: (pages: ClaimPages) => Promise<void>): Promise<void> {
+async function eachClaim(
+  page: Page,
+  visit: (pages: ClaimPages) => Promise<void>,
+): Promise<void> {
   const spreads = await layout();
   const leaves = await leafLayout();
   const keys = [
@@ -111,7 +116,11 @@ async function eachClaim(page: Page, visit: (pages: ClaimPages) => Promise<void>
     */
     const narrow = (page.viewportSize()?.width ?? 1600) < 62 * 16;
     const pages = narrow
-      ? leaves.map((leaf) => ({ chapter: leaf.chapter, at: leaf.at, panels: [leaf.panel] }))
+      ? leaves.map((leaf) => ({
+          chapter: leaf.chapter,
+          at: leaf.at,
+          panels: [leaf.panel],
+        }))
       : spreads.map((one) => ({
           chapter: one.chapter,
           at: one.at,
@@ -120,7 +129,9 @@ async function eachClaim(page: Page, visit: (pages: ClaimPages) => Promise<void>
 
     const addressOf = (kind: string): string => {
       const at = pages.find((one) =>
-        one.panels.some((panel) => panel.kind === kind && "key" in panel && panel.key === key),
+        one.panels.some(
+          (panel) => panel.kind === kind && "key" in panel && panel.key === key,
+        ),
       );
       if (!at) throw new Error(`no ${kind} page for ${key}`);
       return `#ch=${at.chapter.slug}&p=${at.at}`;
@@ -149,7 +160,9 @@ async function at(page: Page, address: string): Promise<void> {
 /** The first claim's record page, which is where the number and the precise sentence are. */
 async function recordPage(page: Page): Promise<void> {
   const spreads = await layout();
-  const at_ = spreads.find((one) => [one.verso, one.recto].some((p) => p.kind === "record"));
+  const at_ = spreads.find((one) =>
+    [one.verso, one.recto].some((p) => p.kind === "record"),
+  );
   if (!at_) throw new Error("the book carries no record page");
   await at(page, `#ch=${at_.chapter.slug}&p=${at_.at}`);
   await expect(page.locator(".claim__value").first()).toBeVisible();
@@ -194,7 +207,10 @@ async function ready(page: Page): Promise<void> {
  * `getByRole("radio")` reaches into whichever one loaded first.
  */
 async function surfaceIs(page: Page, name: string): Promise<void> {
-  await page.locator(".surface").getByRole("radio", { name, exact: true }).check();
+  await page
+    .locator(".surface")
+    .getByRole("radio", { name, exact: true })
+    .check();
 }
 
 /**
@@ -216,24 +232,55 @@ interface Patch {
   sd: number;
 }
 
+/** The side of a 12px square of paper, which is enough grain to average and little enough to place. */
+const PATCH = 12;
+
 async function sheetPaper(page: Page): Promise<Patch> {
   /*
-    The foot of the facing page, which is blank paper.
+    A patch of the facing page that nothing is printed on, found rather than assumed.
 
-    It used to be the top-left of the old shell's torn sheet. In the book the paper is the spread's
-    own ground seen through a page, and the reliable patch of it is low on the recto: a plate is
-    landscape and top-aligned, so the bottom of a figure page carries nothing. Reading the paper on
-    one page and the ink on another is sound for the reason the header already gives -- the notebook
-    has one background everywhere, and `every surface that paints paper paints it the same way` is
-    the test that keeps that true.
+    It used to be a fixed point at half the width and 82% of the height, on the argument that "a
+    plate is landscape and top-aligned, so the bottom of a figure page carries nothing". That was
+    true of every figure page until one grew a chart above its plate, and then the patch landed on
+    the plate's own sheet -- `--plate-paper`, darker than the page by design -- so the ink on the
+    facing leaf was measured against a ground it is not printed on. The kicker came out at 4.30:1
+    against a floor of 4.5 without a single colour having changed.
+
+    So the square is searched for: the lowest one in the page that no painting element overlaps.
+    Painting means a leaf or a drawing -- a container's box covers its children and says nothing
+    about where the ink is, which is the same distinction `book/fit.ts` draws for the same reason.
+
+    Reading the paper on one page and the ink on another is still sound, for the reason the header
+    gives: the notebook has one background everywhere, and `every surface that paints paper paints
+    it the same way` is the test that keeps that true.
   */
-  const box = await page.locator(".spread > .page--recto").boundingBox();
-  expect(box, "no page to measure the paper on").toBeTruthy();
-  const shot = (
-    await page.screenshot({
-      clip: { x: box!.x + box!.width * 0.5, y: box!.y + box!.height * 0.82, width: 12, height: 12 },
-    })
-  ).toString("base64");
+  const clip = await page.evaluate((size) => {
+    const inner = document.querySelector(".spread > .page--recto .page__inner");
+    if (!inner) return null;
+    const box = inner.getBoundingClientRect();
+    const painted = [...inner.querySelectorAll("*")]
+      .filter(
+        (node) => node.children.length === 0 || node.tagName.toLowerCase() === "svg",
+      )
+      .map((node) => node.getBoundingClientRect())
+      .filter((rect) => rect.width > 0 && rect.height > 0);
+    for (let y = box.bottom - size; y > box.top; y -= 4) {
+      for (const share of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+        const x = box.left + box.width * share - size / 2;
+        const clear = painted.every(
+          (rect) =>
+            rect.right <= x ||
+            rect.left >= x + size ||
+            rect.bottom <= y ||
+            rect.top >= y + size,
+        );
+        if (clear) return { x, y, width: size, height: size };
+      }
+    }
+    return null;
+  }, PATCH);
+  expect(clip, "no bare paper on the facing page to measure").toBeTruthy();
+  const shot = (await page.screenshot({ clip: clip! })).toString("base64");
 
   return page.evaluate(async (encoded) => {
     const image = new Image();
@@ -264,11 +311,16 @@ async function sheetPaper(page: Page): Promise<Patch> {
 
 /** Relative luminance of an `rgb(...)` string or a channel triple. */
 function luminance(colour: string | [number, number, number]): number {
-  const parts = typeof colour === "string" ? (colour.match(/[\d.]+/g)?.map(Number) ?? []) : colour;
+  const parts =
+    typeof colour === "string"
+      ? (colour.match(/[\d.]+/g)?.map(Number) ?? [])
+      : colour;
   const [r = 0, g = 0, b = 0] = parts
     .slice(0, 3)
     .map((value) => value / 255)
-    .map((value) => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4));
+    .map((value) =>
+      value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+    );
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
@@ -291,7 +343,9 @@ async function contrast(target: Locator, paper: number): Promise<number> {
 }
 
 for (const surface of ["day", "night"] as const) {
-  test(`every text colour clears AA on the ${surface} surface`, async ({ page }) => {
+  test(`every text colour clears AA on the ${surface} surface`, async ({
+    page,
+  }) => {
     await ready(page);
     /*
       The surface is set again after every navigation, inside the loop below, because these samples
@@ -356,7 +410,10 @@ for (const surface of ["day", "night"] as const) {
         await at(page, address);
         if (surface === "night") {
           await surfaceIs(page, "Night");
-          await expect(page.locator(":root")).toHaveAttribute("data-surface", "night");
+          await expect(page.locator(":root")).toHaveAttribute(
+            "data-surface",
+            "night",
+          );
         }
         where = address;
       }
@@ -377,7 +434,9 @@ for (const surface of ["day", "night"] as const) {
   });
 }
 
-test("every surface that paints paper paints it the same way", async ({ page }) => {
+test("every surface that paints paper paints it the same way", async ({
+  page,
+}) => {
   await ready(page);
   // The bug this exists for: `Sheet` set the paper colour and the grain and no blend mode, so the
   // texture was painted *over* the colour rather than into it and every card on the site was a grey
@@ -412,18 +471,26 @@ test("every surface that paints paper paints it the same way", async ({ page }) 
     of into it turned every card on the site into a grey slab, and nothing caught it because the
     contrast suite was reading the token underneath.
   */
-  expect(painted.spreadColour, "the spread is not the same colour as the page").toBe(
-    painted.bodyColour,
+  expect(
+    painted.spreadColour,
+    "the spread is not the same colour as the page",
+  ).toBe(painted.bodyColour);
+  expect(painted.grainImage, "the page's grain is not the page's grain").toBe(
+    painted.bodyImage,
   );
-  expect(painted.grainImage, "the page's grain is not the page's grain").toBe(painted.bodyImage);
-  expect(painted.grainSize, "the grain is at a different scale on the page").toBe(painted.bodySize);
+  expect(
+    painted.grainSize,
+    "the grain is at a different scale on the page",
+  ).toBe(painted.bodySize);
   expect(
     painted.grainBlend,
     "the grain is painted over the paper rather than into it, which is the grey-slab bug",
   ).toBe(painted.bodyBlend);
 });
 
-test("the grain is a texture, not a filter over the paper", async ({ page }) => {
+test("the grain is a texture, not a filter over the paper", async ({
+  page,
+}) => {
   await ready(page);
   // A displacement map straight out of the archive is centred on mid-grey, because a height field
   // carries no tone. Multiplied over cream that is a 40% neutral-density filter, and the page came
@@ -452,7 +519,10 @@ test("the grain is a texture, not a filter over the paper", async ({ page }) => 
     // because night is deliberately four times smoother -- its map is large-scale creases rather
     // than fibre, and at any real amplitude on a near-black ground that reads as foil.
     if (surface === "day") {
-      expect(sheet.sd, `${where} -- no variation, so there is no grain`).toBeGreaterThan(1);
+      expect(
+        sheet.sd,
+        `${where} -- no variation, so there is no grain`,
+      ).toBeGreaterThan(1);
     }
   }
 });
@@ -472,14 +542,18 @@ function dichromat(colour: string, kind: Blindness): [number, number, number] {
     .slice(0, 3)
     .map(Number)
     .map((value) => value / 255)
-    .map((value) => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4));
+    .map((value) =>
+      value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+    );
 
   const l = 17.8824 * sr + 43.5161 * sg + 4.11935 * sb;
   const m = 3.45565 * sr + 27.1554 * sg + 3.86714 * sb;
   const s = 0.0299566 * sr + 0.184309 * sg + 1.46709 * sb;
 
   const [pl, pm, ps] =
-    kind === "protan" ? [2.02344 * m - 2.52581 * s, m, s] : [l, 0.494207 * l + 1.24827 * s, s];
+    kind === "protan"
+      ? [2.02344 * m - 2.52581 * s, m, s]
+      : [l, 0.494207 * l + 1.24827 * s, s];
 
   return [
     0.080944 * pl - 0.130504 * pm + 0.116721 * ps,
@@ -487,7 +561,10 @@ function dichromat(colour: string, kind: Blindness): [number, number, number] {
     -0.000365294 * pl - 0.00412163 * pm + 0.693513 * ps,
   ].map((value) => {
     const clamped = Math.min(1, Math.max(0, value));
-    const encoded = clamped <= 0.0031308 ? clamped * 12.92 : 1.055 * clamped ** (1 / 2.4) - 0.055;
+    const encoded =
+      clamped <= 0.0031308
+        ? clamped * 12.92
+        : 1.055 * clamped ** (1 / 2.4) - 0.055;
     return Math.round(encoded * 255);
   }) as [number, number, number];
 }
@@ -554,20 +631,23 @@ for (const surface of ["day", "night"] as const) {
     await ready(page);
     if (surface === "night") await surfaceIs(page, "Night");
 
-    const resolved = await page.evaluate((names) => {
-      const style = getComputedStyle(document.documentElement);
-      // Through a probe, so a token arrives as `rgb(...)` rather than as whatever hex it was
-      // authored in -- the simulation needs channels, not a string it has to guess the format of.
-      const probe = document.createElement("span");
-      document.body.append(probe);
-      const out: Record<string, string> = {};
-      for (const name of names) {
-        probe.style.color = style.getPropertyValue(name).trim();
-        out[name] = getComputedStyle(probe).color;
-      }
-      probe.remove();
-      return out;
-    }, [...new Set(CONFUSABLE.flatMap(([, a, b]) => [a, b]))]);
+    const resolved = await page.evaluate(
+      (names) => {
+        const style = getComputedStyle(document.documentElement);
+        // Through a probe, so a token arrives as `rgb(...)` rather than as whatever hex it was
+        // authored in -- the simulation needs channels, not a string it has to guess the format of.
+        const probe = document.createElement("span");
+        document.body.append(probe);
+        const out: Record<string, string> = {};
+        for (const name of names) {
+          probe.style.color = style.getPropertyValue(name).trim();
+          out[name] = getComputedStyle(probe).color;
+        }
+        probe.remove();
+        return out;
+      },
+      [...new Set(CONFUSABLE.flatMap(([, a, b]) => [a, b]))],
+    );
 
     const failures: string[] = [];
     for (const [what, first, second] of CONFUSABLE) {
@@ -578,7 +658,9 @@ for (const surface of ["day", "night"] as const) {
       for (const kind of ["protan", "deutan"] as const) {
         const apart = separation(a!, b!, kind);
         if (apart < SEPARATION_FLOOR) {
-          failures.push(`${what} is ${apart.toFixed(0)} apart under ${kind} (floor ${SEPARATION_FLOOR})`);
+          failures.push(
+            `${what} is ${apart.toFixed(0)} apart under ${kind} (floor ${SEPARATION_FLOOR})`,
+          );
         }
       }
     }
@@ -586,7 +668,9 @@ for (const surface of ["day", "night"] as const) {
   });
 }
 
-test("the surface is a three-way choice, and it survives a reload", async ({ page }) => {
+test("the surface is a three-way choice, and it survives a reload", async ({
+  page,
+}) => {
   await ready(page);
 
   // Three, not a toggle. "Follow the system" is a choice: a reader whose machine dims at sunset
@@ -613,7 +697,8 @@ test("the globe follows the paper it is read on", async ({ page }) => {
   // the state this project shipped in for the whole time the palette existed and the switch did not.
   const ocean = () =>
     page.evaluate(() => {
-      const map = (window as unknown as { migratlas?: { map?: unknown } }).migratlas?.map as
+      const map = (window as unknown as { migratlas?: { map?: unknown } })
+        .migratlas?.map as
         | { getPaintProperty: (id: string, property: string) => unknown }
         | undefined;
       return String(map?.getPaintProperty("ocean", "background-color") ?? "");
@@ -628,11 +713,16 @@ test("the globe follows the paper it is read on", async ({ page }) => {
     the darts' rotation poll for the flake that made the point.
   */
   await expect
-    .poll(ocean, { message: "the surface changed and the ocean did not", timeout: 30_000 })
+    .poll(ocean, {
+      message: "the surface changed and the ocean did not",
+      timeout: 30_000,
+    })
     .not.toBe(byDay);
 });
 
-test("an addressed status is legible too, and is not the only signal", async ({ page }) => {
+test("an addressed status is legible too, and is not the only signal", async ({
+  page,
+}) => {
   /*
     The audit is a page per claim now, and "addressed" is not on every one of them -- so this walks
     until it finds one rather than assuming the first claim has every status. A test that asserted
@@ -642,7 +732,8 @@ test("an addressed status is legible too, and is not the only signal", async ({ 
   await eachClaim(page, async (pages) => {
     if (found) return;
     await at(page, pages.bias);
-    if ((await page.locator(".bias__status--addressed").count()) > 0) found = true;
+    if ((await page.locator(".bias__status--addressed").count()) > 0)
+      found = true;
   });
   expect(found, "no claim has an addressed bias domain to measure").toBe(true);
   const addressed = page.locator(".bias__status--addressed").first();
@@ -654,21 +745,29 @@ test("an addressed status is legible too, and is not the only signal", async ({ 
   // convention. Red against green measures 52 apart under protanopia by day, which is below the
   // separability floor and cannot be fixed without leaving the palette; what makes it compliant is
   // that the word is the signal and the colour only agrees with it. So: every status on the page,
-  // not just this one, has to read as its own meaning.
+  // not just this one, has to read as its own meaning -- in the reader's words, which `ledger.ts`
+  // maps from the ledger's, so the class carries the standard's term and the page carries the
+  // plain one.
   //
   // Read in one `evaluate` rather than looped over a locator, because a page turn keeps the old
   // claim in the DOM for the length of the transition: counting the nodes and then asserting on
   // them are two moments, and the first version failed on a node that had been replaced between
   // them. One synchronous pass over the live document has no such gap.
+  const { BIAS_STATUS_WORDS } = await import("../src/lib/ledger");
   await eachClaim(page, async () => {
-    const silent = await page.evaluate(() =>
-      [...document.querySelectorAll("[class*='bias__status--']")]
-        .map((node) => {
-          const meaning = /bias__status--(\w+)/.exec(node.className)?.[1] ?? "";
-          return { meaning, text: (node.textContent ?? "").trim() };
-        })
-        .filter(({ meaning, text }) => !text.toLowerCase().includes(meaning))
-        .map(({ meaning, text }) => `${meaning} reads "${text}"`),
+    const silent = await page.evaluate(
+      (words) =>
+        [...document.querySelectorAll("[class*='bias__status--']")]
+          .map((node) => {
+            const meaning = (/bias__status--([\w-]+)/.exec(node.className)?.[1] ?? "").replace(
+              /-/g,
+              " ",
+            );
+            return { meaning, text: (node.textContent ?? "").trim() };
+          })
+          .filter(({ meaning, text }) => text !== words[meaning])
+          .map(({ meaning, text }) => `${meaning} reads "${text}"`),
+      BIAS_STATUS_WORDS,
     );
     expect(silent, silent.join("; ")).toEqual([]);
   });
@@ -693,7 +792,10 @@ test("a chart says which line is which without colour", async ({ page }) => {
       const found = node.querySelector(selector);
       if (!found) return null;
       const style = getComputedStyle(found);
-      return { tag: found.tagName, width: Number.parseFloat(style.strokeWidth) || 0 };
+      return {
+        tag: found.tagName,
+        width: Number.parseFloat(style.strokeWidth) || 0,
+      };
     };
     return {
       scatter: read(".chart__year"),
@@ -704,11 +806,16 @@ test("a chart says which line is which without colour", async ({ page }) => {
 
   // The scatter is a filled circle per year; the two series are stroked lines, and thick ones.
   expect(marks.scatter?.tag, "the scatter is not a point mark").toBe("circle");
-  expect(marks.observed?.tag, "the observed series is not a stroke").toBe("line");
-  expect(marks.counterfactual?.tag, "the counterfactual is not a stroke").toBe("line");
-  expect(marks.observed?.width ?? 0, "a series line thin enough to read as scatter").toBeGreaterThan(
-    1.5,
+  expect(marks.observed?.tag, "the observed series is not a stroke").toBe(
+    "line",
   );
+  expect(marks.counterfactual?.tag, "the counterfactual is not a stroke").toBe(
+    "line",
+  );
+  expect(
+    marks.observed?.width ?? 0,
+    "a series line thin enough to read as scatter",
+  ).toBeGreaterThan(1.5);
 
   // And the two lines, which *are* the same mark, carry their own labels rather than relying on the
   // legend to say which is which.
@@ -716,7 +823,9 @@ test("a chart says which line is which without colour", async ({ page }) => {
   await expect(chart.locator(".chart__label--counterfactual")).toHaveCount(1);
 });
 
-test("every claim shows an instrument rather than a creature", async ({ page }) => {
+test("every claim shows an instrument rather than a creature", async ({
+  page,
+}) => {
   await ready(page);
   await eachClaim(page, async (pages) => {
     await at(page, pages.finding);
@@ -728,7 +837,10 @@ test("every claim shows an instrument rather than a creature", async ({ page }) 
     // cannot separate birds from bats from insects; a drawing of an animal beside that claim would
     // contradict the caveat printed two lines below it, in the page's most legible register.
     const label = await instrument.getAttribute("aria-label");
-    expect(label, "an instrument with nothing read out to a screen reader").toBeTruthy();
+    expect(
+      label,
+      "an instrument with nothing read out to a screen reader",
+    ).toBeTruthy();
     expect(
       label,
       `"${label}" names a creature; only the apparatus goes here`,
@@ -736,7 +848,9 @@ test("every claim shows an instrument rather than a creature", async ({ page }) 
   });
 });
 
-test("the audit is a page of its own, not something behind a control", async ({ page }) => {
+test("the audit is a page of its own, not something behind a control", async ({
+  page,
+}) => {
   /*
     Re-authored for the book, and the half that mattered is the half that survived.
 
@@ -770,7 +884,10 @@ test("the audit is a page of its own, not something behind a control", async ({ 
   });
 
   expect(audited, "no claim has an audit page").toBeGreaterThan(0);
-  expect(open, "nothing is marked open, which would mean the audit is decorative").toBeGreaterThan(0);
+  expect(
+    open,
+    "nothing is marked open, which would mean the audit is decorative",
+  ).toBeGreaterThan(0);
 });
 
 test("every claim is said twice, plainly and precisely, and both are in the book", async ({
@@ -791,26 +908,36 @@ test("every claim is said twice, plainly and precisely, and both are in the book
   // that says almost the same thing and deletes one of them.
   await eachClaim(page, async (pages) => {
     await at(page, pages.finding);
-    const plain = (await page.locator(".claim__title").textContent())?.trim() ?? "";
+    const plain =
+      (await page.locator(".claim__title").textContent())?.trim() ?? "";
     await expect(page.locator(".claim__short-caveat")).not.toBeEmpty();
     await expect(page.locator(".claim__matters")).not.toBeEmpty();
-    await expect(page.locator(".spread details, .spread [hidden]")).toHaveCount(0);
+    await expect(page.locator(".spread details, .spread [hidden]")).toHaveCount(
+      0,
+    );
 
     await at(page, pages.record);
     const claim = page.locator(".claim").first();
-    const precise = (await claim.locator(".claim__precise").textContent())?.trim() ?? "";
+    const precise =
+      (await claim.locator(".claim__precise").textContent())?.trim() ?? "";
     await expect(claim.locator(".claim__caveat")).not.toBeEmpty();
 
     expect(plain.length, "a claim with no plain sentence").toBeGreaterThan(20);
-    expect(precise.length, "a claim with no precise sentence").toBeGreaterThan(20);
-    expect(precise.replace(/^Precisely\s*/, "")).not.toBe(plain);
+    expect(precise.length, "a claim with no precise sentence").toBeGreaterThan(
+      20,
+    );
+    expect(precise).not.toBe(plain);
 
     // Neither register is behind a control, on either leaf -- the same rule as the audit page.
-    await expect(page.locator(".spread details, .spread [hidden]")).toHaveCount(0);
+    await expect(page.locator(".spread details, .spread [hidden]")).toHaveCount(
+      0,
+    );
   });
 });
 
-test("the plain register is set larger than the precise one it introduces", async ({ page }) => {
+test("the plain register is set larger than the precise one it introduces", async ({
+  page,
+}) => {
   /*
     Measured across two leaves, because the registers are on two. Nothing about the comparison
     changed -- the plain sentence is the heading and is set as one -- but the pages are now the
@@ -820,7 +947,9 @@ test("the plain register is set larger than the precise one it introduces", asyn
   const finding = spreads.find((one) => one.verso.kind === "finding")!;
   const key = "key" in finding.verso ? finding.verso.key : "";
   const record = spreads.find((one) =>
-    [one.verso, one.recto].some((panel) => panel.kind === "record" && panel.key === key),
+    [one.verso, one.recto].some(
+      (panel) => panel.kind === "record" && panel.key === key,
+    ),
   )!;
   // Which register is the heading is the decision, so it has to be legible as one. A plain
   // sentence typeset at the same size as the sentence beneath it is not a heading, it is a
@@ -836,7 +965,10 @@ test("the plain register is set larger than the precise one it introduces", asyn
   await at(page, `#ch=${record.chapter.slug}&p=${record.at}`);
   const precise = await sizeOf(".claim__precise");
 
-  expect(plain, `the plain register is ${plain}px against ${precise}px`).toBeGreaterThan(precise);
+  expect(
+    plain,
+    `the plain register is ${plain}px against ${precise}px`,
+  ).toBeGreaterThan(precise);
 });
 
 test("no number animates to its value", async ({ page }) => {
@@ -851,7 +983,9 @@ test("no number animates to its value", async ({ page }) => {
   expect(first).toMatch(/\d/);
 });
 
-test("the type is a setting a reader can reach, and it survives a reload", async ({ page }) => {
+test("the type is a setting a reader can reach, and it survives a reload", async ({
+  page,
+}) => {
   await ready(page);
 
   // Beside the surface switch, not behind anything. Two of the three options exist for people who
@@ -862,13 +996,18 @@ test("the type is a setting a reader can reach, and it survives a reload", async
 
   await picker.getByRole("radio", { name: "Dyslexia", exact: true }).check();
   await expect(page.locator(":root")).toHaveAttribute("data-type", "dyslexic");
-  await expect(page.locator(".claim__title")).toHaveCSS("font-family", /OpenDyslexic/);
+  await expect(page.locator(".claim__title")).toHaveCSS(
+    "font-family",
+    /OpenDyslexic/,
+  );
 
   await page.reload();
   await expect(page.locator(":root")).toHaveAttribute("data-type", "dyslexic");
 });
 
-test("changing the type changes the letterforms and nothing else", async ({ page }) => {
+test("changing the type changes the letterforms and nothing else", async ({
+  page,
+}) => {
   await ready(page);
   const picker = page.locator(".type");
 
@@ -894,15 +1033,21 @@ test("changing the type changes the letterforms and nothing else", async ({ page
 
   // Every preset lands in a readable band rather than at the same nominal size.
   for (const [name, size] of Object.entries(seen)) {
-    expect(size.title, `${name} heading is ${size.title}px`).toBeGreaterThan(15);
+    expect(size.title, `${name} heading is ${size.title}px`).toBeGreaterThan(
+      15,
+    );
     expect(size.body, `${name} body is ${size.body}px`).toBeGreaterThan(12);
     expect(size.leading / size.body, `${name} leading`).toBeGreaterThan(1.4);
   }
   // And they are genuinely different settings, not three names for one.
-  expect(new Set(Object.values(seen).map((s) => s.title)).size).toBeGreaterThan(1);
+  expect(new Set(Object.values(seen).map((s) => s.title)).size).toBeGreaterThan(
+    1,
+  );
 });
 
-test("a figure is never set in a face that cannot line one up", async ({ page }) => {
+test("a figure is never set in a face that cannot line one up", async ({
+  page,
+}) => {
   await recordPage(page);
   /*
     Retargeted rather than dropped, and the retarget is the point. This used to name Architects
@@ -922,12 +1067,21 @@ test("a figure is never set in a face that cannot line one up", async ({ page })
 
   const token = (name: string) =>
     page.evaluate(
-      (property) => getComputedStyle(document.documentElement).getPropertyValue(property).trim(),
+      (property) =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue(property)
+          .trim(),
       name,
     );
 
-  const hand = (await token("--font-hand")).split(",")[0]!.replaceAll('"', "").trim();
-  const mono = (await token("--font-mono")).split(",")[0]!.replaceAll('"', "").trim();
+  const hand = (await token("--font-hand"))
+    .split(",")[0]!
+    .replaceAll('"', "")
+    .trim();
+  const mono = (await token("--font-mono"))
+    .split(",")[0]!
+    .replaceAll('"', "")
+    .trim();
 
   /*
     And the small registers are never the hand. `.claim__banner` is on the finding page and
@@ -939,20 +1093,30 @@ test("a figure is never set in a face that cannot line one up", async ({ page })
   const findingAt = spreads.find((one) => one.verso.kind === "finding")!;
   const key = "key" in findingAt.verso ? findingAt.verso.key : "";
   const biasAt = spreads.find((one) =>
-    [one.verso, one.recto].some((panel) => panel.kind === "bias" && panel.key === key),
+    [one.verso, one.recto].some(
+      (panel) => panel.kind === "bias" && panel.key === key,
+    ),
   )!;
 
   expect(await faceOf(".claim__value")).toContain(mono);
 
   await at(page, `#ch=${findingAt.chapter.slug}&p=${findingAt.at}`);
-  expect(await faceOf(".claim__banner"), "the banner is set in the hand face").not.toContain(hand);
+  expect(
+    await faceOf(".claim__banner"),
+    "the banner is set in the hand face",
+  ).not.toContain(hand);
   expect(await faceOf(".claim__title")).toContain(hand);
 
   await at(page, `#ch=${biasAt.chapter.slug}&p=${biasAt.at}`);
-  expect(await faceOf(".bias__domain"), "a bias domain is set in the hand face").not.toContain(hand);
+  expect(
+    await faceOf(".bias__domain"),
+    "a bias domain is set in the hand face",
+  ).not.toContain(hand);
 });
 
-test("the audit is still there on a phone, and still not behind anything", async ({ page }) => {
+test("the audit is still there on a phone, and still not behind anything", async ({
+  page,
+}) => {
   /*
     Re-authored, and the clause that mattered is the one that survived.
 
@@ -973,9 +1137,13 @@ test("the audit is still there on a phone, and still not behind anything", async
 
   // And nothing overflows sideways, which is what a fixed 19rem column would have done here.
   const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
   );
-  expect(overflow, `${overflow}px of horizontal overflow`).toBeLessThanOrEqual(1);
+  expect(overflow, `${overflow}px of horizontal overflow`).toBeLessThanOrEqual(
+    1,
+  );
 });
 
 test("paper is paper, not a bordered box", async ({ page }) => {
@@ -995,7 +1163,9 @@ test("paper is paper, not a bordered box", async ({ page }) => {
     return { border: style.borderTopWidth, radius: style.borderTopLeftRadius };
   });
   expect(leaf.border, "a page has a border, which makes it a card").toBe("0px");
-  expect(leaf.radius, "a page has rounded corners, which makes it a card").toBe("0px");
+  expect(leaf.radius, "a page has rounded corners, which makes it a card").toBe(
+    "0px",
+  );
 
   await world(page);
   const clip = await page
@@ -1006,10 +1176,14 @@ test("paper is paper, not a bordered box", async ({ page }) => {
   const lift = await page
     .locator(".explore .sheet__lift")
     .evaluate((node) => getComputedStyle(node).filter);
-  expect(lift, "no shadow, or one that the clip will have eaten").toContain("drop-shadow");
+  expect(lift, "no shadow, or one that the clip will have eaten").toContain(
+    "drop-shadow",
+  );
 });
 
-test("the drawn edge stays put while what is inside it scrolls", async ({ page }) => {
+test("the drawn edge stays put while what is inside it scrolls", async ({
+  page,
+}) => {
   /*
     The regression this exists for: an absolutely-positioned edge inside a scrolling box is placed
     against the padding box, so the tear travels up the screen as a reader scrolls.
@@ -1020,13 +1194,17 @@ test("the drawn edge stays put while what is inside it scrolls", async ({ page }
     a torn sheet. So the assertion moved to where it can still fail.
   */
   await world(page);
-  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"));
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== "running"),
+  );
 
   const slip = page.locator(".explore__slip");
   const before = await page.locator(".explore .sheet__ink").boundingBox();
   await slip.evaluate((node) => node.scrollBy(0, 400));
   await expect
-    .poll(async () => (await slip.evaluate((n) => n.scrollTop)) > 0, { timeout: 15_000 })
+    .poll(async () => (await slip.evaluate((n) => n.scrollTop)) > 0, {
+      timeout: 15_000,
+    })
     .toBe(true);
   const after = await page.locator(".explore .sheet__ink").boundingBox();
   expect(after?.y).toBeCloseTo(before?.y ?? 0, 0);
@@ -1073,10 +1251,13 @@ test("a control is drawn, not bordered", async ({ page }) => {
     business and the invariant is that the chosen option carries strokes the unchosen ones do not.
     The arrival's three doors used to be the subject here; the type presets are the same control.
   */
-  const strokes = (selector: string) => page.locator(`${selector} .boxed path`).count();
+  const strokes = (selector: string) =>
+    page.locator(`${selector} .boxed path`).count();
   const chosen = await strokes(".type__option--on");
   const unchosen = await strokes(".type__option:not(.type__option--on)");
-  expect(chosen, "the chosen option has no drawn box at all").toBeGreaterThan(0);
+  expect(chosen, "the chosen option has no drawn box at all").toBeGreaterThan(
+    0,
+  );
   expect(
     chosen,
     `the chosen option has ${chosen} strokes against ${unchosen} across the other two`,
@@ -1108,7 +1289,11 @@ test("nothing on the page is still a bordered control", async ({ page }) => {
     up a radius on more than the two corners a tab has.
   */
   const bordered = await page.evaluate(() =>
-    [...document.querySelectorAll(".option, .surface__option, .type__option, .layers input, [data-turn]")]
+    [
+      ...document.querySelectorAll(
+        ".option, .surface__option, .type__option, .layers input, [data-turn]",
+      ),
+    ]
       .filter((node) => {
         const style = getComputedStyle(node);
         return Number.parseFloat(style.borderTopWidth) > 0;
@@ -1117,29 +1302,38 @@ test("nothing on the page is still a bordered control", async ({ page }) => {
   );
   expect(bordered, "these still carry a CSS border").toEqual([]);
 
-  const tab = await page.locator(".tab").first().evaluate((node) => {
-    const style = getComputedStyle(node);
-    return {
-      colour: style.borderTopColor,
-      rule: getComputedStyle(document.documentElement).getPropertyValue("--rule").trim(),
-      corners: [
-        style.borderTopLeftRadius,
-        style.borderTopRightRadius,
-        style.borderBottomRightRadius,
-        style.borderBottomLeftRadius,
-      ],
-    };
-  });
+  const tab = await page
+    .locator(".tab")
+    .first()
+    .evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        colour: style.borderTopColor,
+        rule: getComputedStyle(document.documentElement)
+          .getPropertyValue("--rule")
+          .trim(),
+        corners: [
+          style.borderTopLeftRadius,
+          style.borderTopRightRadius,
+          style.borderBottomRightRadius,
+          style.borderBottomLeftRadius,
+        ],
+      };
+    });
   // Mixed with the tab's own tint, so not equal to `--rule` -- but it must be a colour and not a
   // system border, and it must not be the ink the text is set in.
-  expect(tab.colour, "a tab with no edge is not cut paper").not.toBe("rgba(0, 0, 0, 0)");
+  expect(tab.colour, "a tab with no edge is not cut paper").not.toBe(
+    "rgba(0, 0, 0, 0)",
+  );
   expect(
     tab.corners.filter((corner) => corner !== "0px").length,
     "a tab is rounded on the two corners that stick out, not all four",
   ).toBeLessThanOrEqual(2);
 });
 
-test("switching a layer on draws a tick rather than filling a box", async ({ page }) => {
+test("switching a layer on draws a tick rather than filling a box", async ({
+  page,
+}) => {
   await world(page);
 
   // Layers land one by one and the panel re-renders as they do; clicking a row while the list
@@ -1147,7 +1341,9 @@ test("switching a layer on draws a tick rather than filling a box", async ({ pag
   // existence is the load-complete signal -- the first version of this wait counted to seven,
   // and the ice layer made the count stale within a day, which is what counting by hand does.
   await page.waitForFunction(
-    () => !!(window as unknown as { migratlas?: { loaded?: unknown[] } }).migratlas?.loaded?.length,
+    () =>
+      !!(window as unknown as { migratlas?: { loaded?: unknown[] } }).migratlas
+        ?.loaded?.length,
     undefined,
     { timeout: 30_000 },
   );
@@ -1160,7 +1356,10 @@ test("switching a layer on draws a tick rather than filling a box", async ({ pag
   // that the tick animates in from nothing instead of appearing -- and that reduced motion, which
   // zeroes `--draw-quick`, still lands it in the final state.
   const offset = () =>
-    row.locator(".ticked .ink-tick path").first().evaluate((node) => getComputedStyle(node).strokeDashoffset);
+    row
+      .locator(".ticked .ink-tick path")
+      .first()
+      .evaluate((node) => getComputedStyle(node).strokeDashoffset);
 
   const before = await offset();
   await row.locator("input").click();
@@ -1190,23 +1389,34 @@ test("the paper turns and the world does not", async ({ page }) => {
   const named = await page.evaluate(
     () => getComputedStyle(document.documentElement).viewTransitionName,
   );
-  expect(named, "the root would be snapshotted, freezing the globe").toBe("none");
+  expect(named, "the root would be snapshotted, freezing the globe").toBe(
+    "none",
+  );
 
   // The leaf rotates in three dimensions, so nothing above it may carry a filter.
   await page.locator('.spread > .page--recto [data-turn="on"]').click();
-  await expect(page.locator(".leaf"), "no leaf was built for the turn").toHaveCount(1);
+  await expect(
+    page.locator(".leaf"),
+    "no leaf was built for the turn",
+  ).toHaveCount(1);
   const flattened = await page.evaluate(() => {
     const leaf = document.querySelector(".leaf");
     if (!leaf) return "no leaf was built";
     for (let node = leaf.parentElement; node; node = node.parentElement) {
-      if (getComputedStyle(node).filter !== "none") return node.className || node.tagName;
+      if (getComputedStyle(node).filter !== "none")
+        return node.className || node.tagName;
     }
     return "";
   });
-  expect(flattened, "an ancestor of the leaf carries a filter, which flattens the rotation").toBe("");
+  expect(
+    flattened,
+    "an ancestor of the leaf carries a filter, which flattens the rotation",
+  ).toBe("");
 });
 
-test("changing claim never blocks the main thread for long", async ({ page }) => {
+test("changing claim never blocks the main thread for long", async ({
+  page,
+}) => {
   await ready(page);
   // The guard that lets the rest of this go all out. Bytes are the wrong instrument for animation
   // work -- a page turn adds no payload and can still cost a reader every frame of it -- so what
@@ -1236,12 +1446,16 @@ test("changing claim never blocks the main thread for long", async ({ page }) =>
       (window as unknown as { longTasks: number[] }).longTasks = [];
       new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
-          (window as unknown as { longTasks: number[] }).longTasks.push(entry.duration);
+          (window as unknown as { longTasks: number[] }).longTasks.push(
+            entry.duration,
+          );
         }
       }).observe({ type: "longtask" });
     });
   const worstSince = () =>
-    page.evaluate(() => Math.max(0, ...(window as unknown as { longTasks: number[] }).longTasks));
+    page.evaluate(() =>
+      Math.max(0, ...(window as unknown as { longTasks: number[] }).longTasks),
+    );
 
   await observe();
   await surfaceIs(page, "Night");
@@ -1256,7 +1470,9 @@ test("changing claim never blocks the main thread for long", async ({ page }) =>
   await observe();
   for (let turn = 0; turn < 3; turn += 1) {
     await page.locator('.spread > .page--recto [data-turn="on"]').click();
-    await expect(page.locator(".spread > .page--recto .page__folio")).toBeVisible();
+    await expect(
+      page.locator(".spread > .page--recto .page__folio"),
+    ).toBeVisible();
   }
   const worst = await worstSince();
 
@@ -1268,25 +1484,36 @@ test("changing claim never blocks the main thread for long", async ({ page }) =>
   ).toBeLessThan(allowed);
 });
 
-test("with motion turned down the next claim is simply there", async ({ page }) => {
+test("with motion turned down the next claim is simply there", async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await ready(page);
 
   // Not a faster turn -- no turn. `Book` reads `--draw` through `still()` and declines to build a
   // leaf at all, so the new spread is in its final state on the first frame.
-  const before = await page.locator(".spread > .page--recto .page__folio").textContent();
+  const before = await page
+    .locator(".spread > .page--recto .page__folio")
+    .textContent();
   await page.locator('.spread > .page--recto [data-turn="on"]').click();
-  await expect(page.locator(".spread > .page--recto .page__folio")).not.toHaveText(before ?? "");
+  await expect(
+    page.locator(".spread > .page--recto .page__folio"),
+  ).not.toHaveText(before ?? "");
   await expect(page.locator(".leaf")).toHaveCount(0);
   expect(
-    await page.evaluate(() => document.getAnimations().some((a) => a.playState === "running")),
+    await page.evaluate(() =>
+      document.getAnimations().some((a) => a.playState === "running"),
+    ),
     "something is still animating under reduced motion",
   ).toBe(false);
 });
 
-test("nothing on the page is still set in a type face that came with a glyph", async ({ page }) => {
+test("nothing on the page is still set in a type face that came with a glyph", async ({
+  page,
+}) => {
   await eachClaim(page, async (pages) => {
-    if ((await page.locator(".survived li").count()) === 0) await at(page, pages.survived);
+    if ((await page.locator(".survived li").count()) === 0)
+      await at(page, pages.survived);
   });
   // The survived list used U+2713, which came from whichever font happened to have it and was the
   // last mark on the page still set in type rather than drawn. Every other tick on the site is two
@@ -1314,7 +1541,9 @@ test("the tools are on the same paper as the claims", async ({ page }) => {
 
   // And the scroll is inside the paper, so the torn edge does not travel as the tools scroll.
   expect(
-    await page.locator(".explore__slip").evaluate((node) => getComputedStyle(node).overflowY),
+    await page
+      .locator(".explore__slip")
+      .evaluate((node) => getComputedStyle(node).overflowY),
   ).toBe("auto");
 });
 
@@ -1327,7 +1556,10 @@ test("a slider is a ruled scale, not a platform control", async ({ page }) => {
   // engines, and a half-styled one looks like a rendering fault rather than a decision.
   const style = await slider.evaluate((node) => {
     const computed = getComputedStyle(node);
-    return { appearance: computed.appearance, background: computed.backgroundColor };
+    return {
+      appearance: computed.appearance,
+      background: computed.backgroundColor,
+    };
   });
   expect(style.appearance).toBe("none");
   expect(style.background).toBe("rgba(0, 0, 0, 0)");
@@ -1339,7 +1571,9 @@ test("a slider is a ruled scale, not a platform control", async ({ page }) => {
   expect(await slider.inputValue()).not.toBe(before);
 });
 
-test("the scrollbar is drawn, and only one of the two APIs is styling it", async ({ page }) => {
+test("the scrollbar is drawn, and only one of the two APIs is styling it", async ({
+  page,
+}) => {
   await ready(page);
 
   const drawn = await page.evaluate(() => {
@@ -1361,11 +1595,14 @@ test("the scrollbar is drawn, and only one of the two APIs is styling it", async
   // is how the first version silently un-styled itself and shipped a plain grey bar. The rule that
   // sets it is behind `@supports not selector(::-webkit-scrollbar)`, so in this engine it must not
   // apply. In Firefox it would, and the drawing is not available there anyway.
-  const webkit = await page.evaluate(() => CSS.supports("selector(::-webkit-scrollbar)"));
+  const webkit = await page.evaluate(() =>
+    CSS.supports("selector(::-webkit-scrollbar)"),
+  );
   if (webkit) {
-    expect(drawn.width, "the standard property is on, so the drawn track is switched off").toBe(
-      "auto",
-    );
+    expect(
+      drawn.width,
+      "the standard property is on, so the drawn track is switched off",
+    ).toBe("auto");
   }
 });
 
@@ -1385,10 +1622,15 @@ test("the map's own controls are in the same hand", async ({ page }) => {
 
   for (const role of ["zoom-in", "zoom-out"]) {
     const button = page.locator(`.maplibregl-ctrl-${role}`);
-    const image = await button.evaluate((node) => getComputedStyle(node).backgroundImage);
+    const image = await button.evaluate(
+      (node) => getComputedStyle(node).backgroundImage,
+    );
     // Two: the mark and the box it is in, both generated with the same pen as the page.
     expect(image, `${role} is not drawn`).toContain("data:image/svg+xml");
-    expect(image.match(/data:image\/svg\+xml/g)?.length, `${role} has no drawn box`).toBe(2);
+    expect(
+      image.match(/data:image\/svg\+xml/g)?.length,
+      `${role} has no drawn box`,
+    ).toBe(2);
 
     // And MapLibre's own icon is off rather than underneath, which would be two plus signs.
     const inner = await button
@@ -1401,7 +1643,9 @@ test("the map's own controls are in the same hand", async ({ page }) => {
   // because the width *is* the distance printed beside it.
   const scale = await page
     .locator(".maplibregl-ctrl-scale")
-    .evaluate((node) => getComputedStyle(node).backgroundSize.split(",")[0]?.trim());
+    .evaluate((node) =>
+      getComputedStyle(node).backgroundSize.split(",")[0]?.trim(),
+    );
   expect(scale).toBe("100% 6px");
 });
 
@@ -1420,12 +1664,16 @@ test("the licence notice is restyled and not shrunk", async ({ page }) => {
     // against the page's own height, so `--size-margin` on the root is a different number from the
     // one the notice sitting on that page actually inherits -- and comparing the two measured the
     // scale rather than the notice. 10.03px against a root 10.56px, which is what this caught.
-    (document.querySelector(".leaves, .spread, .world") ?? document.body).append(probe);
+    (
+      document.querySelector(".leaves, .spread, .world") ?? document.body
+    ).append(probe);
     const resolved = Number.parseFloat(getComputedStyle(probe).fontSize);
     probe.remove();
     return resolved;
   });
-  const size = await notice.evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+  const size = await notice.evaluate((node) =>
+    Number.parseFloat(getComputedStyle(node).fontSize),
+  );
   expect(
     size,
     `the licence notice is ${size}px against the page's smallest prose at ${smallest}px`,
@@ -1445,7 +1693,10 @@ test("the licence notice is restyled and not shrunk", async ({ page }) => {
     const [high, low] = ink > paper ? [ink, paper] : [paper, ink];
     return (high + 0.05) / (low + 0.05);
   });
-  expect(ratio, `the licence notice is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_SMALL);
+  expect(
+    ratio,
+    `the licence notice is ${ratio.toFixed(2)}:1`,
+  ).toBeGreaterThanOrEqual(AA_SMALL);
 });
 
 test("the furniture follows the paper it is drawn on", async ({ page }) => {
@@ -1456,9 +1707,12 @@ test("the furniture follows the paper it is drawn on", async ({ page }) => {
   const read = () =>
     page.evaluate(() => {
       const style = getComputedStyle(document.documentElement);
-      return ["--scroll-track", "--thumb-top", "--ctrl-zoom-in", "--scale-rule"].map((name) =>
-        style.getPropertyValue(name).trim(),
-      );
+      return [
+        "--scroll-track",
+        "--thumb-top",
+        "--ctrl-zoom-in",
+        "--scale-rule",
+      ].map((name) => style.getPropertyValue(name).trim());
     });
 
   const day = await read();
@@ -1477,7 +1731,9 @@ test("the furniture follows the paper it is drawn on", async ({ page }) => {
 
   const night = await read();
   for (const [index, drawing] of night.entries()) {
-    expect(drawing, "this one was not redrawn for the night surface").not.toBe(day[index]);
+    expect(drawing, "this one was not redrawn for the night surface").not.toBe(
+      day[index],
+    );
   }
 });
 
@@ -1486,13 +1742,16 @@ test("a rule is one continuous stroke, not a dashed line", async ({ page }) => {
   // The regression. The first version stretched a 100-unit viewBox with `non-scaling-stroke`, which
   // put the path in user units and the dash pattern in screen units -- so the dasharray meant to
   // cover the whole line drew four dashes and a gap instead. It looked like a design choice.
-  const drawn = await page.locator(".rule path").first().evaluate((node) => {
-    const style = getComputedStyle(node);
-    return {
-      dash: Number.parseFloat(style.strokeDasharray),
-      length: (node as SVGPathElement).getTotalLength(),
-    };
-  });
+  const drawn = await page
+    .locator(".rule path")
+    .first()
+    .evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        dash: Number.parseFloat(style.strokeDasharray),
+        length: (node as SVGPathElement).getTotalLength(),
+      };
+    });
 
   expect(drawn.length).toBeGreaterThan(50);
   // One dash at least as long as the path: anything shorter is a gap somewhere in the middle.
@@ -1519,7 +1778,10 @@ test("the instrument marks stay legible as marks", async ({ page }) => {
     const [high, low] = ink > paper ? [ink, paper] : [paper, ink];
     return (high + 0.05) / (low + 0.05);
   });
-  expect(ratio, `instrument stroke is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_LARGE);
+  expect(
+    ratio,
+    `instrument stroke is ${ratio.toFixed(2)}:1`,
+  ).toBeGreaterThanOrEqual(AA_LARGE);
 });
 
 /**
@@ -1532,7 +1794,9 @@ test("the instrument marks stay legible as marks", async ({ page }) => {
  * simplification of the mix from quietly undoing it.
  */
 for (const surface of ["day", "night"] as const) {
-  test(`the plate stock reads against the page on ${surface}`, async ({ page }) => {
+  test(`the plate stock reads against the page on ${surface}`, async ({
+    page,
+  }) => {
     await ready(page);
     if (surface === "night") await surfaceIs(page, "Night");
 
@@ -1562,7 +1826,10 @@ for (const surface of ["day", "night"] as const) {
     });
 
     // Visible, and the first attempt at this managed two units per channel by day and six by night.
-    expect(measured.gap, `plate is only ${measured.gap} from the page`).toBeGreaterThan(10);
+    expect(
+      measured.gap,
+      `plate is only ${measured.gap} from the page`,
+    ).toBeGreaterThan(10);
     expect(
       measured.lighter,
       surface === "day"
@@ -1572,4 +1839,3 @@ for (const surface of ["day", "night"] as const) {
     expect(measured.lede, "--size-lede does not resolve").toContain("rem");
   });
 }
-

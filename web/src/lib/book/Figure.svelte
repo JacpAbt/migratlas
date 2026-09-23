@@ -1,7 +1,9 @@
 <script lang="ts">
   import Plate from "./Plate.svelte";
   import Coverage from "../claim/Coverage.svelte";
+  import Headline from "../claim/Headline.svelte";
   import Ribbon from "../claim/Ribbon.svelte";
+  import { headlineOf, loadHeadlines, type HeadlineDocument } from "../claim/headline";
   import Rule from "../notebook/Rule.svelte";
   import { FIGURES, figurePages } from "./figures";
   import { loadDetectability, type DetectabilityDocument } from "../../layers/detectability";
@@ -53,6 +55,24 @@
       .then((loaded) => (assessment = loaded))
       .catch(() => (failed = true));
   });
+
+  /*
+    The headline document, fetched the same lazy way and for the same reason: it is wanted by nine
+    claim pages and by nothing else. A failure to load, or a claim the analyses withheld, leaves
+    the page as it was before charts existed -- the plate alone -- rather than blank.
+  */
+  let headlines = $state<HeadlineDocument | null>(null);
+  let headlinesSettled = $state(false);
+
+  $effect(() => {
+    if (figure?.kind !== "headline") return;
+    loadHeadlines(base)
+      .then((loaded) => (headlines = loaded))
+      .catch(() => undefined)
+      .finally(() => (headlinesSettled = true));
+  });
+
+  const drawn = $derived(figure?.kind === "headline" ? headlineOf(headlines, finding.key) : null);
 </script>
 
 <!--
@@ -62,7 +82,24 @@
   figure the chapter's claim actually has: the counterfactual ribbon, the coverage assessment, or —
   where the claim has neither — the drawn plate saying where on Earth it is.
 -->
-{#if figure}
+{#if figure?.kind === "headline"}
+  <!--
+    The result, drawn, and the plate under it smaller and more crooked: a notebook page with a
+    chart on it and the map of where it was measured taped in below. Until the document arrives
+    the page waits rather than showing a plate that will jump; if it never arrives, or the claim
+    has no chart, the plate takes the page as it always did.
+  -->
+  <section class="figure figure--headline">
+    {#if drawn}
+      <Headline headline={drawn} />
+      <Plate {finding} {number} {base} compact />
+    {:else if headlinesSettled}
+      <Plate {finding} {number} {base} />
+    {:else}
+      <p class="figure__waiting" role="status">Drawing the result…</p>
+    {/if}
+  </section>
+{:else if figure}
   <section class="figure">
     <h2>{leaf.title}</h2>
     <Rule seed={`${finding.key}-figure`} tone="pencil" />
@@ -81,10 +118,23 @@
 {/if}
 
 <style>
+  /*
+    Every size here is a multiple of `--size-margin`, not a rem.
+
+    Sized in rem, this component's text neither grew on a tall window nor shrank on a short one, so
+    `fit.ts` could scale everything on its page except the words -- and its pages were among the
+    last to run off the leaf at 1280x720 and 1024x768. Each factor is the old rem over 0.66, the
+    token's root value, so a phone -- which reads the root tokens -- is exactly as it was, and on
+    the spread the words follow the page like everything else on it.
+  */
   .figure {
     display: flex;
     flex-direction: column;
     min-height: 0;
+  }
+
+  .figure--headline {
+    gap: var(--gap);
   }
 
   h2 {
@@ -93,7 +143,7 @@
     font-weight: 400;
     /* Above ADR 0007's 20px floor for the hand face, and below the claim's own heading, so the
        figure reads as part of the claim rather than as a second claim. */
-    font-size: 1.35rem;
+    font-size: calc(var(--size-margin) * 2.05);
     line-height: var(--leading-hand);
   }
 

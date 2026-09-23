@@ -72,6 +72,15 @@ FIELDS: Final[dict[str, Field]] = {
         unit="degC",
         offset=-273.15,
     ),
+    "radiation": Field(
+        cds_name="surface_solar_radiation_downwards",
+        canonical="surface_solar_radiation_downwards",
+        unit="W m-2",
+        # The monthly-mean product carries the daily accumulation in joules per square
+        # metre; dividing by the seconds in a day gives the mean flux, which is what a
+        # reader and a regression both expect a radiation to be.
+        scale=1.0 / 86400.0,
+    ),
 }
 
 # North, west, south, east -- the order CDS wants, which is not the order anyone says them in.
@@ -84,6 +93,10 @@ CONUS_AREA: Final[Area] = (50.0, -125.0, 24.0, -66.0)
 # the *less negative* latitude here, which is the one thing about this tuple worth stating: a
 # southern box written north-first reads backwards to anyone used to the CONUS one above it.
 SABAP_AREA: Final[Area] = (-21.0, 17.0, -36.0, 34.0)
+
+# Britain and Ireland with a degree of margin, for the butterflies' pre-season. North first,
+# like the CONUS box above it.
+UK_AREA: Final[Area] = (61.0, -11.0, 49.0, 2.5)
 
 POLL_SECONDS: Final = 15.0
 POLL_LIMIT: Final = 240

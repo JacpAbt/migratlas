@@ -23,17 +23,22 @@ test.use({ viewport: { width: 1600, height: 900 } });
 /** The book's own pagination, computed from the same module and documents the book uses. */
 async function layout(): Promise<readonly Spread[]> {
   const { spreadsOf } = await import("../src/lib/book/pages");
-  const read = (name: string) => JSON.parse(readFileSync(`public/${name}`, "utf8"));
+  const read = (name: string) =>
+    JSON.parse(readFileSync(`public/${name}`, "utf8"));
   return spreadsOf({
     findings: read("findings.json").findings,
     introduction: read("introduction.json"),
+    chapters: read("chapters.json"),
     safeguards: read("sandbox.json"),
     dial: read("response.json"),
   });
 }
 
 /** The address of the first spread carrying a panel that matches. */
-function addressOf(spreads: readonly Spread[], match: (panel: Panel) => boolean): string {
+function addressOf(
+  spreads: readonly Spread[],
+  match: (panel: Panel) => boolean,
+): string {
   const spread = spreads.find((one) => match(one.verso) || match(one.recto));
   if (!spread) throw new Error("no spread carries that panel");
   return `#ch=${spread.chapter.slug}&p=${spread.at}`;
@@ -52,7 +57,8 @@ function pageAt(
 ): { at: string; side: "verso" | "recto" } {
   for (const spread of spreads) {
     for (const side of ["verso", "recto"] as const) {
-      if (match(spread[side])) return { at: `#ch=${spread.chapter.slug}&p=${spread.at}`, side };
+      if (match(spread[side]))
+        return { at: `#ch=${spread.chapter.slug}&p=${spread.at}`, side };
     }
   }
   throw new Error("no spread carries that panel");
@@ -71,13 +77,18 @@ function pageAt(
  * The width is the same 62rem `Reader` switches on. Asked of the viewport rather than passed in, so
  * a test that changes size cannot forget.
  */
-async function address(page: Page, match: (panel: Panel) => boolean): Promise<string> {
+async function address(
+  page: Page,
+  match: (panel: Panel) => boolean,
+): Promise<string> {
   const { leavesOf, spreadsOf } = await import("../src/lib/book/pages");
   const { CHAPTERS } = await import("../src/lib/story");
-  const read = (name: string) => JSON.parse(readFileSync(`public/${name}`, "utf8"));
+  const read = (name: string) =>
+    JSON.parse(readFileSync(`public/${name}`, "utf8"));
   const sources = {
     findings: read("findings.json").findings,
     introduction: read("introduction.json"),
+    chapters: read("chapters.json"),
     safeguards: read("sandbox.json"),
     dial: read("response.json"),
   };
@@ -102,7 +113,13 @@ async function address(page: Page, match: (panel: Panel) => boolean): Promise<st
 
 /** One claim's plain-register page. */
 async function claimPage(page: Page, key: string): Promise<void> {
-  await open(page, await address(page, (panel) => panel.kind === "finding" && panel.key === key));
+  await open(
+    page,
+    await address(
+      page,
+      (panel) => panel.kind === "finding" && panel.key === key,
+    ),
+  );
 }
 
 /**
@@ -114,12 +131,24 @@ async function claimPage(page: Page, key: string): Promise<void> {
  * claim and the record beside it, so the next page inserted anywhere moves nothing here.
  */
 async function figurePage(page: Page, key: string): Promise<void> {
-  await open(page, await address(page, (panel) => panel.kind === "figure" && panel.key === key));
+  await open(
+    page,
+    await address(
+      page,
+      (panel) => panel.kind === "figure" && panel.key === key,
+    ),
+  );
 }
 
 /** One claim's record page, where the number and the specimen invitation are. */
 async function recordPage(page: Page, key: string): Promise<void> {
-  await open(page, await address(page, (panel) => panel.kind === "record" && panel.key === key));
+  await open(
+    page,
+    await address(
+      page,
+      (panel) => panel.kind === "record" && panel.key === key,
+    ),
+  );
 }
 
 /**
@@ -169,7 +198,8 @@ async function knobOf(page: Page, key: string, asks: RegExp): Promise<void> {
   );
   for (const address of pages) {
     await open(page, address);
-    if ((await page.locator(".knob").filter({ hasText: asks }).count()) > 0) return;
+    if ((await page.locator(".knob").filter({ hasText: asks }).count()) > 0)
+      return;
   }
   throw new Error(`no page carries a knob asking ${String(asks)}`);
 }
@@ -186,7 +216,8 @@ async function refusalOf(page: Page, key: string, asks: RegExp): Promise<void> {
   );
   for (const address of pages) {
     await open(page, address);
-    if ((await page.locator(".refusal").filter({ hasText: asks }).count()) > 0) return;
+    if ((await page.locator(".refusal").filter({ hasText: asks }).count()) > 0)
+      return;
   }
   throw new Error(`no page carries a refusal about ${String(asks)}`);
 }
@@ -211,7 +242,9 @@ async function explore(page: Page): Promise<void> {
     uses and for the same reason: counting them by hand went stale the day the ice layer landed.
   */
   await page.waitForFunction(
-    () => !!(window as unknown as { migratlas?: { loaded?: unknown[] } }).migratlas?.loaded?.length,
+    () =>
+      !!(window as unknown as { migratlas?: { loaded?: unknown[] } }).migratlas
+        ?.loaded?.length,
     undefined,
     { timeout: 30_000 },
   );
@@ -229,14 +262,22 @@ const SETTLE_MS = 15_000;
 /**
  * Where a visitor lands.
  *
- * The arrival card was an interstitial with three doors; the book puts the reader on a claim's own
- * page instead, which is the same decision ADR 0007 made -- a claim first -- reached without a card.
+ * The arrival card was an interstitial with three doors, and the book replaced it by putting the
+ * reader straight onto a claim -- ADR 0007's "a claim first", reached without a card.
+ *
+ * **The second arc moved that, and this is the record of it.** The owner's direction of 2026-09-15
+ * is a book anybody can read, so a chapter now opens on its own account of itself and its claims
+ * are the spreads after. A visitor therefore lands on prose, one turn from a number, and what
+ * ADR 0007 was protecting against -- an interstitial that delays the evidence without carrying any
+ * -- is still gone: the leaf they land on is the argument, and it names its figures at the foot.
+ *
  * Relative, never a leading slash: that replaces the whole path of baseURL and lands on the origin
  * root rather than the project subpath, which is the trap the globe suite documents.
  */
 async function arrive(page: Page): Promise<void> {
   await open(page);
-  await expect(page.locator(".claim").first()).toBeVisible();
+  // Either container: a spread by desk and a leaf by phone, and this helper serves both.
+  await expect(page.locator(".spread, .leaf").first()).toBeVisible();
 }
 
 /**
@@ -279,7 +320,8 @@ interface Camera {
 /** Camera state, read from MapLibre rather than inferred from pixels. Null until the hook exists. */
 async function camera(page: Page): Promise<Camera | null> {
   return page.evaluate(() => {
-    const globe = (window as unknown as { migratlas?: { map?: unknown } }).migratlas?.map as
+    const globe = (window as unknown as { migratlas?: { map?: unknown } })
+      .migratlas?.map as
       | { getCenter: () => { lng: number; lat: number }; getZoom: () => number }
       | undefined;
     if (!globe) return null;
@@ -288,8 +330,32 @@ async function camera(page: Page): Promise<Camera | null> {
   });
 }
 
-test("a visitor lands on a claim, with its number and its caveat", async ({ page }) => {
+test("a visitor lands on the story, and its first claim is one turn away", async ({
+  page,
+}) => {
   await arrive(page);
+
+  /*
+    Where a visitor lands: the front of the book, which says what a migration is and carries no
+    result. It landed on the first chapter's account until a first reading found that a visitor
+    with no address never saw the one page written for them. The claim is found below by address,
+    and the rest of this test is unchanged -- what it guards is that the number and the caveat are
+    page turns away rather than behind a disclosure, and page turns are what they still are.
+  */
+  await expect(page.locator(".intro__standfirst").first()).not.toBeEmpty();
+
+  /*
+    The claim is found in the layout rather than at a page number typed here: claims flow within a
+    chapter now, so an offset moves whenever the account before it gains a paragraph.
+  */
+  const { ARRIVAL_KEY: arrival } = await import("../src/lib/story");
+  await open(
+    page,
+    addressOf(
+      await layout(),
+      (panel) => panel.kind === "finding" && panel.key === arrival,
+    ),
+  );
 
   /*
     The claim, why it matters and its caveat, on the page a visitor lands on -- and the number one
@@ -326,7 +392,9 @@ test("a visitor lands on a claim, with its number and its caveat", async ({ page
   await expect(page.locator(".spread > .page .plate .ink-here")).toHaveCount(1);
 });
 
-test("asking how we know is a page turn, not a disclosure", async ({ page }) => {
+test("asking how we know is a page turn, not a disclosure", async ({
+  page,
+}) => {
   /*
     The arrival asked the question with a button. The book answers it by turning: the plain register,
     then the figure, then the number with its scope and caveat, then how it could be wrong -- which
@@ -340,13 +408,20 @@ test("asking how we know is a page turn, not a disclosure", async ({ page }) => 
   const spreads = await layout();
   await open(
     page,
-    addressOf(spreads, (panel) => panel.kind === "bias" && panel.key === ARRIVAL_KEY),
+    addressOf(
+      spreads,
+      (panel) => panel.kind === "bias" && panel.key === ARRIVAL_KEY,
+    ),
   );
   await expect(page.locator(".bias__domain").first()).toBeVisible();
-  await expect(page.locator(".spread details, .spread [hidden]")).toHaveCount(0);
+  await expect(page.locator(".spread details, .spread [hidden]")).toHaveCount(
+    0,
+  );
 });
 
-test("the map is not covered by the thing you read it with", async ({ page }) => {
+test("the map is not covered by the thing you read it with", async ({
+  page,
+}) => {
   /*
     The regression this exists for: at 56rem the claim sheet covered the sphere on a laptop, which
     makes both the camera flight and the caption explaining it pointless. There is no sheet over a
@@ -368,10 +443,15 @@ test("the map is not covered by the thing you read it with", async ({ page }) =>
 
   // And the tools are beside it rather than over it.
   const panel = await page.locator(".explore").boundingBox();
-  expect(panel!.x + panel!.width, "the tools overlap the map").toBeLessThanOrEqual(canvas!.x + 2);
+  expect(
+    panel!.x + panel!.width,
+    "the tools overlap the map",
+  ).toBeLessThanOrEqual(canvas!.x + 2);
 });
 
-test("turning to another claim swaps the evidence with it", async ({ page }) => {
+test("turning to another claim swaps the evidence with it", async ({
+  page,
+}) => {
   /*
     There is no camera to fly. This used to assert that choosing a claim flew the globe to its own
     ground and swapped the layers under it -- "the globe is an index to the arguments rather than a
@@ -394,7 +474,10 @@ test("turning to another claim swaps the evidence with it", async ({ page }) => 
       .first()
       .evaluate((node) => {
         const box = (node as unknown as SVGGElement).getBoundingClientRect();
-        return [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)];
+        return [
+          Math.round(box.x + box.width / 2),
+          Math.round(box.y + box.height / 2),
+        ];
       });
   // The register is on the claim's page and the plate is two leaves on, so each half of the swap is
   // read where it lives rather than off one spread that used to hold both.
@@ -406,17 +489,22 @@ test("turning to another claim swaps the evidence with it", async ({ page }) => 
   await figurePage(page, "atlas-no-net-change");
   const southern = await markOf();
 
-  const moved = Math.abs(marine[0]! - southern[0]!) + Math.abs(marine[1]! - southern[1]!);
+  const moved =
+    Math.abs(marine[0]! - southern[0]!) + Math.abs(marine[1]! - southern[1]!);
   expect(
     moved,
     `both plates mark the same spot, at ${marine.join(",")} and ${southern.join(",")}`,
   ).toBeGreaterThan(30);
 
   // And the two cameras really are different, so the pixels above mean something.
-  expect(VIEWS["marine-null"]!.center).not.toEqual(VIEWS["atlas-no-net-change"]!.center);
+  expect(VIEWS["marine-null"]!.center).not.toEqual(
+    VIEWS["atlas-no-net-change"]!.center,
+  );
 });
 
-test("a claim has its own address, and the back button honours it", async ({ page }) => {
+test("a claim has its own address, and the back button honours it", async ({
+  page,
+}) => {
   await arrive(page);
 
   /*
@@ -439,7 +527,9 @@ test("a claim has its own address, and the back button honours it", async ({ pag
   await expect(page.locator(".claim__title")).toHaveText(/fish/i);
 });
 
-test("a link to a claim opens that claim, with nothing in front of it", async ({ page }) => {
+test("a link to a claim opens that claim, with nothing in front of it", async ({
+  page,
+}) => {
   /*
     Someone following a link to a finding has already been told what it is; a card would be an
     interstitial between them and the thing they clicked for. There is no card now, so what this
@@ -448,14 +538,18 @@ test("a link to a claim opens that claim, with nothing in front of it", async ({
   */
   await open(page, "#c=anthropogenic-share");
   await expect(page.locator(".claim__title")).toBeVisible();
-  await expect(page.locator(".claim__title")).toContainText(/half of that earlier timing/i);
+  await expect(page.locator(".claim__title")).toContainText(
+    /half of that earlier timing/i,
+  );
 
   // And the precise register is a turn away, not absent.
   await recordPage(page, "anthropogenic-share");
   await expect(page.locator(".claim__precise")).toHaveText(/human forcing/i);
 });
 
-test("choosing an animal says what is known about it, not just where it is", async ({ page }) => {
+test("choosing an animal says what is known about it, not just where it is", async ({
+  page,
+}) => {
   await explore(page);
 
   // Atlantic mackerel: measured in fourteen bottom-trawl surveys, which disagree.
@@ -473,7 +567,9 @@ test("choosing an animal says what is known about it, not just where it is", asy
   await expect(study.locator(".study__caveat")).not.toBeEmpty();
 });
 
-test("an animal the gate refuses has a page saying so, with no location on it", async ({ page }) => {
+test("an animal the gate refuses has a page saying so, with no location on it", async ({
+  page,
+}) => {
   await explore(page);
   await page.getByRole("searchbox").fill("Canis lupus");
   await page.locator(".hits button").first().click();
@@ -489,12 +585,15 @@ test("an animal the gate refuses has a page saying so, with no location on it", 
   expect(prose).not.toMatch(/-?\d{1,3}\.\d{3,}/);
 });
 
-test("a species page is fetched only when a species is chosen", async ({ page }) => {
+test("a species page is fetched only when a species is chosen", async ({
+  page,
+}) => {
   await explore(page);
 
   const asked: string[] = [];
   page.on("request", (request) => {
-    if (/species-study-\d+\.json/.test(request.url())) asked.push(request.url());
+    if (/species-study-\d+\.json/.test(request.url()))
+      asked.push(request.url());
   });
 
   // Typing must not cost a shard. 2.2 MB of study pages has no business loading for a reader who
@@ -505,10 +604,15 @@ test("a species page is fetched only when a species is chosen", async ({ page })
 
   await page.locator(".hits button").first().click();
   await expect(page.locator(".study")).toBeVisible();
-  expect(asked.length, "choosing a species fetched more than its own shard").toBe(1);
+  expect(
+    asked.length,
+    "choosing a species fetched more than its own shard",
+  ).toBe(1);
 });
 
-test("a study card leads back to the claim its evidence feeds", async ({ page }) => {
+test("a study card leads back to the claim its evidence feeds", async ({
+  page,
+}) => {
   await explore(page);
 
   await page.getByRole("searchbox").fill("Scomber");
@@ -523,11 +627,15 @@ test("a study card leads back to the claim its evidence feeds", async ({ page })
     outside this repository too, because they are what the deployed site has been handing out.
   */
   await page.locator(".study__claim").first().click();
-  await expect(page.locator(".claim__title")).toContainText("Fish are not all moving");
+  await expect(page.locator(".claim__title")).toContainText(
+    "Fish are not all moving",
+  );
   await expect(page).toHaveURL(/[#&]c=marine-null/);
 });
 
-test("a claim's specimen button opens the fish that carries its argument", async ({ page }) => {
+test("a claim's specimen button opens the fish that carries its argument", async ({
+  page,
+}) => {
   /*
     The other half, and it was dead too -- worse than dead, invisible. `Claim` renders the invitation
     only when it is given somewhere to go, and `Reader` passed nothing, so the button did not exist
@@ -553,7 +661,9 @@ test("a claim's specimen button opens the fish that carries its argument", async
   await expect(page.locator(".study")).toContainText("north");
 });
 
-test("the year can be set moving, and the control says so", async ({ page }) => {
+test("the year can be set moving, and the control says so", async ({
+  page,
+}) => {
   /*
     The arrival's third door is gone with the card. What it was for is not: a reader who wants to
     watch a year rather than read about one, and a control that does not lie about whether the clock
@@ -564,10 +674,15 @@ test("the year can be set moving, and the control says so", async ({ page }) => 
   const run = page.locator(".explore .run").first();
   await expect(run).toBeVisible();
   await run.click();
-  await expect(run, "the clock is running and the button still says Play").toContainText(/pause/i);
+  await expect(
+    run,
+    "the clock is running and the button still says Play",
+  ).toContainText(/pause/i);
 });
 
-test("the world chapter offers the whole map, not the last claim's filter", async ({ page }) => {
+test("the world chapter offers the whole map, not the last claim's filter", async ({
+  page,
+}) => {
   /*
     The regression this exists for: explore mode inherited the last claim's layer subset, so a reader
     who asked for the map got one claim's evidence still filtered onto it -- which reads as a bug
@@ -588,15 +703,26 @@ test("the world chapter offers the whole map, not the last claim's filter", asyn
     .then((r) => r.json() as Promise<{ name: string }[]>);
   // Plus one: the detectability assessment is not a manifest layer -- it is computed and added by
   // `addDetectability` -- and it still gets a control, which is the point of counting at all.
-  await expect(page.locator(".explore .layers li")).toHaveCount(manifest.length + 1);
+  await expect(page.locator(".explore .layers li")).toHaveCount(
+    manifest.length + 1,
+  );
 
   // And none of them is drawn, so nothing was carried over from the claim.
   const drawn = await page.evaluate(() => {
-    const map = (window as unknown as { migratlas?: { map?: unknown } }).migratlas?.map as
-      | { getStyle: () => { layers: { id: string; layout?: { visibility?: string } }[] } }
+    const map = (window as unknown as { migratlas?: { map?: unknown } })
+      .migratlas?.map as
+      | {
+          getStyle: () => {
+            layers: { id: string; layout?: { visibility?: string } }[];
+          };
+        }
       | undefined;
     return (map?.getStyle().layers ?? [])
-      .filter((layer) => /^(series|surface|contour|tracks|seasonal|detectability)/.test(layer.id))
+      .filter((layer) =>
+        /^(series|surface|contour|tracks|seasonal|detectability)/.test(
+          layer.id,
+        ),
+      )
       .filter((layer) => layer.layout?.visibility !== "none")
       .map((layer) => layer.id);
   });
@@ -608,11 +734,18 @@ test("the world chapter offers the whole map, not the last claim's filter", asyn
     .poll(
       () =>
         page.evaluate(() => {
-          const map = (window as unknown as { migratlas?: { map?: unknown } }).migratlas?.map as
-            | { getStyle: () => { layers: { id: string; layout?: { visibility?: string } }[] } }
+          const map = (window as unknown as { migratlas?: { map?: unknown } })
+            .migratlas?.map as
+            | {
+                getStyle: () => {
+                  layers: { id: string; layout?: { visibility?: string } }[];
+                };
+              }
             | undefined;
           return (map?.getStyle().layers ?? []).filter(
-            (layer) => layer.layout?.visibility !== "none" && /^(series|surface)-/.test(layer.id),
+            (layer) =>
+              layer.layout?.visibility !== "none" &&
+              /^(series|surface)-/.test(layer.id),
           ).length;
         }),
       { message: "ticking a layer drew nothing", timeout: 30_000 },
@@ -623,7 +756,9 @@ test("the world chapter offers the whole map, not the last claim's filter", asyn
   const wide = await settled(page);
   expect(wide.zoom).toBeLessThan(3);
 });
-test("every claim is reachable, and says what it found before anyone reads it", async ({ page }) => {
+test("every claim is reachable, and says what it found before anyone reads it", async ({
+  page,
+}) => {
   /*
     The index was a tab per claim with its direction printed on it, so a reader could see at a glance
     that the ledger holds nulls and limits and not only changes -- an index of the positives alone
@@ -651,7 +786,8 @@ test("every claim is reachable, and says what it found before anyone reads it", 
     );
     expect(where, `no page carries the claim "${finding.key}"`).toBeTruthy();
     await open(page, `#ch=${where!.chapter.slug}&p=${where!.at}`);
-    const banner = (await page.locator(".claim__banner").first().textContent()) ?? "";
+    const banner =
+      (await page.locator(".claim__banner").first().textContent()) ?? "";
     kinds.add(banner.trim().toLowerCase());
   }
 
@@ -661,14 +797,23 @@ test("every claim is reachable, and says what it found before anyone reads it", 
   expect(said, "no claim reports a limit").toContain("limit");
 });
 
-test("every published claim has a view, and every view names a real layer", async ({ page }) => {
+test("every published claim has a view, and every view names a real layer", async ({
+  page,
+}) => {
   await arrive(page);
   const problems = await page.evaluate(async () => {
     const [ledger, manifest] = await Promise.all([
-      fetch("findings.json").then((r) => r.json() as Promise<{ findings: { key: string }[] }>),
-      fetch("layers/manifest.json").then((r) => r.json() as Promise<{ name: string }[]>),
+      fetch("findings.json").then(
+        (r) => r.json() as Promise<{ findings: { key: string }[] }>,
+      ),
+      fetch("layers/manifest.json").then(
+        (r) => r.json() as Promise<{ name: string }[]>,
+      ),
     ]);
-    return { keys: ledger.findings.map((f) => f.key), names: manifest.map((m) => m.name) };
+    return {
+      keys: ledger.findings.map((f) => f.key),
+      names: manifest.map((m) => m.name),
+    };
   });
 
   // Imported rather than re-listed, so the assertion is about the module the app actually uses.
@@ -681,16 +826,24 @@ test("every published claim has a view, and every view names a real layer", asyn
   // appears -- indistinguishable from a claim that has no evidence.
   for (const [key, view] of Object.entries(VIEWS)) {
     for (const layer of view.layers) {
-      expect(problems.names, `${key} names a layer "${layer}" that is not in the manifest`).toContain(
-        layer,
-      );
+      expect(
+        problems.names,
+        `${key} names a layer "${layer}" that is not in the manifest`,
+      ).toContain(layer);
     }
-    expect(view.because, `${key} does not say why the camera is there`).toBeTruthy();
+    expect(
+      view.because,
+      `${key} does not say why the camera is there`,
+    ).toBeTruthy();
   }
-  expect(problems.keys, "the arrival claim is not in the ledger").toContain(ARRIVAL_KEY);
+  expect(problems.keys, "the arrival claim is not in the ledger").toContain(
+    ARRIVAL_KEY,
+  );
 });
 
-test("every published claim has exactly one chapter, and every chapter is real", async ({ page }) => {
+test("every published claim has exactly one chapter, and every chapter is real", async ({
+  page,
+}) => {
   /*
     ADR 0013 asked for this guard by name: the chapters are the argument, so a claim with no chapter
     is a result the book has nowhere to put. Two failures it has to catch, and they fail differently
@@ -710,7 +863,9 @@ test("every published claim has exactly one chapter, and every chapter is real",
   for (const key of keys) {
     const chapter = chapterOf(key);
     expect(chapter, `no chapter carries the claim "${key}"`).toBeTruthy();
-    const homes = CHAPTERS.filter((c) => c.keys.includes(key)).map((c) => c.slug);
+    const homes = CHAPTERS.filter((c) => c.keys.includes(key)).map(
+      (c) => c.slug,
+    );
     expect(homes, `"${key}" is in more than one chapter`).toHaveLength(1);
   }
 
@@ -718,16 +873,25 @@ test("every published claim has exactly one chapter, and every chapter is real",
   // would render a chapter with a hole in it rather than fail.
   for (const chapter of CHAPTERS) {
     for (const key of chapter.keys) {
-      expect(keys, `chapter "${chapter.slug}" names a claim "${key}" that is not published`).toContain(
-        key,
-      );
+      expect(
+        keys,
+        `chapter "${chapter.slug}" names a claim "${key}" that is not published`,
+      ).toContain(key);
     }
-    expect(chapter.title, `chapter "${chapter.slug}" has no title`).toBeTruthy();
-    expect(chapter.tab, `chapter "${chapter.slug}" has no tab label`).toBeTruthy();
+    expect(
+      chapter.title,
+      `chapter "${chapter.slug}" has no title`,
+    ).toBeTruthy();
+    expect(
+      chapter.tab,
+      `chapter "${chapter.slug}" has no tab label`,
+    ).toBeTruthy();
     // The tab is the word on the thumb; the mock found seven full titles ran past the foot of the
     // book, so this holds the shorthand to something a tab can actually carry.
-    expect(chapter.tab.length, `chapter "${chapter.slug}" has a tab label too long to set`)
-      .toBeLessThanOrEqual(12);
+    expect(
+      chapter.tab.length,
+      `chapter "${chapter.slug}" has a tab label too long to set`,
+    ).toBeLessThanOrEqual(12);
   }
 
   const slugs = CHAPTERS.map((c) => c.slug);
@@ -752,9 +916,14 @@ for (const [device, width, height] of [
     // Nothing runs off the side, in any mode. The one failure a visitor cannot work around.
     const overflow = () =>
       page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
       );
-    expect(await overflow(), `${await overflow()}px of horizontal overflow on arrival`).toBeLessThanOrEqual(1);
+    expect(
+      await overflow(),
+      `${await overflow()}px of horizontal overflow on arrival`,
+    ).toBeLessThanOrEqual(1);
 
     /*
       The measurement stays on one line, wherever it is printed. Broken after "days" it read as two
@@ -763,10 +932,16 @@ for (const [device, width, height] of [
     */
     const { ARRIVAL_KEY } = await import("../src/lib/story");
     await recordPage(page, ARRIVAL_KEY);
-    const lines = await page.locator(".claim__value").first().evaluate((node) => {
-      const style = getComputedStyle(node);
-      return node.getBoundingClientRect().height / Number.parseFloat(style.lineHeight || "0");
-    });
+    const lines = await page
+      .locator(".claim__value")
+      .first()
+      .evaluate((node) => {
+        const style = getComputedStyle(node);
+        return (
+          node.getBoundingClientRect().height /
+          Number.parseFloat(style.lineHeight || "0")
+        );
+      });
     /*
       One line on a tablet and at most two on a phone. The rule this protects is that the number and
       its interval read as one fact -- broken after "days" it read as two -- and at 390px a mono
@@ -774,14 +949,15 @@ for (const [device, width, height] of [
       is not negotiable is that it does not fragment further than that, so the bar is by width
       rather than a single figure that would have to be loosened for the smaller screen.
     */
-    expect(lines, `the measurement is on ${lines.toFixed(1)} lines`).toBeLessThan(
-      width < 500 ? 2.4 : 1.8,
-    );
+    expect(
+      lines,
+      `the measurement is on ${lines.toFixed(1)} lines`,
+    ).toBeLessThan(width < 500 ? 2.4 : 1.8);
 
     // The way on is reachable without scrolling: the fore-edge on a phone, the folio on a tablet.
     await expect(page.locator(".thumb, [data-turn]").first()).toBeInViewport();
 
-      expect(await overflow()).toBeLessThanOrEqual(1);
+    expect(await overflow()).toBeLessThanOrEqual(1);
 
     /*
       The claim responds to the room it is given rather than to the viewport. On a 768px tablet the
@@ -803,7 +979,10 @@ for (const [device, width, height] of [
     // arranges the same pages without the spread's padding, so `p` is a different offset there.
     await open(
       page,
-      await address(page, (panel) => panel.kind === "bias" && panel.key === ARRIVAL_KEY),
+      await address(
+        page,
+        (panel) => panel.kind === "bias" && panel.key === ARRIVAL_KEY,
+      ),
     );
     await expect(page.locator(".bias__finding").first()).toBeVisible();
     await expect(page.locator("details, [hidden]")).toHaveCount(0);
@@ -836,7 +1015,9 @@ for (const [device, width, height] of [
                   box.top + box.height / 2,
                 );
                 if (!at || !(node.contains(at) || at.contains(node))) {
-                  hits.push(`${selector} is under ${at?.className || at?.tagName || "nothing"}`);
+                  hits.push(
+                    `${selector} is under ${at?.className || at?.tagName || "nothing"}`,
+                  );
                 }
               }
             }
@@ -856,7 +1037,9 @@ for (const [device, width, height] of [
  * assessment is the coverage limit's number, so each appears with its claim and nowhere else.
  */
 
-test("the counterfactual is the attribution claim's own evidence", async ({ page }) => {
+test("the counterfactual is the attribution claim's own evidence", async ({
+  page,
+}) => {
   // Not on every claim: a chart on each would be decoration, and the plate answers a different
   // question. `book.spec.ts` asserts the routing; this is about what the chart itself says.
   await claimPage(page, "marine-null");
@@ -893,7 +1076,9 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
     readings of two. That would have passed as "four lines" while hiding the thing being checked:
     that there are two charts and each carries its own pair.
   */
-  const readEach = async <T>(read: (leaf: string) => Promise<T>): Promise<T[]> => {
+  const readEach = async <T>(
+    read: (leaf: string) => Promise<T>,
+  ): Promise<T[]> => {
     const out: T[] = [];
     for (const address of chartPages) {
       await open(page, address);
@@ -917,10 +1102,18 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
     *pages* now: they came to 1,362px on an 826px page, so `figures.ts` gives each its own leaf. Both
     still exist and each still carries its own pair of lines, which is what this counted.
   */
-  const lines = await readEach((leaf) => page.locator(`${leaf} .chart__line`).count());
+  const lines = await readEach((leaf) =>
+    page.locator(`${leaf} .chart__line`).count(),
+  );
   expect(lines, "not two charts, one per page").toHaveLength(2);
-  expect(lines.reduce((sum, n) => sum + n, 0), "not four lines across the pair").toBe(4);
-  expect(new Set(lines).size, "the two charts do not carry the same number of lines").toBe(1);
+  expect(
+    lines.reduce((sum, n) => sum + n, 0),
+    "not four lines across the pair",
+  ).toBe(4);
+  expect(
+    new Set(lines).size,
+    "the two charts do not carry the same number of lines",
+  ).toBe(1);
 
   // One frame for both, which is the assertion the whole design rests on. Each chart drawn to its
   // own extents would make a 0.89-day gap and a 0.29-day gap look the same size, and would stretch
@@ -931,11 +1124,15 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
       .locator(`${leaf} .chart__svg`)
       .first()
       .evaluate((node) =>
-        [...node.querySelectorAll(".chart__tick")].map((t) => t.textContent?.trim()).join("|"),
+        [...node.querySelectorAll(".chart__tick")]
+          .map((t) => t.textContent?.trim())
+          .join("|"),
       ),
   );
   expect(geometry.length, "fewer than two charts in the book").toBe(2);
-  expect(new Set(geometry).size, "the two charts do not share one frame").toBe(1);
+  expect(new Set(geometry).size, "the two charts do not share one frame").toBe(
+    1,
+  );
 
   // The observed line draws before the counterfactual: the drawing order is the argument, because a
   // reader watches the gap fail to open rather than hunting for it.
@@ -944,7 +1141,9 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   await open(page, chartPages[0]!);
   const delays = await page
     .locator(".chart__line")
-    .evaluateAll((nodes) => nodes.map((n) => getComputedStyle(n).transitionDelay));
+    .evaluateAll((nodes) =>
+      nodes.map((n) => getComputedStyle(n).transitionDelay),
+    );
   expect(delays.length, "no lines to read a delay from").toBeGreaterThan(1);
   expect(new Set(delays).size, "the lines all draw at once").toBeGreaterThan(1);
 
@@ -952,7 +1151,9 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   // different things, because ATTRICI's counterfactual series ran out where DAMIP's share is a ratio
   // carried past the window that fitted it. globe.spec.ts checks the geometry; this checks the words.
   const limits = (
-    await readEach((leaf) => page.locator(`${leaf} .chart__beyond-label`).allTextContents())
+    await readEach((leaf) =>
+      page.locator(`${leaf} .chart__beyond-label`).allTextContents(),
+    )
   ).flat();
   expect(limits).toHaveLength(2);
   expect(limits.join(" ")).toMatch(/no counterfactual after 2019/);
@@ -961,7 +1162,9 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   // Each size stated in words, which is what stops a chart being "improved" into a diverging wedge.
   // Read across the pair, because each chart states its own.
   const sizes = (
-    await readEach((leaf) => page.locator(`${leaf} .chart__size`).allTextContents())
+    await readEach((leaf) =>
+      page.locator(`${leaf} .chart__size`).allTextContents(),
+    )
   ).flat();
   expect(sizes.length, "no chart states its size in words").toBeGreaterThan(0);
   expect(sizes.join(" ")).toMatch(/part by \d+\.\d+ days/);
@@ -975,7 +1178,10 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
     page,
     addressOf(
       spreads,
-      (panel) => panel.kind === "figure" && panel.key === "anthropogenic-share" && panel.at === 2,
+      (panel) =>
+        panel.kind === "figure" &&
+        panel.key === "anthropogenic-share" &&
+        panel.at === 2,
     ),
   );
   const gap = page.locator(".pair__gap");
@@ -983,7 +1189,9 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   // Two registers here now, as on a claim. Retargeted rather than loosened: `.pair__gap p` would
   // match either paragraph, so it would go on passing while the precise text was quietly dropped.
   await expect(gap.locator(".pair__plain")).toContainText("neither is wrong");
-  await expect(gap.locator(".pair__precise")).toContainText("not two estimates of one number");
+  await expect(gap.locator(".pair__precise")).toContainText(
+    "not two estimates of one number",
+  );
 
   const size = await gap
     .locator(".pair__precise")
@@ -991,10 +1199,14 @@ test("the counterfactual is the attribution claim's own evidence", async ({ page
   const footnote = await page
     .locator(".pair__caveat")
     .evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
-  expect(size, "the explanation is not set at footnote size").toBeGreaterThan(footnote);
+  expect(size, "the explanation is not set at footnote size").toBeGreaterThan(
+    footnote,
+  );
 });
 
-test("the detectability assessment is the coverage claim's own number", async ({ page }) => {
+test("the detectability assessment is the coverage claim's own number", async ({
+  page,
+}) => {
   await arrive(page);
 
   /*
@@ -1005,7 +1217,10 @@ test("the detectability assessment is the coverage claim's own number", async ({
   */
   const measured = pageAt(
     await layout(),
-    (panel) => panel.kind === "figure" && panel.key === "coverage-bias" && panel.at === 0,
+    (panel) =>
+      panel.kind === "figure" &&
+      panel.key === "coverage-bias" &&
+      panel.at === 0,
   );
   await open(page, measured.at);
 
@@ -1031,7 +1246,10 @@ test("the detectability assessment is the coverage claim's own number", async ({
     page,
     addressOf(
       spreads,
-      (panel) => panel.kind === "figure" && panel.key === "coverage-bias" && panel.at === 1,
+      (panel) =>
+        panel.kind === "figure" &&
+        panel.key === "coverage-bias" &&
+        panel.at === 1,
     ),
   );
   const held = page.locator(".held");
@@ -1051,11 +1269,16 @@ test("the detectability assessment is the coverage claim's own number", async ({
     page,
     addressOf(
       spreads,
-      (panel) => panel.kind === "figure" && panel.key === "coverage-bias" && panel.at === 0,
+      (panel) =>
+        panel.kind === "figure" &&
+        panel.key === "coverage-bias" &&
+        panel.at === 0,
     ),
   );
   const sources = await coverage.locator("tbody tr th").allTextContents();
-  expect(sources.filter((name) => name.startsWith("movebank_")).length).toBeGreaterThan(0);
+  expect(
+    sources.filter((name) => name.startsWith("movebank_")).length,
+  ).toBeGreaterThan(0);
   await expect(coverage.locator(".coverage__ceiling").first()).not.toBeEmpty();
 });
 
@@ -1071,13 +1294,16 @@ test("explore carries the tools, with the terms every drawn layer was published 
   // rather than written here: the literal was 4 and publishing a fifth layer broke this test
   // instead of the thing it is meant to protect, which is that every layer gets a control.
   const published = await page.evaluate(async () => {
-    const manifest = (await fetch("layers/manifest.json").then((r) => r.json())) as unknown[];
+    const manifest = (await fetch("layers/manifest.json").then((r) =>
+      r.json(),
+    )) as unknown[];
     return manifest.length;
   });
   const toggles = panel.locator(".layers input");
-  await expect(toggles, "a published layer has no toggle, or one has two").toHaveCount(
-    published + 1,
-  );
+  await expect(
+    toggles,
+    "a published layer has no toggle, or one has two",
+  ).toHaveCount(published + 1);
 
   // Required, not decorative: published data must never be separable from the terms it was
   // published under. This is the assertion the old page had and the shell has to keep.
@@ -1092,15 +1318,24 @@ test("explore carries the tools, with the terms every drawn layer was published 
 
   // The clock reads as a date rather than as a day number, and without the stray punctuation a
   // trimmed shared formatter left behind.
+  //
+  // `\w{3,4}` and not `\w{3}`: `month: "short"` under en-GB abbreviates eleven months to three
+  // letters and September to four. Written as three, this passed every day of the year except in
+  // September, and it duly failed on 1 September against "1 Sept · week 35". The assertion is
+  // about the shape of the label rather than the width of a month name, so the range is the fix
+  // and not a wider pattern that would stop checking anything.
   const clockface = await panel.locator(".clockface").textContent();
-  expect(clockface).toMatch(/^\d{1,2} \w{3} · week \d{1,2}$/);
+  expect(clockface).toMatch(/^\d{1,2} \w{3,4} · week \d{1,2}$/);
 
   // Moving the slider moves the label, so the control is wired to the clock and not decorative.
   await panel.locator(".time input").fill("120");
   await expect(panel.locator(".clockface")).not.toHaveText(clockface!);
 
   // Search is loaded and knows how many animals it holds.
-  await expect(panel.locator("#taxon-search")).toHaveAttribute("placeholder", /Search [\d,]+ animals/);
+  await expect(panel.locator("#taxon-search")).toHaveAttribute(
+    "placeholder",
+    /Search [\d,]+ animals/,
+  );
 });
 
 test("switching on the assessment brings its key with it", async ({ page }) => {
@@ -1116,7 +1351,9 @@ test("switching on the assessment brings its key with it", async ({ page }) => {
   await expect(panel.locator(".key li").first()).toContainText("%");
 });
 
-test("searching an animal draws it and says which one is shown", async ({ page }) => {
+test("searching an animal draws it and says which one is shown", async ({
+  page,
+}) => {
   await explore(page);
 
   // A species the index actually holds. It is built from the *published* layers, so FISHGLOB's
@@ -1142,7 +1379,9 @@ test("searching an animal draws it and says which one is shown", async ({ page }
  * has a layer, so it never touched this path.
  */
 
-test("a studied bird has a page, and it carries both numbers", async ({ page }) => {
+test("a studied bird has a page, and it carries both numbers", async ({
+  page,
+}) => {
   await explore(page);
 
   await page.locator("#taxon-search").fill("Acridotheres");
@@ -1157,7 +1396,9 @@ test("a studied bird has a page, and it carries both numbers", async ({ page }) 
   // TypeScript union, the kinds are written in Python, and the shard JSON is cast rather than
   // validated -- so nothing in `tsc` could see the missing entry. `test_species_pages.py` guards
   // the coverage; this asserts a reader sees the words.
-  await expect(card.locator(".study__kind")).toHaveText("how much of the region it occupies");
+  await expect(card.locator(".study__kind")).toHaveText(
+    "how much of the region it occupies",
+  );
 
   // The exhibit this wave exists for. The atlas finding's second claim is that correcting for
   // detection did not change the answer, and a reader can only check that against a number.
@@ -1177,7 +1418,9 @@ test("a studied bird has a page, and it carries both numbers", async ({ page }) 
  * asserted against what a reader actually sees, which is a different failure mode.
  */
 
-test("the sandbox default reproduces the number on the claim it sits under", async ({ page }) => {
+test("the sandbox default reproduces the number on the claim it sits under", async ({
+  page,
+}) => {
   /*
     Two leaves rather than one card. The number is on the claim's record page and the knob is on its
     own, because three of them came to 1,306px against an 826px page -- so the invariant is read
@@ -1200,7 +1443,10 @@ test("the sandbox default reproduces the number on the claim it sits under", asy
     readFileSync("public/sandbox.json", "utf8"),
   ) as Parameters<typeof knobsFor>[0];
   const knobs = knobsFor(doc, "autumn-advance");
-  expect(knobs.length, "the sandbox holds no knobs for this claim").toBeGreaterThan(1);
+  expect(
+    knobs.length,
+    "the sandbox holds no knobs for this claim",
+  ).toBeGreaterThan(1);
   void loadSandbox;
 
   for (const [index] of knobs.entries()) {
@@ -1208,12 +1454,16 @@ test("the sandbox default reproduces the number on the claim it sits under", asy
     const knob = page.locator(".knob").first();
     await expect(knob, `no knob on page ${index}`).toBeVisible();
     await expect(knob.locator(".option--on em")).toHaveText("published");
-    await expect(knob.locator(".knob__value")).toContainText(match![0].replace("-", "−"));
+    await expect(knob.locator(".knob__value")).toContainText(
+      match![0].replace("-", "−"),
+    );
     await expect(knob.locator(".knob__delta--published")).toBeVisible();
   }
 });
 
-test("switching a safeguard off moves the number and says which way", async ({ page }) => {
+test("switching a safeguard off moves the number and says which way", async ({
+  page,
+}) => {
   // One knob to a page, so the page carrying this one is found rather than assumed.
   await knobOf(page, "autumn-advance", /hardware upgrade/i);
   // Named rather than first. Two knobs face each other now that the plain-method page changed the
@@ -1221,24 +1471,32 @@ test("switching a safeguard off moves the number and says which way", async ({ p
   const knob = page.locator(".knob").filter({ hasText: /hardware upgrade/i });
   const before = await knob.locator(".knob__value").textContent();
 
-  await knob.locator(".option", { hasText: "break at detected outage" }).click();
+  await knob
+    .locator(".option", { hasText: "a step where each radar was upgraded" })
+    .click();
   const after = await knob.locator(".knob__value").textContent();
   expect(after).not.toBe(before);
 
   // The direction is the point, and this project's answer is the unusual one: fitting a break makes
   // the advance *larger*, so the published number is the conservative choice. A panel that only said
   // "the number moved" would waste that.
-  await expect(knob.locator(".knob__delta")).toContainText(/larger effect than the number we publish/);
+  await expect(knob.locator(".knob__delta")).toContainText(
+    /larger effect than the number we publish/,
+  );
   await expect(knob.locator(".knob__value--alternative")).toBeVisible();
   await expect(knob.locator(".option--on em")).toHaveCount(0);
 });
 
-test("the shuffled-years control collapses the trend to nothing", async ({ page }) => {
+test("the shuffled-years control collapses the trend to nothing", async ({
+  page,
+}) => {
   await knobOf(page, "autumn-advance", /shuffl/i);
 
   // The strongest single thing in the panel: destroy the order of the years and the trend goes with
   // it, which is what shows the result is order and not arithmetic.
-  const knob = page.locator(".knob").filter({ hasText: /years were shuffled/i });
+  const knob = page
+    .locator(".knob")
+    .filter({ hasText: /years were shuffled/i });
   await knob.locator(".option", { hasText: "years shuffled" }).click();
   const shuffled = await knob.locator(".knob__value").textContent();
   const value = Number.parseFloat(shuffled!.replace("−", "-"));
@@ -1279,7 +1537,9 @@ test("the refusal is on the claim it refutes, and its wrong answer takes a click
   await expect(refusal.locator(".refusal__rows")).not.toContainText("1985.00");
 
   // And the verdict is present whether or not the figure was revealed.
-  await expect(refusal.locator(".refusal__verdict")).toContainText(/not runnable/i);
+  await expect(refusal.locator(".refusal__verdict")).toContainText(
+    /not runnable/i,
+  );
 });
 
 /**
@@ -1302,7 +1562,9 @@ test("the dial sits on the attribution claim, at the sensitivity the fit publish
 }) => {
   await dialPage(page);
 
-  const dial = page.locator(".response .knob").filter({ hasText: /June-July before migration/i });
+  const dial = page
+    .locator(".response .knob")
+    .filter({ hasText: /June-July before migration/i });
   await expect(dial).toBeVisible();
 
   // The published position is the fitted sensitivity itself: a degree warmer, 0.66 days earlier.
@@ -1311,9 +1573,13 @@ test("the dial sits on the attribution claim, at the sensitivity the fit publish
   await expect(dial.locator(".knob__delta--published")).toBeVisible();
 });
 
-test("asking for nothing implies nothing, and warmer implies earlier", async ({ page }) => {
+test("asking for nothing implies nothing, and warmer implies earlier", async ({
+  page,
+}) => {
   await dialPage(page);
-  const dial = page.locator(".response .knob").filter({ hasText: /June-July before migration/i });
+  const dial = page
+    .locator(".response .knob")
+    .filter({ hasText: /June-July before migration/i });
 
   await dial.locator(".option", { hasText: "as it was" }).click();
   const unchanged = await dial.locator(".knob__value").textContent();
@@ -1330,17 +1596,27 @@ test("asking for nothing implies nothing, and warmer implies earlier", async ({ 
   expect(Number.parseFloat(cooler!.replace("−", "-"))).toBeGreaterThan(0.9);
 });
 
-test("the dial stops where the fit stops, and offers no position past it", async ({ page }) => {
+test("the dial stops where the fit stops, and offers no position past it", async ({
+  page,
+}) => {
   await dialPage(page);
-  const dial = page.locator(".response .knob").filter({ hasText: /June-July before migration/i });
+  const dial = page
+    .locator(".response .knob")
+    .filter({ hasText: /June-July before migration/i });
 
   // Ninety per cent of the record's within-station departures lie inside roughly ±1.8 °C, so ±1.5
   // is offered and ±2 is not. A dial that offered it would be extrapolating in the reader's hand.
-  await expect(dial.locator(".option", { hasText: "1.5 °C warmer" })).toBeVisible();
-  await expect(dial.locator(".option", { hasText: "2 °C warmer" })).toHaveCount(0);
+  await expect(
+    dial.locator(".option", { hasText: "1.5 °C warmer" }),
+  ).toBeVisible();
+  await expect(dial.locator(".option", { hasText: "2 °C warmer" })).toHaveCount(
+    0,
+  );
 });
 
-test("the flat driver is published as flat rather than left out", async ({ page }) => {
+test("the flat driver is published as flat rather than left out", async ({
+  page,
+}) => {
   /*
     Two navigations, because the two things asserted are on two pages.
 
@@ -1354,13 +1630,17 @@ test("the flat driver is published as flat rather than left out", async ({ page 
   // Wind support is the obvious mechanism and it measures nothing: −0.24 ± 0.39 days per m/s, an
   // interval straddling zero. Publishing it is the point -- a panel carrying only the drivers that
   // worked would be selecting for its own story -- so its absence is the failure to catch.
-  const wind = page.locator(".response .knob").filter({ hasText: /winds were more favourable/i });
+  const wind = page
+    .locator(".response .knob")
+    .filter({ hasText: /winds were more favourable/i });
   await expect(wind).toBeVisible();
   await expect(wind.locator(".knob__value")).toContainText("−0.24 days");
 
   // And the panel says why a flat driver is in it at all, on the page that carries its standfirst.
   await dialPage(page);
-  await expect(page.locator(".response__lead")).toContainText(/published because it is flat/i);
+  await expect(page.locator(".response__lead")).toContainText(
+    /published because it is flat/i,
+  );
 });
 
 test("the dial refuses to be read as a forecast, and refuses to leave its own range", async ({
@@ -1373,21 +1653,30 @@ test("the dial refuses to be read as a forecast, and refuses to leave its own ra
   */
   await refusalOf(page, "anthropogenic-share", /2 °C warmer than usual/i);
 
-  const beyond = page.locator(".response .refusal").filter({ hasText: /2 °C warmer than usual/i });
+  const beyond = page
+    .locator(".response .refusal")
+    .filter({ hasText: /2 °C warmer than usual/i });
   await expect(beyond.locator(".refusal__verdict")).toContainText(/Withheld/);
   // The bound is the band and not the extreme, and the reason is in the verdict rather than implied.
-  await expect(beyond.locator(".refusal__verdict")).toContainText(/single observation|one observation/i);
+  await expect(beyond.locator(".refusal__verdict")).toContainText(
+    /single observation|one observation/i,
+  );
 
   // Its own page. The two refusals shared a spread until the plain-method page flipped the parity,
   // and a test that reads both off one leaf is asserting a layout rather than a refusal.
   await refusalOf(page, "anthropogenic-share", /this coming autumn/i);
-  const forecast = page.locator(".response .refusal").filter({ hasText: /this coming autumn/i });
-  await expect(forecast.locator(".refusal__verdict")).toContainText(/did not beat chance/i);
+  const forecast = page
+    .locator(".response .refusal")
+    .filter({ hasText: /this coming autumn/i });
+  await expect(forecast.locator(".refusal__verdict")).toContainText(
+    /did not beat chance/i,
+  );
 
   // The evidence is behind a click, as everywhere else in this panel: a number we say is
   // unsupported does not get printed at full size beside the ones we stand behind.
   await expect(forecast.locator(".refusal__rows")).toHaveCount(0);
-  await forecast.getByRole("button", { name: /show me the wrong answer/i }).click();
+  await forecast
+    .getByRole("button", { name: /show me the wrong answer/i })
+    .click();
   await expect(forecast.locator(".refusal__rows")).toContainText("20 of 143");
 });
-

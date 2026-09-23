@@ -69,6 +69,30 @@ export const DIRECTION_LABEL: Record<FindingDirection, string> = {
 };
 
 /**
+ * The audit's domains and statuses, in the reader's words.
+ *
+ * The ledger keeps ROBITT's names -- `geographic`, `bounded` -- because a published standard is
+ * what the assessment is held to. A reader has no use for them: on the one page whose job is to
+ * say plainly how a number could mislead, the tags read as jargon. The classes and the test that
+ * reads them stay keyed on the ledger's word; only what is printed changes.
+ */
+export const BIAS_DOMAIN_WORDS: Record<string, string> = {
+  geographic: "Where it was measured",
+  temporal: "When, and for how long",
+  taxonomic: "Which animals",
+  environmental: "Which habitats",
+  detectability: "Whether it could be seen",
+  phenological: "Which part of the year",
+};
+
+export const BIAS_STATUS_WORDS: Record<string, string> = {
+  addressed: "tested, and held",
+  bounded: "limited, and said so",
+  open: "still open",
+  "not applicable": "does not apply",
+};
+
+/**
  * The instrument that stands where an illustration would.
  *
  * ADR 0007 decision 5: a creature appears only beside a claim that genuinely identifies a taxon.

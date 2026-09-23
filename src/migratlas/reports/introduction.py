@@ -33,6 +33,15 @@ DOCUMENT: Final = PUBLIC / "introduction.json"
 # The realm every cross-realm finding carries, which is not a place and must not be counted as one.
 EVERYWHERE: Final = "all"
 
+# The realms as a reader says them. `aerial` is the schema's word and "the air" is what it means;
+# the introduction is the one page where the schema's word would be the first jargon a visitor met.
+REALM_WORDS: Final[dict[str, str]] = {
+    "aerial": "the air",
+    "marine": "the sea",
+    "terrestrial": "the land",
+    "freshwater": "fresh water",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class Passage:
@@ -64,6 +73,25 @@ def counts() -> tuple[int, int, int]:
     return len(findings), len(realms), len(catalog.load())
 
 
+def realm_words() -> list[str]:
+    """The realms the ledger spans, as a reader says them, in the schema's order.
+
+    Computed like the counts: the sentence lists the places rather than counting them, and a list
+    typed once would still say "the land" on a build where every terrestrial claim had withheld
+    itself.
+    """
+    present = {str(finding["realm"]) for finding in _findings()} - {EVERYWHERE}
+    return [word for realm, word in REALM_WORDS.items() if realm in present]
+
+
+def places() -> str:
+    """The realm words joined as prose: "the air, the sea and the land"."""
+    words = realm_words()
+    if len(words) <= 1:
+        return "".join(words)
+    return ", ".join(words[:-1]) + " and " + words[-1]
+
+
 def _findings() -> list[dict[str, object]]:
     payload = json.loads(LEDGER.read_text(encoding="utf-8"))
     published: list[dict[str, object]] = payload["findings"]
@@ -86,22 +114,22 @@ def directions() -> dict[str, int]:
 
 def build() -> Introduction:
     """The introduction, with its counts filled in."""
-    published, realms, sources = counts()
+    published, _, sources = counts()
     pointing = directions()
     nulls = pointing.get("null", 0)
     limits = pointing.get("limit", 0)
     return Introduction(
         schema_version=SCHEMA_VERSION,
-        title="What this is",
+        title="An animal's year",
         standfirst=(
             "This is a notebook about where animals go and what is changing it. Not a summary of "
             "the field — a record of what this project has actually measured, including the parts "
             "that did not work."
         ),
         counted=(
-            f"{published} findings across {realms} realms, from {sources} registered sources. "
-            "Every number is recomputed from the data on every build, so none of them can quietly "
-            "go stale."
+            f"{published} findings from {sources} sources, measured in {places()}. Every number "
+            "is worked out again from the raw records each time these pages are made, so none of "
+            "them can quietly go stale."
         ),
         passages=(
             Passage(
@@ -110,10 +138,10 @@ def build() -> Introduction:
                     "Migration is a journey on a schedule, and the question here is whether the "
                     "schedule is coming apart. When animals leave, where they go, when they arrive "
                     "— and whether the year they arrive into is still the year the journey was "
-                    "built for. Across the three realms the records reach: the air, the sea and "
-                    "the land. What each record can identify differs and every page says which — "
-                    "the aerial measurements see moving biomass in the night sky and cannot tell "
-                    "you what species it belongs to."
+                    "built for. In the three places the records reach: the air, the sea and the "
+                    "land. What each record can identify differs and every page says which — "
+                    "weather radar sees a mass of animals moving in the night sky and cannot tell "
+                    "you what species they are."
                 ),
             ),
             Passage(
@@ -130,55 +158,54 @@ def build() -> Introduction:
             Passage(
                 heading="How the work is done",
                 body=(
-                    "Nothing is measured that was not registered first: every source is written "
-                    "down with its licence, its known problems and what it may be used for, before "
-                    "anything is downloaded. Every question is written down beforehand too — the "
-                    "prediction, the rule for stopping, and what the answer could not settle "
-                    "either way — so that a hypothesis cannot be adjusted once the answer is "
-                    "visible. Every number on these pages is recomputed from the raw data each "
-                    "time the site is built. And nothing is drawn at a resolution that would put "
-                    "an animal at risk of being found."
-                ),
-            ),
-            Passage(
-                heading="Every claim carries its own scope",
-                body=(
-                    "A number here always arrives with what it covers and what it does not. The "
-                    "autumn timing result is about 78 radar stations between 37 and 50 degrees "
-                    "north, and it says so; it is not a statement about a continent, or about "
-                    "birds, because the radar cannot tell a bird from a bat. Where the scope is "
-                    "narrow the page says so rather than rounding it up."
+                    "Nothing is measured that was not written down first: where each record "
+                    "comes from, who may use it and for what, and what is known to be wrong with "
+                    "it, all before anything is downloaded. Every question is written down "
+                    "beforehand too — the prediction, the rule for stopping, and what the answer "
+                    "could not settle either way — so that a hypothesis cannot be adjusted once "
+                    "the answer is visible. Every number on these pages is worked out again from "
+                    "the raw records each time the pages are made. And nothing is drawn finely "
+                    "enough to put an animal at risk of being found."
                 ),
             ),
             Passage(
                 heading="The results that found nothing are here too",
                 body=(
                     f"{nulls} of the findings report no change and {limits} report a limit on what "
-                    "this work can see — a chapter of each. They are not filed as failures. A "
-                    "ledger showing only the positive results would be lying by selection, and the "
-                    "strongest thing in here is a marine record where the surveys disagree even "
-                    "about which way fish are moving."
+                    "this work can see. They are not filed as failures, and they have their own "
+                    "pages here. A record showing only the positive results would be lying by "
+                    "selection, and the strongest thing in here is a marine record where the "
+                    "surveys disagree even about which way fish are moving."
                 ),
             ),
+            # One passage where there were two. Seven passages paginate to a last page holding one
+            # of them, facing blank paper; the owner's levers for an empty page are a larger hand,
+            # a true drawing or a merged panel, and these two were one thought -- what a number
+            # covers, and what would make it mislead you -- said in two places.
             Passage(
-                heading="A caveat is not an apology",
+                heading="Every claim carries its scope, and its caveat",
                 body=(
-                    "Beside each number is a line saying what would have to be true for it to "
-                    "mislead you. Read it as part of the result rather than as hedging: it is "
-                    "there because the alternative is a reader who trusts the figure further than "
-                    "the evidence goes. Where a prediction was made and graded, the grade stands "
-                    "whichever way it went."
+                    "A number here always arrives with what it covers and what it does not. The "
+                    "autumn timing result is about 78 radar stations between 37 and 50 degrees "
+                    "north, and it says so; it is not a statement about a continent, or about "
+                    "birds, because the radar cannot tell a bird from a bat. And beside each "
+                    "number is a line saying what would have to be true for it to mislead you. "
+                    "Read it as part of the result rather than as hedging: it is there because "
+                    "the alternative is a reader who trusts the figure further than the evidence "
+                    "goes. Where a prediction was made and graded, the grade stands whichever way "
+                    "it went."
                 ),
             ),
             Passage(
                 heading="Three ways in",
                 body=(
-                    "The chapters are the argument, in order: what changed, what did not, what "
-                    "cannot be seen, what can be predicted, and why. Or take the tabs in any "
-                    "order — each chapter stands alone, and any of them can be read one realm at "
-                    "a time from the small tabs at the foot: the air, the sea or the land. Or go "
-                    "straight to the world in the back pocket and look at the layers yourself, "
-                    "with nothing argued over the top."
+                    "The chapters are the argument, in order: what changed, what is telling the "
+                    "animals to change, what did not change, why a pile of species adds up to "
+                    "nothing, whether next year can be predicted, and what we cannot see. Or take "
+                    "the tabs in any order — each chapter stands alone, and any of them can be "
+                    "read one place at a time from the small tabs at the foot: the air, the sea "
+                    "or the land. Or go straight to the globe at the back of the book and look at "
+                    "the records yourself, with nothing argued over the top."
                 ),
             ),
         ),

@@ -59,12 +59,21 @@
   <p class="refusal__verdict"><strong>Why it is not reported.</strong> {refusal.verdict}</p>
   <p class="refusal__method">
     <a href={`${REPOSITORY}${refusal.method}`} rel="noopener" target="_blank">
-      {refusal.method}
+      The plan, written down before we looked
     </a>
   </p>
 </section>
 
 <style>
+  /*
+    Every size here is a multiple of `--size-margin`, not a rem.
+
+    Sized in rem, this component's text neither grew on a tall window nor shrank on a short one, so
+    `fit.ts` could scale everything on its page except the words -- and its pages were among the
+    last to run off the leaf at 1280x720 and 1024x768. Each factor is the old rem over 0.66, the
+    token's root value, so a phone -- which reads the root tokens -- is exactly as it was, and on
+    the spread the words follow the page like everything else on it.
+  */
   .refusal {
     margin-top: var(--gap);
     padding: var(--gap);
@@ -88,14 +97,14 @@
   .refusal__question {
     margin: var(--gap-hair) 0 0;
     font-family: var(--font-hand);
-    font-size: calc(1.3rem * var(--font-scale-hand));
+    font-size: calc(var(--size-margin) * 1.97 * var(--font-scale-hand));
     line-height: var(--leading-hand);
     color: var(--ink);
   }
 
   .refusal__naive {
     margin: var(--gap-tight) 0 0;
-    font-size: 0.82rem;
+    font-size: calc(var(--size-margin) * 1.24);
     line-height: 1.5;
     color: var(--ink-soft);
   }
@@ -107,7 +116,7 @@
     border: 1px solid var(--rust-ink);
     border-radius: var(--radius);
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: calc(var(--size-margin) * 1.06);
     color: var(--rust);
     cursor: pointer;
   }
@@ -121,7 +130,7 @@
     grid-template-columns: 1fr auto;
     gap: 0 var(--gap-tight);
     margin: var(--gap-tight) 0 0;
-    font-size: 0.74rem;
+    font-size: calc(var(--size-margin) * 1.12);
   }
 
   dt {
@@ -158,7 +167,7 @@
 
   .refusal__verdict {
     margin: var(--gap) 0 0;
-    font-size: 0.78rem;
+    font-size: calc(var(--size-margin) * 1.18);
     line-height: 1.5;
     color: var(--ink);
   }
@@ -170,6 +179,6 @@
   .refusal__method {
     margin: var(--gap-hair) 0 0;
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: calc(var(--size-margin) * 1.03);
   }
 </style>

@@ -50,8 +50,11 @@ def test_no_count_in_the_prose_is_typed() -> None:
     pointing = introduction.directions()
 
     assert f"{published} findings" in document.counted
-    assert f"{realms} realms" in document.counted
-    assert f"{sources} registered sources" in document.counted
+    assert f"{sources} sources" in document.counted
+    # The places are listed rather than counted, and the list is read from the ledger too.
+    assert len(introduction.realm_words()) == realms
+    for word in introduction.realm_words():
+        assert word in document.counted
 
     nulls = pointing.get("null", 0)
     limits = pointing.get("limit", 0)
@@ -86,7 +89,8 @@ def test_the_counts_would_move_if_the_ledger_did(
     published, realms, _ = introduction.counts()
     assert (published, realms) == (2, 1)
     document = introduction.build()
-    assert "2 findings across 1 realms" in document.counted
+    assert "2 findings from" in document.counted
+    assert "measured in the air." in document.counted
     body = next(p.body for p in document.passages if "no change" in p.body)
     assert body.startswith("0 of the findings report no change")
     assert "1 report a limit" in body

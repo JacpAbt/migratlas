@@ -21,6 +21,7 @@ from migratlas.drivers import era5, narr
 from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan_dataset
+from migratlas.metrics.interval import mean_ci
 from migratlas.metrics.phenology import Season, passage_quantiles
 from migratlas.reports.phase1 import (
     AUTUMN,
@@ -92,8 +93,11 @@ class BreakFit(NamedTuple):
     step: float
 
 
-def _fit_break(years: np.ndarray, response: np.ndarray, break_year: int) -> BreakFit | None:
+def fit_break(years: np.ndarray, response: np.ndarray, break_year: int) -> BreakFit | None:
     """Least squares ``response ~ 1 + year + post_break``, returning both coefficients.
+
+    Public because Phase 2i fits the same break to the latitude gradient of passage date, and a
+    second copy of this specification is a second thing that can move.
 
     ``phase1_robustness._slope`` fits the same design but returns only the trend, because
     there the step is a nuisance to absorb. Here the step *is* the object of study, so both
@@ -107,13 +111,6 @@ def _fit_break(years: np.ndarray, response: np.ndarray, break_year: int) -> Brea
         return None
     coefficients, *_ = np.linalg.lstsq(design, response, rcond=None)
     return BreakFit(trend=float(coefficients[1]), step=float(coefficients[2]))
-
-
-def _mean_ci(values: np.ndarray) -> tuple[float, float]:
-    if values.size == 0:
-        return (float("nan"), float("nan"))
-    ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size) if values.size > 1 else 0.0
-    return (float(values.mean()), ci)
 
 
 def speed_weighting(*, max_year: int = 2025) -> list[str]:
@@ -159,7 +156,7 @@ def speed_weighting(*, max_year: int = 2025) -> list[str]:
                 continue
             claim = band["days_per_decade"].to_numpy().astype(float)
             control = band["days_per_decade_control"].to_numpy().astype(float)
-            difference, ci = _mean_ci(control - claim)
+            difference, ci = mean_ci(control - claim)
             lines.append(
                 "    "
                 + str(
@@ -183,7 +180,7 @@ def speed_weighting(*, max_year: int = 2025) -> list[str]:
             )
         )
         if not claim_band.is_empty():
-            difference, ci = _mean_ci(claim_band["difference"].to_numpy().astype(float))
+            difference, ci = mean_ci(claim_band["difference"].to_numpy().astype(float))
             correlation = float(
                 np.corrcoef(
                     claim_band["days_per_decade"].to_numpy().astype(float),
@@ -282,7 +279,7 @@ def speed_drift(*, max_year: int = 2025) -> list[str]:
             ):
                 if group.height < MIN_YEARS:
                     continue
-                fit = _fit_break(
+                fit = fit_break(
                     group["year"].to_numpy(),
                     group[column].to_numpy().astype(float),
                     FLEET_MIDPOINT_YEAR,
@@ -291,7 +288,7 @@ def speed_drift(*, max_year: int = 2025) -> list[str]:
                     slopes.append(fit.trend * 10.0)
             if not slopes:
                 continue
-            mean, ci = _mean_ci(np.asarray(slopes, dtype=float))
+            mean, ci = mean_ci(np.asarray(slopes, dtype=float))
             level = float(paired[column].to_numpy().astype(float).mean())
             verdict = "flat" if abs(mean) < abs(ci) else "MOVES"
             lines.append(
@@ -383,7 +380,7 @@ def screening(*, max_year: int = 2025) -> list[str]:
         ):
             if group.height < MIN_YEARS:
                 continue
-            phenology = _fit_break(
+            phenology = fit_break(
                 group["year"].to_numpy(),
                 group["q50_doy"].to_numpy().astype(float),
                 FLEET_MIDPOINT_YEAR,
@@ -391,7 +388,7 @@ def screening(*, max_year: int = 2025) -> list[str]:
             rain_group = fixed.filter(pl.col("station_id") == station).sort("year")
             if phenology is None or rain_group.height < MIN_YEARS:
                 continue
-            rain = _fit_break(
+            rain = fit_break(
                 rain_group["year"].to_numpy(),
                 rain_group["rain"].to_numpy().astype(float),
                 FLEET_MIDPOINT_YEAR,
@@ -420,9 +417,9 @@ def screening(*, max_year: int = 2025) -> list[str]:
             continue
         lines.append(f"\n  {name}: per-station steps, n={seasonal.height}")
         phenology_step = seasonal["phenology_step"].to_numpy().astype(float)
-        mean, ci = _mean_ci(phenology_step)
+        mean, ci = mean_ci(phenology_step)
         lines.append(f"    mean phenology step  {mean:+.2f} +/- {ci:.2f} d")
-        rain_mean, rain_ci = _mean_ci(seasonal["rain_step"].to_numpy().astype(float))
+        rain_mean, rain_ci = mean_ci(seasonal["rain_step"].to_numpy().astype(float))
         lines.append(f"    mean screening step  {rain_mean:+.4f} +/- {rain_ci:.4f} rain fraction")
         for against in ("rain_step", "mean_rain", "latitude"):
             correlation = float(
@@ -531,7 +528,7 @@ def _speed_trend(per_station_year: pl.DataFrame, column: str) -> SpeedTrend | No
     ):
         if group.height < MIN_YEARS:
             continue
-        fit = _fit_break(
+        fit = fit_break(
             group["year"].to_numpy(),
             group[column].to_numpy().astype(float),
             FLEET_MIDPOINT_YEAR,
@@ -540,9 +537,28 @@ def _speed_trend(per_station_year: pl.DataFrame, column: str) -> SpeedTrend | No
             slopes.append(fit.trend * 10.0)
     if not slopes:
         return None
-    mean, ci = _mean_ci(np.asarray(slopes, dtype=float))
+    mean, ci = mean_ci(np.asarray(slopes, dtype=float))
     level = float(per_station_year[column].to_numpy().astype(float).mean())
     return SpeedTrend(mean=mean, ci95=ci, level=level, stations=len(slopes))
+
+
+def airspeed_by_year(season: Season, *, max_year: int = 2025) -> pl.DataFrame | None:
+    """One row per year: the season's airspeed averaged over the stations that reported it.
+
+    The series `airspeed_trend` fits its per-station slopes on, reduced to a line a reader can see.
+    `reports/headline.py` draws it under the published drift; nothing here is a second fit.
+    """
+    nights = _airspeed_nights(max_year)
+    if nights.is_empty():
+        return None
+    per_station_year = _per_station_year(nights, season)
+    if per_station_year.is_empty():
+        return None
+    return (
+        per_station_year.group_by("year")
+        .agg(pl.col("airspeed").mean().alias("airspeed"), pl.len().alias("stations"))
+        .sort("year")
+    )
 
 
 def airspeed_trend(season: Season, *, max_year: int = 2025) -> SpeedTrend | None:
@@ -666,7 +682,7 @@ def _without_slow_nights(nights: pl.DataFrame, *, max_year: int) -> list[str]:
             )
             if band.is_empty():
                 continue
-            mean, ci = _mean_ci(band["days_per_decade"].to_numpy().astype(float))
+            mean, ci = mean_ci(band["days_per_decade"].to_numpy().astype(float))
             pair.append((label, band.height, mean, ci))
         # Both the all-nights and bird-nights fits, or the comparison has nothing to say.
         if len(pair) == BOTH_FITS:
@@ -748,10 +764,10 @@ def weather_or_instrument(*, max_year: int = 2025) -> list[str]:
                 continue
             ordered = group.sort("year")
             years = ordered["year"].to_numpy()
-            screened = _fit_break(
+            screened = fit_break(
                 years, ordered["screened"].to_numpy().astype(float), FLEET_MIDPOINT_YEAR
             )
-            rainfall = _fit_break(
+            rainfall = fit_break(
                 years, ordered["rainfall"].to_numpy().astype(float), FLEET_MIDPOINT_YEAR
             )
             if screened is None or rainfall is None:
@@ -780,8 +796,8 @@ def weather_or_instrument(*, max_year: int = 2025) -> list[str]:
         steps = pl.DataFrame(rows)
         screened_step = steps["screened"].to_numpy().astype(float)
         rainfall_step = steps["rainfall"].to_numpy().astype(float)
-        screened_mean, screened_ci = _mean_ci(screened_step)
-        rainfall_mean, rainfall_ci = _mean_ci(rainfall_step)
+        screened_mean, screened_ci = mean_ci(screened_step)
+        rainfall_mean, rainfall_ci = mean_ci(rainfall_step)
         correlation = float(np.corrcoef(screened_step, rainfall_step)[0, 1])
 
         lines.append(f"\n  {season}, n={steps.height} stations")

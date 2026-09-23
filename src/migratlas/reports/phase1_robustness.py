@@ -18,6 +18,7 @@ import polars as pl
 from migratlas.constants import MIN_COVERAGE, MIN_NIGHTS
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.metrics import breaks
+from migratlas.metrics.interval import mean_ci
 from migratlas.metrics.phenology import Season, passage_quantiles
 from migratlas.reports.phase1 import (
     AUTUMN,
@@ -63,14 +64,6 @@ class Estimate:
             f"{self.label:<34} n={self.stations:>3}  "
             f"{self.days_per_decade:+.2f} +/- {self.ci95:.2f}"
         )
-
-
-def _mean_ci(slopes: Sequence[float]) -> tuple[float, float]:
-    values = np.asarray(slopes, dtype=float)
-    if values.size == 0:
-        return (float("nan"), float("nan"))
-    ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size) if values.size > 1 else 0.0
-    return (float(values.mean()), ci)
 
 
 def _slope(years: np.ndarray, passage: np.ndarray, step: np.ndarray | None) -> float | None:
@@ -200,7 +193,7 @@ def specification_estimates(
 
     estimates: list[Estimate] = []
     for label, slopes in specifications.items():
-        mean, ci = _mean_ci(slopes)
+        mean, ci = mean_ci(slopes)
         estimates.append(Estimate(label, len(slopes), mean, ci))
     return estimates
 
@@ -302,7 +295,7 @@ def render(max_year: int = 2025) -> str:
         )
         if value is not None:
             winter_slopes.append(value * 10)
-    winter_mean, winter_ci = _mean_ci(winter_slopes)
+    winter_mean, winter_ci = mean_ci(winter_slopes)
     out += [
         "",
         "=" * 74,

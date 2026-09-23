@@ -1,15 +1,5 @@
 """Phase 3h, per `docs/methods/phase3h-pooled-response.md`: predict a region, not a station.
 
-Three arms, and the ladder climbs one step only. Arm A is Phase 3a's per-station fit and exists to
-calibrate the harness. Arm B changes the *response* to the regional mean and nothing else, which is
-the one thing Phase 3a, the 3d rehearsal and Phase 3f all held fixed while varying the predictor.
-Arm C adds the wind terms Phase 2a fitted and no skill harness in this project has ever seen.
-
-The licence for changing the response is `reports/response_floor.py`: a station's passage date moves
-4.37 days between years and up to 3.54 of that is measurement error, so at most a third of it was
-ever explainable, while a region's series is 65% shared signal. Every earlier attempt was fitting to
-a target that is mostly noise.
-
 The estimator is `models.skill.hindcast` verbatim in every arm -- no pooling, no spline, no new
 lambda rule. Phase 3f spent five rungs on estimator complexity and could interpret none of them;
 changing the response *and* the estimator would produce a difference nobody could attribute.
@@ -223,6 +213,31 @@ def collect() -> tuple[list[ArmResult], dict[str, list[str]]]:
                     continue
                 results.append(run_arm(arm, unit_list, season, scope=scope))
     return results, dropped
+
+
+def regional_arm(season: str) -> ArmResult | None:
+    """Arm B alone, for the ledger to carry beside the per-station numbers.
+
+    `collect` runs three arms over two seasons and two driver scopes, which is the right shape for
+    grading a registration and the wrong shape for a claim that needs one number. Arm A is not
+    re-run here because `skill-sparse` already computes Phase 3a's per-station medians from Phase
+    3a itself -- running it twice would be two paths to one figure.
+
+    The arm, its columns, its seed and its null are `LADDER[1]`'s, untouched: this is a narrower
+    door into the same room, not a second room.
+    """
+    arm = next((rung for rung in LADDER if rung.key == "B"), None)
+    if arm is None:  # pragma: no cover -- the ladder is a module constant
+        return None
+    stations, _ = units(season)
+    if not stations:
+        log.info("%s: no station units, so there is no region to pool", season)
+        return None
+    regions, _ = regional_units(stations, station_sites(load_conus_nights()))
+    if not regions:
+        log.info("%s: no region cleared the station floor", season)
+        return None
+    return run_arm(arm, regions, season, scope="all")
 
 
 def calibration_verdict(results: Sequence[ArmResult]) -> tuple[bool, list[str]]:

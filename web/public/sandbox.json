@@ -12,7 +12,7 @@
    "variants": [
     {
      "key": "speed-weighted",
-     "label": "reflectivity traffic",
+     "label": "weighted by flight speed",
      "value": -0.5590837875896816,
      "unit": "days per decade",
      "n": 78,
@@ -21,7 +21,7 @@
     },
     {
      "key": "speed-free",
-     "label": "reflectivity hours",
+     "label": "speed left out",
      "value": -0.6463526172097931,
      "unit": "days per decade",
      "n": 78,
@@ -41,7 +41,7 @@
    "variants": [
     {
      "key": "no-break-term",
-     "label": "no break term",
+     "label": "no allowance for the upgrade",
      "value": -0.559083787589677,
      "unit": "days per decade",
      "n": 78,
@@ -50,7 +50,7 @@
     },
     {
      "key": "break-at-detected-outage",
-     "label": "break at detected outage",
+     "label": "a step where each radar was upgraded",
      "value": -0.904904279374325,
      "unit": "days per decade",
      "n": 68,
@@ -59,7 +59,7 @@
     },
     {
      "key": "common-break-at-2012",
-     "label": "common break at 2012",
+     "label": "one step for every radar, in 2012",
      "value": -0.7266059282680523,
      "unit": "days per decade",
      "n": 78,
@@ -68,7 +68,7 @@
     },
     {
      "key": "transition-2011-2013-dropped",
-     "label": "transition 2011-2013 dropped",
+     "label": "the upgrade years left out",
      "value": -0.5327185678612045,
      "unit": "days per decade",
      "n": 76,
@@ -117,7 +117,7 @@
    "variants": [
     {
      "key": "footprint-0",
-     "label": "no effort correction",
+     "label": "every cell the ships ever fished",
      "value": -0.02615554907416356,
      "unit": "degrees latitude per decade",
      "n": 2649,
@@ -126,7 +126,7 @@
     },
     {
      "key": "footprint-0.6",
-     "label": "cells sampled in 60% of years",
+     "label": "only cells fished in 60% of years",
      "value": -0.009516282304956616,
      "unit": "degrees latitude per decade",
      "n": 2357,
@@ -135,7 +135,7 @@
     },
     {
      "key": "footprint-0.8",
-     "label": "cells sampled in 80% of years",
+     "label": "only cells fished in 80% of years",
      "value": -0.01104017861017254,
      "unit": "degrees latitude per decade",
      "n": 2240,
@@ -144,7 +144,7 @@
     },
     {
      "key": "footprint-0.95",
-     "label": "cells sampled in 95% of years",
+     "label": "only cells fished in 95% of years",
      "value": -0.01100238267856613,
      "unit": "degrees latitude per decade",
      "n": 1828,

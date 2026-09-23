@@ -112,6 +112,7 @@
       {#if current}
         <Page
           side="verso"
+          fitted
           folio={numbers[0]}
           onturn={index > 0 ? () => go(index - 1) : undefined}
         >
@@ -119,6 +120,7 @@
         </Page>
         <Page
           side="recto"
+          fitted
           folio={numbers[1]}
           onturn={index < spreads.length - 1 ? () => go(index + 1) : undefined}
         >
@@ -129,16 +131,16 @@
       {#if leaving && current}
         <!-- The outgoing page, held on the half the leaf is about to land on. -->
         <div class="stale stale--{arriving}" aria-hidden="true">
-          <Page side={arriving} fill>{@render page(leaving.spread[arriving], arriving)}</Page>
+          <Page side={arriving} fill fitted>{@render page(leaving.spread[arriving], arriving)}</Page>
         </div>
         <!-- The shadow the turning page throws: a sibling, because a child would rotate with it. -->
         <div class="cast cast--{lifted}" aria-hidden="true"></div>
         <div class="leaf leaf--{lifted}" aria-hidden="true">
           <div class="leaf__face leaf__front">
-            <Page side={lifted} fill>{@render page(leaving.spread[lifted], lifted)}</Page>
+            <Page side={lifted} fill fitted>{@render page(leaving.spread[lifted], lifted)}</Page>
           </div>
           <div class="leaf__face leaf__back">
-            <Page side={arriving} fill>{@render page(current[arriving], arriving)}</Page>
+            <Page side={arriving} fill fitted>{@render page(current[arriving], arriving)}</Page>
           </div>
         </div>
       {/if}
@@ -238,12 +240,38 @@
       CSS cannot divide a length by a length, so this is `--book-h / n` rather than a ratio applied
       to the token. That is also why each line repeats the hand factor it needs.
     */
-    --size-claim: clamp(1.08rem, calc(var(--book-h) / 26.9 * var(--font-scale-hand)), 2.6rem);
-    --size-lede: clamp(0.86rem, calc(var(--book-h) / 50.2 * var(--font-scale-hand)), 1.5rem);
-    --size-body: clamp(0.73rem, calc(var(--book-h) / 59.5), 1.15rem);
-    --size-value: clamp(0.98rem, calc(var(--book-h) / 41.8), 1.7rem);
-    --size-margin: clamp(0.56rem, calc(var(--book-h) / 85.6), 0.82rem);
-    --size-label: clamp(0.53rem, calc(var(--book-h) / 91.2), 0.76rem);
+    /*
+      Declared twice, and the `-page` half is what a page is allowed to grow.
+
+      A custom property is substituted where it is *declared*, so `calc(var(--size-body) * ...)` on
+      a descendant cannot reach back to this one -- it is a cycle and CSS drops the whole
+      declaration. The base names give `.page__inner` something to multiply, and the plain names
+      stay for the book's own furniture, which does not grow: the thumb tabs and the filter are the
+      same size on every page or they are not an index.
+    */
+    --size-claim-page: clamp(1.08rem, calc(var(--book-h) / 26.9 * var(--font-scale-hand)), 2.6rem);
+    --size-lede-page: clamp(0.86rem, calc(var(--book-h) / 50.2 * var(--font-scale-hand)), 1.5rem);
+    --size-body-page: clamp(0.73rem, calc(var(--book-h) / 59.5), 1.15rem);
+    --size-value-page: clamp(0.98rem, calc(var(--book-h) / 41.8), 1.7rem);
+    --size-margin-page: clamp(0.56rem, calc(var(--book-h) / 85.6), 0.82rem);
+    --size-label-page: clamp(0.53rem, calc(var(--book-h) / 91.2), 0.76rem);
+
+    --size-claim: var(--size-claim-page);
+    --size-lede: var(--size-lede-page);
+    --size-body: var(--size-body-page);
+    --size-value: var(--size-value-page);
+    --size-margin: var(--size-margin-page);
+    --size-label: var(--size-label-page);
+
+    /* The air a page may grow, captured here so the multiplication downstream has something to
+       multiply. These read whatever the reader's type choice left on `:root`, so a fitted page
+       grows the dyslexia setting's leading rather than the default's. */
+    --leading-body-page: var(--leading-body);
+    --leading-hand-page: var(--leading-hand);
+    --gap-hair-page: var(--gap-hair);
+    --gap-tight-page: var(--gap-tight);
+    --gap-page: var(--gap);
+    --gap-wide-page: var(--gap-wide);
     /* As large as the window allows in both axes, so it fills a wide monitor and still cannot run
        off the bottom of a short one. The subtraction is the chrome above it. */
     /*
@@ -261,12 +289,17 @@
       how the overflow guard would start failing. As written, nothing below about a 1,050px-tall
       window changes at all.
     */
-    --book-h: min(calc(98vw / var(--ratio)), calc(100vh - 2.6rem), max(54rem, 82vh));
+    /*
+      The width term leaves the thumb tabs their room. At 98vw the book had ten pixels a side at
+      1024 wide, and the tabs -- which stand off the fore-edge by their own width -- hung off the
+      screen with their labels cut. Five rem is two tab widths and a little air, and at either
+      guarded size the book is height-bound, so nothing `pages.ts` measured moves.
+    */
+    --book-h: min(calc((100vw - 5rem) / var(--ratio)), calc(100vh - 2.6rem), max(54rem, 82vh));
 
     position: relative;
     width: calc(var(--book-h) * var(--ratio));
     aspect-ratio: var(--ratio);
-    perspective: 2800px;
   }
 
   .block {
@@ -293,11 +326,71 @@
       var(--paper);
   }
 
+  /*
+    A fitted page: the two numbers `fit.ts` measures, and everything that follows from them.
+
+    Declared here rather than in `Page.svelte` because only the spread is fitted -- a phone leaf is
+    a scroll-snap track with its own reading size and nothing to fill -- and because the base names
+    it multiplies are the book's. `:global` on the inner is the price of reaching a child
+    component's element; the selector is still anchored to `.spread`, so nothing outside this book
+    can match it.
+
+    Both default to 1, so a page renders correctly before the first measurement and stays correct
+    if scripting never runs.
+  */
+  .spread :global(.page__inner) {
+    --fit-air: 1;
+    --fit-type: 1;
+
+    --leading-body: calc(var(--leading-body-page) * var(--fit-air));
+    --leading-hand: calc(var(--leading-hand-page) * var(--fit-air));
+    --gap-hair: calc(var(--gap-hair-page) * var(--fit-air));
+    --gap-tight: calc(var(--gap-tight-page) * var(--fit-air));
+    --gap: calc(var(--gap-page) * var(--fit-air));
+    --gap-wide: calc(var(--gap-wide-page) * var(--fit-air));
+
+    --size-claim: calc(var(--size-claim-page) * var(--fit-type));
+    --size-lede: calc(var(--size-lede-page) * var(--fit-type));
+    --size-body: calc(var(--size-body-page) * var(--fit-type));
+    --size-value: calc(var(--size-value-page) * var(--fit-type));
+    --size-margin: calc(var(--size-margin-page) * var(--fit-type));
+    --size-label: calc(var(--size-label-page) * var(--fit-type));
+  }
+
   .spread {
     position: absolute;
     inset: 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
+    /*
+      The perspective lives here, on the element that also clips, and both halves of that are the
+      fix for what the owner called "some small clipping while I switch pages".
+
+      It was declared on `.book`, one generation too far up: perspective applies to an element's
+      own children, and the leaf is a grandchild through this grid. So the book asked for a 3D turn
+      and got none -- `rotateY` on a flat element is a horizontal squash, and the turning sheet was
+      the outgoing page compressed sideways while a strip of the page beneath showed at the outer
+      edge with its lines cut off mid-letter. Nothing about that reads as paper.
+
+      Moved down one level the sheet genuinely lifts: the free edge comes toward the reader and is
+      drawn larger than the bound edge, so the page beneath is something a sheet is rising off
+      rather than something with a slice missing.
+
+      It has to be clipped for the same reason, because a foreshortened sheet is *bigger* than the
+      page it came from: measured across the turn it reaches 17px past the outer edge and further
+      past the head and the foot, onto the desk and under the type controls. `overflow: clip` here
+      is what `.book` cannot do -- the filter tabs hang below that block by design -- and it is
+      safe on this element in particular: the rule that flattens 3D applies to an element's own
+      `transform-style`, and this one has nothing to preserve. The leaf below still does, for its
+      two faces.
+
+      What it costs is a third of the way through the turn, where the lifted sheet is drawn taller
+      than the book and loses about 30px at the head. That is inherent rather than unfixed: a sheet
+      near the eye *is* bigger, and the two alternatives are letting it run over the controls or
+      going back to a squash.
+    */
+    perspective: 2800px;
+    overflow: clip;
     background: var(--paper);
     border: 1px solid var(--rule);
     box-shadow:
@@ -479,8 +572,15 @@
       window while the book kept shrinking around them.
     */
     font-family: var(--font-body);
-    font-size: clamp(0.7rem, calc(var(--book-h) / 42), 0.95rem);
+    /* The divisor is 50 rather than 42 because the tabs are one line now and cannot shrink: at a
+       597px book (1024x768) the eight labels sum to about 575px at this size, and would have run
+       84px past the book at the old one. Both guarded sizes sit on the ceiling either way. */
+    font-size: clamp(0.62rem, calc(var(--book-h) / 50), 0.95rem);
     writing-mode: vertical-rl;
+    /* One line each. A tab that wraps into two vertical lines widens off the fore-edge and shows a
+       reader its last word only, which is how "The calendar" became "calendar". */
+    white-space: nowrap;
+    flex: 0 0 auto;
     padding: 0.42em 0.72em;
     color: var(--ink);
     /* Coloured stock from the palette's own hues, mixed into the page's paper so it inverts with the

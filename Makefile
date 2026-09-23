@@ -98,6 +98,14 @@ sandbox:  ## Recompute the analysis with each safeguard off -> web/public/sandbo
 introduction:  ## Publish the book's introduction -> web/public/introduction.json
 	$(RUN) migratlas build-introduction
 
+.PHONY: chapters
+chapters:  ## Publish the book's chapter openers -> web/public/chapters.json
+	$(RUN) migratlas build-chapters
+
+.PHONY: headline
+headline:  ## Draw each claim's headline result from the lake -> web/public/headline.json
+	$(RUN) migratlas build-headline
+
 .PHONY: response
 response:  ## Publish the fitted response as a dial with its envelope -> web/public/response.json
 	$(RUN) migratlas build-response
@@ -177,6 +185,10 @@ ingest-era5:  ## ERA5 monthly precipitation at the radar stations -> lake (drive
 ingest-era5-south:  ## ERA5 monthly temperature at the atlas cells -> lake (driver samples)
 	$(RUN) migratlas ingest-era5-south
 
+.PHONY: ingest-era5-uk
+ingest-era5-uk:  ## ERA5 monthly temperature at the butterfly transects -> lake (driver samples)
+	$(RUN) migratlas ingest-era5-uk
+
 .PHONY: build-findings
 build-findings:  ## Recompute what the research established, for the globe to render
 	$(RUN) migratlas build-findings
@@ -236,6 +248,70 @@ report-phase3f:  ## The response-model ladder: pooling, the wind, its form, the 
 .PHONY: ingest-ukbms
 ingest-ukbms:  ## UK butterfly flight-period phenology: the fourth leg's response
 	$(RUN) migratlas ingest-ukbms
+
+.PHONY: report-phase1k
+report-phase1k:  ## Four idle schemes: what each finds alone, and what they find in company
+	$(RUN) migratlas report phase1k
+
+.PHONY: report-phase1l
+report-phase1l:  ## Paired by species: how much of a network difference is the counting?
+	$(RUN) migratlas report phase1l
+
+.PHONY: report-phase1m
+report-phase1m:  ## A level between one species and all of them?
+	$(RUN) migratlas report phase1m
+
+.PHONY: report-phase2c
+report-phase2c:  ## Is the thermal sensitivity a response, or a co-trend?
+	$(RUN) migratlas report phase2c
+
+.PHONY: report-phase1o
+report-phase1o:  ## Is the level between one species and all of them a taxonomic one?
+	$(RUN) migratlas report phase1o
+
+.PHONY: report-phase1n
+report-phase1n:  ## Footprint held equal: what is the protocol difference made of?
+	$(RUN) migratlas report phase1n
+
+.PHONY: report-predictions
+report-predictions:  ## How often the registered predictions turned out wrong
+	$(RUN) migratlas report predictions
+
+.PHONY: report-phase3j
+report-phase3j:  ## Is the marine null a mixture? Clusters by thermal exposure
+	$(RUN) migratlas report phase3j
+
+.PHONY: report-phase3k
+report-phase3k:  ## Is the marine signal a property of the species rather than of the sea?
+	$(RUN) migratlas report phase3k
+
+.PHONY: report-phase2d
+report-phase2d:  ## Does the butterflies' flight date follow the temperature, per species?
+	$(RUN) migratlas report phase2d
+
+.PHONY: report-phase2e
+report-phase2e:  ## Is where an animal moved the population's, rather than the sea's?
+	$(RUN) migratlas report phase2e
+
+.PHONY: report-phase2f
+report-phase2f:  ## Does when an animal moves have more than one cue?
+	$(RUN) migratlas report phase2f
+
+.PHONY: report-phase2g
+report-phase2g:  ## Did the cells that got wetter gain birds? The southern atlas's rain
+	$(RUN) migratlas report phase2g
+
+.PHONY: report-phase2h
+report-phase2h:  ## Is a marine where-shift a range shift, or a cut through a season?
+	$(RUN) migratlas report phase2h
+
+.PHONY: report-phase2i
+report-phase2i:  ## Is the radar's residual in the front's speed, or in the departure?
+	$(RUN) migratlas report phase2i
+
+.PHONY: report-phase2j
+report-phase2j:  ## Does an animal answer a hard winter by staying less, or by moving faster?
+	$(RUN) migratlas report phase2j
 
 .PHONY: report-phase3h
 report-phase3h:  ## Predict a region rather than a station: does the pooled response beat it?

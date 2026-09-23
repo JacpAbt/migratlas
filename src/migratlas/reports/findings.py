@@ -20,7 +20,7 @@ selection.
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, NamedTuple
 
 import numpy as np
 import polars as pl
@@ -31,6 +31,8 @@ from migratlas.lake.reader import sources as lake_sources
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from migratlas.reports.phase3k import SpeciesFit
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +46,16 @@ PLAIN_MAX_CHARS: Final = 180
 # than a plain sentence because a method is a sequence and a sequence needs clauses, and short
 # enough that it cannot turn into the method note it stands in front of.
 HOW_MAX_CHARS: Final = 620
+
+# There is no character cap on the pages, and one was tried and refuted rather than not considered.
+# `value`, `scope` and `caveat` share a page 826 pixels tall, and `web/tests/book.spec.ts` fails on
+# three pixels of overflow -- twelve minutes after the fact, which is what made a cap attractive.
+# The measurement says it cannot work: `anthropogenic-share` fits at 1,584 characters (821 pixels,
+# five to spare) while `protocol-disagreement` overflowed at **1,573**, because three fields of
+# different word lengths reflow into different numbers of lines. No threshold passes the first and
+# fails the second, and a guard that cannot fail before the browser does is decoration. The browser
+# guard is the authority; when it reports an overflow, move a sentence to a page with room rather
+# than trimming words until the pixels agree.
 
 # The domains ROBITT asks about (Boyd et al. 2022, Methods in Ecology and Evolution 13:1497), a
 # 17-question tool for risk of bias in studies of temporal trends, built on PRISMA's model. Adopted
@@ -269,6 +281,76 @@ DISPLACEMENT_BIAS: Final = _domains(
         "The season windows are fixed calendar blocks, so a herd that shifted *when* it moves "
         "rather than how far is invisible here -- the trade the method note makes explicitly, "
         "because timing is what Phase 1d proved a changing collar record cannot measure.",
+    ),
+)
+
+PROTOCOL_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "Sweden, and only Sweden. It is the one place in this lake where two independent "
+        "programmes count the same populations, so it is the only place the question can be asked "
+        "at all -- which is itself a fact about the holding rather than about birds.",
+    ),
+    temporal=(
+        "addressed",
+        "Both programmes restricted to their shared window, 1996-2024, before any slope was "
+        "fitted. Window cannot contribute to the disagreement.",
+    ),
+    taxonomic=(
+        "addressed",
+        "Paired species by species. The comparison is one animal against itself, so the species "
+        "mixture -- which is what made the first version of this diagnosis wrong -- cannot "
+        "contribute either.",
+    ),
+    environmental=(
+        "open",
+        "Footprints still differ: 33 consistently sampled cells against 84. Part of the residual "
+        "may be real geography rather than method, and restricting to shared cells is the "
+        "successor's first job.",
+    ),
+    detectability=(
+        "open",
+        "This is a measurement *of* a detectability difference and cannot correct for one. A point "
+        "count and a fixed route weight a species' detectability differently by construction; "
+        "which of the two is closer to the truth is not answerable from the pair.",
+    ),
+    phenological=(
+        "not applicable",
+        "A latitude centroid over a breeding season carries no timing claim.",
+    ),
+)
+
+FLIGHT_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "The United Kingdom's transect network, 3,144 sites. A phenological response measured "
+        "where volunteers walk, which is not a sample of anywhere else.",
+    ),
+    temporal=(
+        "addressed",
+        "1973-2021, and the unit qualifies only with fifteen years of its own. Long enough that a "
+        "decadal rate is not an artefact of two endpoints.",
+    ),
+    taxonomic=(
+        "bounded",
+        "59 taxa, resolved to name, and the great majority resident. This is a flight-period "
+        "response and not a migration timing shift -- the two are different behaviours and the "
+        "claim is only about the first.",
+    ),
+    environmental=(
+        "open",
+        "No driver enters this. That the advance tracks warming is the literature's expectation "
+        "and is not tested here, so the finding is a change and not an attribution.",
+    ),
+    detectability=(
+        "addressed",
+        "The estimand is a date, not an abundance, so no effort denominator is needed -- and the "
+        "source carries none. A year with fewer visits gives a noisier date, not a biased one.",
+    ),
+    phenological=(
+        "bounded",
+        "Mean flight date is one summary of a flight period. A species whose season lengthened at "
+        "one end without moving its centre would report no change here.",
     ),
 )
 
@@ -536,6 +618,834 @@ def _coverage_bias(evidence_types: int) -> list[BiasDomain]:
     )
 
 
+SEAS_DISAGREE_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "Eighteen shelf surveys of the North Atlantic and North Pacific. 0% southern hemisphere "
+        "and 0% tropics, so this is a statement about northern shelf seas and not about the ocean.",
+    ),
+    temporal=(
+        "addressed",
+        "The unit is a survey's longest unbroken run under one gear, clipped to the satellite era, "
+        "so no break term is needed anywhere: the segment is the break handling. A deterministic "
+        "gear rule replaced one whose tie order was unstable between runs.",
+    ),
+    taxonomic=(
+        "addressed",
+        "Around 1,400 species-survey pairs summarised per survey by their median. The "
+        "heterogeneity is measured between surveys, which is the level a pooled median destroys.",
+    ),
+    environmental=(
+        "open",
+        "The warming driver is a satellite reading the sea surface at a quarter degree, and these "
+        "are bottom trawls. Where both waters exist they agree in direction at +0.216 across ten "
+        "surveys, which is modest, and that correlation is the whole of what bounds the "
+        "substitution.",
+    ),
+    detectability=(
+        "bounded",
+        "A trawl samples trawlable ground, and a survey that recorded no haul depth cannot enter "
+        "the registered regression at all rather than being given a substituted depth.",
+    ),
+    phenological=(
+        "bounded",
+        "Surveys run in fixed seasons, so a species that shifted its timing rather than its "
+        "position does not appear here.",
+    ),
+)
+
+
+def _sorting_sentence(sorted_by: SpeciesFit | None) -> str:
+    """Whether the animal or the sea carries the marine spread, from Phase 3k, in one sentence.
+
+    Two coherences with very different group counts are not on one scale: a between-group share has
+    a chance level near (k - 1) / n, so the sentence quotes each grouping's excess over its own
+    shuffled-label baseline rather than the raw pair. The 2.8x this caveat carried on 2026-09-01
+    compared 297 groups against 23 and is withdrawn here. "Neither leads" is decided against the
+    permutation spread rather than by a typed threshold: two excesses closer together than the
+    wider null's own 95th-to-median gap are not distinguishable by this instrument.
+    """
+    if sorted_by is None or sorted_by.species_chance is None or sorted_by.survey_chance is None:
+        return (
+            "Whether the spread belongs to the animal or to the sea was asked and could not be "
+            "answered on this panel."
+        )
+    species, survey = sorted_by.species_chance, sorted_by.survey_chance
+    noise = max(species.null_95 - species.null_median, survey.null_95 - survey.null_median)
+    if abs(species.excess - survey.excess) < noise:
+        leader = "neither leads"
+    elif species.excess > survey.excess:
+        leader = "the animal leads"
+    else:
+        leader = "the sea leads"
+    return (
+        f"Whether the spread belongs to the animal or to the sea was asked for the "
+        f"{sorted_by.taxa} species caught in five or more surveys: grouped by species the "
+        f"coherence is {sorted_by.by_species.corrected:.2f} and grouped by survey "
+        f"{sorted_by.by_survey.corrected:.2f}, but a grouping into many small groups scores high "
+        f"with its labels shuffled, and over their own chance levels the two carry "
+        f"{species.excess:+.2f} and {survey.excess:+.2f}. Both are real, and {leader}."
+    )
+
+
+def _population_sentence(pooled: pl.DataFrame) -> str:
+    """Whether the size of a shift follows the size of a change in numbers, from Phase 2e.
+
+    The one sentence `marine-null`'s caveat gains under Phase 2e's registered stop condition. Its
+    control is the point: a rare species has a noisy shift and a noisy abundance trend, and the
+    magnitude of a noisy estimate is inflated, so the abundance spread is set beside the same spread
+    cut on the trend's own precision -- and read as rarity where the precision spread is the larger.
+    """
+    from migratlas.reports import phase2e  # noqa: PLC0415 -- heavy, and only this claim
+
+    table, _ = phase2e.marine_panel(pooled=pooled)
+    leg = phase2e.leg(phase2e.MARINE, table)
+    if leg is None:
+        return (
+            "Whether the shifts follow the species' own changes in numbers was asked and could not "
+            "be answered on this panel."
+        )
+    if leg.size_survives_control:
+        return (
+            "Cut by the size of each species' own change in numbers, the shifts do sort: the "
+            f"spread is {leg.size.spread:+.3f} against {leg.precision.spread:+.3f} when cut by "
+            "the trends' own precision."
+        )
+    return (
+        "Nor do they follow numbers: cut by the size of each species' own change in abundance, the "
+        f"spread of shifts is {leg.size.spread:+.3f} against {leg.precision.spread:+.3f} when cut "
+        "by the trends' own precision, so what looked like abundance was rarity."
+    )
+
+
+def _season_sentence() -> str:
+    """Whether a species' trend depends on the season that measured it, from Phase 2h.
+
+    The one sentence `marine-null`'s caveat gains under Phase 2h's registered stop condition, and
+    it is a limit on the estimand rather than on the null: the pooled median stands, and what a
+    per-species trend *is* changes. The split-half figure is carried because without it a spread in
+    the standardised difference could be an autocorrelated centroid rather than a season.
+    """
+    from migratlas.reports import phase2h  # noqa: PLC0415 -- heavy, and only this claim
+
+    read = phase2h.collect()
+    if not read.calibrated:
+        return "Whether a trend depends on the season that measured it could not be calibrated."
+    passing = read.passing
+    if not passing or not read.controlled:
+        return (
+            "Whether a trend depends on the season that measured it was asked, and this "
+            "instrument could not separate it from a wandering centroid."
+        )
+    disagreeing = [family for family in passing if family.disagrees]
+    controls = [f.control_median for f in passing if f.control_median is not None]
+    if not disagreeing:
+        return (
+            f"And a trend does not depend on the season that measured it: in {len(passing)} "
+            "regions trawled in more than one season, the same species' two estimates agree "
+            "within their own errors."
+        )
+    correlations = [family.pair_correlation for family in disagreeing]
+    return (
+        f"And a trend depends on the season that measured it: in {len(disagreeing)} of "
+        f"{len(passing)} regions trawled in more than one season, the same species' two estimates "
+        "disagree beyond their own errors, ranking species alike at only "
+        f"{min(correlations):+.2f} to {max(correlations):+.2f} — while two halves of one season "
+        f"sit at {max(controls):.2f} of the error that would make it noise. Where a species is, as "
+        "measured here, is a property of the animal and the season that looked."
+    )
+
+
+def _rain_sentence() -> str:
+    """Whether the southern cells that got wetter gained birds, from Phase 2g, in one sentence.
+
+    The registered consequence of its prediction 3 failing: the atlas claim's caveat gains the
+    region's own driver as a named null at the cell level, beside the species-level count that says
+    what rain does to these birds is decided species by species and cancels in the total. Computed
+    here at build; the species count rests on cell-independent intervals, which the note says.
+    """
+    from migratlas.reports import phase1e, phase2g  # noqa: PLC0415 -- heavy, and only this claim
+
+    frame, coverage = phase2g.design()
+    if not coverage.landed:
+        return "Rainfall between the epochs was asked for and did not land at every cell."
+    cells = phase2g.cell_level(frame)
+    footprint = phase1e.footprint(phase1e.EPOCH_2)
+    species = phase2g.species_level(frame, phase2g.reporting_rates(footprint))
+    if cells.wetter_gained:
+        sentence = (
+            f"Rain between the epochs does explain part of the per-cell change: partial r "
+            f"{cells.main.partial_r:+.3f}, spectral p {cells.spectral_p:.2f}."
+        )
+    else:
+        sentence = (
+            f"Rain between the epochs does not explain the per-cell change either: partial r "
+            f"{cells.main.partial_r:+.3f}, spectral p {cells.spectral_p:.2f}."
+        )
+    if species is None:
+        return sentence
+    return (
+        f"{sentence} Yet {species.clear} of {len(species.responses)} species' reporting rates "
+        f"follow it beyond their own error against a chance bar of {species.bar}, in both "
+        "directions, so what rain does to these birds is decided species by species and cancels "
+        "in the total."
+    )
+
+
+def _seas_finding() -> Finding | None:
+    """Phase 3e's established result, owed to the ledger since the presentation arc closed.
+
+    Two halves and the note calls them inseparable: the seas differ emphatically, and the
+    thermometer does not sort which of them moved. Publishing either alone would be a different
+    claim -- the heterogeneity without the null reads as "warming redistributes fish unevenly",
+    and the null without the heterogeneity reads as "warming does nothing".
+    """
+    from migratlas.metrics import range as range_metrics  # noqa: PLC0415 -- heavy
+    from migratlas.reports import phase1b, phase3b, phase3e, phase3k  # noqa: PLC0415 -- heavy
+
+    fitted, coverage, calibration = phase3e.units_3e()
+    if not calibration.passes or len(fitted) < phase3b.MIN_UNITS:
+        return None
+    fit = phase3b.regression(fitted)
+    if not fit.heterogeneous:
+        return None
+    # ADR 0016, extended to Q by this phase because that ADR deferred it here. Q is a sum over
+    # units, so one extreme sea could carry it exactly as one carried Phase 3g's slope -- and a
+    # heterogeneity claim that rests on a single sea is a claim about that sea.
+    if not fit.q_survives:
+        log.warning("seas-disagree withheld: Q does not survive dropping one unit")
+        return None
+    # Phase 3k's registered design: the stations' own movement as a coefficient rather than a
+    # correction. The claim states what survives it, so a fit that cannot be made withholds the
+    # claim rather than publishing the sentence from before that phase ran.
+    drift = phase3k.fit_drift(
+        phase3k.drift_units(fitted, range_metrics.to_cells(phase1b.survey_unit(phase1b.load())))
+    )
+    if drift is None:
+        log.warning("seas-disagree withheld: the registered drift fit could not be made")
+        return None
+    # A null that clears zero with one unit dropped is a null worth describing as fragile. Computed
+    # from the leave-one-out rather than typed, so the sentence goes when the fragility does.
+    fragile = drift.warming_leverage is not None and any(
+        clears for _, _, _, clears in drift.warming_leverage.survivals
+    )
+    sign = "negative" if drift.warming_slope < 0 else "positive"
+
+    return Finding(
+        key="seas-disagree",
+        plain_how=(
+            "The same research trawls, cut a different way. Instead of asking how far fish moved "
+            "on average, we asked whether the seas agree with each other at all — a formal test of "
+            "whether eighteen surveys are one population with noise or genuinely different places. "
+            "Then we asked whether the seas that warmed fastest were the seas whose fish moved "
+            "furthest, using satellite temperature over each survey's own footprint."
+        ),
+        realm=Realm.MARINE.value,
+        taxon_scope=TaxonScope.EXACT.value,
+        evidence_type=EvidenceType.SURVEY_INDEX.value,
+        bias=SEAS_DISAGREE_BIAS,
+        plain=(
+            "Most of what these surveys report as fish moving is where the ships went. What is "
+            "left still differs from sea to sea, and how fast a sea warmed does not sort it."
+        ),
+        matters=(
+            "A single number for the ocean would erase this, and a single number is what a reader "
+            "wants. The useful half of the answer is how much of the disagreement is the surveying "
+            "rather than the sea: most of it, which is a warning about every range-centre on "
+            "this site. And the obvious explanation for who moved — whose water warmed most — is "
+            "measured here and is not the answer."
+        ),
+        plain_caveat=(
+            "This says the seas still differ after their own station drift is taken out, and that "
+            "temperature does not sort them. It does not say what does. Whether the fish or the "
+            "sea carries the difference was asked, and once chance is counted the two explain "
+            "about the same."
+        ),
+        claim=(
+            f"Across {fit.units} shelf-survey segments the latitude trends are heterogeneous far "
+            f"beyond sampling — Cochran's Q {fit.q_statistic:.1f} against a chi-square bar of "
+            f"{fit.q_bar:.1f} — while warming does not predict which segments moved: "
+            f"{fit.temp_slope:+.3f} ± {fit.temp_ci:.3f} °latitude per °C, both per decade. With "
+            "each survey's own sampling drift in the design, a degree of station movement carries "
+            f"{drift.drift_slope:+.2f} ± {drift.drift_ci:.2f} degrees of reported movement, the "
+            f"residual heterogeneity is Q {drift.residual_q:.1f} against {drift.residual_bar:.1f}, "
+            f"and warming stays null at {drift.warming_slope:+.3f} ± {drift.warming_ci:.3f}."
+        ),
+        value=(
+            f"Q {fit.q_statistic:.1f} against a bar of {fit.q_bar:.1f} across {fit.units} "
+            f"segments; warming {fit.temp_slope:+.3f} ± {fit.temp_ci:.3f} °lat per °C"
+        ),
+        scope=(
+            f"{fit.units} bottom-trawl survey segments, each its longest unbroken run under one "
+            f"gear clipped to the satellite era at twenty years or more, against a footprint-mean "
+            f"satellite sea-surface temperature. {len(coverage)} surveys published as coverage "
+            f"instead."
+        ),
+        caveat=(
+            "The heterogeneity that survives the stations' own movement is about a third of the "
+            f"published Q, and it clears its bar by a weight margin of {drift.residual_margin:.2f} "
+            "times while the dependence corrections this project has measured on comparable "
+            "intervals run 2.4 to 4.5 times — so it clears, and not comfortably. The warming null "
+            "is an average over units that disagree, so it rules out warming as the sorter on this "
+            f"axis at this unit, not as a driver; with the drift in the design its sign is {sign}"
+            + (
+                ", and dropping one segment takes it clear of zero, stated rather than read"
+                if fragile
+                else ""
+            )
+            + ". Cut in thirds by thermal position, warming rate and depth, no third of the pairs "
+            "moved differently beyond its own null, so the null is not hiding a subset along any "
+            "axis this lake can define. The registered depth interaction came out "
+            f"{fit.interaction_slope:+.3f} ± {fit.interaction_ci:.3f}, the opposite sign to the "
+            "prediction, and is reported as the graded failure it is. The driver is a satellite "
+            "reading the surface where the fish are on the bottom, bounded only by the two waters "
+            f"agreeing in direction at {calibration.correlation:+.3f} across {calibration.units} "
+            "surveys."
+        ),
+        method="docs/methods/phase3e-marine-oisst.md",
+        direction="limit",
+        supporting=[
+            "The heterogeneity survives ADR 0016: dropping any one of the segments leaves Q above "
+            "its own recomputed bar, so this is not one extreme sea carrying a statistic.",
+            "It does not survive intact as a claim about oceans. With each survey's own station "
+            "drift as a coefficient rather than a correction, a degree of station movement carries "
+            f"{drift.drift_slope:+.2f} ± {drift.drift_ci:.2f} degrees of reported movement -- "
+            "nearly one for one -- and the heterogeneity left over is "
+            f"Q {drift.residual_q:.1f} against {drift.residual_bar:.1f}, surviving the loss of any "
+            "one segment. The finding is about a third the size it was published at and it is "
+            "about surveys rather than seas.",
+            "Whether the animal or the sea carries the spread was asked at a five-survey floor, "
+            "and the two came out about level once the number of groups was counted -- a "
+            "between-group share scores high with its labels shuffled when the groups are many "
+            "and small. The marine-null claim carries that measurement. The sentence this claim "
+            "published on 2026-09-01, that the species explains 2.8 times what the survey does, "
+            "compared 297 groups against 23 and is withdrawn.",
+            f"Its margin against the weights is narrower than that, and is stated rather than "
+            f"left implicit: Q clears while each survey's interval is understated by less than "
+            f"{fit.q_robustness:.2f} times. Those intervals treat the species inside a survey as "
+            f"independent when they share its gear, footprint and water, and the comparable "
+            f"corrections this project has measured elsewhere run 2.4 to 4.5 times. Nobody has "
+            f"measured the factor for this quantity, so the honest position is that the "
+            f"heterogeneity is large and its clearance is not comfortable.",
+            "The warming null has no verdict for a single unit to overturn, and the furthest any "
+            "one segment moves it leaves it a null as well.",
+            "Five of five registered predictions were graded and two came back false, including "
+            "the warming one this claim reports — the design was built to be able to say so.",
+            "The satellite substitution was gated on a calibration fixed before any value was "
+            "read: where a survey recorded its own water, the two had to agree in direction or "
+            "nothing below was interpreted.",
+            "An earlier version of this phase died on its own floor, with ten units against a "
+            "registered twelve, because it required each survey to have recorded its own "
+            "temperature. The salvage is what made eighteen possible and it is priced in the note.",
+        ],
+    )
+
+
+PROJECTION_MASK_BIAS: Final = _domains(
+    geographic=(
+        "bounded",
+        "The 78 radar stations between 37°N and 50°N, which is where the response function is "
+        "published and nowhere else. Nothing here is projected outside that band, and the whole "
+        "point of the claim is that a fitted line does not travel.",
+    ),
+    temporal=(
+        "open",
+        "Every model's anomaly is taken against its own 1995-2014 baseline, which ends where "
+        "CMIP6's historical runs end. The response it multiplies was fitted over 1995-2025, so the "
+        "two windows do not coincide and the ratio construction is what makes that tolerable.",
+    ),
+    taxonomic=(
+        "open",
+        "The response is aerial reflectivity, which cannot tell a bird from a bat from an insect. "
+        "A projection inherits that whole and adds nothing to it.",
+    ),
+    environmental=(
+        "open",
+        "Wind, land use, light and the unexplained half of the observed advance are all held at no "
+        "change, which is a claim about the future and not a neutral choice.",
+    ),
+    detectability=(
+        "addressed",
+        "Every row carries whether that station has any interannual skill at all, because a "
+        "scenario response read forwards is not a year-ahead forecast and a reader who confuses "
+        "them has been misled by presentation.",
+    ),
+    phenological=(
+        "bounded",
+        "The response is a passage date, so this projects timing and nothing about abundance, "
+        "route or destination.",
+    ),
+)
+
+
+def _projection_finding() -> Finding | None:
+    """Forecast A's deliverable, which is the mask and never the shift.
+
+    The note's own closing words: *"a successor should also consider reporting the sayable share as
+    the headline number rather than any shift."* Done here, and the reason is arithmetic -- masking
+    keeps exactly the cells bunched against the envelope's upper edge, so the median sayable shift
+    sits near a day in every scenario at every horizon. Four scenarios differing by four degrees of
+    warming cannot imply the same shift; what they share is the edge of the mask.
+    """
+    from migratlas.reports import forecast_a  # noqa: PLC0415 -- heavy, and only this claim
+
+    read = forecast_a.mask()
+    if read is None:
+        return None
+
+    return Finding(
+        key="projection-mask",
+        plain_how=(
+            "No new measurement and no model of our own. The relationship between a warm "
+            "pre-season and an earlier passage was already fitted from thirty years of "
+            "observations, over a range of temperatures those thirty years actually contained. We "
+            "took published climate projections, asked how much warmer each scenario makes each "
+            "station's pre-season, and then asked the only question that matters: is that warming "
+            "inside the range the relationship was measured over? Where it is not, nothing is "
+            "drawn."
+        ),
+        realm=Realm.AERIAL.value,
+        taxon_scope=TaxonScope.UNATTRIBUTED.value,
+        evidence_type=EvidenceType.FLUX.value,
+        bias=PROJECTION_MASK_BIAS,
+        plain=(
+            "If emissions are cut hard, about half these places stay inside the range we measured. "
+            "Under every other scenario the warming runs off the end of it, and there we decline "
+            "to guess."
+        ),
+        matters=(
+            "A projection three degrees outside the range it was fitted in is not a cautious "
+            "estimate. It is arithmetic wearing the clothes of evidence, and it is the single "
+            "commonest way this kind of forecasting goes wrong. Publishing where the answer runs "
+            "out is the result here, and it is a smaller map than anyone wants."
+        ),
+        plain_caveat=(
+            "This projects only the part of the timing shift that follows temperature, which is "
+            "about half of it. And it is not a forecast for any particular year — a response read "
+            "forwards under a scenario and a prediction of next autumn are different things."
+        ),
+        claim=(
+            f"Of the scenario-and-horizon frames projected across {read.stations} stations in the "
+            f"claim band, {read.unsayable} of {read.total_frames} have nothing sayable in them at "
+            f"all: the multi-model median warming reaches {read.worst_delta:+.2f} °C against a "
+            f"fitted envelope whose upper bound is {read.envelope_high:+.2f} °C. The best-covered "
+            f"frame is {read.best_scenario} at {read.best_window}, sayable at "
+            f"{read.best_share:.0%} of stations, and the largest sayable shift anywhere is "
+            f"{read.largest_shift:.2f} days per the fitted response."
+        ),
+        value=(
+            f"{read.best_share:.0%} sayable at best ({read.best_scenario}, {read.best_window}); "
+            f"{read.unsayable} of {read.total_frames} frames entirely unsayable"
+        ),
+        scope=(
+            f"{read.stations} radar stations between 37°N and 50°N, four SSPs and two twenty-year "
+            "windows, each model's June-July anomaly against its own 1995-2014 baseline, masked "
+            "against the 5th-to-95th band of the within-station departures the response was fitted "
+            "over."
+        ),
+        caveat=(
+            "The number a reader will reach for is the projected shift, and it is the one number "
+            "here that misleads: masking removes every cell warmer than the envelope's edge, so "
+            "the surviving cells are bunched against that edge and the median sayable shift sits "
+            "near a day in every scenario at every horizon. Four scenarios that differ by four "
+            "degrees of warming cannot imply the same shift — what they share is the mask. Read it "
+            "as a bound on the thermal component, never as an expectation. That component is also "
+            "only about half of the observed advance and the response behind it can be fitted on "
+            "two timescales, so it carries its own range before any scenario is applied. Nothing "
+            "here says the response stays linear outside the band, which is exactly what the mask "
+            "declines to assert, and the model spread is wider than the response's own interval — "
+            "which model you pick matters more than how well the response is known. And this is "
+            "not a year-ahead forecast: interannual skill is absent at most of these stations, and "
+            "a standing annual prediction was tested and refused on measured grounds."
+        ),
+        method="docs/methods/forecast-a.md",
+        direction="limit",
+        supporting=[
+            "The mask was applied before any projected value was reported, not after inspecting "
+            "them, and the envelope, the windows, the member cap and the baseline were all fixed "
+            "before a single scenario store was opened.",
+            "Four of five registered predictions held. The one that failed was the mid-century "
+            "share under strong mitigation, short of a bar chosen for its roundness by one "
+            "station, and it is recorded as false rather than rounded up.",
+            "The response function is read from the published fit rather than re-estimated here, "
+            "so the projection and the ledger cannot disagree about the coefficient they share.",
+            "Every projected row carries whether its station has any interannual skill at all, "
+            "because a scenario response and a year-ahead forecast are different objects and the "
+            "difference is presentation's responsibility.",
+        ],
+    )
+
+
+def _optional(finding: Finding | None, *, withheld: str) -> list[Finding]:
+    """One finding, or none with the reason logged.
+
+    Three claims are conditional on their own data clearing a registered floor, and each wrote the
+    same four lines. A withheld finding must leave a trace -- silence is how a claim disappears
+    without anybody deciding to drop it.
+    """
+    if finding is not None:
+        return [finding]
+    log.warning(withheld)
+    return []
+
+
+def _idle_network_findings() -> list[Finding]:
+    """Phase 1k and 1l's publishable half, which is not the half that was expected.
+
+    1l's stop condition fired -- two protocols disagree about one species more than species disagree
+    with each other -- so 1k's three latitude medians are withheld and the bound 1l measured stands
+    in their place. The butterfly timing leg makes no cross-network comparison and is unaffected.
+
+    Its own function rather than eight statements in `collect`, which was already at its limit.
+    """
+    return [
+        *_optional(
+            _protocol_finding(),
+            withheld="protocol-disagreement withheld: the paired panel fell below its floor",
+        ),
+        *_optional(
+            _flight_finding(),
+            withheld="flight-advance withheld: no series cleared the registered floor",
+        ),
+        *_optional(
+            _seas_finding(),
+            withheld=(
+                "seas-disagree withheld: the calibration, the unit floor or the heterogeneity "
+                "test did not hold"
+            ),
+        ),
+        *_optional(
+            _projection_finding(),
+            withheld="projection-mask withheld: no scenario frame carried a station",
+        ),
+    ]
+
+
+def _protocol_finding() -> Finding | None:
+    """The bound Phase 1l measured on this project's own comparative method.
+
+    Published because Phase 1l's stop condition fired: its ratio came back above 1, so Phase 1k's
+    three latitude medians are withheld and this is what stands in their place. A project that
+    compares realms, legs and networks has to publish what it measured about the reliability of
+    comparing.
+    """
+    from migratlas.reports import phase1l  # noqa: PLC0415 -- heavy, and only this claim
+
+    paired = phase1l.paired()
+    split = phase1l.decompose()
+    if paired is None or split is None:
+        return None
+
+    noise = 100.0 * split.noise_share
+    corrected = (
+        split.method_sd / split.species_sd
+        if split.method_sd is not None and split.species_sd
+        else float("nan")
+    )
+    return Finding(
+        key="protocol-disagreement",
+        realm=Realm.TERRESTRIAL.value,
+        taxon_scope=TaxonScope.EXACT.value,
+        evidence_type=EvidenceType.SURVEY_INDEX.value,
+        bias=PROTOCOL_BIAS,
+        plain=(
+            "Two bird surveys counting the same species often disagree about which way it is "
+            "moving, and mostly because neither can measure one species precisely enough to tell."
+        ),
+        matters=(
+            "Almost everything on this site is a comparison: one place against another, one kind "
+            "of animal against another, one method against another. All of it assumes that how "
+            "you counted matters less than what you counted. Here that assumption was tested for "
+            "the first time and it did not hold -- the two matter about equally. The useful half "
+            "of the answer is why: a single species counted by a single programme is too faint a "
+            "signal to compare, which is a reason to read the pages that follow as being about "
+            "many animals at once rather than about any one of them."
+        ),
+        plain_caveat=(
+            "This is one country and one kind of survey. It does not prove the same is true of "
+            "radar or of fishing nets, and it cannot say which of the two surveys is closer to "
+            "right. Averaging species together makes each reading sharper without bringing the "
+            "two surveys any closer, so the disagreement is not something more counting fixes."
+        ),
+        plain_how=(
+            "Sweden runs two independent bird-counting programmes side by side. We took every "
+            "species counted by both, cut the records back to the years the two share, and worked "
+            "out how far north that species had moved according to each one. Then we compared the "
+            "two answers for the same animal, so that differences between species could not be "
+            "the explanation, and asked whether the gap between methods was smaller or larger "
+            "than the gap between species."
+        ),
+        claim=(
+            f"On the one population pair this lake can check, between-protocol disagreement in a "
+            f"species' latitudinal trend is comparable to between-species dispersion once each "
+            f"side's own estimation error is removed from both: {corrected:.2f} to one. Only "
+            f"{noise:.0f}% of the raw paired disagreement is that error, so most of what "
+            f"separates the two programmes is a real difference in what they measure rather than "
+            f"noise in how well they measure it."
+        ),
+        value=(
+            f"method-to-species scatter {corrected:.2f}x, estimation error removed from both; "
+            f"{noise:.0f}% of the raw disagreement is that error"
+        ),
+        scope=(
+            f"Two Swedish bird programmes, {paired.shared_years[0]}-{paired.shared_years[1]}, "
+            f"{paired.species} species qualifying in both at twenty years each, paired species by "
+            f"species with the window held common, of which {split.species} carry a standard "
+            f"error on both sides and enter the decomposition."
+        ),
+        # The footprint sentence lives in `supporting` rather than here. This record page overran
+        # its leaf by 19px at 1600x900 with it, found by the browser guard on 2026-09-02 -- an
+        # overrun the commit that added the sentence shipped without running the guard -- and the
+        # fix is the one the attribution's overrun taught: move the sentence to a page with room.
+        caveat=(
+            f"The two readings a paired difference allows have been separated rather than left "
+            f"open, from the standard errors the fits were already computing: {noise:.0f}% of the "
+            f"raw disagreement is the two fits' own estimation error, so the remainder is a real "
+            f"difference in what the programmes measure. And the remainder is a constant offset -- "
+            f"point counts read about a "
+            f"sixth of a degree per decade more northward movement than fixed routes, by the same "
+            f"amount whether a species is easy to count or hard, northern or southern. The sign "
+            f"disagreements are softer than they read: {split.flips_explained} of "
+            f"{split.flips} involve at least one estimate that cannot be told apart from zero, "
+            f"which two weak readings of a near-zero trend do as a matter of course. The reason "
+            f"is in the third figure: a median species trend here is "
+            f"{split.slope_vs_stderr:.2f} standard errors from zero, short of the two a single "
+            f"estimate needs, so these networks do not measure one species' movement precisely "
+            f"enough to compare. And agreement would have licensed comparison, never accuracy -- "
+            f"two programmes in one country can share a bias and agree while both are wrong."
+        ),
+        method="docs/methods/phase1l-paired-protocols.md",
+        direction="limit",
+        supporting=[
+            "The pairing was run because an earlier version of this diagnosis compared two "
+            "network averages over different species mixtures, which is the error it was warning "
+            "about; removing the mixture made the disagreement larger rather than smaller.",
+            "It is not geography: matching the two footprints cell for cell leaves the ratio where "
+            "it was, because the smaller programme's cells turn out to be 97% nested inside the "
+            "larger one's rather than beside them.",
+            "Two of the phase's four registered predictions were graded false, and they fired "
+            "the stop condition that withholds the distribution results this claim replaces.",
+            "A successor grouped the same species by where they live and recomputed the ratio "
+            "with groups as the unit, which is how a difference that averages away is told from "
+            "one that does not. It did not move, so the remainder is systematic rather than "
+            "species-specific -- the more serious of the two possibilities, and the reason the "
+            "withholding stands on firmer ground than when it fired.",
+            "The window was made common before any slope was fitted, so the disagreement is not "
+            "two programmes describing two different periods.",
+            f"The headline moved in the correcting, and the earlier figure is kept here rather "
+            f"than replaced quietly: {paired.ratio:.2f} compared interquartile ranges with both "
+            f"sides' estimation error left in, and {corrected:.2f} compares standard deviations "
+            f"with that error removed from each. Two changes at once, so the fall is not "
+            f"attributable to the correction alone.",
+        ],
+    )
+
+
+def _flight_finding() -> Finding | None:
+    """The largest timing signal in this lake, and the first from an insect series.
+
+    The comparison to the radar is published only while the flight curve's *shape* is flat. That is
+    Phase 1j's prediction 6, whose registered consequence is that a shape trend withdraws the
+    comparison rather than caveating it. The reason is that the two records summarise their season
+    differently -- a count-weighted mean here against a traffic-weighted median there -- so a
+    constant offset between them cancels in a ratio of trends and only a trend in the shape can
+    bias it. The standalone advance is unaffected either way and keeps its own sentence.
+    """
+    from migratlas.reports import phase1k  # noqa: PLC0415 -- heavy, and only this claim
+
+    flight = phase1k.timing()
+    if flight is None:
+        return None
+
+    from migratlas.reports import phase2d  # noqa: PLC0415 -- heavy, and only this claim
+
+    # Phase 2d's response, calibrated against the very `timing` this claim is built on. The
+    # environmental domain said "no driver enters this" until 2026-09-02; what replaces it is
+    # computed here, and the sentences go when the response stops clearing zero.
+    response = phase2d.collect(timing=flight)
+    pooled = response.pooled if response is not None and response.calibrated else None
+    thermal = pooled is not None and pooled.negative_and_clear
+    follows = " Their dates follow how warm the spring before was." if thermal else ""
+    if thermal and pooled is not None and response is not None:
+        thermal_caveat = (
+            f"The response to pre-season temperature is measured and it is not a cause -- a date "
+            f"regressed on a temperature at the same place -- and {pooled.share:.0%} of the "
+            f"advance is the size that response predicts from the warming."
+        )
+        thermal_claim = (
+            f" The date follows the pre-season temperature at {pooled.median_b:+.2f} days per °C, "
+            f"the median over {pooled.units} species-generations."
+        )
+        environmental = BiasDomain(
+            "environmental",
+            "bounded",
+            f"Pre-season temperature enters as a driver in Phase 2d: {pooled.median_b:+.2f} days "
+            f"per °C, fitted within site with a year term. A response and not a cause -- nitrogen, "
+            f"land use and recorder behaviour that trend with British springs survive the fit.",
+        )
+        thermal_bullets = [
+            f"Phase 2d fitted the response per species-generation with site intercepts and a year "
+            f"term, intervals clustered on year: median {pooled.median_b:+.2f} days per °C "
+            f"[{pooled.interval_b[0]:+.2f}, {pooled.interval_b[1]:+.2f}] over {pooled.units} "
+            f"units, {response.clear} of them clear of zero and every one of those negative. The "
+            f"year term moved the median by {abs(pooled.median_a - pooled.median_b):.2f}, so the "
+            f"co-trend is small here as it was on the radar.",
+            f"The responses are the species': Cochran's Q {pooled.q_statistic:.1f} against a bar "
+            f"of {pooled.q_bar:.1f}, so they are not one number with noise. The pre-season warmed "
+            f"{pooled.median_warming:+.2f} °C per decade, and the response predicts "
+            f"{pooled.share:.0%} of the observed advance against about half for the radar.",
+        ]
+    else:
+        thermal_caveat = (
+            "No driver enters the fit, so it is a change and not an attribution -- that warming is "
+            "the cause is the literature's expectation and is untested here."
+        )
+        thermal_claim = ""
+        environmental = BiasDomain(
+            "environmental",
+            "open",
+            "No driver enters this. That the advance tracks warming is the literature's "
+            "expectation and is not tested here, so the finding is a change and not an "
+            "attribution.",
+        )
+        thermal_bullets = []
+
+    published_width = flight.interval[1] - flight.interval[0]
+    widening = (flight.widest[1] - flight.widest[0]) / published_width if published_width else 1.0
+    shape = phase1k.flight_shape()
+    moved = [trend for trend in shape if not trend.flat]
+    # An unevaluated guard is not a guard that passed: with no shape series the comparison is
+    # unlicensed, which is the direction the registration points.
+    licensed = bool(shape) and not moved
+
+    comparison = ""
+    guard = ""
+    if licensed:
+        radar, _ = phase1k.calibrate_timing()
+        ratio = abs(flight.median / radar) if radar else float("nan")
+        # The plain sentence says "nearly four times" in words, as every plain sentence here is
+        # worded rather than numbered. A word is still a published figure, so it is published only
+        # while the recomputed ratio is one the word describes -- the README status line and
+        # `coverage-bias` were both wrong for days because a figure was typed once.
+        verbal_low, verbal_high = 3.5, 4.5
+        if verbal_low <= ratio <= verbal_high:
+            comparison = " and the shift is nearly four times the one measured in the night sky"
+        else:
+            log.warning(
+                "flight-advance: the radar ratio is %.2f, which 'nearly four times' no longer "
+                "describes, so the plain sentence drops the comparison",
+                ratio,
+            )
+        guard = (
+            " That ratio rests on a guard graded before it was quoted: a mean and a median are "
+            "commensurable only while the curve's shape holds still, and neither measure of it "
+            "moved."
+        )
+        supporting_comparison = (
+            f"The advance is {ratio:.1f} times the radar's autumn slope, recomputed from the lake "
+            f"rather than quoted, and Phase 1j's registered guard on the comparison holds: "
+            f"{'; '.join(trend.label for trend in shape)}."
+        )
+    else:
+        guard = (
+            " No ratio between the two is published: a mean and a median are commensurable only "
+            "while the curve's shape holds still, and it did not. Withdrawing rather than "
+            "caveating is Phase 1j's registered consequence."
+        )
+        supporting_comparison = (
+            "The comparison to the radar is withheld, and by a condition registered in Phase 1j "
+            "before either number existed. What moved: "
+            + (
+                "; ".join(trend.label for trend in moved)
+                if moved
+                else "nothing measurable -- the shape series is unavailable, so the guard could "
+                "not be evaluated at all"
+            )
+            + ". The interval resamples units as if independent, so it is if anything too tight -- "
+            "which withholds more than a wider one would, and is the safe direction for a guard."
+        )
+
+    return Finding(
+        key="flight-advance",
+        realm=Realm.TERRESTRIAL.value,
+        taxon_scope=TaxonScope.EXACT.value,
+        evidence_type=EvidenceType.SURVEY_INDEX.value,
+        bias=[
+            environmental if domain.domain == "environmental" else domain for domain in FLIGHT_BIAS
+        ],
+        plain=(
+            f"British butterflies are flying about two days earlier every decade{comparison}."
+            f"{follows}"
+        ),
+        matters=(
+            "Timing is where a warming year shows up first, and for an animal that lives a few "
+            "weeks as an adult, emerging into the wrong fortnight is the whole of the stake. This "
+            "is the same question the radar answers over North America, asked of a completely "
+            "different kind of animal with a completely different instrument, on a panel eighty "
+            "times bigger."
+        ),
+        plain_caveat=(
+            "Most of these are butterflies that stay put, so this is when they emerge rather than "
+            "when they travel. It is one country, and it is volunteers walking fixed routes."
+        ),
+        plain_how=(
+            "Volunteers have walked the same fixed routes in Britain since the scheme began, "
+            "recording what they see. For each species at each site, the scheme records the middle "
+            "of its flight period, and we asked whether that date has moved -- one straight line "
+            "per site-species series, and only where fifteen years of it exist. Every series was "
+            "also compared against itself with the years shuffled, so a series only counts if it "
+            "beats its own noise."
+        ),
+        claim=(
+            f"Mean flight date across UK monitoring transects has advanced by "
+            f"{abs(flight.median):.2f} days per decade (median across {flight.units:,} "
+            f"site-species-generation series, 95% CI "
+            f"{flight.widest[0]:+.2f} to {flight.widest[1]:+.2f} with taxa resampled rather than "
+            f"series), with {flight.significant:,} series beating their own year-shuffle null "
+            f"against a chance bar of {flight.bar:,}.{thermal_claim}"
+        ),
+        value=(
+            f"{flight.median:+.2f} days per decade across {flight.units:,} series "
+            f"(IQR {flight.iqr[0]:+.1f} to {flight.iqr[1]:+.1f})"
+        ),
+        scope=(
+            f"UK Butterfly Monitoring Scheme transects, 1973-2021, {flight.units:,} "
+            "site-species-generation series clearing fifteen years each, split generations kept "
+            "apart from pooled-brood rows."
+        ),
+        caveat=(
+            "The median hides a spread that is wider than itself: the interquartile range runs "
+            f"{flight.iqr[0]:+.1f} to {flight.iqr[1]:+.1f} days per decade, so a substantial "
+            "minority of series are flying later, and this is a summary of series doing different "
+            f"things rather than one behaviour. {thermal_caveat} A mean flight date is one summary "
+            "of a flight period, and a species "
+            "whose season lengthened at one end without moving its centre reports nothing. And a "
+            "flight period is not a migration: the comparison to nocturnal passage is a comparison "
+            f"of thermal tracking, not of the same behaviour. No individual series is readable "
+            f"here: the median one sits {flight.slope_vs_stderr:.2f} standard errors from zero, "
+            f"short of the two a single estimate needs, so this is a statement about a network and "
+            f"never about a site or a species.{guard}"
+        ),
+        method="docs/methods/phase1k-idle-networks.md",
+        direction="change",
+        supporting=[
+            "The phase's estimator reproduced two of this project's published numbers before "
+            "touching a new source -- the marine median to three significant figures and the "
+            "aerial slope to two -- by calling those reports rather than a copy of them.",
+            supporting_comparison,
+            "The estimand had to be reconstructed because the lake stores no flight date, and the "
+            "first implementation fitted the wrong quantity; the correction is recorded in the "
+            "method note rather than edited away.",
+            f"The interval published here is {widening:.1f} times the one a resample over series "
+            f"gives, and it is the wider of two clusterings rather than the convenient one: "
+            f"{flight.units:,} series rest on {flight.taxa} taxa and one national spring, so "
+            f"treating them as independent was the error. Registered as a prediction before it was "
+            f"measured, and it came in above the bracket's floor.",
+            *thermal_bullets,
+        ],
+    )
+
+
 def _radar_coverage() -> tuple[int, int, int]:
     """Stations, first and last year of the radar record, read from the lake."""
     frame = (
@@ -652,12 +1562,72 @@ def _evidence_types_in_use() -> int:
     return sum(1 for kind in EvidenceType if lake_sources(kind))
 
 
+class Timescale(NamedTuple):
+    """The three pieces of prose the timescale bracket contributes to the attribution claim."""
+
+    share: str
+    """Appended to `value`: the bracket as a percentage range, or empty."""
+    caveat: str
+    """Appended to the caveat: why the share is a range and why it cannot be narrowed."""
+    supporting: str
+    """A supporting line, whether or not the check could run."""
+
+
+def _timescale(sensitivity: float, ensemble: float) -> Timescale:
+    """Bracket the attributed share over the two timescales the response can be fitted on.
+
+    The published response function carries no time term, so it absorbs the shared trend of passage
+    date and temperature and reproduces part of the advance by construction. Phase 2c refits with
+    one; the ledger carries both ends rather than the end that happens to be published.
+    """
+    from migratlas.reports import phase2c  # noqa: PLC0415 -- heavy, and only this claim
+
+    timescale = phase2c.bracket()
+    if timescale is None:
+        log.warning("anthropogenic-share: no timescale bracket, so the share is published as one")
+        return Timescale(
+            share="",
+            caveat="",
+            supporting=(
+                "The response function's timescale could not be checked on this build, so the "
+                "share is published as a point estimate rather than as the range it should be."
+            ),
+        )
+
+    low = ensemble * timescale.low
+    high = ensemble * timescale.high
+    moved = abs(sensitivity - timescale.interannual) / timescale.interannual_ci
+    return Timescale(
+        share=f", {low:.0%}-{high:.0%} of it",
+        # Short on purpose, and the coefficients live in `supporting` rather than here. The record
+        # page carrying value, scope and caveat overflowed by 43px with them in it, and the fix is
+        # the one the last overrun taught: move the sentence to a page with room rather than trim
+        # words until the pixels agree.
+        caveat=(
+            " The share is a range because the response can be fitted on two timescales and this "
+            "record cannot choose between them."
+        ),
+        supporting=(
+            f"The response function was refitted with a time term in it, because without one it "
+            f"absorbs the shared trend of passage date and temperature and would reproduce part of "
+            f"the advance by construction. Adding one moves the sensitivity from "
+            f"{sensitivity:+.3f} to {timescale.interannual:+.3f} days per °C across "
+            f"{timescale.units} stations — "
+            f"{moved:.2f} of its own interval — and the attributed share from {high:.0%} to "
+            f"{low:.0%}. That is why this number survived the check rather than being withdrawn. "
+            f"The record cannot narrow the range further: a response acting over decades and a "
+            f"non-thermal process that trends the same way are the same column of that design "
+            f"matrix."
+        ),
+    )
+
+
 def collect() -> list[Finding]:
     """Compute every finding. Re-runs the analyses, so this takes minutes rather than seconds."""
     # Imported here rather than at module scope: the reports import this module's siblings,
     # so a top-level import would close a cycle.
     from migratlas.metrics import range as range_metrics  # noqa: PLC0415
-    from migratlas.reports import phase1b  # noqa: PLC0415
+    from migratlas.reports import phase1b, phase3k  # noqa: PLC0415
     from migratlas.reports.phase1 import AUTUMN  # noqa: PLC0415
 
     _, first_year, last_year = _radar_coverage()
@@ -691,8 +1661,8 @@ def collect() -> list[Finding]:
             evidence_type=EvidenceType.SURVEY_INDEX.value,
             bias=MARINE_NULL_BIAS,
             plain=(
-                "Fish are not all moving towards the poles. Different seas are doing different "
-                "things, and some are doing the opposite of others."
+                "Fish are not all moving towards the poles. Different surveys report different "
+                "directions, and much of that is where the ships went, not where the fish did."
             ),
             matters=(
                 '"Fish are moving polewards as the sea warms" is one of the best-known '
@@ -718,8 +1688,26 @@ def collect() -> list[Finding]:
             caveat=(
                 "A pooled median hides the variation worth predicting: individual surveys reach "
                 "-0.22 and +0.26 °latitude per decade in opposite directions. The unit of "
-                "analysis has to be the species in its region, not the ocean."
+                "analysis has to be the species in its region, not the ocean. "
+                + _sorting_sentence(phase3k.fit_species(pooled))
+                + " "
+                + _population_sentence(pooled)
+                + " "
+                + _season_sentence()
             ),
+            # The mixture check moved here when Phase 2h's computed sentence pushed this record
+            # page 40px over at 1600x900. It is the oldest sentence in the caveat and the least
+            # load-bearing of them: a robustness check that came back null, where the three that
+            # stayed each name what the shifts do not follow.
+            supporting=[
+                "This null was tested for a mixture rather than left as an average: cut into "
+                "thirds by where a species sits in its own survey's water, by how fast that water "
+                "warmed, and by how deep it lives, no third moved differently from the others "
+                "beyond what shuffling the labels produces, and no grouping explained more than a "
+                "twentieth of the variation between pairs. A warming that hit some and spared the "
+                "rest would look like this median, and along these three axes it is not what is "
+                "here."
+            ],
             method="docs/methods/phase1b-marine.md",
             direction="null",
             specimen_key=exemplar[0] if exemplar else None,
@@ -829,8 +1817,9 @@ def collect() -> list[Finding]:
         # smaller advance. That is not a competing estimate of this number and it is not averaged
         # into it -- but it changes how "almost all" here should be read, so it goes in the caveat
         # rather than staying in a methods note nobody opens.
-        from migratlas.reports import phase2a_attrici  # noqa: PLC0415
+        from migratlas.reports import phase2a_attrici  # noqa: PLC0415 -- heavy, and only here
 
+        timescale = _timescale(seen.sensitivity, primary.ensemble)
         second = phase2a_attrici.attributed(seen.sensitivity, seen.sensitivity_ci95)
         variability = (
             ' Read "almost all" as a share of the forced warming as the ensemble mean has it, '
@@ -889,7 +1878,10 @@ def collect() -> list[Finding]:
                     "Human forcing accounts for almost all of the pre-season warming the animals "
                     "are responding to, and so for about half of the observed advance."
                 ),
-                value=f"{days:+.2f} days per decade of the {seen.advance:+.2f} observed",
+                value=(
+                    f"{days:+.2f} days per decade of the {seen.advance:+.2f} observed"
+                    f"{timescale.share}"
+                ),
                 scope=(
                     f"{primary.models} CMIP6 models with both a historical and a hist-nat run, "
                     f"sampled at the {seen.stations} radar stations between 37°N and 50°N over "
@@ -902,11 +1894,13 @@ def collect() -> list[Finding]:
                     "share "
                     f"spans {bracket[0]:.2f} to {bracket[-1]:.2f} depending on the window fitted, "
                     "and CMIP6's historical runs stop in 2014 while the radar record runs to 2025."
+                    + timescale.caveat
                     + variability
                 ),
                 method="docs/methods/phase2a-attribution.md",
                 direction="change",
                 supporting=[
+                    timescale.supporting,
                     "The counterfactual runs warm at "
                     f"{primary.natural:+.2f} °C per decade against {primary.historical:+.2f} "
                     "with human forcing included.",
@@ -923,8 +1917,8 @@ def collect() -> list[Finding]:
         Finding(
             key="coverage-bias",
             plain_how=(
-                "No new measurement — a count of what this project holds. Every source with a "
-                "time axis was tallied by hemisphere, separating the records that describe "
+                "No new measurement — a count of what this project holds. Every record that "
+                "runs over time was tallied by hemisphere, separating the records that describe "
                 "animals from the records of weather and vegetation used to explain them. The "
                 "two shares are nothing like each other, and that gap bounds every question "
                 "that needs both halves at once."
@@ -1018,8 +2012,9 @@ def collect() -> list[Finding]:
                 "correcting for how hard people looked changes what you conclude."
             ),
             plain_caveat=(
-                "Two snapshots thirty years apart, in three countries, in the places volunteers "
-                "atlassed twice. It is a before and after, not a trend, and it is not Africa."
+                "Two snapshots thirty years apart, in three countries, in the map squares "
+                "volunteers covered twice. It is a before and after, not a trend, and it is not "
+                "Africa."
             ),
             claim=(
                 "Between the two southern African bird atlases there is no net change in "
@@ -1048,7 +2043,7 @@ def collect() -> list[Finding]:
                 "unnecessary. Read the other way, that is why the number can be trusted: it does "
                 "not depend on the model. What it cannot do is separate a species that left from "
                 "one that stayed and was recorded differently in a landscape that changed around "
-                "it — no land-use covariate enters this, and attribution is a later note."
+                "it — no land-use covariate enters this. " + _rain_sentence()
             ),
             method="docs/methods/phase1e-atlas.md",
             direction="null",
@@ -1079,11 +2074,14 @@ def collect() -> list[Finding]:
 
     findings.append(_skill_finding())
 
-    displacement = _displacement_finding()
-    if displacement is not None:
-        findings.append(displacement)
-    else:
-        log.warning("displacement-flat withheld: the escape correlation exceeded its bar")
+    findings.extend(_idle_network_findings())
+
+    findings.extend(
+        _optional(
+            _displacement_finding(),
+            withheld="displacement-flat withheld: the escape correlation exceeded its bar",
+        )
+    )
 
     # --- Phase 1i: does any of this transfer? -----------------------------
     # The slowest entry in the build by a wide margin: it re-runs all three legs, and two of them
@@ -1097,6 +2095,12 @@ def collect() -> list[Finding]:
     agreed = transfer.indistinguishable
     worst = transfer.worst
 
+    # How many standard errors the marine median sits from zero. Named because the caveat used
+    # to call both agreeing legs "indistinguishable from no tracking", and that is true of one
+    # of them: a measured near-absence and an unmeasurable one are different things.
+    marine_leg = by_realm[phase1i.MARINE]
+    marine_sigma = abs(marine_leg.median) / marine_leg.median_se
+
     def coverage_of(realm: str) -> float:
         return next(held.coverage for held in transfer.held_out if held.realm == realm)
 
@@ -1104,7 +2108,8 @@ def collect() -> list[Finding]:
         Finding(
             key="transfer-fails",
             plain_how=(
-                "A test of whether one realm's answer travels. Three bodies of evidence, and "
+                "A test of whether an answer from one kind of record carries to another. Three "
+                "bodies of evidence, and "
                 "three runs: each time, fit on two of them and try to describe the third, which "
                 "the model has never seen. Two of the three could be recovered that way. The "
                 "one measured from the air could not, by an order of magnitude — which is the "
@@ -1115,15 +2120,16 @@ def collect() -> list[Finding]:
             evidence_type="all",
             bias=TRANSFER_BIAS,
             plain=(
-                "Two records on opposite sides of the world agreed about how animals follow a "
-                "warming climate. The third, measured a different way, did not."
+                "Two records on opposite sides of the world agreed that these animals barely "
+                "follow the warming. The third found a large response, so what crossed the "
+                "equator was an absence."
             ),
             matters=(
                 "Almost every published forecast of where wildlife will go assumes a response "
                 "measured in one place holds in another. It is an assumption because testing it "
-                "needs several responses measured the same way, which is rare. Here the crossing "
-                "that everyone worries about — hemisphere — turned out to be the one that held, "
-                "and the one nobody names broke it."
+                "needs several responses measured the same way, which is rare. This is three of "
+                "them under one audit — and the honest result is that the test could not be run "
+                "as intended, because two of the three had almost no response to carry across."
             ),
             plain_caveat=(
                 "Three records is three points. The one that disagreed is also the only one "
@@ -1134,9 +2140,12 @@ def collect() -> list[Finding]:
                 "Thermal tracking measured in the northern marine realm "
                 f"({by_realm[phase1i.MARINE].median:+.3f}) and the southern terrestrial realm "
                 f"({by_realm[phase1i.TERRESTRIAL].median:+.3f}) cannot be told apart, while the "
-                f"aerial record ({by_realm[phase1i.AERIAL].median:+.3f}) differs from both. "
-                "Responses transferred across the equator and failed to transfer across the kind "
-                "of response being measured."
+                f"aerial record ({by_realm[phase1i.AERIAL].median:+.3f}) differs from both. But "
+                "the two that agree sit within a few percent of no tracking on a scale where one "
+                "is full tracking, so what agreed across the equator is a near-absence of "
+                "response — and two near-zeros matching cannot establish that a response "
+                "transfers. The one leg carrying a substantial response is the one that broke the "
+                "agreement, which is the result this design can support."
             ),
             value=(
                 f"hold-one-out error {worst.error:.2f} for {worst.realm} against "
@@ -1151,20 +2160,26 @@ def collect() -> list[Finding]:
                 f"shelf seas, and {by_realm[phase1i.TERRESTRIAL].n} species over 496 "
                 "quarter-degree cells in southern Africa. Each leg's own window."
             ),
+            # Two sentences live in `supporting` rather than here: the near-absence figures and the
+            # correction's recording. This record page overran its leaf by 71px at 1600x900 and
+            # 20px at 1280x800 with them, found by the browser guard on 2026-09-02 after the commit
+            # that added them shipped without running it. Moved to a page with room, not trimmed.
             caveat=(
                 "This tests whether three measured responses agree, not whether a model fitted in "
                 "one would work in another — a weaker question, and the only one three cases can "
-                "answer. The two realms that agree do so at a median tracking of "
+                "answer. And it could not be run as intended, because the two realms that agree do "
+                "so at a median tracking of "
                 f"{by_realm[phase1i.MARINE].median:+.3f} and "
-                f"{by_realm[phase1i.TERRESTRIAL].median:+.3f}: both are indistinguishable from no "
-                "tracking at all, so what transferred is an absence of response, which is a much "
-                "cheaper thing to reproduce than a response. The aerial leg is the only one with a "
-                "clear signal in it and the only one that failed, and it is also the only "
+                f"{by_realm[phase1i.TERRESTRIAL].median:+.3f} on a scale where one is full "
+                "tracking. So what transferred is an absence, "
+                "which is a far cheaper thing to reproduce, and the held-out prediction that "
+                "succeeded predicted approximately nothing from two values near nothing. The "
+                "aerial leg is the only one carrying a substantial response and the only one that "
+                "failed, and it is also the only "
                 "phenological leg, the only radar leg and the only one needing a seasonal "
                 "temperature slope to reach common units — the pre-registration listed realm, "
                 "hemisphere, instrument and decade as inseparable here and did not list response "
-                "type, which is the axis the result fell on. That omission is recorded as a "
-                "correction in the method note rather than edited away. Every leg divides by a "
+                "type, which is the axis the result fell on. Every leg divides by a "
                 "temperature and none carries wind, land use or fishing pressure, so a realm moved "
                 "by something else reports it as a failure to follow the heat."
             ),
@@ -1181,6 +2196,11 @@ def collect() -> list[Finding]:
                 f"{max(pair.gap for pair in transfer.pairs):.2f} from both."
                 if agreed
                 else "Every pair of realms is distinguishable.",
+                "The southern figure is not separable from zero at all; the marine one is, at "
+                f"about {marine_sigma:.1f} standard errors, which makes it a measured near-absence "
+                "rather than an unmeasurable one — and neither is a response.",
+                "That omission is recorded as a correction in the method note rather than edited "
+                "away.",
                 "Agreement is not only in the centre: predicting the southern atlas from the "
                 f"other two puts {coverage_of(phase1i.TERRESTRIAL):.1%} of it inside the "
                 "predicted interquartile range, against the 50% a correct prediction would give, "
@@ -1286,8 +2306,8 @@ def _displacement_finding() -> Finding | None:
             "The obvious measure of animal movement -- distance walked along the track -- "
             "mostly measures how often the collar spoke, which changed 104-fold over "
             "this record. The distance between winter and summer does not care how "
-            "often the collar spoke, and it has not changed. Six million fixes in this "
-            "project's lake carry that lesson for every collar study ever pooled."
+            "often the collar spoke, and it has not changed. Six million collar positions in "
+            "this project's records carry that lesson for every collar study ever pooled."
         ),
         plain_caveat=(
             "A change smaller than roughly a doubling per decade could not have been "
@@ -1335,8 +2355,13 @@ def _displacement_finding() -> Finding | None:
     )
 
 
-def _autumn_advance(first_year: int, last_year: int) -> Finding:
-    """The headline claim, recomputed from the station slopes on every build."""
+def autumn_band_slopes(last_year: int = 2025) -> tuple[float, float, int]:
+    """The headline number's arithmetic: mean station slope in the claim band, its 95% interval,
+    and how many stations it is over.
+
+    Split out of `_autumn_advance` so `reports/headline.py` can draw the same slope the ledger
+    publishes rather than fitting a second one to the drawn points.
+    """
     from migratlas.reports.phase1 import load_conus_nights, station_slopes  # noqa: PLC0415
 
     slopes = station_slopes(load_conus_nights(), max_year=last_year)
@@ -1348,6 +2373,12 @@ def _autumn_advance(first_year: int, last_year: int) -> Finding:
     values = autumn["days_per_decade"].to_numpy().astype(float)
     mean = float(values.mean())
     ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size)
+    return mean, ci, int(values.size)
+
+
+def _autumn_advance(first_year: int, last_year: int) -> Finding:
+    """The headline claim, recomputed from the station slopes on every build."""
+    mean, ci, stations = autumn_band_slopes(last_year)
     return Finding(
         key="autumn-advance",
         plain_how=(
@@ -1379,7 +2410,7 @@ def _autumn_advance(first_year: int, last_year: int) -> Finding:
         claim="Nocturnal autumn passage over the mid-latitude US is happening earlier.",
         value=f"{mean:+.2f} ± {ci:.2f} days per decade",
         scope=(
-            f"{autumn.height} US weather-radar stations between 37°N and 50°N, "
+            f"{stations} US weather-radar stations between 37°N and 50°N, "
             f"{first_year}-{last_year}. Not the whole continent: the southern bands carry a "
             "step change at 2012 that four candidate explanations have failed to account for."
         ),
@@ -1398,6 +2429,62 @@ def _autumn_advance(first_year: int, last_year: int) -> Finding:
     )
 
 
+class Scales(NamedTuple):
+    """What the regional half of the predictability question adds to `skill-sparse`."""
+
+    claim: str
+    value: str
+    supporting: str
+
+
+def _scales() -> Scales:
+    """The reconciliation, published at last.
+
+    Two findings looked like a contradiction for as long as this number sat in a method note. One
+    says knowing the weather barely predicts next year's passage; the other credits pre-season
+    temperature with about half the thirty-year trend. Phase 3h's floor diagnostic is what makes
+    both true at once: at a single station there is very little explainable variance for any driver
+    to reach, and pooling stations into a region roughly doubles it. A trend and interannual
+    predictability were always different properties, and this is the measurement that says why.
+    """
+    from migratlas.reports import phase3h, response_floor  # noqa: PLC0415 -- heavy, and only here
+
+    floors = {floor.season: floor for floor in response_floor.collect()}
+    floor = floors.get("autumn")
+    regional = phase3h.regional_arm("autumn")
+    if floor is None or regional is None:
+        log.warning("skill-sparse: no regional half, so only the per-station scale is published")
+        return Scales(
+            claim="",
+            value="",
+            supporting=(
+                "The regional scale could not be measured on this build, so this claim carries "
+                "only the per-station answer and not the reason for it."
+            ),
+        )
+    return Scales(
+        claim=(
+            f" The limit is the target rather than the drivers: a station's own passage date is "
+            f"only {floor.station_ceiling:.0%} explainable against {floor.pooled_ceiling:.0%} for "
+            f"a flyway-band region, and predicting the region instead lifts the autumn median to "
+            f"{regional.median_skill:+.3f} with {regional.significant} of {regional.units} regions "
+            f"beating their own null."
+        ),
+        value=(
+            f"; regions {regional.significant}/{regional.units}, "
+            f"median {regional.median_skill:+.3f}"
+        ),
+        supporting=(
+            f"Two of this project's claims read as a contradiction until this was published: "
+            f"temperature barely predicts a station's next year, and yet it is credited with about "
+            f"half the thirty-year advance. Both hold, because a station's date is "
+            f"{floor.station_ceiling:.0%} explainable and a region's {floor.pooled_ceiling:.0%} — "
+            f"a trend and interannual predictability are different properties, and the second was "
+            f"being measured against a target that is mostly noise."
+        ),
+    )
+
+
 def _skill_finding() -> Finding:
     """Phase 3a's product: the predictability of timing, measured and mostly absent.
 
@@ -1410,6 +2497,7 @@ def _skill_finding() -> Finding:
     results = phase3a.aerial()
     seasons = {v.season: v for v in phase3a.verdicts(results)}
     spring, autumn = seasons["spring"], seasons["autumn"]
+    scales = _scales()
     return Finding(
         key="skill-sparse",
         plain_how=(
@@ -1432,11 +2520,11 @@ def _skill_finding() -> Finding:
             "Migration timing has shifted over thirty years, and it is tempting to assume the "
             "shift makes each year predictable. It does not: a trend and year-to-year "
             "predictability are different properties, and every forecast this site will ever "
-            "draw is licensed only where this map is not empty."
+            "draw is allowed only where this map is not empty."
         ),
         plain_caveat=(
-            "Tested with one deliberately simple model and seven registered inputs; a cleverer "
-            "model might do better, but it would be answering a different, unregistered "
+            "Tested with one deliberately simple model and seven inputs chosen in advance; a "
+            "cleverer model might do better, but it would be answering a different, unregistered "
             "question."
         ),
         claim=(
@@ -1444,11 +2532,11 @@ def _skill_finding() -> Finding:
             f"at {spring.significant} of {spring.stations} (chance bar {spring.binomial_bar}), "
             f"autumn at {autumn.significant} of {autumn.stations} (chance bar "
             f"{autumn.binomial_bar}), with median test-era skill "
-            f"{spring.median_skill:+.3f} and {autumn.median_skill:+.3f}."
+            f"{spring.median_skill:+.3f} and {autumn.median_skill:+.3f}.{scales.claim}"
         ),
         value=(
             f"autumn {autumn.significant}/{autumn.stations} stations above chance; spring "
-            f"{spring.significant}/{spring.stations} at the chance bar"
+            f"{spring.significant}/{spring.stations} at the chance bar{scales.value}"
         ),
         scope=(
             f"{autumn.stations} US weather-radar stations, 1995-2025, era-split ridge against "
@@ -1463,11 +2551,16 @@ def _skill_finding() -> Finding:
             "the marine and herd halves of the same design produced no skill map at all: the "
             "surveys mostly changed gear mid-record, and the herds' usable years fall below "
             "the design's own floor. The empty cells are statements about the data and the "
-            "design, published at the same rank as the filled ones."
+            "design, published at the same rank as the filled ones. One thing this number does "
+            "not carry on its own: every aerial skill phase in this project has scored the same "
+            "held-out era of the same panel, each blind within itself and none blind to the "
+            "tables before it. ADR 0017 reserves the record's last three years for a single "
+            "confirmatory run and requires each phase to state where in that sequence it sits."
         ),
         method="docs/methods/phase3a-skill.md",
         direction="limit",
         supporting=[
+            scales.supporting,
             "Two of the design's own pre-registered predictions were graded false and stand "
             "recorded in the method note -- spring, the literature's temperature-forced "
             "season, is indistinguishable from the false-positive rate.",

@@ -4,6 +4,7 @@
   import Figure from "./Figure.svelte";
   import Introduction from "./Introduction.svelte";
   import Leaves from "./Leaves.svelte";
+  import Opener from "./Opener.svelte";
   import Settings from "./Settings.svelte";
   import World from "./World.svelte";
   import Claim from "../claim/Claim.svelte";
@@ -11,25 +12,27 @@
   import Margin from "../claim/Margin.svelte";
   import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
+  import { openerOf, type ChaptersDocument } from "./chapters";
   import { leavesOf, openingOf, spreadsOf, type Panel } from "./pages";
   import { world as pocket } from "./pocket.svelte";
   import type { IntroductionDocument } from "./introduction";
   import type { ResponseDocument } from "../sandbox/response";
   import type { SandboxDocument } from "../sandbox/sandbox";
   import { CHAPTERS, chapterAt, chapterOf, realmAt } from "../story";
-  import type { Finding } from "../ledger";
+  import { instrumentFor, type Finding, type Instrument } from "../ledger";
 
   let {
     findings,
     base,
     opening,
+    chapterProse,
     safeguards,
     dial,
   }: {
     findings: Finding[];
     base: string;
     /*
-      The three documents the pagination is computed from, loaded in `main.ts` before this mounts.
+      The four documents the pagination is computed from, loaded in `main.ts` before this mounts.
 
       They used to be fetched here, on the argument that the book should open on a claim without
       waiting for a document only the introduction needs. That argument died with pagination: the
@@ -39,11 +42,18 @@
       later. All three together are 18 KB.
     */
     opening: IntroductionDocument | null;
+    chapterProse: ChaptersDocument | null;
     safeguards: SandboxDocument | null;
     dial: ResponseDocument | null;
   } = $props();
 
-  const sources = $derived({ findings, introduction: opening, safeguards, dial });
+  const sources = $derived({
+    findings,
+    introduction: opening,
+    chapters: chapterProse,
+    safeguards,
+    dial,
+  });
 
   /*
     The same book, arranged twice, and the routing works over whichever one is mounted.
@@ -71,6 +81,24 @@
   );
 
   const of = (key: string): Finding | undefined => findings.find((f) => f.key === key);
+
+  /**
+   * The instruments a chapter's claims were measured with, each once, in the chapter's order.
+   *
+   * Read from the ledger through the opener's `keys` rather than declared beside the prose, so a
+   * chapter that gains a claim gains its drawing without anyone remembering to add it -- and a
+   * claim the ledger withholds takes its drawing with it.
+   */
+  function instrumentsOf(keys: string[]): Instrument[] {
+    const seen: Instrument[] = [];
+    for (const key of keys) {
+      const finding = of(key);
+      if (!finding) continue;
+      const kind = instrumentFor(finding);
+      if (!seen.includes(kind)) seen.push(kind);
+    }
+    return seen;
+  }
 
   /**
    * Plate numbers, counted in reading order over the whole book.
@@ -163,7 +191,13 @@
       if (at >= 0) return at;
     }
 
-    const slug = chapterAt(params.get(CHAPTER_PARAM))?.slug ?? CHAPTERS[1]!.slug;
+    /*
+      No address means the front of the book. This defaulted to the first chapter *with claims*,
+      which was right when the introduction was a page about how to read a ledger and wrong once
+      the owner made it the page that says what a migration is: a first-time visitor opened onto
+      "The calendar moved" and never saw the page written for them.
+    */
+    const slug = chapterAt(params.get(CHAPTER_PARAM))?.slug ?? CHAPTERS[0]!.slug;
     const first = openingOf(pages, slug);
     const into = Number.parseInt(params.get(PAGE_PARAM) ?? "0", 10);
     if (!Number.isFinite(into) || into <= 0) return first;
@@ -233,7 +267,7 @@
    * sees it, it is the filtered pagination and not the one that was on screen a line ago.
    */
   function filter(slug: string): void {
-    const chapter = pages[open]?.chapter.slug ?? CHAPTERS[1]!.slug;
+    const chapter = pages[open]?.chapter.slug ?? CHAPTERS[0]!.slug;
     realm = slug;
     show(openingOf(pages, chapter));
   }
@@ -288,6 +322,17 @@
 {#snippet leaf(panel: Panel, _side: "verso" | "recto")}
   {#if panel.kind === "opening"}
     <Introduction document_={opening} opening />
+  {:else if panel.kind === "opener"}
+    {@const written = openerOf(chapterProse, panel.slug)}
+    {#if written}
+      <Opener
+        chapter={panel.chapter}
+        opener={written}
+        from={panel.from}
+        to={panel.to}
+        instruments={instrumentsOf(written.keys)}
+      />
+    {/if}
   {:else if panel.kind === "intro"}
     <Introduction document_={opening} from={panel.from} to={panel.to} />
   {:else if panel.kind === "world"}

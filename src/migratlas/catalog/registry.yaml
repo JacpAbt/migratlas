@@ -344,10 +344,50 @@ sources:
       this under `era5` deleted five years of the North American record twice before it was
       given an id of its own. Sampled at the 496 quarter-degree cells of the SABAP common
       footprint, monthly, for 1987–1991 and 2008–2012 — the two atlas epochs and nothing
-      between them, so this record cannot describe the nineteen years it skips. A reanalysis
+      between them, so this record cannot describe the nineteen years it skips. Two fields
+      since Phase 2g: 2 m temperature and total precipitation, landed in one call. A reanalysis
       is a model constrained by observations, and southern Africa is more sparsely observed
       than North America, so the constraint is weaker here than the same product is there.
     added: 2026-08-07
+
+  - id: era5_uk
+    title: ERA5 monthly 2 m temperature over Britain and Ireland, at the butterfly transects
+    realm: terrestrial
+    landing_page: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means
+    download_uri: https://cds.climate.copernicus.eu/api/retrieve/v1/processes/reanalysis-era5-single-levels-monthly-means
+    # Read off the collection metadata rather than assumed: the STAC record gives license
+    # "CC-BY-4.0" and the licence the account must accept has id `cc-by`.
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      Hersbach, H., Bell, B., Berrisford, P., Biavati, G., Horányi, A., Muñoz Sabater, J.,
+      Nicolas, J., Peubey, C., Radu, R., Rozum, I., Schepers, D., Simmons, A., Soci, C., Dee, D.,
+      Thépaut, J-N. (2023). ERA5 monthly averaged data on single levels from 1940 to present.
+      Copernicus Climate Change Service (C3S) Climate Data Store (CDS).
+      https://doi.org/10.24381/cds.f17050d7
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+      notes: >-
+        CC BY 4.0 permits redistribution of derived products with attribution. Copernicus asks
+        that products be credited to the Copernicus Climate Change Service and that neither the
+        European Commission nor ECMWF be represented as endorsing the result.
+    credential: cds_token
+    # A temperature field. There is no animal in it.
+    default_sensitivity: not_sensitive
+    caveats: >-
+      The same product as `era5` and `era5_south`, retrieved for a third box and registered
+      separately for the lake's reason: partitions are (source_id, year) and a write replaces
+      the partitions it touches. Sampled at every UKBMS transect the lake holds, monthly,
+      January to August of 1973–2021, so that a two-month pre-season exists for a
+      species-generation whichever month it flies; nothing from September to December is here
+      and nothing about the flight season itself is meant to be. Three fields since Phase 2f:
+      2 m temperature, total precipitation, and downward solar radiation as a mean flux. A quarter-degree cell is a
+      blunt reading of a transect's microclimate, and a coastal site may match a cell that is
+      mostly sea; the match distance is recorded and no site is dropped for it. Registered
+      2026-09-02 by `phase2d-flight-response.md` before any value was fetched.
+    added: 2026-09-02
 
   # The third driver-only source, and the only one that is not an observation at all: DAMIP runs
   # the same models with and without human forcing, so `hist-nat` is a climate that never happened.

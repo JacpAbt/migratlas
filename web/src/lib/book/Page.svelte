@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { fit } from "./fit";
 
   let {
     side,
     fill = false,
+    fitted = false,
     folio = null,
     onturn,
     children,
@@ -11,6 +13,15 @@
     side: "verso" | "recto";
     /** Absolutely fill the parent, for the two places a page stands in for another one. */
     fill?: boolean;
+    /**
+     * Write this page in the largest hand that fits. See `fit.ts`.
+     *
+     * Off by default, and the phone is what leaves it off: a leaf there is a scroll-snap track at
+     * its own reading size, so there is no fixed leaf to fill and nothing for a search to find.
+     * The turning leaf and the page parked under it *do* set it -- they would otherwise be written
+     * in a different hand from the page they are copies of, and the turn would flicker.
+     */
+    fitted?: boolean;
     /**
      * The folio, counted over the whole book. Null on the one page that has none.
      *
@@ -48,7 +59,7 @@
 <div class="page page--{side}" class:page--fill={fill}>
   <div class="page__grain" aria-hidden="true"></div>
   <div class="page__curl" aria-hidden="true"></div>
-  <div class="page__inner">
+  <div class="page__inner" use:fit={fitted}>
     {@render children()}
   </div>
   {#if folio !== null && onturn}
@@ -59,6 +70,15 @@
       aria-label={side === "recto" ? "Turn the page" : "Turn back"}
       onclick={onturn}
     >
+      <!--
+        The arrow, because the folio alone did not read as a control.
+
+        It was a page number that happened to be clickable and turned rust on hover, which is a
+        thing a reader finds only by accident -- the owner read the book as going chapter to
+        chapter, since the thumb tabs were the only navigation that looked like navigation. The
+        mark points the way the page goes and sits at rest rather than on hover, which is the
+        whole point of it.
+      -->
       {String(folio).padStart(3, "0")} · migratlas
     </button>
   {:else if folio !== null}
@@ -90,6 +110,20 @@
     display: flex;
     flex-direction: column;
     padding: var(--page-pad);
+    /*
+      And the page number's corner, which the page may not write into.
+
+      `.page__folio` is absolutely positioned, so it contributes no layout height: without this the
+      last line of a page can print underneath it while `scrollHeight === clientHeight`, which is
+      exactly what the overflow guard compares and exactly why that guard never caught it. Measured
+      at 1280x720, a page `fit.ts` had grown to its target cleared the folio by -1px.
+
+      Composed from the tokens the folio is built from rather than guessed: its own padding twice
+      over, plus a line of the label size. So it tracks the folio if either ever changes, and it
+      costs every page about 42px of room -- which is why `fit.ts` learned to write smaller in the
+      same change.
+    */
+    padding-bottom: calc(var(--page-pad) + var(--gap) * 2 + var(--size-label) * 1.35);
     /* A backstop, not a feature. `pages.ts` puts one panel on a page precisely so this never
        engages, and `tests/book.spec.ts` walks all seventy pages at both supported sizes asserting
        that it does not. It stays because a reader at 200% zoom with a font this project did not
@@ -135,6 +169,33 @@
   .page__folio--turn:hover,
   .page__folio--turn:focus-visible {
     color: var(--rust);
+  }
+
+  /*
+    The arrow is drawn, not written.
+
+    A `<span>` inside the button put it in `textContent`, and the folio guard reads the number by
+    splitting that on its first space -- so every verso came back `NaN` and the suite caught it. A
+    pseudo-element is the mark without the text, which is what it always was: set in the hand face
+    because somebody drew it in a margin, and present at rest because a control nobody can see is
+    the thing the owner found missing.
+  */
+  .page__folio--turn::before,
+  .page__folio--turn::after {
+    font-family: var(--font-hand);
+    font-size: 1.25em;
+    line-height: 1;
+    vertical-align: -0.08em;
+  }
+
+  .page--verso .page__folio--turn::before {
+    content: "‹";
+    margin-right: 0.35em;
+  }
+
+  .page--recto .page__folio--turn::after {
+    content: "›";
+    margin-left: 0.35em;
   }
 
   .page--verso .page__folio {

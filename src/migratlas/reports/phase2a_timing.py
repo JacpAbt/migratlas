@@ -2,12 +2,6 @@
 
 Pre-registered in docs/methods/phase2a-timing.md, including the three predictions, before the
 temperature was fetched.
-
-The test is arithmetic rather than a coefficient. Sensitivity S (days per degC, fitted within each
-station across years) times warming W (degC per decade, from ERA5) should reproduce the observed
-advance A (days per decade, from Phase 1a) if the advance is thermally driven. S x W is the
-explained share, and the honest halfway house to the DAMIP counterfactual that phase2a-design
-reserves the causal claim for.
 """
 
 import logging
@@ -21,6 +15,7 @@ from migratlas.drivers import era5, narr
 from migratlas.drivers.schema import DRIVER_SAMPLES
 from migratlas.evidence import EvidenceType, spec_for
 from migratlas.lake.reader import scan_dataset
+from migratlas.metrics.interval import mean_ci
 from migratlas.metrics.phenology import Season, passage_quantiles
 from migratlas.reports.phase1 import (
     AUTUMN,
@@ -221,8 +216,13 @@ def _fit(design: np.ndarray, response: np.ndarray) -> np.ndarray | None:
     return np.asarray(coefficients, dtype=float)
 
 
-def sensitivities() -> list[Sensitivity]:
-    """Per station: the thermal and wind response of passage date, and the station's warming."""
+def panel() -> pl.DataFrame:
+    """The station-year panel the timing question is fitted on: passage, temperature, wind, place.
+
+    Extracted so this module's `S` and Phase 2c's arms are computed over one panel rather than two
+    copies of one -- the reason Phase 1k's calibration arms call the published reports rather than
+    reimplementing them. Longitude is carried for Phase 2c's regional arm; nothing here reads it.
+    """
     nights = load_conus_nights(quantity="reflectivity_traffic")
     quantiles = passage_quantiles(
         nights,
@@ -233,15 +233,21 @@ def sensitivities() -> list[Sensitivity]:
         min_observations=MIN_NIGHTS,
     ).filter(pl.col("q50_doy").is_not_null())
 
-    sites = nights.group_by("station_id").agg(pl.col("station_latitude").first())
-    panel = (
+    sites = nights.group_by("station_id").agg(
+        pl.col("station_latitude").first(), pl.col("station_longitude").first()
+    )
+    return (
         quantiles.join(pre_season_temperature(), on=("station_id", "year"), how="inner")
         .join(wind_support(), on=("station_id", "year"), how="left")
         .join(sites, on="station_id", how="inner")
     )
 
+
+def sensitivities() -> list[Sensitivity]:
+    """Per station: the thermal and wind response of passage date, and the station's warming."""
     results: list[Sensitivity] = []
-    for (station,), group in panel.sort("station_id").group_by(["station_id"], maintain_order=True):
+    frame = panel().sort("station_id")
+    for (station,), group in frame.group_by(["station_id"], maintain_order=True):
         series = group.drop_nulls(["q50_doy", "temperature", "support"]).sort("year")
         if series.height < MIN_YEARS:
             continue
@@ -277,13 +283,6 @@ def sensitivities() -> list[Sensitivity]:
             )
         )
     return results
-
-
-def _mean_ci(values: np.ndarray) -> tuple[float, float]:
-    if values.size == 0:
-        return (float("nan"), float("nan"))
-    ci = 1.96 * float(values.std(ddof=1)) / np.sqrt(values.size) if values.size > 1 else 0.0
-    return (float(values.mean()), ci)
 
 
 def render() -> str:
@@ -331,7 +330,7 @@ def render() -> str:
             continue
         pieces = []
         for column in ("per_degree", "warming", "explained", "observed"):
-            mean, ci = _mean_ci(band[column].to_numpy().astype(float))
+            mean, ci = mean_ci(band[column].to_numpy().astype(float))
             pieces.append(f"{mean:+7.3f}+-{ci:.2f}")
         marker = "  <- the claim" if (low, high) == CLAIM_BAND else ""
         out.append(f"  {low}-{high}N{'':<4} {band.height:>3}  " + "  ".join(pieces) + marker)
@@ -339,12 +338,12 @@ def render() -> str:
     claim = frame.filter(pl.col("latitude").is_between(*CLAIM_BAND, closed="left"))
     if not claim.is_empty():
         out += ["", "=" * 78, f"the claim band, {CLAIM_BAND[0]}-{CLAIM_BAND[1]}N", "=" * 78]
-        explained, explained_ci = _mean_ci(claim["explained"].to_numpy().astype(float))
-        observed, observed_ci = _mean_ci(claim["observed"].to_numpy().astype(float))
-        sensitivity, sensitivity_ci = _mean_ci(claim["per_degree"].to_numpy().astype(float))
-        warming, warming_ci = _mean_ci(claim["warming"].to_numpy().astype(float))
-        wind, wind_ci = _mean_ci(claim["per_wind"].to_numpy().astype(float))
-        collinear, collinear_ci = _mean_ci(claim["driver_correlation"].to_numpy().astype(float))
+        explained, explained_ci = mean_ci(claim["explained"].to_numpy().astype(float))
+        observed, observed_ci = mean_ci(claim["observed"].to_numpy().astype(float))
+        sensitivity, sensitivity_ci = mean_ci(claim["per_degree"].to_numpy().astype(float))
+        warming, warming_ci = mean_ci(claim["warming"].to_numpy().astype(float))
+        wind, wind_ci = mean_ci(claim["per_wind"].to_numpy().astype(float))
+        collinear, collinear_ci = mean_ci(claim["driver_correlation"].to_numpy().astype(float))
 
         out += [
             f"\n  sensitivity S    {sensitivity:+.3f} +/- {sensitivity_ci:.3f} days per degC",

@@ -1,12 +1,18 @@
 /**
  * Which claims have a figure of their own, what it is, and how many pages it takes.
  *
- * Lifted from `claim/Evidence.svelte` rather than reinvented, including its reasoning: only two
- * claims have a figure that adds something the sentence does not. A chart per claim would be
- * decoration -- the marine null and the composition control are both "indistinguishable from zero",
- * and a flat line drawn three times teaches nothing the value already said.
+ * Lifted from `claim/Evidence.svelte` rather than reinvented. Two claims have a figure of their
+ * own that carries an argument -- the counterfactual ribbon and the coverage assessment. Nine more
+ * carry a *headline* figure: the result the plain sentence states, drawn from the values the
+ * ledger's own functions produced (`reports/headline.py`). This file used to argue that a chart
+ * per claim would be decoration because a flat line teaches nothing; a first reading of the book
+ * answered that a null drawn as a pile centred on zero teaches exactly what the sentence says,
+ * and that a project about numbers showing none of them as pictures reads as a wall of text.
  *
- * Everything else gets the drawn plate, which answers a different question: where on Earth.
+ * A headline page still carries the plate, smaller and more crooked, because the owner wants the
+ * maps around like a sketchbook's -- and because the plate answers the other question, where on
+ * Earth. The two claims that keep a plate alone are the ones no honest single picture carries:
+ * the transfer test is three numbers and the protocol disagreement a ratio of two scatters.
  *
  * It lives in a module of its own rather than inside `Figure.svelte` because `pages.ts` has to know
  * it too: a plate is one page and these two are four and two, so the fact decides the book's length.
@@ -40,7 +46,7 @@ export interface FigurePage {
 }
 
 export interface FigureKind {
-  kind: "ribbon" | "coverage";
+  kind: "ribbon" | "coverage" | "headline";
   pages: readonly FigurePage[];
   /**
    * The same figure for a 375px column, where two of these pages do not fit.
@@ -67,7 +73,27 @@ export interface FigureKind {
   independent reconstructions of the same counterfactual, and giving the second a title of its own
   would be this file making a claim about the science instead of the report making it.
 */
+/**
+ * One page, no title of its own: the chart prints the title the document carries, and the plate
+ * rides under it. Declared as a list so the guard in `tests/book.spec.ts` can hold the document
+ * to it -- a headline drawn for a claim not declared here would never reach a page.
+ */
+export const HEADLINE_KEYS: readonly string[] = [
+  "autumn-advance",
+  "flight-advance",
+  "composition-stable",
+  "marine-null",
+  "atlas-no-net-change",
+  "displacement-flat",
+  "seas-disagree",
+  "skill-sparse",
+  "projection-mask",
+];
+
+const HEADLINE: FigureKind = { kind: "headline", pages: [{ part: "chart", title: "" }] };
+
 export const FIGURES: Readonly<Record<string, FigureKind>> = {
+  ...Object.fromEntries(HEADLINE_KEYS.map((key) => [key, HEADLINE])),
   "anthropogenic-share": {
     kind: "ribbon",
     pages: [

@@ -131,6 +131,51 @@ export const VIEWS: Record<string, View> = {
       "The two herds the claim is measured from, a continent apart: elk in the Canadian " +
       "Rockies, reindeer on Svalbard.",
   },
+  "flight-advance": {
+    // Britain, and no layer: the transects are a series in the lake with no tile behind them, so
+    // the plate carries this claim's evidence and the globe carries only the place.
+    center: [-2.4, 54.2],
+    zoom: 4.4,
+    layers: [],
+    because:
+      "Britain, where the same fixed transects are walked every year by volunteers who count " +
+      "what crosses them.",
+  },
+  "protocol-disagreement": {
+    // Sweden, which is the whole claim: one country counted twice, by two programmes, at once.
+    center: [16.5, 62.5],
+    zoom: 3.8,
+    layers: [],
+    because:
+      "Sweden, counted twice over: two national bird-counting programmes have run side by side " +
+      "across the same country for decades.",
+  },
+  "projection-mask": {
+    // The claim band, pulled back the way the attribution's view is, because the forcing behind a
+    // scenario is global even where the response is 78 stations wide.
+    center: [-96, 42],
+    zoom: 2.6,
+    layers: ["aerial-passage"],
+    because:
+      "The same band the response was fitted in, which is the only band any of it may be " +
+      "projected into.",
+  },
+  "seas-disagree": {
+    // Pulled back much further than `marine-null`, and that is the claim rather than a framing
+    // preference: this one says the seas differ *from each other*, so a camera on one of them would
+    // contradict the sentence it illustrates. North America with an ocean on each side puts the
+    // Bering Sea, the two Gulf of Mexico series, the Scotian shelf and the European surveys in one
+    // frame, which is the comparison.
+    center: [-70, 45],
+    zoom: 1.6,
+    // The same survey-footprint layer `marine-null` draws, because it is the same 2.8 million rows
+    // and it shows where the eighteen segments are. It does not draw the heterogeneity: no tile
+    // does, and the plate carries that.
+    layers: ["marine-taxa-recorded"],
+    because:
+      "North America with an ocean on each side, because the finding is that these seas disagree " +
+      "with one another -- framing one of them would argue against the sentence.",
+  },
   "coverage-bias": {
     // Deliberately the southern hemisphere, and deliberately far out. This claim is about what the
     // project cannot see, so the camera points at the emptiness rather than at the data.
@@ -188,20 +233,41 @@ export function exploreView(available: string[], zoom = 1.4): View {
  *
  * ADR 0013 made the chapters the argument rather than a menu, and asked for this table to live
  * beside `VIEWS` with the guards extended to it: a published claim with no chapter fails the build.
- * The order is the ledger's own logic and not a ranking -- what changed, what did not, what cannot
- * be seen, what can be predicted, why it changed -- with an introduction before any claim and the
- * world in the back pocket.
+ *
+ * **The owner chose this order on 2026-09-15, from three mocked directions**, and it is a story
+ * rather than a taxonomy: every migrating animal keeps a calendar and a map; over thirty years the
+ * calendar moved and the map did not; chasing that mismatch finds something stranger than the
+ * moving calendar, which is that *which animal you are* matters more than where in the world you
+ * live. Each chapter is one step of that, and the chapter after it exists because of what the one
+ * before found.
+ *
+ * What it replaced sorted claims by their *direction* -- what changed, what did not, what cannot be
+ * seen -- which is a property of a result rather than a question any reader arrives with, and is
+ * why the book read as a list of points with nothing between them.
+ *
+ * **Every slug is kept**, because they are in links this site has already handed out and a chapter
+ * changing its question is not a reason to break them. So `what-changed` opens *The calendar moved*
+ * and `why-it-changed` opens *Whose hand is on the clock*, which is what its old title was asking.
+ * One slug is new, for the chapter the old table had nowhere to put.
  *
  * `tab` is deliberately not `title`. A thumb tab carries a word and the page carries the sentence;
  * seven full titles set vertically ran past the foot of the book in the mock ADR 0015 records.
  *
- * `anthropogenic-share` sits in *Why it changed* rather than in *What changed*, which is the one
- * departure from ADR 0013's own list and is the amendment that ADR made room for: the attribution
- * is the answer to why, and the chapter that holds it also holds the mechanism dial and the
- * forecast's novelty mask.
+ * **The word is the question's, not the title's.** The first set -- `The clock`, `The map`, `No
+ * average`, `Cannot see` -- were the titles' subjects, and a first reading of the book took them
+ * for riddles: nothing on a tab said what a reader would find behind it. The chapters are asked as
+ * questions, so each tab now carries the question's own word and its question mark, and the two
+ * chapters that are not questions carry what they are: the way in, and the globe.
+ *
+ * **Two claims moved house and the move is the argument.** `anthropogenic-share` leaves the timing
+ * chapter for the one that asks what moved the clock, because attribution is the answer to *why*.
+ * `seas-disagree` and `transfer-fails` come out of the limits and make a chapter of their own: that
+ * the seas disagree, and that a response measured in one realm does not predict another, are not
+ * caveats on the null before them -- they are the reason that null is an average of animals pulling
+ * in opposite directions, which is the book's turn.
  */
 export interface Chapter {
-  /** Stable identity, and what goes in the URL. */
+  /** Stable identity, and what goes in the URL. Never changed, even when the question is. */
   slug: string;
   /** The heading on the page this opens. */
   title: string;
@@ -214,47 +280,55 @@ export interface Chapter {
 
 export const CHAPTERS: readonly Chapter[] = [
   /*
-    The front matter, and it answers a reader's first question before the epistemic ones.
-
-    `introduction.py` leads with what is being studied, why it is worth measuring and how the work
-    is done -- three passages with no result in them, which is the point: a reader who arrives at a
-    finding without knowing what a finding here is made of has been handed a number to trust.
+    The way in, and it answers a reader's first question before any epistemic one: what a migration
+    actually is. `introduction.py` carries its passages.
 
     The slug is unchanged. It is in every link this site has handed out, and renaming a chapter is
     not a reason to break them.
   */
   {
     slug: "how-to-read",
-    title: "What this is, and how to read it",
-    tab: "What this is",
+    title: "An animal's year",
+    tab: "Start here",
     keys: [],
   },
   {
     slug: "what-changed",
-    title: "What changed",
-    tab: "Changed",
-    keys: ["autumn-advance", "composition-stable"],
+    title: "The calendar moved",
+    tab: "Earlier?",
+    keys: ["autumn-advance", "flight-advance", "composition-stable"],
+  },
+  {
+    slug: "why-it-changed",
+    title: "Whose hand is on the clock",
+    tab: "Why?",
+    keys: ["anthropogenic-share"],
   },
   {
     slug: "what-did-not",
-    title: "What did not",
-    tab: "Did not",
+    title: "But the map stayed put",
+    tab: "Elsewhere?",
     keys: ["marine-null", "atlas-no-net-change", "displacement-flat"],
+  },
+  {
+    slug: "no-average-animal",
+    title: "There is no average animal",
+    tab: "Who decides?",
+    keys: ["seas-disagree", "transfer-fails"],
+  },
+  {
+    slug: "can-be-predicted",
+    title: "What about next year?",
+    tab: "Next year?",
+    keys: ["skill-sparse", "projection-mask"],
   },
   {
     slug: "cannot-see",
     title: "What we cannot see",
-    tab: "Cannot see",
-    keys: ["coverage-bias", "transfer-fails"],
+    tab: "Blind spots",
+    keys: ["coverage-bias", "protocol-disagreement"],
   },
-  {
-    slug: "can-be-predicted",
-    title: "What can be predicted",
-    tab: "Predicted",
-    keys: ["skill-sparse"],
-  },
-  { slug: "why-it-changed", title: "Why it changed", tab: "Why", keys: ["anthropogenic-share"] },
-  { slug: "the-world", title: "The world", tab: "The world", keys: [] },
+  { slug: "the-world", title: "The world", tab: "The globe", keys: [] },
 ];
 
 /** The chapter carrying a claim, or undefined -- which the build guard turns into a failure. */

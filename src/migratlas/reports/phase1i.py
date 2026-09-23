@@ -211,6 +211,9 @@ def terrestrial() -> Leg:
     def epoch_mean(years: range) -> pl.DataFrame:
         return (
             scan_dataset("driver_samples", source_id="era5_south")
+            # Phase 2g landed precipitation beside the temperature in this source on 2026-09-03,
+            # and a mean over both moved this finding's southern leg from -0.014 to +0.044.
+            .filter(pl.col("variable") == "air_temperature_2m")
             .filter(pl.col("period_start").dt.year().is_in(list(years)))
             .group_by("site_id")
             .agg(value=pl.col("value").mean())

@@ -59,14 +59,14 @@
   },
   {
    "key": "marine-null",
-   "plain": "Fish are not all moving towards the poles. Different seas are doing different things, and some are doing the opposite of others.",
+   "plain": "Fish are not all moving towards the poles. Different surveys report different directions, and much of that is where the ships went, not where the fish did.",
    "matters": "\"Fish are moving polewards as the sea warms\" is one of the best-known sentences in climate ecology. Across two thousand species it is not one story, and a single global number would erase every difference worth planning around.",
    "claim": "There is no single global poleward shift in fish distribution \u2014 surveys disagree even in its direction.",
    "plain_caveat": "These are trawl surveys in the North Atlantic and North Pacific. Nowhere else has been counted the same way for long enough to be included.",
    "plain_how": "Government research ships have been dragging the same nets over the same seabed for decades. For each species in each survey we followed the middle of where it was caught, year by year, and fitted how fast that middle was moving north or south. Then we looked at all of those fits together instead of collapsing them into one \u2014 the disagreement between them is the result.",
    "value": "median -0.011 \u00b0latitude per decade across 2,240 species-survey pairs",
    "scope": "29 harmonised scientific bottom-trawl surveys, North America and Europe, on consistently sampled cells only.",
-   "caveat": "A pooled median hides the variation worth predicting: individual surveys reach -0.22 and +0.26 \u00b0latitude per decade in opposite directions. The unit of analysis has to be the species in its region, not the ocean.",
+   "caveat": "A pooled median hides the variation worth predicting: individual surveys reach -0.22 and +0.26 \u00b0latitude per decade in opposite directions. The unit of analysis has to be the species in its region, not the ocean. Whether the spread belongs to the animal or to the sea was asked for the 171 species caught in five or more surveys: grouped by species the coherence is 0.33 and grouped by survey 0.18, but a grouping into many small groups scores high with its labels shuffled, and over their own chance levels the two carry +0.12 and +0.14. Both are real, and neither leads. Nor do they follow numbers: cut by the size of each species' own change in abundance, the spread of shifts is +0.024 against +0.120 when cut by the trends' own precision, so what looked like abundance was rarity. And a trend depends on the season that measured it: in 6 of 6 regions trawled in more than one season, the same species' two estimates disagree beyond their own errors, ranking species alike at only +0.30 to +0.62 \u2014 while two halves of one season sit at 0.79 of the error that would make it noise. Where a species is, as measured here, is a property of the animal and the season that looked.",
    "method": "docs/methods/phase1b-marine.md",
    "realm": "marine",
    "taxon_scope": "exact",
@@ -106,7 +106,9 @@
    "specimen_key": 5216014,
    "specimen": "Raja montagui went north in one survey and south in another. Watch it happen.",
    "direction": "null",
-   "supporting": []
+   "supporting": [
+    "This null was tested for a mixture rather than left as an average: cut into thirds by where a species sits in its own survey's water, by how fast that water warmed, and by how deep it lives, no third moved differently from the others beyond what shuffling the labels produces, and no grouping explained more than a twentieth of the variation between pairs. A warming that hit some and spared the rest would look like this median, and along these three axes it is not what is here."
+   ]
   },
   {
    "key": "composition-stable",
@@ -164,9 +166,9 @@
    "claim": "Human forcing accounts for almost all of the pre-season warming the animals are responding to, and so for about half of the observed advance.",
    "plain_caveat": "This attributes the warming, not the animals. Two independent ways of building the world-without-us disagree with each other by more than a factor of two, and both are shown.",
    "plain_how": "Climate models can be run twice: once with the last century as it happened, and once with human emissions taken out of it. We sampled both runs at the same radar stations and over the same years, put each one's temperature through the relationship between warmth and passage date that the observations themselves fitted, and took the difference. What is left is the part of the shift a world without us does not produce.",
-   "value": "-0.30 days per decade of the -0.56 observed",
+   "value": "-0.30 days per decade of the -0.56 observed, 50%-53% of it",
    "scope": "15 CMIP6 models with both a historical and a hist-nat run, sampled at the 78 radar stations between 37\u00b0N and 50\u00b0N over 1995-2014.",
-   "caveat": "This attributes the warming, not the migration. It says what caused the temperature change the record tracked \u2014 the other half of the advance does not track temperature at all and is unexplained here. The models' human share spans 0.88 to 0.98 depending on the window fitted, and CMIP6's historical runs stop in 2014 while the radar record runs to 2025. Read \"almost all\" as a share of the forced warming as the ensemble mean has it, though: averaging 15 models cancels the year-to-year weather, so what the ratio divides into is close to a pure forced signal rather than the trend a thermometer at one station recorded. An independent counterfactual built from the observations themselves, with no model in it (ATTRICI), removes only 38% of each station's own warming and so attributes -0.12 days per decade against this finding's -0.30. Neither is wrong and they are not averaged: the distance between them says that roughly 59% of the warming at these stations over 1995-2019 does not move with the global mean at all. Over twenty-five years at one half-degree cell that is mostly weather leaning one way \u2014 but it also holds any forcing that does not scale with the global average, so it is an upper bound on the chance part rather than a measurement of it. Either way: human forcing caused nearly all of the warming signal, and that is not the same thing as nearly all of the warming these stations measured.",
+   "caveat": "This attributes the warming, not the migration. It says what caused the temperature change the record tracked \u2014 the other half of the advance does not track temperature at all and is unexplained here. The models' human share spans 0.88 to 0.98 depending on the window fitted, and CMIP6's historical runs stop in 2014 while the radar record runs to 2025. The share is a range because the response can be fitted on two timescales and this record cannot choose between them. Read \"almost all\" as a share of the forced warming as the ensemble mean has it, though: averaging 15 models cancels the year-to-year weather, so what the ratio divides into is close to a pure forced signal rather than the trend a thermometer at one station recorded. An independent counterfactual built from the observations themselves, with no model in it (ATTRICI), removes only 38% of each station's own warming and so attributes -0.12 days per decade against this finding's -0.30. Neither is wrong and they are not averaged: the distance between them says that roughly 59% of the warming at these stations over 1995-2019 does not move with the global mean at all. Over twenty-five years at one half-degree cell that is mostly weather leaning one way \u2014 but it also holds any forcing that does not scale with the global average, so it is an upper bound on the chance part rather than a measurement of it. Either way: human forcing caused nearly all of the warming signal, and that is not the same thing as nearly all of the warming these stations measured.",
    "method": "docs/methods/phase2a-attribution.md",
    "realm": "aerial",
    "taxon_scope": "unattributed",
@@ -207,6 +209,7 @@
    "specimen": "",
    "direction": "change",
    "supporting": [
+    "The response function was refitted with a time term in it, because without one it absorbs the shared trend of passage date and temperature and would reproduce part of the advance by construction. Adding one moves the sensitivity from -0.659 to -0.624 days per \u00b0C across 78 stations \u2014 0.20 of its own interval \u2014 and the attributed share from 53% to 50%. That is why this number survived the check rather than being withdrawn. The record cannot narrow the range further: a response acting over decades and a non-thermal process that trends the same way are the same column of that design matrix.",
     "The counterfactual runs warm at +0.01 \u00b0C per decade against +0.59 with human forcing included.",
     "The ensemble reproduces the observed pre-season warming it is calibrated against, which is the check that licenses using it.",
     "Members are averaged within a model before models are averaged, so two models with fifty runs each cannot carry the answer."
@@ -216,10 +219,10 @@
    "key": "coverage-bias",
    "plain": "A third of what this site measures is now southern, and none of the weather that would explain it is. Describing a place and explaining it are different problems.",
    "matters": "A map of what is known is not a map of what is happening. Most of the world has never been counted the same way twice \u2014 and where it has, the records that would say *why* often still do not reach. A result from one hemisphere is not evidence about the other until someone goes and checks.",
-   "claim": "35.5% of the rows this project can measure change with lie south of the equator, from 2 of 16 sources \u2014 and 0.80% of its driver record does. The evidence has crossed the equator and the data that would explain it has barely started.",
+   "claim": "35.5% of the rows this project can measure change with lie south of the equator, from 2 of 16 sources \u2014 and 1.00% of its driver record does. The evidence has crossed the equator and the data that would explain it has barely started.",
    "plain_caveat": "Two sources are held back deliberately. Wolves and mountain caribou are hunted by people who would use a map of them, so none of their locations are drawn.",
-   "plain_how": "No new measurement \u2014 a count of what this project holds. Every source with a time axis was tallied by hemisphere, separating the records that describe animals from the records of weather and vegetation used to explain them. The two shares are nothing like each other, and that gap bounds every question that needs both halves at once.",
-   "value": "19,742,318 of 55,680,454 time-series rows are southern (35.5%), against 89,122 of 11,166,823 driver samples (0.80%)",
+   "plain_how": "No new measurement \u2014 a count of what this project holds. Every record that runs over time was tallied by hemisphere, separating the records that describe animals from the records of weather and vegetation used to explain them. The two shares are nothing like each other, and that gap bounds every question that needs both halves at once.",
+   "value": "19,742,318 of 55,680,454 time-series rows are southern (35.5%), against 148,642 of 14,923,687 driver samples (1.00%)",
    "scope": "Every source in this project that has a usable time axis.",
    "caveat": "The southern share is two bird atlases in three countries, so it is a large number from a small place and not coverage of a hemisphere. What has not moved has barely moved is the driver record, and what little of it is southern arrived only to answer this. Every wind field and every counterfactual in this lake was taken over North America; the southern share is surface water and monthly temperature over one atlas footprint, fetched for two five-year windows thirty years apart. That is enough to ask whether those birds tracked the warming and nothing like enough to explain them: no wind, no counterfactual, and nineteen unobserved years in the middle. Inherited rather than chosen \u2014 long digitised radar and trawl series exist where they were funded \u2014 but no model trained on this should be trusted elsewhere without being tested there first. Two kinds of gap are worth telling apart on the map. Grey cells are places the lake reaches and cannot measure. And two sources are held and drawn nowhere at all: mountain caribou and wolves are classified high-sensitivity, so their locations are withheld entirely rather than coarsened. The map is not a map of everything this lake knows, and the coverage panel lists what is missing from it rather than letting an absence speak.",
    "method": "docs/methods/geographic-coverage.md",
@@ -258,11 +261,11 @@
    "plain": "Southern African birds have not, on the whole, moved. A few dozen species clearly have \u2014 and the ones spreading fastest are birds people brought.",
    "matters": "This is the first thing this project has measured outside the northern hemisphere, and it is the test of whether findings from one continent carry to another. It also answers a question the site had only ever asked: whether correcting for how hard people looked changes what you conclude.",
    "claim": "Between the two southern African bird atlases there is no net change in occupancy across 512 species \u2014 the median is -0.007 \u2014 while 56 species moved by more than 0.1 in one direction or the other.",
-   "plain_caveat": "Two snapshots thirty years apart, in three countries, in the places volunteers atlassed twice. It is a before and after, not a trend, and it is not Africa.",
+   "plain_caveat": "Two snapshots thirty years apart, in three countries, in the map squares volunteers covered twice. It is a before and after, not a trend, and it is not Africa.",
    "plain_how": "Two atlases thirty years apart, built from the same kind of volunteer checklist in the same map squares. Volunteers looked far harder the second time, so raw counts would measure the volunteers rather than the birds: instead we asked, for each species in each square, how likely a full day's card was to record it, and only in squares visited enough in both periods. Those probabilities are what we compared.",
    "value": "median -0.007 change in occupancy probability, deciles -0.075 to +0.048, across 512 species on 496 shared cells",
    "scope": "SABAP1 1987-1991 against SABAP2 2008-2012, full-protocol cards only, on 496 quarter-degree cells carrying at least 20 cards in both epochs.",
-   "caveat": "The detection correction this was built for made no difference, and that is the second finding rather than a technicality. Corrected and naive occupancy change agree to within 0.01 for 77% of species, with a median difference of 0.0020. The reason is the footprint rule: 20 cards per cell was registered so detection could be *estimated* everywhere, and at that effort an occupied cell is essentially never missed, so there was nothing left for detection to *explain*. The elaborate machinery earns its place on sparse data, and a footprint strict enough to fit it is strict enough to make it unnecessary. Read the other way, that is why the number can be trusted: it does not depend on the model. What it cannot do is separate a species that left from one that stayed and was recorded differently in a landscape that changed around it \u2014 no land-use covariate enters this, and attribution is a later note.",
+   "caveat": "The detection correction this was built for made no difference, and that is the second finding rather than a technicality. Corrected and naive occupancy change agree to within 0.01 for 77% of species, with a median difference of 0.0020. The reason is the footprint rule: 20 cards per cell was registered so detection could be *estimated* everywhere, and at that effort an occupied cell is essentially never missed, so there was nothing left for detection to *explain*. The elaborate machinery earns its place on sparse data, and a footprint strict enough to fit it is strict enough to make it unnecessary. Read the other way, that is why the number can be trusted: it does not depend on the model. What it cannot do is separate a species that left from one that stayed and was recorded differently in a landscape that changed around it \u2014 no land-use covariate enters this. Rain between the epochs does not explain the per-cell change either: partial r -0.088, spectral p 0.30. Yet 194 of 560 species' reporting rates follow it beyond their own error against a chance bar of 37, in both directions, so what rain does to these birds is decided species by species and cancels in the total.",
    "method": "docs/methods/phase1e-atlas.md",
    "realm": "terrestrial",
    "taxon_scope": "exact",
@@ -314,13 +317,13 @@
   {
    "key": "skill-sparse",
    "plain": "Knowing the weather and the big climate patterns barely helps predict when next year's migration will pass -- only a scattered few autumn stations beat guessing the average.",
-   "matters": "Migration timing has shifted over thirty years, and it is tempting to assume the shift makes each year predictable. It does not: a trend and year-to-year predictability are different properties, and every forecast this site will ever draw is licensed only where this map is not empty.",
-   "claim": "Interannual passage-timing skill is absent at most stations: spring significant at 11 of 140 (chance bar 11), autumn at 20 of 143 (chance bar 12), with median test-era skill -0.031 and +0.005.",
-   "plain_caveat": "Tested with one deliberately simple model and seven registered inputs; a cleverer model might do better, but it would be answering a different, unregistered question.",
+   "matters": "Migration timing has shifted over thirty years, and it is tempting to assume the shift makes each year predictable. It does not: a trend and year-to-year predictability are different properties, and every forecast this site will ever draw is allowed only where this map is not empty.",
+   "claim": "Interannual passage-timing skill is absent at most stations: spring significant at 11 of 140 (chance bar 11), autumn at 20 of 143 (chance bar 12), with median test-era skill -0.031 and +0.005. The limit is the target rather than the drivers: a station's own passage date is only 34% explainable against 65% for a flyway-band region, and predicting the region instead lifts the autumn median to +0.065 with 3 of 11 regions beating their own null.",
+   "plain_caveat": "Tested with one deliberately simple model and seven inputs chosen in advance; a cleverer model might do better, but it would be answering a different, unregistered question.",
    "plain_how": "Prediction was tested the only way that settles anything: fit on the early years, predict the later ones, and never look at them first. What the model was allowed to use was written down before it was run once. Then every station's score was set against the same model fed the same years shuffled, so a station counts as predictable only if it beats its own noise. Most did not.",
-   "value": "autumn 20/143 stations above chance; spring 11/140 at the chance bar",
+   "value": "autumn 20/143 stations above chance; spring 11/140 at the chance bar; regions 3/11, median +0.065",
    "scope": "143 US weather-radar stations, 1995-2025, era-split ridge against the training climatology with a per-station year-shuffle null; covariates fixed in docs/methods/phase3a-skill.md before any fit.",
-   "caveat": "One registered model class, one covariate list, one split: absence of skill here is absence under those registered choices, not a theorem about the atmosphere. Part of what skill exists is the shared climate modes wearing local clothes -- where the modes alone predict, the weather's marginal contribution halves -- and the marine and herd halves of the same design produced no skill map at all: the surveys mostly changed gear mid-record, and the herds' usable years fall below the design's own floor. The empty cells are statements about the data and the design, published at the same rank as the filled ones.",
+   "caveat": "One registered model class, one covariate list, one split: absence of skill here is absence under those registered choices, not a theorem about the atmosphere. Part of what skill exists is the shared climate modes wearing local clothes -- where the modes alone predict, the weather's marginal contribution halves -- and the marine and herd halves of the same design produced no skill map at all: the surveys mostly changed gear mid-record, and the herds' usable years fall below the design's own floor. The empty cells are statements about the data and the design, published at the same rank as the filled ones. One thing this number does not carry on its own: every aerial skill phase in this project has scored the same held-out era of the same panel, each blind within itself and none blind to the tables before it. ADR 0017 reserves the record's last three years for a single confirmatory run and requires each phase to state where in that sequence it sits.",
    "method": "docs/methods/phase3a-skill.md",
    "realm": "aerial",
    "taxon_scope": "unattributed",
@@ -361,15 +364,248 @@
    "specimen": "",
    "direction": "limit",
    "supporting": [
+    "Two of this project's claims read as a contradiction until this was published: temperature barely predicts a station's next year, and yet it is credited with about half the thirty-year advance. Both hold, because a station's date is 34% explainable and a region's 65% \u2014 a trend and interannual predictability are different properties, and the second was being measured against a target that is mostly noise.",
     "Two of the design's own pre-registered predictions were graded false and stand recorded in the method note -- spring, the literature's temperature-forced season, is indistinguishable from the false-positive rate.",
     "Autumn's count clears its exact binomial chance bar, so the sparse map is not noise promoted to a story.",
     "The fits reproduced byte-for-byte across two runs under the registered seed, after a data gap forced the only rerun."
    ]
   },
   {
+   "key": "protocol-disagreement",
+   "plain": "Two bird surveys counting the same species often disagree about which way it is moving, and mostly because neither can measure one species precisely enough to tell.",
+   "matters": "Almost everything on this site is a comparison: one place against another, one kind of animal against another, one method against another. All of it assumes that how you counted matters less than what you counted. Here that assumption was tested for the first time and it did not hold -- the two matter about equally. The useful half of the answer is why: a single species counted by a single programme is too faint a signal to compare, which is a reason to read the pages that follow as being about many animals at once rather than about any one of them.",
+   "claim": "On the one population pair this lake can check, between-protocol disagreement in a species' latitudinal trend is comparable to between-species dispersion once each side's own estimation error is removed from both: 1.17 to one. Only 24% of the raw paired disagreement is that error, so most of what separates the two programmes is a real difference in what they measure rather than noise in how well they measure it.",
+   "plain_caveat": "This is one country and one kind of survey. It does not prove the same is true of radar or of fishing nets, and it cannot say which of the two surveys is closer to right. Averaging species together makes each reading sharper without bringing the two surveys any closer, so the disagreement is not something more counting fixes.",
+   "plain_how": "Sweden runs two independent bird-counting programmes side by side. We took every species counted by both, cut the records back to the years the two share, and worked out how far north that species had moved according to each one. Then we compared the two answers for the same animal, so that differences between species could not be the explanation, and asked whether the gap between methods was smaller or larger than the gap between species.",
+   "value": "method-to-species scatter 1.17x, estimation error removed from both; 24% of the raw disagreement is that error",
+   "scope": "Two Swedish bird programmes, 1996-2024, 166 species qualifying in both at twenty years each, paired species by species with the window held common, of which 166 carry a standard error on both sides and enter the decomposition.",
+   "caveat": "The two readings a paired difference allows have been separated rather than left open, from the standard errors the fits were already computing: 24% of the raw disagreement is the two fits' own estimation error, so the remainder is a real difference in what the programmes measure. And the remainder is a constant offset -- point counts read about a sixth of a degree per decade more northward movement than fixed routes, by the same amount whether a species is easy to count or hard, northern or southern. The sign disagreements are softer than they read: 62 of 73 involve at least one estimate that cannot be told apart from zero, which two weak readings of a near-zero trend do as a matter of course. The reason is in the third figure: a median species trend here is 1.69 standard errors from zero, short of the two a single estimate needs, so these networks do not measure one species' movement precisely enough to compare. And agreement would have licensed comparison, never accuracy -- two programmes in one country can share a bias and agree while both are wrong.",
+   "method": "docs/methods/phase1l-paired-protocols.md",
+   "realm": "terrestrial",
+   "taxon_scope": "exact",
+   "evidence_type": "survey_index",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "Sweden, and only Sweden. It is the one place in this lake where two independent programmes count the same populations, so it is the only place the question can be asked at all -- which is itself a fact about the holding rather than about birds."
+    },
+    {
+     "domain": "temporal",
+     "status": "addressed",
+     "finding": "Both programmes restricted to their shared window, 1996-2024, before any slope was fitted. Window cannot contribute to the disagreement."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "addressed",
+     "finding": "Paired species by species. The comparison is one animal against itself, so the species mixture -- which is what made the first version of this diagnosis wrong -- cannot contribute either."
+    },
+    {
+     "domain": "environmental",
+     "status": "open",
+     "finding": "Footprints still differ: 33 consistently sampled cells against 84. Part of the residual may be real geography rather than method, and restricting to shared cells is the successor's first job."
+    },
+    {
+     "domain": "detectability",
+     "status": "open",
+     "finding": "This is a measurement *of* a detectability difference and cannot correct for one. A point count and a fixed route weight a species' detectability differently by construction; which of the two is closer to the truth is not answerable from the pair."
+    },
+    {
+     "domain": "phenological",
+     "status": "not applicable",
+     "finding": "A latitude centroid over a breeding season carries no timing claim."
+    }
+   ],
+   "specimen_key": null,
+   "specimen": "",
+   "direction": "limit",
+   "supporting": [
+    "The pairing was run because an earlier version of this diagnosis compared two network averages over different species mixtures, which is the error it was warning about; removing the mixture made the disagreement larger rather than smaller.",
+    "It is not geography: matching the two footprints cell for cell leaves the ratio where it was, because the smaller programme's cells turn out to be 97% nested inside the larger one's rather than beside them.",
+    "Two of the phase's four registered predictions were graded false, and they fired the stop condition that withholds the distribution results this claim replaces.",
+    "A successor grouped the same species by where they live and recomputed the ratio with groups as the unit, which is how a difference that averages away is told from one that does not. It did not move, so the remainder is systematic rather than species-specific -- the more serious of the two possibilities, and the reason the withholding stands on firmer ground than when it fired.",
+    "The window was made common before any slope was fitted, so the disagreement is not two programmes describing two different periods.",
+    "The headline moved in the correcting, and the earlier figure is kept here rather than replaced quietly: 1.43 compared interquartile ranges with both sides' estimation error left in, and 1.17 compares standard deviations with that error removed from each. Two changes at once, so the fall is not attributable to the correction alone."
+   ]
+  },
+  {
+   "key": "flight-advance",
+   "plain": "British butterflies are flying about two days earlier every decade. Their dates follow how warm the spring before was.",
+   "matters": "Timing is where a warming year shows up first, and for an animal that lives a few weeks as an adult, emerging into the wrong fortnight is the whole of the stake. This is the same question the radar answers over North America, asked of a completely different kind of animal with a completely different instrument, on a panel eighty times bigger.",
+   "claim": "Mean flight date across UK monitoring transects has advanced by 2.10 days per decade (median across 12,213 site-species-generation series, 95% CI -2.45 to -1.81 with taxa resampled rather than series), with 2,476 series beating their own year-shuffle null against a chance bar of 651. The date follows the pre-season temperature at -4.70 days per \u00b0C, the median over 75 species-generations.",
+   "plain_caveat": "Most of these are butterflies that stay put, so this is when they emerge rather than when they travel. It is one country, and it is volunteers walking fixed routes.",
+   "plain_how": "Volunteers have walked the same fixed routes in Britain since the scheme began, recording what they see. For each species at each site, the scheme records the middle of its flight period, and we asked whether that date has moved -- one straight line per site-species series, and only where fifteen years of it exist. Every series was also compared against itself with the years shuffled, so a series only counts if it beats its own noise.",
+   "value": "-2.10 days per decade across 12,213 series (IQR -4.6 to +0.5)",
+   "scope": "UK Butterfly Monitoring Scheme transects, 1973-2021, 12,213 site-species-generation series clearing fifteen years each, split generations kept apart from pooled-brood rows.",
+   "caveat": "The median hides a spread that is wider than itself: the interquartile range runs -4.6 to +0.5 days per decade, so a substantial minority of series are flying later, and this is a summary of series doing different things rather than one behaviour. The response to pre-season temperature is measured and it is not a cause -- a date regressed on a temperature at the same place -- and 75% of the advance is the size that response predicts from the warming. A mean flight date is one summary of a flight period, and a species whose season lengthened at one end without moving its centre reports nothing. And a flight period is not a migration: the comparison to nocturnal passage is a comparison of thermal tracking, not of the same behaviour. No individual series is readable here: the median one sits 1.05 standard errors from zero, short of the two a single estimate needs, so this is a statement about a network and never about a site or a species. No ratio between the two is published: a mean and a median are commensurable only while the curve's shape holds still, and it did not. Withdrawing rather than caveating is Phase 1j's registered consequence.",
+   "method": "docs/methods/phase1k-idle-networks.md",
+   "realm": "terrestrial",
+   "taxon_scope": "exact",
+   "evidence_type": "survey_index",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "The United Kingdom's transect network, 3,144 sites. A phenological response measured where volunteers walk, which is not a sample of anywhere else."
+    },
+    {
+     "domain": "temporal",
+     "status": "addressed",
+     "finding": "1973-2021, and the unit qualifies only with fifteen years of its own. Long enough that a decadal rate is not an artefact of two endpoints."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "bounded",
+     "finding": "59 taxa, resolved to name, and the great majority resident. This is a flight-period response and not a migration timing shift -- the two are different behaviours and the claim is only about the first."
+    },
+    {
+     "domain": "environmental",
+     "status": "bounded",
+     "finding": "Pre-season temperature enters as a driver in Phase 2d: -4.70 days per \u00b0C, fitted within site with a year term. A response and not a cause -- nitrogen, land use and recorder behaviour that trend with British springs survive the fit."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "The estimand is a date, not an abundance, so no effort denominator is needed -- and the source carries none. A year with fewer visits gives a noisier date, not a biased one."
+    },
+    {
+     "domain": "phenological",
+     "status": "bounded",
+     "finding": "Mean flight date is one summary of a flight period. A species whose season lengthened at one end without moving its centre would report no change here."
+    }
+   ],
+   "specimen_key": null,
+   "specimen": "",
+   "direction": "change",
+   "supporting": [
+    "The phase's estimator reproduced two of this project's published numbers before touching a new source -- the marine median to three significant figures and the aerial slope to two -- by calling those reports rather than a copy of them.",
+    "The comparison to the radar is withheld, and by a condition registered in Phase 1j before either number existed. What moved: flight-curve spread +0.097 [+0.051, +0.133] days per decade over 1973-2021; flight-period duration -0.201 [-0.408, -0.034] days per decade over 1995-2021. The interval resamples units as if independent, so it is if anything too tight -- which withholds more than a wider one would, and is the safe direction for a guard.",
+    "The estimand had to be reconstructed because the lake stores no flight date, and the first implementation fitted the wrong quantity; the correction is recorded in the method note rather than edited away.",
+    "The interval published here is 4.5 times the one a resample over series gives, and it is the wider of two clusterings rather than the convenient one: 12,213 series rest on 57 taxa and one national spring, so treating them as independent was the error. Registered as a prediction before it was measured, and it came in above the bracket's floor.",
+    "Phase 2d fitted the response per species-generation with site intercepts and a year term, intervals clustered on year: median -4.70 days per \u00b0C [-4.98, -4.23] over 75 units, 60 of them clear of zero and every one of those negative. The year term moved the median by 0.10, so the co-trend is small here as it was on the radar.",
+    "The responses are the species': Cochran's Q 206.1 against a bar of 95.1, so they are not one number with noise. The pre-season warmed +0.34 \u00b0C per decade, and the response predicts 75% of the observed advance against about half for the radar."
+   ]
+  },
+  {
+   "key": "seas-disagree",
+   "plain": "Most of what these surveys report as fish moving is where the ships went. What is left still differs from sea to sea, and how fast a sea warmed does not sort it.",
+   "matters": "A single number for the ocean would erase this, and a single number is what a reader wants. The useful half of the answer is how much of the disagreement is the surveying rather than the sea: most of it, which is a warning about every range-centre on this site. And the obvious explanation for who moved \u2014 whose water warmed most \u2014 is measured here and is not the answer.",
+   "claim": "Across 18 shelf-survey segments the latitude trends are heterogeneous far beyond sampling \u2014 Cochran's Q 235.7 against a chi-square bar of 27.6 \u2014 while warming does not predict which segments moved: +0.039 \u00b1 0.179 \u00b0latitude per \u00b0C, both per decade. With each survey's own sampling drift in the design, a degree of station movement carries +0.82 \u00b1 0.29 degrees of reported movement, the residual heterogeneity is Q 77.3 against 25.0, and warming stays null at -0.117 \u00b1 0.121.",
+   "plain_caveat": "This says the seas still differ after their own station drift is taken out, and that temperature does not sort them. It does not say what does. Whether the fish or the sea carries the difference was asked, and once chance is counted the two explain about the same.",
+   "plain_how": "The same research trawls, cut a different way. Instead of asking how far fish moved on average, we asked whether the seas agree with each other at all \u2014 a formal test of whether eighteen surveys are one population with noise or genuinely different places. Then we asked whether the seas that warmed fastest were the seas whose fish moved furthest, using satellite temperature over each survey's own footprint.",
+   "value": "Q 235.7 against a bar of 27.6 across 18 segments; warming +0.039 \u00b1 0.179 \u00b0lat per \u00b0C",
+   "scope": "18 bottom-trawl survey segments, each its longest unbroken run under one gear clipped to the satellite era at twenty years or more, against a footprint-mean satellite sea-surface temperature. 11 surveys published as coverage instead.",
+   "caveat": "The heterogeneity that survives the stations' own movement is about a third of the published Q, and it clears its bar by a weight margin of 1.76 times while the dependence corrections this project has measured on comparable intervals run 2.4 to 4.5 times \u2014 so it clears, and not comfortably. The warming null is an average over units that disagree, so it rules out warming as the sorter on this axis at this unit, not as a driver; with the drift in the design its sign is negative, and dropping one segment takes it clear of zero, stated rather than read. Cut in thirds by thermal position, warming rate and depth, no third of the pairs moved differently beyond its own null, so the null is not hiding a subset along any axis this lake can define. The registered depth interaction came out +0.176 \u00b1 0.131, the opposite sign to the prediction, and is reported as the graded failure it is. The driver is a satellite reading the surface where the fish are on the bottom, bounded only by the two waters agreeing in direction at +0.216 across 10 surveys.",
+   "method": "docs/methods/phase3e-marine-oisst.md",
+   "realm": "marine",
+   "taxon_scope": "exact",
+   "evidence_type": "survey_index",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "Eighteen shelf surveys of the North Atlantic and North Pacific. 0% southern hemisphere and 0% tropics, so this is a statement about northern shelf seas and not about the ocean."
+    },
+    {
+     "domain": "temporal",
+     "status": "addressed",
+     "finding": "The unit is a survey's longest unbroken run under one gear, clipped to the satellite era, so no break term is needed anywhere: the segment is the break handling. A deterministic gear rule replaced one whose tie order was unstable between runs."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "addressed",
+     "finding": "Around 1,400 species-survey pairs summarised per survey by their median. The heterogeneity is measured between surveys, which is the level a pooled median destroys."
+    },
+    {
+     "domain": "environmental",
+     "status": "open",
+     "finding": "The warming driver is a satellite reading the sea surface at a quarter degree, and these are bottom trawls. Where both waters exist they agree in direction at +0.216 across ten surveys, which is modest, and that correlation is the whole of what bounds the substitution."
+    },
+    {
+     "domain": "detectability",
+     "status": "bounded",
+     "finding": "A trawl samples trawlable ground, and a survey that recorded no haul depth cannot enter the registered regression at all rather than being given a substituted depth."
+    },
+    {
+     "domain": "phenological",
+     "status": "bounded",
+     "finding": "Surveys run in fixed seasons, so a species that shifted its timing rather than its position does not appear here."
+    }
+   ],
+   "specimen_key": null,
+   "specimen": "",
+   "direction": "limit",
+   "supporting": [
+    "The heterogeneity survives ADR 0016: dropping any one of the segments leaves Q above its own recomputed bar, so this is not one extreme sea carrying a statistic.",
+    "It does not survive intact as a claim about oceans. With each survey's own station drift as a coefficient rather than a correction, a degree of station movement carries +0.82 \u00b1 0.29 degrees of reported movement -- nearly one for one -- and the heterogeneity left over is Q 77.3 against 25.0, surviving the loss of any one segment. The finding is about a third the size it was published at and it is about surveys rather than seas.",
+    "Whether the animal or the sea carries the spread was asked at a five-survey floor, and the two came out about level once the number of groups was counted -- a between-group share scores high with its labels shuffled when the groups are many and small. The marine-null claim carries that measurement. The sentence this claim published on 2026-09-01, that the species explains 2.8 times what the survey does, compared 297 groups against 23 and is withdrawn.",
+    "Its margin against the weights is narrower than that, and is stated rather than left implicit: Q clears while each survey's interval is understated by less than 2.92 times. Those intervals treat the species inside a survey as independent when they share its gear, footprint and water, and the comparable corrections this project has measured elsewhere run 2.4 to 4.5 times. Nobody has measured the factor for this quantity, so the honest position is that the heterogeneity is large and its clearance is not comfortable.",
+    "The warming null has no verdict for a single unit to overturn, and the furthest any one segment moves it leaves it a null as well.",
+    "Five of five registered predictions were graded and two came back false, including the warming one this claim reports \u2014 the design was built to be able to say so.",
+    "The satellite substitution was gated on a calibration fixed before any value was read: where a survey recorded its own water, the two had to agree in direction or nothing below was interpreted.",
+    "An earlier version of this phase died on its own floor, with ten units against a registered twelve, because it required each survey to have recorded its own temperature. The salvage is what made eighteen possible and it is priced in the note."
+   ]
+  },
+  {
+   "key": "projection-mask",
+   "plain": "If emissions are cut hard, about half these places stay inside the range we measured. Under every other scenario the warming runs off the end of it, and there we decline to guess.",
+   "matters": "A projection three degrees outside the range it was fitted in is not a cautious estimate. It is arithmetic wearing the clothes of evidence, and it is the single commonest way this kind of forecasting goes wrong. Publishing where the answer runs out is the result here, and it is a smaller map than anyone wants.",
+   "claim": "Of the scenario-and-horizon frames projected across 78 stations in the claim band, 3 of 8 have nothing sayable in them at all: the multi-model median warming reaches +7.10 \u00b0C against a fitted envelope whose upper bound is +1.74 \u00b0C. The best-covered frame is ssp126 at 2040-2059, sayable at 49% of stations, and the largest sayable shift anywhere is 1.14 days per the fitted response.",
+   "plain_caveat": "This projects only the part of the timing shift that follows temperature, which is about half of it. And it is not a forecast for any particular year \u2014 a response read forwards under a scenario and a prediction of next autumn are different things.",
+   "plain_how": "No new measurement and no model of our own. The relationship between a warm pre-season and an earlier passage was already fitted from thirty years of observations, over a range of temperatures those thirty years actually contained. We took published climate projections, asked how much warmer each scenario makes each station's pre-season, and then asked the only question that matters: is that warming inside the range the relationship was measured over? Where it is not, nothing is drawn.",
+   "value": "49% sayable at best (ssp126, 2040-2059); 3 of 8 frames entirely unsayable",
+   "scope": "78 radar stations between 37\u00b0N and 50\u00b0N, four SSPs and two twenty-year windows, each model's June-July anomaly against its own 1995-2014 baseline, masked against the 5th-to-95th band of the within-station departures the response was fitted over.",
+   "caveat": "The number a reader will reach for is the projected shift, and it is the one number here that misleads: masking removes every cell warmer than the envelope's edge, so the surviving cells are bunched against that edge and the median sayable shift sits near a day in every scenario at every horizon. Four scenarios that differ by four degrees of warming cannot imply the same shift \u2014 what they share is the mask. Read it as a bound on the thermal component, never as an expectation. That component is also only about half of the observed advance and the response behind it can be fitted on two timescales, so it carries its own range before any scenario is applied. Nothing here says the response stays linear outside the band, which is exactly what the mask declines to assert, and the model spread is wider than the response's own interval \u2014 which model you pick matters more than how well the response is known. And this is not a year-ahead forecast: interannual skill is absent at most of these stations, and a standing annual prediction was tested and refused on measured grounds.",
+   "method": "docs/methods/forecast-a.md",
+   "realm": "aerial",
+   "taxon_scope": "unattributed",
+   "evidence_type": "flux",
+   "bias": [
+    {
+     "domain": "geographic",
+     "status": "bounded",
+     "finding": "The 78 radar stations between 37\u00b0N and 50\u00b0N, which is where the response function is published and nowhere else. Nothing here is projected outside that band, and the whole point of the claim is that a fitted line does not travel."
+    },
+    {
+     "domain": "temporal",
+     "status": "open",
+     "finding": "Every model's anomaly is taken against its own 1995-2014 baseline, which ends where CMIP6's historical runs end. The response it multiplies was fitted over 1995-2025, so the two windows do not coincide and the ratio construction is what makes that tolerable."
+    },
+    {
+     "domain": "taxonomic",
+     "status": "open",
+     "finding": "The response is aerial reflectivity, which cannot tell a bird from a bat from an insect. A projection inherits that whole and adds nothing to it."
+    },
+    {
+     "domain": "environmental",
+     "status": "open",
+     "finding": "Wind, land use, light and the unexplained half of the observed advance are all held at no change, which is a claim about the future and not a neutral choice."
+    },
+    {
+     "domain": "detectability",
+     "status": "addressed",
+     "finding": "Every row carries whether that station has any interannual skill at all, because a scenario response read forwards is not a year-ahead forecast and a reader who confuses them has been misled by presentation."
+    },
+    {
+     "domain": "phenological",
+     "status": "bounded",
+     "finding": "The response is a passage date, so this projects timing and nothing about abundance, route or destination."
+    }
+   ],
+   "specimen_key": null,
+   "specimen": "",
+   "direction": "limit",
+   "supporting": [
+    "The mask was applied before any projected value was reported, not after inspecting them, and the envelope, the windows, the member cap and the baseline were all fixed before a single scenario store was opened.",
+    "Four of five registered predictions held. The one that failed was the mid-century share under strong mitigation, short of a bar chosen for its roundness by one station, and it is recorded as false rather than rounded up.",
+    "The response function is read from the published fit rather than re-estimated here, so the projection and the ledger cannot disagree about the coefficient they share.",
+    "Every projected row carries whether its station has any interannual skill at all, because a scenario response and a year-ahead forecast are different objects and the difference is presentation's responsibility."
+   ]
+  },
+  {
    "key": "displacement-flat",
    "plain": "Two collared herds travel about as far between winter and summer as they did when tracking began -- as far as their collars can honestly tell.",
-   "matters": "The obvious measure of animal movement -- distance walked along the track -- mostly measures how often the collar spoke, which changed 104-fold over this record. The distance between winter and summer does not care how often the collar spoke, and it has not changed. Six million fixes in this project's lake carry that lesson for every collar study ever pooled.",
+   "matters": "The obvious measure of animal movement -- distance walked along the track -- mostly measures how often the collar spoke, which changed 104-fold over this record. The distance between winter and summer does not care how often the collar spoke, and it has not changed. Six million collar positions in this project's records carry that lesson for every collar study ever pooled.",
    "claim": "Winter-summer displacement shows no detectable trend in either herd (-1.84 \u00b1 3.89 and +1.16 \u00b1 2.13 km per decade), while path length tracks the fix interval at rho -0.879 and displacement does not (-0.047).",
    "plain_caveat": "A change smaller than roughly a doubling per decade could not have been seen, so this is a wide kind of nothing.",
    "plain_how": "Two collared herds, one in the Canadian Rockies and one on Svalbard. For each animal in each year we took where it was in a fixed winter window and where it was in a fixed summer window and measured the distance between the two \u2014 the same two windows every year, so the numbers can be compared \u2014 then asked whether that distance is growing or shrinking. Years with fewer than ten animals are left out.",
@@ -423,14 +659,14 @@
   },
   {
    "key": "transfer-fails",
-   "plain": "Two records on opposite sides of the world agreed about how animals follow a warming climate. The third, measured a different way, did not.",
-   "matters": "Almost every published forecast of where wildlife will go assumes a response measured in one place holds in another. It is an assumption because testing it needs several responses measured the same way, which is rare. Here the crossing that everyone worries about \u2014 hemisphere \u2014 turned out to be the one that held, and the one nobody names broke it.",
-   "claim": "Thermal tracking measured in the northern marine realm (-0.025) and the southern terrestrial realm (-0.014) cannot be told apart, while the aerial record (-0.706) differs from both. Responses transferred across the equator and failed to transfer across the kind of response being measured.",
+   "plain": "Two records on opposite sides of the world agreed that these animals barely follow the warming. The third found a large response, so what crossed the equator was an absence.",
+   "matters": "Almost every published forecast of where wildlife will go assumes a response measured in one place holds in another. It is an assumption because testing it needs several responses measured the same way, which is rare. This is three of them under one audit \u2014 and the honest result is that the test could not be run as intended, because two of the three had almost no response to carry across.",
+   "claim": "Thermal tracking measured in the northern marine realm (-0.025) and the southern terrestrial realm (-0.014) cannot be told apart, while the aerial record (-0.706) differs from both. But the two that agree sit within a few percent of no tracking on a scale where one is full tracking, so what agreed across the equator is a near-absence of response \u2014 and two near-zeros matching cannot establish that a response transfers. The one leg carrying a substantial response is the one that broke the agreement, which is the result this design can support.",
    "plain_caveat": "Three records is three points. The one that disagreed is also the only one measuring dates instead of places, and the only one from radar, and nothing here can separate those.",
-   "plain_how": "A test of whether one realm's answer travels. Three bodies of evidence, and three runs: each time, fit on two of them and try to describe the third, which the model has never seen. Two of the three could be recovered that way. The one measured from the air could not, by an order of magnitude \u2014 which is the finding rather than a hitch in it.",
+   "plain_how": "A test of whether an answer from one kind of record carries to another. Three bodies of evidence, and three runs: each time, fit on two of them and try to describe the third, which the model has never seen. Two of the three could be recovered that way. The one measured from the air could not, by an order of magnitude \u2014 which is the finding rather than a hitch in it.",
    "value": "hold-one-out error 0.68 for aerial-north against 0.06 and 0.02 for the other two",
    "scope": "69 radar stations between 37\u00b0N and 50\u00b0N, 1,426 species-and-survey pairs over northern-hemisphere shelf seas, and 523 species over 496 quarter-degree cells in southern Africa. Each leg's own window.",
-   "caveat": "This tests whether three measured responses agree, not whether a model fitted in one would work in another \u2014 a weaker question, and the only one three cases can answer. The two realms that agree do so at a median tracking of -0.025 and -0.014: both are indistinguishable from no tracking at all, so what transferred is an absence of response, which is a much cheaper thing to reproduce than a response. The aerial leg is the only one with a clear signal in it and the only one that failed, and it is also the only phenological leg, the only radar leg and the only one needing a seasonal temperature slope to reach common units \u2014 the pre-registration listed realm, hemisphere, instrument and decade as inseparable here and did not list response type, which is the axis the result fell on. That omission is recorded as a correction in the method note rather than edited away. Every leg divides by a temperature and none carries wind, land use or fishing pressure, so a realm moved by something else reports it as a failure to follow the heat.",
+   "caveat": "This tests whether three measured responses agree, not whether a model fitted in one would work in another \u2014 a weaker question, and the only one three cases can answer. And it could not be run as intended, because the two realms that agree do so at a median tracking of -0.025 and -0.014 on a scale where one is full tracking. So what transferred is an absence, which is a far cheaper thing to reproduce, and the held-out prediction that succeeded predicted approximately nothing from two values near nothing. The aerial leg is the only one carrying a substantial response and the only one that failed, and it is also the only phenological leg, the only radar leg and the only one needing a seasonal temperature slope to reach common units \u2014 the pre-registration listed realm, hemisphere, instrument and decade as inseparable here and did not list response type, which is the axis the result fell on. Every leg divides by a temperature and none carries wind, land use or fishing pressure, so a realm moved by something else reports it as a failure to follow the heat.",
    "method": "docs/methods/phase1i-transfer.md",
    "realm": "all",
    "taxon_scope": "all",
@@ -472,6 +708,8 @@
    "direction": "limit",
    "supporting": [
     "The pair that agrees differs in hemisphere, realm, instrument, taxon and decade, and its medians sit 0.011 apart (p=0.10, Holm-corrected) \u2014 while the aerial record sits 0.69 from both.",
+    "The southern figure is not separable from zero at all; the marine one is, at about 2.3 standard errors, which makes it a measured near-absence rather than an unmeasurable one \u2014 and neither is a response.",
+    "That omission is recorded as a correction in the method note rather than edited away.",
     "Agreement is not only in the centre: predicting the southern atlas from the other two puts 52.8% of it inside the predicted interquartile range, against the 50% a correct prediction would give, and the marine leg lands at 49.7%. The aerial leg gets 31.9%.",
     "The conversion the aerial leg needs was registered as a stop condition, and it does not fire: its median moves 0.054 across three choices of autumn window, against the 0.2 that would have withdrawn the leg and reduced this to a two-realm comparison.",
     "Both quantities in that conversion are measured from the same reanalysis the denominator comes from, so no literature constant enters the only leg that needs one.",

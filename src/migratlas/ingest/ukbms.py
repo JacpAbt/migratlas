@@ -1,20 +1,5 @@
 """UK Butterfly Monitoring Scheme flight-period phenology, per `docs/methods/phase1j-fourth-leg.md`.
 
-The project's first insect series and the fourth leg of the transfer test: a timing record that is
-phenological like the radar and is not radar, which is the one axis `transfer-fails` could not
-separate.
-
-Three things here are decided in the method note rather than by this module, and each would be a
-silent error otherwise.
-
-**The day columns count from 1 April, not from 1 January.** The archive's own documentation says so
-with "20 = 20th April" as its example. Read as a day of year, every date lands about ninety days
-early and looks entirely plausible -- a Peacock flying in January rather than April.
-
-**The pooled brood row is dropped for the thirteen species that have their generations split.** For
-those, `BROOD = 0` is the whole flight season across two peaks and a trough, which is not a date any
-animal experienced. For every other species it is the only row there is, and it is kept.
-
 **`count` is days from first appearance to the mean flight date, not a day number.** `count` is this
 table's value column, where `sabap1` puts a reporting rate and `fishglob` a standardised index --
 every one of those an intensity. A day of year is a coordinate on the time axis instead, and
@@ -216,3 +201,27 @@ def ingest() -> WriteResult:
     spec = spec_for(EvidenceType.SURVEY_INDEX)
     table: pa.Table = rows.select(spec.schema.names).to_arrow().cast(spec.schema)
     return write_evidence(table, spec, source_id=SOURCE_ID)
+
+
+def shape_series() -> pl.DataFrame:
+    """The flight curve's *shape* per row, for the guard Phase 1j registered as prediction 6.
+
+    Neither quantity belongs in the lake and neither is there. `SURVEY_INDEX` carries one value
+    column, that column carries the flight date, and a second and third number about the same
+    period have nowhere to go -- so the guard reads the archive rather than widening a schema for
+    a diagnostic.
+
+    The two are not equally trustworthy and a grading has to say which of them moved.
+    `FLIGHTPERIOD_SD` is the measure the scheme's own supporting document recommends.
+    `FLIGHTPERIOD_RANGE` rests on `FIRSTDAY` and `LASTDAY`, which the same document warns are
+    unreliable where a flight period runs past the 1 April to 30 September window. A trend in the
+    duration with none in the spread is therefore as likely to be the window as the animals.
+    """
+    return phenology().select(
+        site=pl.col("SITENO").cast(pl.Int64),
+        taxon_label=pl.col("SPECIES_NAME"),
+        brood=pl.col("BROOD").cast(pl.Int64),
+        year=pl.col("YEAR").cast(pl.Int64),
+        sd_days=pl.col("FLIGHTPERIOD_SD").cast(pl.Float64),
+        duration_days=pl.col("FLIGHTPERIOD_RANGE").cast(pl.Float64),
+    )

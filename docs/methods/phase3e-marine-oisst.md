@@ -126,3 +126,103 @@ than beside it. When it does, this section is its source of truth: the claim is 
 differ, and the thermometer alone does not sort the movers from the stayers", with Q 235.7
 against 27.6 across 18 units as the number, and prediction 3's null as its inseparable other
 half.
+
+---
+
+## Diagnostics, 2026-09-01: why do the seas differ, and is it the sea at all?
+
+**UNREGISTERED.** §3 asked for neither of these and both were written after the heterogeneity was
+published, so neither can ever be a graded prediction. Phase 3g's precedent governs how they may be
+read — and as there, the diagnostic decides what the phase is allowed to claim.
+
+They exist because the results section stopped at *"the seas differ emphatically and the thermometer
+does not sort them"*, and four measured drivers have since failed to sort them as well (warming,
+depth, oxygen after leverage, and Phase 3j's three cluster axes). A fact with no explanation and four
+failed explanations is an unfinished result, not a caveated one.
+
+### 1. Nearly half the heterogeneity is where the ships went
+
+A centroid is weighted by catch per unit effort, so where the hauls happen moves it. The consistency
+rule keeps a cell only where it was sampled in 80% of the survey's years; it says nothing about how
+many hauls each kept cell received in each year. So: **each survey's own mean haul latitude per year,
+with no fish in it at all.**
+
+The spread is as large as the fish signal it is supposed to explain — from **−0.210** °latitude per
+decade (BITS-4) to **+0.337** (SWC-IBTS-4), against fish trends running −0.18 to +0.26.
+
+| | |
+| --- | --- |
+| correlation, sampling drift against fish drift, 18 surveys | **+0.699** |
+| r² | 0.489 |
+| slope | **+0.516** ° of fish per ° of sampling |
+| Cochran's Q on the fish trends | 235.7 |
+| **Q on the residuals, drift regressed out** | **130.9** |
+| **share of Q the drift accounts for** | **44.5%** |
+
+A slope near a half is what an effort-weighted mean should give if the stations move and the fish do
+not follow: the centroid moves with the sampling, damped by the cells that did not move.
+
+**So `seas-disagree`'s headline was overstated and is corrected in the same commit as this note.**
+The heterogeneity is real — 130.9 still clears a bar of 27.6 — but it is about half the size the
+finding published and it is no longer a statement about oceans doing different things. It is a
+statement about eighteen surveys, of which the most that can be said is that they differ after their
+own station drift is taken out.
+
+And the weight margin is tighter than the 2.92× recorded this morning. On the residual Q,
+`sqrt(130.9 / 27.6)` is **2.18** — so the intervals would need to be understated by only that much
+for the residual heterogeneity to stop clearing, and the comparable corrections measured in this
+project run 2.4 to 4.5.
+
+### 2. It is mostly the species, not the sea
+
+The other half of the question the results section never asked: surveys reach −0.22 and +0.26 in
+opposite directions, but **different surveys hold different species**, so that spread could be seas
+disagreeing or simply different animals living in different places. Restricting to taxa caught in
+three or more surveys makes them separable, because then the same animal is measured in several seas.
+
+**1,570 species-survey pairs, 297 taxa, 23 surveys.** Both shares use `phase1m._icc`, the project's
+own coherence measure, so they are comparable to every grouping result elsewhere:
+
+| grouped by | noise-corrected coherence |
+| --- | --- |
+| **the species** | **0.430** |
+| the survey | 0.156 |
+
+**Which fish you are explains about 2.8× what which sea you are in explains** — and 0.430 is the
+highest coherence this project has measured on any axis, against a floor of 0.10 and against family's
+0.346 in Swedish birds.
+
+That is a positive, mechanistic finding and it has been sitting inside `marine-null` unexamined since
+July: **fish species carry consistent movement tendencies across the seas they live in.** A species
+that moves north in the North Sea tends to move north on the Scotian shelf. The spread the ledger
+published as "surveys disagree" is substantially a property of the animals rather than of the water.
+
+### 3. And the oxygen result really is one sea
+
+Phase 3g found its association carried by GSL-N alone and stopped at that. The question it left is
+whether GSL is an outlier or the top of a dose-response, and the numbers Phase 3g already published
+answer it. The four next-strongest oxygen losses and their latitude trends:
+
+| survey | O₂ per decade | latitude per decade |
+| --- | --- | --- |
+| SCS-SUMMER | −8.87 | +0.039 |
+| SP-NORTH | −6.34 | −0.026 |
+| EBS | −5.15 | +0.008 |
+| EVHOE | −5.06 | −0.035 |
+
+**No gradient.** Losses of five to nine mmol m⁻³ per decade produce movement of either sign and near
+zero magnitude. So GSL-N at −29.4 is an isolated extreme rather than the end of a slope, and Phase
+3g's refusal to publish was not merely cautious — there is no dose-response for the claim to have
+rested on.
+
+### What these three do and do not license
+
+They do not retract the heterogeneity, and they are not a registered test of anything. What they do is
+move the marine story from *"the seas differ and nothing explains it"* to something with parts:
+**about 45% of the between-survey spread is survey design, the species is the strongest explanatory
+axis in the project, and the environmental drivers still explain none of the rest.**
+
+**What is owed is a registered successor**, because the right version of this puts the sampling drift
+in the design rather than regressing it out afterwards, and asks the species question with a
+pre-registered floor rather than on whichever taxa happen to appear three times. Neither is done here
+and neither should be read as done.

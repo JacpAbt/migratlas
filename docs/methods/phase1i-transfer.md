@@ -336,3 +336,69 @@ is now `coupling <= 1e-9` (`COUPLING_NOISE` in `phase1i.py`), found by the unit 
 after publication. Every physically coupled station sits orders of magnitude above the floor, so
 the published ratios are unchanged — verified by rebuilding `findings.json` and diffing, not
 asserted.
+
+---
+
+## Correction, 2026-09-01: the design could not test transfer, because two legs had no response
+
+The results above are unchanged and every prediction stays graded as it was. What is corrected is
+what the three legs together are able to establish, and the published claim's headline, which
+asserted more than the numbers carry.
+
+**Two of the three legs sit within a few percent of no tracking at all.** On a scale where 1 is
+following the warming completely:
+
+| leg | median tracking | SE of the median | separable from zero |
+| --- | --- | --- | --- |
+| aerial, north | **−0.706** | 0.121 | yes, comfortably |
+| marine, north | −0.025 | 0.011 | yes, at about 2.3 standard errors |
+| terrestrial, south | −0.014 | 0.036 | **no** |
+
+So the two legs that "agree" agree about an **absence**. The southern figure is not separable from
+zero at all. The marine one is separable but is 2.5% of the tracking the warming would require, and
+in the opposite direction — a *measured* near-absence rather than an unmeasurable one, which is a
+distinction worth keeping in the one note whose whole subject is what agreement means.
+
+**Agreement between two near-zeros is not evidence that a response transfers.** It is evidence that
+neither system had a response to transfer. And the held-out prediction that succeeded — terrestrial
+south, predicted at −0.035 against an actual −0.014 — predicted approximately nothing from two values
+near nothing, which is arithmetic rather than a test passing.
+
+That means the conclusion this note reached, *"transfer fails, and along the displacement-to-timing
+axis"*, is stronger than the design can support in one respect and weaker in another:
+
+- **Stronger:** with only one leg carrying a substantial response, there is no pair of *responses*
+  to compare. The comparison that actually happened is one signal against two near-flats, and no
+  arrangement of three such legs can say whether a response travels.
+- **Weaker, and this part stands:** the aerial leg's difference from both is real and large, and it
+  remains true that the axis it fell on was not in §6's list. The earlier correction about response
+  type is unaffected.
+
+**What was already right, and is why this is a headline correction rather than a result one.** The
+published finding's *caveat* has always said it: *"both are indistinguishable from no tracking at
+all, so what transferred is an absence of response, which is a much cheaper thing to reproduce than
+a response."* The `direction="limit"` comment in `findings.py` says the same. What contradicted them
+was the finding's own `plain`, `matters` and `claim`, which read as agreement about a response —
+*"Responses transferred across the equator"* — and a reader takes the headline. The headline now says
+what the caveat knew, and the caveat's one loose word is fixed with it: "indistinguishable" was true
+of the southern leg and not of the marine one, and both are now stated as measured.
+
+### What this does to #47
+
+#47 has been "a fourth leg for the transfer test" since 2026-08. It should be **"a second leg with a
+detectable response"**. A fourth near-flat leg would add a fourth point to a comparison that already
+cannot be made; what the design needs is a second system in which animals demonstrably track their
+thermal calendar, so that two responses can be compared rather than one response and some noise.
+
+That reframes which candidate wins. `ukbms_phenology` is already in the lake and already carries a
+signal — **−2.10 days per decade over 12,213 series** — so it is the strongest available candidate
+on exactly the criterion that matters, and Phase 1j's stop condition fired on a floor set against the
+wrong quantity rather than on anything about the data. The other candidates in #47's original list
+(constant-effort ringing, a phenology network) are unassessed for whether they carry a response at
+all, which is now the first question to ask of them rather than the last.
+
+### What this cannot fix
+
+Nothing here rescues the three-leg design. Three cases were always going to be thin, and §6 said so;
+what this correction adds is that they were thinner than the note realised, because two of the three
+had nothing in them to carry. The remedy is a leg with a response, not a leg.

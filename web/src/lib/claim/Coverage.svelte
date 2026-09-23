@@ -57,8 +57,8 @@
   <section class="coverage" aria-label="Where change could be measured">
     {#if part === "all" || part === "measured" || part === "summary"}
     <p class="coverage__lead">
-      <strong>{detectable.toFixed(1)}%</strong> of the cells this lake covers could support a trend.
-      Switch the layer on to see where.
+      <strong>{detectable.toFixed(1)}%</strong> of the squares these records cover have been
+      counted often enough to show a change. The globe in the last chapter shows where.
     </p>
 
     <ul class="coverage__legend">
@@ -77,7 +77,7 @@
     <table class="coverage__sources">
       <caption>Per source, ordered by what it can support</caption>
       <thead>
-        <tr><th scope="col">Source</th><th scope="col">Realm</th><th scope="col">Best it can do</th></tr>
+        <tr><th scope="col">Source</th><th scope="col">Where</th><th scope="col">Best it can do</th></tr>
       </thead>
       <tbody>
         {#each doc.coverage as source (source.source_id)}
@@ -109,7 +109,7 @@
              on the first of them. -->
         {#if part !== "held-more"}
           <p class="held__lead">
-            {doc.withheld.length} source{doc.withheld.length === 1 ? "" : "s"} in this lake
+            {doc.withheld.length} source{doc.withheld.length === 1 ? "" : "s"} in these records
             {doc.withheld.length === 1 ? "is" : "are"} classified as high sensitivity. Individual
             locations are withheld entirely — not coarsened, not delayed. Nothing below is on the map.
           </p>
@@ -148,8 +148,17 @@
 {/if}
 
 <style>
+  /*
+    Every size here is a multiple of `--size-margin`, not a rem.
+
+    Sized in rem, this component's text neither grew on a tall window nor shrank on a short one, so
+    `fit.ts` could scale everything on its page except the words -- and its pages were among the
+    last to run off the leaf at 1280x720 and 1024x768. Each factor is the old rem over 0.66, the
+    token's root value, so a phone -- which reads the root tokens -- is exactly as it was, and on
+    the spread the words follow the page like everything else on it.
+  */
   .coverage {
-    font-size: 0.8rem;
+    font-size: calc(var(--size-margin) * 1.21);
     line-height: 1.5;
   }
 
@@ -166,7 +175,7 @@
   .held h4 {
     margin: 0 0 var(--gap-tight);
     font-family: var(--font-hand);
-    font-size: calc(1.05rem * var(--font-scale-hand));
+    font-size: calc(var(--size-margin) * 1.59 * var(--font-scale-hand));
     font-weight: 400;
     line-height: var(--leading-hand);
   }
@@ -203,13 +212,13 @@
   .held__why {
     margin: var(--gap-hair) 0 0;
     color: var(--ink-soft);
-    font-size: 0.76rem;
+    font-size: calc(var(--size-margin) * 1.15);
   }
 
   .held__note {
     margin: var(--gap) 0 0;
     color: var(--pencil);
-    font-size: 0.76rem;
+    font-size: calc(var(--size-margin) * 1.15);
   }
 
   .coverage__lead {
@@ -219,7 +228,7 @@
   .coverage__lead strong {
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 1.15rem;
+    font-size: calc(var(--size-margin) * 1.74);
     color: var(--rust);
   }
 
@@ -227,7 +236,7 @@
     margin: var(--gap) 0 0;
     padding: 0;
     list-style: none;
-    font-size: 0.76rem;
+    font-size: calc(var(--size-margin) * 1.15);
   }
 
   .coverage__legend li {
@@ -253,7 +262,7 @@
   .coverage__ceiling {
     font-family: var(--font-mono);
     font-style: normal;
-    font-size: 0.7rem;
+    font-size: calc(var(--size-margin) * 1.06);
     color: var(--pencil);
     font-variant-numeric: tabular-nums;
   }
@@ -262,7 +271,7 @@
     width: 100%;
     margin: var(--gap) 0 0;
     border-collapse: collapse;
-    font-size: 0.72rem;
+    font-size: calc(var(--size-margin) * 1.09);
     text-align: left;
   }
 
@@ -278,7 +287,10 @@
 
   th,
   td {
-    padding: 2px var(--gap-tight) 2px 0;
+    /* In the page's own air rather than 2px: sixteen rows of fixed padding were the last 9px this
+       page could not give back at 1024x768. 0.6 of the hairline gap is the same 2px at the
+       reference window, and breathes with the page everywhere else. */
+    padding: calc(var(--gap-hair) * 0.6) var(--gap-tight) calc(var(--gap-hair) * 0.6) 0;
     border-bottom: 1px dotted var(--rule-faint);
     font-weight: 400;
     vertical-align: top;
@@ -294,7 +306,7 @@
 
   tbody th {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: calc(var(--size-margin) * 1.06);
     color: var(--ink);
   }
 
@@ -302,7 +314,7 @@
     margin: var(--gap) 0 0;
     padding-top: var(--gap-tight);
     border-top: 1px dotted var(--rule);
-    font-size: 0.76rem;
+    font-size: calc(var(--size-margin) * 1.15);
     color: var(--pencil);
   }
 

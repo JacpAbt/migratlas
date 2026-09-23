@@ -364,15 +364,58 @@ def ingest_era5_south() -> None:
         for lat, lon in cells.select("cell_lat", "cell_lon").iter_rows()
     ]
     years = [*range(1987, 1992), *range(2008, 2013)]
+    # Phase 2g added precipitation; both fields land in this one call because a write
+    # replaces the partitions it touches, and the temperature is re-read from the cache.
     result = era5.ingest(
         points,
         years,
         list(range(1, 13)),
-        fields=("temperature",),
+        fields=("temperature", "precipitation"),
         area=era5.SABAP_AREA,
         source_id="era5_south",
     )
     print(f"{result.rows:,} rows over {len(points)} cells -> {result.path}")
+    print(f"run {result.run_id}")
+
+
+@app.command("ingest-era5-uk")
+def ingest_era5_uk() -> None:
+    """ERA5 monthly 2 m temperature at every UKBMS transect the lake holds (driver samples).
+
+    Phase 2d's driver: months 1-8 of 1973-2021 over Britain and Ireland, so a two-month
+    pre-season exists for a species-generation whichever month it flies. Its own source id,
+    for `era5_south`'s reason -- a second box under `era5` would replace the North American
+    years it shares.
+
+    Phase 2f added precipitation and radiation, and all three fields land in this one call
+    for the lake's reason: a write replaces the partitions it touches, so landing the two new
+    fields alone would have deleted the temperature. The temperature file is re-read from the
+    archive's cache rather than fetched again.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.evidence import EvidenceType  # noqa: PLC0415 -- one command needs it
+    from migratlas.features.annotate import Point  # noqa: PLC0415
+    from migratlas.lake.reader import scan  # noqa: PLC0415
+
+    sites = (
+        scan(EvidenceType.SURVEY_INDEX, source_id="ukbms_phenology")
+        .select("site_id", "site_latitude", "site_longitude")
+        .unique(subset=["site_id"])
+        .collect()
+    )
+    points = [
+        Point(site_id=str(site), latitude=float(lat), longitude=float(lon))
+        for site, lat, lon in sites.iter_rows()
+    ]
+    result = era5.ingest(
+        points,
+        list(range(1973, 2022)),
+        list(range(1, 9)),
+        fields=("temperature", "precipitation", "radiation"),
+        area=era5.UK_AREA,
+        source_id="era5_uk",
+    )
+    print(f"{result.rows:,} rows over {len(points)} sites -> {result.path}")
     print(f"run {result.run_id}")
 
 
@@ -563,6 +606,39 @@ def build_introduction() -> None:
     print(f"{published} findings, {realms} realms, {sources} sources -> {path}")
 
 
+@app.command("build-headline")
+def build_headline() -> None:
+    """Draw each claim's headline result -> web/public/headline.json.
+
+    One small chart per claim, computed by the same functions the ledger calls so a picture cannot
+    disagree with the sentence under it. Re-runs the analyses, so minutes rather than seconds, and
+    needs the lake.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import headline  # noqa: PLC0415 -- one command needs it
+
+    size = headline.write()
+    typer.echo(f"headline -> {headline.DOCUMENT} ({size / 1024:.1f} KiB)")
+
+
+@app.command("build-chapters")
+def build_chapters() -> None:
+    """Publish the book's chapter openers -> web/public/chapters.json.
+
+    The argument between the claims, authored in `reports/chapters.py` and rendered verbatim.
+    Every number in it is read from the published ledger, so an opener cannot quote a figure the
+    record pages no longer carry -- which is the way narration goes stale without anyone noticing.
+
+    Needs no lake, and needs `findings.json` to already be built.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import chapters  # noqa: PLC0415 -- one command needs it
+
+    openers = chapters.build()
+    path = chapters.write(openers)
+    print(f"{len(openers)} chapter openers -> {path}")
+
+
 @app.command("build-response")
 def build_response(
     out: Annotated[Path, typer.Option(help="Where to write the response document.")] = Path(
@@ -722,6 +798,149 @@ def report_phase3f() -> None:
     from migratlas.reports import phase3f  # noqa: PLC0415 -- heavy, and only this command
 
     print(phase3f.render())
+
+
+@report_app.command("phase1k")
+def report_phase1k() -> None:
+    """Four idle monitoring schemes: what each says alone, and what they say in company."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase1k  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase1k.render())
+
+
+@report_app.command("phase1l")
+def report_phase1l() -> None:
+    """Two programmes, one country's birds: how much of the difference is the counting?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase1l  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase1l.render())
+
+
+@report_app.command("phase1m")
+def report_phase1m() -> None:
+    """Is there a level between one species and all of them?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase1m  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase1m.render())
+
+
+@report_app.command("phase2c")
+def report_phase2c() -> None:
+    """Is the thermal sensitivity a response, or a co-trend?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2c  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2c.render())
+
+
+@report_app.command("phase1o")
+def report_phase1o() -> None:
+    """Is the level between one species and all of them a taxonomic one?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase1o  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase1o.render())
+
+
+@report_app.command("phase1n")
+def report_phase1n() -> None:
+    """With the footprint held equal, what is the protocol difference made of?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase1n  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase1n.render())
+
+
+@report_app.command("predictions")
+def report_predictions() -> None:
+    """How often the registered predictions turned out wrong."""
+    from migratlas.reports import predictions  # noqa: PLC0415 -- heavy, and only this command
+
+    print(predictions.render())
+
+
+@report_app.command("phase3j")
+def report_phase3j() -> None:
+    """Is the marine null a mixture? Clusters by thermal exposure."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3j  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3j.render())
+
+
+@report_app.command("phase3k")
+def report_phase3k() -> None:
+    """Is the marine signal a property of the species rather than of the sea?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase3k  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase3k.render())
+
+
+@report_app.command("phase2d")
+def report_phase2d() -> None:
+    """Does the butterflies' flight date follow the temperature, per species?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2d  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2d.render())
+
+
+@report_app.command("phase2e")
+def report_phase2e() -> None:
+    """Is where an animal moved the population's, rather than the sea's or the air's?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2e  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2e.render())
+
+
+@report_app.command("phase2f")
+def report_phase2f() -> None:
+    """Does when an animal moves have more than one cue?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2f  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2f.render())
+
+
+@report_app.command("phase2g")
+def report_phase2g() -> None:
+    """Did the cells that got wetter gain birds? The southern atlas's rain."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2g  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2g.render())
+
+
+@report_app.command("phase2h")
+def report_phase2h() -> None:
+    """Is a marine where-shift a range shift, or a cut through a season?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2h  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2h.render())
+
+
+@report_app.command("phase2i")
+def report_phase2i() -> None:
+    """Is the radar's residual in the front's speed, or in the departure?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2i  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2i.render())
+
+
+@report_app.command("phase2j")
+def report_phase2j() -> None:
+    """Does an animal answer a hard winter by staying less, or by moving faster?"""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    from migratlas.reports import phase2j  # noqa: PLC0415 -- heavy, and only this command
+
+    print(phase2j.render())
 
 
 @report_app.command("phase3h")

@@ -22,10 +22,18 @@ if (!target) throw new Error("no #app to mount into");
 
 const base = import.meta.env.BASE_URL;
 
-const [{ default: Reader }, { loadLedger }, introduction, sandbox, response] = await Promise.all([
+const [
+  { default: Reader },
+  { loadLedger },
+  introduction,
+  chapters,
+  sandbox,
+  response,
+] = await Promise.all([
   import("./lib/book/Reader.svelte"),
   import("./lib/ledger"),
   import("./lib/book/introduction"),
+  import("./lib/book/chapters"),
   import("./lib/sandbox/sandbox"),
   import("./lib/sandbox/response"),
 ]);
@@ -42,10 +50,11 @@ const [{ default: Reader }, { loadLedger }, introduction, sandbox, response] = a
   says so on the leaf, which is the treatment `Plate` already gives a basemap that will not load --
   not a blank book.
 */
-const soft = <T,>(work: Promise<T>): Promise<T | null> => work.catch(() => null);
-const [ledger, opening, safeguards, dial] = await Promise.all([
+const soft = <T>(work: Promise<T>): Promise<T | null> => work.catch(() => null);
+const [ledger, opening, chapterProse, safeguards, dial] = await Promise.all([
   loadLedger(base).catch((error: unknown) => error as Error),
   soft(introduction.loadIntroduction(base)),
+  soft(chapters.loadChapters(base)),
   soft(sandbox.loadSandbox(base)),
   soft(response.loadResponse(base)),
 ]);
@@ -64,7 +73,8 @@ if (ledger instanceof Error) {
   const notice = document.createElement("p");
   notice.className = "boot-failure";
   notice.setAttribute("role", "status");
-  notice.textContent = "The findings did not load, so there is nothing to set. ";
+  notice.textContent =
+    "The findings did not load, so there is nothing to set. ";
   const detail = document.createElement("span");
   detail.className = "boot-failure__detail";
   detail.textContent = ledger.message;
@@ -73,6 +83,13 @@ if (ledger instanceof Error) {
 } else {
   mount(Reader, {
     target,
-    props: { findings: ledger.findings, base, opening, safeguards, dial },
+    props: {
+      findings: ledger.findings,
+      base,
+      opening,
+      chapterProse,
+      safeguards,
+      dial,
+    },
   });
 }

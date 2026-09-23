@@ -88,6 +88,25 @@
       figures, so a measurement set in it stops reading as a measurement -- and it never animates
       to its value, because a counting number reads as a score rather than as an interval.
     -->
+    <!--
+      The signpost, for the reader who was following the story.
+
+      Every page before this one is written for anyone. From here to the next claim they are written
+      for somebody checking the work: the exact sentence, the audit, what was tried against it.
+      Without a line saying so the register changes under a reader with no warning, and a first
+      reading of the book took that as the book stopping being for them.
+
+      One line, and measured to be one: a two-line version with a gap under it put five record
+      pages 4 to 31px over their budget at 1600x900. The longest record page has about eight pixels
+      to spare, so the signpost pays for itself with the air the prose block used to carry above it.
+    -->
+    {#if part === "record" && slice !== "caveat"}
+      <p class="claim__signpost">
+        <span class="claim__register">For the record</span>
+        The same finding as a specialist would check it. Not needed to follow the story.
+      </p>
+    {/if}
+
     {#if part !== "finding" && slice !== "caveat"}
       <p class="claim__value">{finding.value}</p>
     {/if}
@@ -101,10 +120,7 @@
     {#if part !== "finding"}
       <div class="claim__prose">
         {#if slice !== "caveat"}
-          <p class="claim__precise">
-            <span class="claim__register">Precisely</span>
-            {finding.claim}
-          </p>
+          <p class="claim__precise">{finding.claim}</p>
         {/if}
         <!-- Not on the record page in the book: `Plate` prints `finding.scope` in its own caption,
              so a spread showed the same sentence twice, two leaves apart, and the record page
@@ -126,7 +142,7 @@
           rel="noopener"
           target="_blank"
         >
-          Method and pre-registration
+          The plan, written down before we looked
         </a>
       {/if}
     {/if}
@@ -224,6 +240,17 @@
     color: var(--ink);
   }
 
+  .claim__signpost {
+    margin: 0;
+    font-size: var(--size-margin);
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  .claim__signpost + .claim__value {
+    margin-top: var(--gap-tight);
+  }
+
   .claim__value {
     margin: var(--gap) 0 0;
     font-family: var(--font-mono);
@@ -258,8 +285,8 @@
     margin: 0 0 var(--gap-tight);
   }
 
-  /* The exact sentence, kept whole. The label exists so a reader can see this is the same finding
-     said again rather than a further one -- without it the two registers read as two claims. */
+  /* The label on the signpost, so a reader can see the page is the same finding said again rather
+     than a further one -- without it the two registers read as two claims. */
   .claim__register {
     font-family: var(--font-mono);
     font-size: var(--size-label);
@@ -324,6 +351,12 @@
      stacks at -- that reservation squeezed a body with nothing to sit beside it. */
   .claim--part {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* On a page of its own the prose follows the value directly; the wide gap was for a card that
+     had a margin beside it to align with. */
+  .claim--part .claim__prose {
+    margin-top: var(--gap);
   }
 
   @container (max-width: 46rem) {
