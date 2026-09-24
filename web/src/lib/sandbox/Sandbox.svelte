@@ -29,8 +29,11 @@
      * dials to 1,173px, so roughly 435 and 586 each -- two on a page overflows either way. The lead
      * paragraph rides with the first knob only, because repeating it on every leaf would be four
      * copies of the same sentence in one chapter.
+     *
+     * Or on a page of its own: `lead` is the heading and that paragraph and nothing else, and
+     * `apart` tells the first knob its lead already has one. Only the roomy spread asks for either.
      */
-    slice?: { kind: "knob" | "refusal"; at: number } | null;
+    slice?: { kind: "lead" | "knob" | "refusal"; at: number; apart?: boolean } | null;
   } = $props();
 
   const knobs = $derived(knobsFor(doc, claim));
@@ -54,7 +57,7 @@
     <Rule seed={`${claim}-sandbox`} tone="pencil" />
 
     {#if part !== "refusals" && knobs.length > 0}
-      {#if !slice || slice.at === 0}
+      {#if !slice || slice.kind === "lead" || (slice.at === 0 && !slice.apart)}
       <p class="sandbox__lead">
         Every setting below is a real run on the real data, with one parameter changed.
         {#if anyLarger}
@@ -65,7 +68,7 @@
       </p>
       {/if}
 
-      {#each slice ? knobs.slice(slice.at, slice.at + 1) : knobs as knob (knob.key)}
+      {#each slice?.kind === "lead" ? [] : slice ? knobs.slice(slice.at, slice.at + 1) : knobs as knob (knob.key)}
         <Knob {knob} />
       {/each}
     {/if}

@@ -22,7 +22,8 @@
      */
     part?: "all" | "bias" | "survived";
     /**
-     * Which half of the assessment, when a phone gives it two pages.
+     * Which half of the assessment, when a phone gives it two pages -- or which half of what it
+     * survived, when the roomy spread gives that two (`pages.ts`).
      *
      * A narrower value on `part` would have been the wrong shape, for the reason `Claim.svelte`'s
      * own slice records: these gates read `part !== "survived"` and `part !== "bias"`, so a third
@@ -57,6 +58,13 @@
   const heading = $derived(
     slice === "rest" ? "How this could mislead you, continued" : "How this could mislead you",
   );
+
+  // Halved the same way, so an odd list puts its extra line on the first page.
+  const supporting = $derived.by(() => {
+    if (slice === "all") return finding.supporting;
+    const half = Math.ceil(finding.supporting.length / 2);
+    return slice === "first" ? finding.supporting.slice(0, half) : finding.supporting.slice(half);
+  });
 </script>
 
 <!--
@@ -94,12 +102,14 @@
     </section>
     {/if}
 
-    {#if part !== "bias" && finding.supporting.length > 0}
+    {#if part !== "bias" && supporting.length > 0}
       <section>
-        <h3>What we tried to break it with</h3>
+        <h3>
+          {slice === "rest" ? "What we tried to break it with, continued" : "What we tried to break it with"}
+        </h3>
         <Rule seed={`${finding.key}-survived`} tone="rule" />
         <ul class="survived">
-          {#each finding.supporting as line (line)}
+          {#each supporting as line (line)}
             <li><Ticked seed={line} on box={false} /><span>{line}</span></li>
           {/each}
         </ul>

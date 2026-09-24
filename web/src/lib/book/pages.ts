@@ -81,14 +81,25 @@ export type Panel =
    * because a row is the unit the assessment already has.
    */
   | { kind: "bias"; key: string; part: "all" | "first" | "rest" }
-  | { kind: "survived"; key: string }
+  /**
+   * What the claim survived: the whole list, or half of it on each of two pages.
+   *
+   * Halved only in the roomy arrangement -- see `spreadsOf` -- where the longest list ran 117px past
+   * a 1024x768 leaf in the dyslexia setting. A line is the unit the list already has.
+   */
+  | { kind: "survived"; key: string; part: "all" | "first" | "rest" }
 
-  /** One knob or one refusal, from whichever of the two documents keys it to this claim. */
+  /**
+   * One knob or one refusal, from whichever of the two documents keys it to this claim.
+   *
+   * `lead` is the section's heading and its opening paragraph on a page of their own, which only
+   * the roomy arrangement has. Everywhere else the lead rides on the first knob.
+   */
   | {
       kind: "panel";
       doc: "safeguards" | "dial";
       key: string;
-      part: "knobs" | "refusals";
+      part: "lead" | "knobs" | "refusals";
       at: number;
     }
   /**
@@ -213,7 +224,14 @@ function fold(
  * safeguard knobs. Padding every claim to the longest would have added a dozen blank spreads, and a
  * book where every chapter is the same length is a form rather than a book.
  */
-function claimPages(key: string, sources: Sources, narrow: boolean): Panel[] {
+function claimPages(
+  key: string,
+  sources: Sources,
+  narrow: boolean,
+  roomy: boolean,
+): Panel[] {
+  // The phone's seams, which the roomy spread borrows: each is where the material already parts.
+  const split = narrow || roomy;
   /*
     What we found, how we found it, the picture, then the numbers.
 
@@ -223,7 +241,7 @@ function claimPages(key: string, sources: Sources, narrow: boolean): Panel[] {
     to 680 of its 826 and a plain method is another 150 -- the split is where the material already
     had a seam, which is the rule every other split in this file follows.
   */
-  const pages: Panel[] = narrow
+  const pages: Panel[] = split
     ? [
         { kind: "finding", key, part: "said" },
         { kind: "finding", key, part: "matters" },
@@ -233,12 +251,12 @@ function claimPages(key: string, sources: Sources, narrow: boolean): Panel[] {
         { kind: "finding", key, part: "all" },
         { kind: "how", key },
       ];
-  figurePages(key, narrow).forEach((_page, at) =>
+  figurePages(key, split).forEach((_page, at) =>
     pages.push({ kind: "figure", key, at }),
   );
   // The record is one page on a spread and two on a phone. Its own seam, stated where the panel is.
   pages.push(
-    ...(narrow
+    ...(split
       ? ([
           { kind: "record", key, part: "value" },
           { kind: "record", key, part: "caveat" },
@@ -260,14 +278,25 @@ function claimPages(key: string, sources: Sources, narrow: boolean): Panel[] {
     change to `Margin.svelte` and a decision about what an audit shows at a glance.
   */
   pages.push(
-    ...(narrow
+    ...(split
       ? ([
           { kind: "bias", key, part: "first" },
           { kind: "bias", key, part: "rest" },
         ] as Panel[])
       : ([{ kind: "bias", key, part: "all" }] as Panel[])),
   );
-  pages.push({ kind: "survived", key });
+  // Not the phone's: a leaf there scrolls at its own reading size, and this list never outgrew it.
+  // Nor a list of one line, whose second half would be a heading over nothing.
+  const lines =
+    sources.findings.find((finding) => finding.key === key)?.supporting.length ?? 0;
+  pages.push(
+    ...(roomy && lines > 1
+      ? ([
+          { kind: "survived", key, part: "first" },
+          { kind: "survived", key, part: "rest" },
+        ] as Panel[])
+      : ([{ kind: "survived", key, part: "all" }] as Panel[])),
+  );
 
   /*
     One knob and one refusal per page, in the order `claim/Evidence.svelte` fixed: how much to trust
@@ -297,6 +326,10 @@ function claimPages(key: string, sources: Sources, narrow: boolean): Panel[] {
       ["knobs", source.knobs(source.held, key)],
       ["refusals", source.refusals(source.held, key)],
     ] as const) {
+      /* The lead on its own leaf in the roomy arrangement, because it was the difference: the first
+         knob of a section carries it, and those were the knob pages over the leaf. */
+      if (roomy && part === "knobs" && items.length > 0)
+        pages.push({ kind: "panel", doc: source.doc, key, part: "lead", at: 0 });
       items.forEach((_item, index) =>
         pages.push({ kind: "panel", doc: source.doc, key, part, at: index }),
       );
@@ -380,6 +413,7 @@ function sectionsOf(
   chapters: readonly Chapter[],
   realm: string,
   narrow: boolean,
+  roomy = false,
 ): Section[] {
   const opening = chapters[0];
   const world = chapters[chapters.length - 1];
@@ -387,7 +421,7 @@ function sectionsOf(
 
   for (const chapter of chapters) {
     if (chapter === opening) {
-      out.push({ chapter, pages: introPages(sources.introduction, narrow) });
+      out.push({ chapter, pages: introPages(sources.introduction, narrow || roomy) });
       continue;
     }
     if (chapter === world) {
@@ -431,7 +465,7 @@ function sectionsOf(
 
     let drawn = 0;
     for (const finding of drawnFindings) {
-      out.push({ chapter, pages: claimPages(finding.key, sources, narrow) });
+      out.push({ chapter, pages: claimPages(finding.key, sources, narrow, roomy) });
       drawn += 1;
     }
 
@@ -456,10 +490,22 @@ function sectionsOf(
   return out;
 }
 
+/**
+ * The spreads, in the arrangement the reader's type setting needs.
+ *
+ * `roomy` is the dyslexia setting's. OpenDyslexic sets wider and taller than the hand, at a leading
+ * of 2 rather than 1.8, and a page that held its panel in the hand did not in that face: walked at
+ * 1024x768, 20 of 112 pages ran off the leaf by 5 to 117px with `fit.ts` already at its floors --
+ * and a floor lowered for the setting that exists to be easier to read would be the wrong answer.
+ * So that setting gets more paper instead. It takes the phone's seams where the phone has them and
+ * two of its own, and the page count and the folios change with it, the way they already change
+ * between a spread and a phone.
+ */
 export function spreadsOf(
   sources: Sources,
   chapters: readonly Chapter[] = CHAPTERS,
   realm = "",
+  roomy = false,
 ): readonly Spread[] {
   /*
     A chapter folds once, and this is the change that stopped the book wasting paper.
@@ -485,7 +531,7 @@ export function spreadsOf(
     pages = [];
   };
 
-  for (const section of sectionsOf(sources, chapters, realm, false)) {
+  for (const section of sectionsOf(sources, chapters, realm, false, roomy)) {
     if (section.chapter !== chapter) {
       flush();
       chapter = section.chapter;
@@ -541,6 +587,49 @@ export function leavesOf(
 }
 
 /** Index of the first spread of a chapter, which is where its tab goes. */
+/**
+ * Where a panel went in another arrangement of the same book.
+ *
+ * A change of type setting repaginates under the reader, and landing them on the same offset would
+ * put them on a different page of the chapter, or in the next claim. So the page is found by what
+ * is on it: the same kind of panel for the same claim, and failing that the first page that claim
+ * has, and failing that the chapter's opening. A split panel's halves both answer for the whole,
+ * and the first of them is the one found.
+ */
+export function placeOf(
+  spreads: readonly Spread[],
+  panel: Panel,
+  chapter: string,
+): number {
+  const keyOf = (p: Panel): string | null => ("key" in p ? p.key : null);
+  const key = keyOf(panel);
+  const on = (test: (p: Panel) => boolean): number =>
+    spreads.findIndex((spread) => test(spread.verso) || test(spread.recto));
+
+  // A page of passages answers for every passage it holds; an empty one only for its own start.
+  const holds = (p: { from: number; to: number }, from: number): boolean =>
+    p.from <= from && from < Math.max(p.to, p.from + 1);
+
+  if (panel.kind === "intro") {
+    const from = panel.from;
+    const at = on((p) => p.kind === "intro" && holds(p, from));
+    if (at >= 0) return at;
+  } else if (panel.kind === "opener") {
+    const { from, slug } = panel;
+    const at = on((p) => p.kind === "opener" && p.slug === slug && holds(p, from));
+    if (at >= 0) return at;
+  } else if (key !== null) {
+    const same = on((p) => p.kind === panel.kind && keyOf(p) === key);
+    if (same >= 0) return same;
+    const claim = on((p) => keyOf(p) === key);
+    if (claim >= 0) return claim;
+  } else {
+    const same = on((p) => p.kind === panel.kind);
+    if (same >= 0 && spreads[same]!.chapter.slug === chapter) return same;
+  }
+  return openingOf(spreads, chapter);
+}
+
 export function openingOf(
   pages: readonly { chapter: Chapter }[],
   slug: string,

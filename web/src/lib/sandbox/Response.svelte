@@ -29,8 +29,11 @@
      * dials to 1,173px, so roughly 435 and 586 each -- two on a page overflows either way. The lead
      * paragraph rides with the first knob only, because repeating it on every leaf would be four
      * copies of the same sentence in one chapter.
+     *
+     * Or on a page of its own: `lead` is the heading and that paragraph and nothing else, and
+     * `apart` tells the first knob its lead already has one. Only the roomy spread asks for either.
      */
-    slice?: { kind: "knob" | "refusal"; at: number } | null;
+    slice?: { kind: "lead" | "knob" | "refusal"; at: number; apart?: boolean } | null;
   } = $props();
 
   const dials = $derived(dialsFor(doc, claim));
@@ -69,13 +72,15 @@
     </h3>
     <Rule seed={`${claim}-response`} tone="pencil" />
 
-    {#if part !== "refusals" && (!slice || slice.at === 0)}
+    {#if part !== "refusals" && (!slice || slice.kind === "lead" || (slice.at === 0 && !slice.apart))}
       <p class="response__lead">
         These are not predictions. Each setting reads the fitted response <em>backwards through the
         record</em>: what a season like that has been followed by, at these stations, over thirty
         years. What next year holds is a different question, and the {part === "all"
           ? "last panel below"
-          : "facing page"} is this project refusing to answer it.
+          : slice?.kind === "lead"
+            ? "page after the dials"
+            : "facing page"} is this project refusing to answer it.
         {#if anyFlat}
           One of the dials is flat, and it is published because it is flat — a panel carrying only
           the drivers that worked would be a panel choosing its own story.
@@ -83,7 +88,7 @@
       </p>
     {/if}
 
-    {#each part === "refusals" ? [] : slice ? dials.slice(slice.at, slice.at + 1) : dials as dial (dial.key)}
+    {#each part === "refusals" || slice?.kind === "lead" ? [] : slice ? dials.slice(slice.at, slice.at + 1) : dials as dial (dial.key)}
       <Knob knob={dial} />
     {/each}
 

@@ -32,7 +32,7 @@ import type { Leaf, Panel, Spread } from "../src/lib/book/pages";
  * Hard-coded page numbers would have to be re-typed every time a claim gains a knob, and the first
  * one that was missed would pass while pointing at the wrong page. This asks `pages.ts` instead.
  */
-async function layout(realm = ""): Promise<readonly Spread[]> {
+async function layout(realm = "", roomy = false): Promise<readonly Spread[]> {
   const { spreadsOf } = await import("../src/lib/book/pages");
   const { CHAPTERS: chapters } = await import("../src/lib/story");
   const read = (name: string) =>
@@ -47,6 +47,7 @@ async function layout(realm = ""): Promise<readonly Spread[]> {
     },
     chapters,
     realm,
+    roomy,
   );
 }
 
@@ -1294,6 +1295,73 @@ for (const [preset, label] of [
       .toBe(inHand);
   });
 }
+
+test("the dyslexia setting gets more paper, and loses nothing to it", async () => {
+  /*
+    Its arrangement is the roomy one in `spreadsOf`: the phone's seams and two of its own. A split
+    that dropped a half would pass the overflow walk by having less on the page, so this holds the
+    roomy book to the hand's -- every panel the hand prints for a claim, the roomy book prints too,
+    and every split panel arrives with both of its halves.
+  */
+  const hand = await layout();
+  const roomy = await layout("", true);
+  const panels = (spreads: readonly Spread[]) =>
+    spreads.flatMap((spread) => [spread.verso, spread.recto]);
+  const carried = (spreads: readonly Spread[]) =>
+    new Set(panels(spreads).map((panel) => `${panel.kind} ${"key" in panel ? panel.key : ""}`));
+
+  const kept = carried(roomy);
+  expect([...carried(hand)].filter((panel) => !kept.has(panel))).toEqual([]);
+  expect(roomy.length).toBeGreaterThan(hand.length);
+
+  const halves = panels(roomy).flatMap((panel) =>
+    "part" in panel && "key" in panel ? [`${panel.kind} ${panel.key} ${panel.part}`] : [],
+  );
+  for (const [kind, first, rest] of [
+    ["record", "value", "caveat"],
+    ["bias", "first", "rest"],
+    ["survived", "first", "rest"],
+  ] as const) {
+    for (const half of halves.filter((one) => one.startsWith(`${kind} `) && one.endsWith(` ${first}`))) {
+      const other = half.replace(new RegExp(` ${first}$`), ` ${rest}`);
+      expect(halves, `${half} has no ${rest}`).toContain(other);
+    }
+  }
+});
+
+test("a change of type keeps the reader on the claim they were reading", async ({ page }) => {
+  /*
+    The roomy arrangement repaginates under the reader, and the address is an offset into a chapter
+    -- so the same offset in the dyslexia setting's book is an earlier page, or a different claim.
+    The page is kept by what is on it instead: open a claim's record in the hand, choose the
+    dyslexia setting, and the spread the address now names has to carry that same record.
+  */
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const hand = await layout();
+  const spread = hand.find((one) => one.verso.kind === "record");
+  if (!spread || spread.verso.kind !== "record") throw new Error("the book carries no record page");
+  const key = spread.verso.key;
+  await openBook(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+  await expect(page.locator(".spread > .page").filter({ hasText: "For the record" })).toHaveCount(1);
+
+  await page.locator(".type").getByRole("radio", { name: "Dyslexia", exact: true }).check();
+  const roomy = await layout("", true);
+  await expect
+    .poll(
+      async () => {
+        const params = new URLSearchParams((await page.evaluate(() => location.hash)).slice(1));
+        const now = roomy.find(
+          (one) => one.chapter.slug === params.get("ch") && one.at === Number(params.get("p")),
+        );
+        return now
+          ? [now.verso, now.recto].some((panel) => panel.kind === "record" && panel.key === key)
+          : false;
+      },
+      { message: `the dyslexia setting's book opened away from the record of ${key}` },
+    )
+    .toBe(true);
+  await expect(page.locator(".spread > .page").filter({ hasText: "For the record" })).toHaveCount(1);
+});
 
 test("a monitor gets the spread and only the spread", async ({ page }) => {
   // The two containers are a choice, not a fallback: mounting both would run the world chapter's
