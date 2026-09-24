@@ -38,8 +38,8 @@
   const index = $derived(Math.min(Math.max(open, 0), Math.max(spreads.length - 1, 0)));
   const current = $derived(spreads[index] ?? spreads[0]);
 
-  /** The spread being turned away from, and which way. Null when nothing is turning. */
-  let leaving = $state<{ spread: Spread; forward: boolean } | null>(null);
+  /** The spread being turned away from, where it was, and which way. Null when nothing is turning. */
+  let leaving = $state<{ spread: Spread; at: number; forward: boolean } | null>(null);
   let settling: ReturnType<typeof setTimeout> | undefined;
 
   /*
@@ -64,7 +64,7 @@
     }
 
     clearTimeout(settling);
-    leaving = { spread: current!, forward: to > index };
+    leaving = { spread: current!, at: index, forward: to > index };
     onopen(to);
 
     /*
@@ -79,6 +79,13 @@
   /* The folio in each outer corner is the button that turns that way -- see `Page.svelte`. Arrow
      keys do the same, because a reader on a keyboard should not have to find a corner. */
   const numbers = $derived(folio(index));
+
+  /* What the copies print: the folio of the page each stands for, and its mark wherever that page's
+     corner turns -- the same test the two live pages apply to decide whether they have a control. */
+  const was = $derived(leaving ? folio(leaving.at) : null);
+  const turns = (at: number, side: "verso" | "recto"): boolean =>
+    side === "verso" ? at > 0 : at < spreads.length - 1;
+  const of = (side: "verso" | "recto"): 0 | 1 => (side === "verso" ? 0 : 1);
 
   function keys(event: KeyboardEvent): void {
     if (event.target !== document.body) return;
@@ -131,16 +138,40 @@
       {#if leaving && current}
         <!-- The outgoing page, held on the half the leaf is about to land on. -->
         <div class="stale stale--{arriving}" aria-hidden="true">
-          <Page side={arriving} fill fitted>{@render page(leaving.spread[arriving], arriving)}</Page>
+          <Page
+            side={arriving}
+            fill
+            fitted
+            folio={was?.[of(arriving)] ?? null}
+            mark={turns(leaving.at, arriving)}
+          >
+            {@render page(leaving.spread[arriving], arriving)}
+          </Page>
         </div>
         <!-- The shadow the turning page throws: a sibling, because a child would rotate with it. -->
         <div class="cast cast--{lifted}" aria-hidden="true"></div>
         <div class="leaf leaf--{lifted}" aria-hidden="true">
           <div class="leaf__face leaf__front">
-            <Page side={lifted} fill fitted>{@render page(leaving.spread[lifted], lifted)}</Page>
+            <Page
+              side={lifted}
+              fill
+              fitted
+              folio={was?.[of(lifted)] ?? null}
+              mark={turns(leaving.at, lifted)}
+            >
+              {@render page(leaving.spread[lifted], lifted)}
+            </Page>
           </div>
           <div class="leaf__face leaf__back">
-            <Page side={arriving} fill fitted>{@render page(current[arriving], arriving)}</Page>
+            <Page
+              side={arriving}
+              fill
+              fitted
+              folio={numbers[of(arriving)]}
+              mark={turns(index, arriving)}
+            >
+              {@render page(current[arriving], arriving)}
+            </Page>
           </div>
         </div>
       {/if}
@@ -363,8 +394,8 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     /*
-      The perspective lives here, on the element that also clips, and both halves of that are the
-      fix for what the owner called "some small clipping while I switch pages".
+      The perspective lives here, and that was the fix for what the owner called "some small
+      clipping while I switch pages".
 
       It was declared on `.book`, one generation too far up: perspective applies to an element's
       own children, and the leaf is a grandchild through this grid. So the book asked for a 3D turn
@@ -376,21 +407,16 @@
       drawn larger than the bound edge, so the page beneath is something a sheet is rising off
       rather than something with a slice missing.
 
-      It has to be clipped for the same reason, because a foreshortened sheet is *bigger* than the
-      page it came from: measured across the turn it reaches 17px past the outer edge and further
-      past the head and the foot, onto the desk and under the type controls. `overflow: clip` here
-      is what `.book` cannot do -- the filter tabs hang below that block by design -- and it is
-      safe on this element in particular: the rule that flattens 3D applies to an element's own
-      `transform-style`, and this one has nothing to preserve. The leaf below still does, for its
-      two faces.
-
-      What it costs is a third of the way through the turn, where the lifted sheet is drawn taller
-      than the book and loses about 30px at the head. That is inherent rather than unfixed: a sheet
-      near the eye *is* bigger, and the two alternatives are letting it run over the controls or
-      going back to a squash.
+      And it is not clipped, which it was, and which the owner then saw as the same complaint.
+      A foreshortened sheet is bigger than the page it came from: measured at 1280x720 it stands
+      53px past the head and the foot a ninth of the way through the turn and 79px when it is
+      upright, and `overflow: clip` here cut it off in a straight line along the book's own edge for
+      most of the turn -- a sheet that seemed to pass into the desk. It rises over the desk instead,
+      the way a page lifted toward the eye does. The type controls are fixed above everything and the
+      thumb tabs and the filter sit above this element in the book, so it passes under all three; on
+      a window short enough, the top of the window is what it rises past.
     */
     perspective: 2800px;
-    overflow: clip;
     background: var(--paper);
     border: 1px solid var(--rule);
     box-shadow:
@@ -410,9 +436,9 @@
     transform: translateX(-50%);
     z-index: 7;
     pointer-events: none;
-    background:
-      linear-gradient(to right, rgb(0 0 0 / 12%), rgb(0 0 0 / 2%) 42%),
-      linear-gradient(to left, rgb(0 0 0 / 12%), rgb(0 0 0 / 2%) 42%);
+    /* The bottom of the valley, and nothing at its edges: it was two ramps darkest where the band
+       began, which is what drew a hard line down each page where the paper met it. */
+    background: linear-gradient(to right, transparent, rgb(0 0 0 / 7%) 50%, transparent);
   }
 
   .gutter__line {
@@ -498,8 +524,27 @@
     position: absolute;
     inset: 0;
     backface-visibility: hidden;
-    border: 1px solid var(--rule);
     overflow: hidden;
+  }
+
+  /*
+    The sheet's edge, drawn over the page rather than around it, and only while it is lifted.
+
+    It was a border on the face, which put the page inside it one pixel in from every side: two
+    pixels less room than the page it copies, so the copy missed the fit's cache and measured itself,
+    and sat a pixel off. At the end of the turn the real page replaced it, a pixel over and with the
+    edge gone, and that was a visible jump. Over the page, it takes no room; on the cast shadow's
+    curve, it is not there at either end of the turn, so nothing appears or vanishes when it lands.
+  */
+  .leaf__face::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    border: 1px solid var(--rule);
+    pointer-events: none;
+    opacity: 0;
+    animation: sweep var(--draw-slow) var(--ease-pen) forwards;
   }
 
   .leaf__back {

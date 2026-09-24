@@ -8,6 +8,7 @@
     fitted = false,
     folio = null,
     onturn,
+    mark = false,
     children,
   }: {
     side: "verso" | "recto";
@@ -39,6 +40,14 @@
      * corner button beside it -- which is how this got noticed.
      */
     onturn?: () => void;
+    /**
+     * The turn mark without the control, for a copy of a page whose folio is one.
+     *
+     * The turning leaf and the page parked under it print the folio of the page they stand for, and
+     * that folio has its arrow: without either, the number and its mark appeared only when the turn
+     * finished and the real page took over, which is the moment a reader is looking at that corner.
+     */
+    mark?: boolean;
     children: Snippet;
   } = $props();
 </script>
@@ -82,7 +91,7 @@
       {String(folio).padStart(3, "0")} · migratlas
     </button>
   {:else if folio !== null}
-    <p class="page__folio">{String(folio).padStart(3, "0")} · migratlas</p>
+    <p class="page__folio" class:page__folio--mark={mark}>{String(folio).padStart(3, "0")} · migratlas</p>
   {/if}
 </div>
 
@@ -181,19 +190,23 @@
     the thing the owner found missing.
   */
   .page__folio--turn::before,
-  .page__folio--turn::after {
+  .page__folio--turn::after,
+  .page__folio--mark::before,
+  .page__folio--mark::after {
     font-family: var(--font-hand);
     font-size: 1.25em;
     line-height: 1;
     vertical-align: -0.08em;
   }
 
-  .page--verso .page__folio--turn::before {
+  .page--verso .page__folio--turn::before,
+  .page--verso .page__folio--mark::before {
     content: "‹";
     margin-right: 0.35em;
   }
 
-  .page--recto .page__folio--turn::after {
+  .page--recto .page__folio--turn::after,
+  .page--recto .page__folio--mark::after {
     content: "›";
     margin-left: 0.35em;
   }
@@ -221,6 +234,12 @@
     edge catches a little light. Light rather than paint, so it survives a surface change, and one
     element rather than a pseudo-element on `.page` because the mock put it in two places at once
     and shaded the turning sheet twice.
+
+    The darkening is a curve rather than a ramp: a page bends into the spine faster the closer it
+    gets, so it loses light slowly a quarter of the page out and quickly in the last few percent.
+    It used to be a straight 13% ramp that met the gutter's own band -- darkest at its two edges --
+    in a step, so the binding read as a grey stripe laid over the paper. This carries the whole
+    fall to the fold, and `Book.svelte`'s gutter only deepens the valley at the centre.
   */
   .page__curl {
     position: absolute;
@@ -231,13 +250,29 @@
   .page--verso .page__curl {
     background:
       linear-gradient(to right, rgb(255 255 255 / 5%) 0 6%, transparent 22%),
-      linear-gradient(to left, rgb(0 0 0 / 13%), transparent 16%);
+      linear-gradient(
+        to left,
+        rgb(0 0 0 / 18%),
+        rgb(0 0 0 / 12.5%) 2%,
+        rgb(0 0 0 / 7.5%) 5%,
+        rgb(0 0 0 / 3.5%) 10%,
+        rgb(0 0 0 / 1%) 16%,
+        transparent 24%
+      );
   }
 
   .page--recto .page__curl {
     background:
       linear-gradient(to left, rgb(255 255 255 / 5%) 0 6%, transparent 22%),
-      linear-gradient(to right, rgb(0 0 0 / 13%), transparent 16%);
+      linear-gradient(
+        to right,
+        rgb(0 0 0 / 18%),
+        rgb(0 0 0 / 12.5%) 2%,
+        rgb(0 0 0 / 7.5%) 5%,
+        rgb(0 0 0 / 3.5%) 10%,
+        rgb(0 0 0 / 1%) 16%,
+        transparent 24%
+      );
   }
 
   @media (width < 62rem) {

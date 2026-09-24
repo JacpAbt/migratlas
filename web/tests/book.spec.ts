@@ -32,7 +32,7 @@ import type { Leaf, Panel, Spread } from "../src/lib/book/pages";
  * Hard-coded page numbers would have to be re-typed every time a claim gains a knob, and the first
  * one that was missed would pass while pointing at the wrong page. This asks `pages.ts` instead.
  */
-async function layout(realm = ""): Promise<readonly Spread[]> {
+async function layout(realm = "", roomy = false): Promise<readonly Spread[]> {
   const { spreadsOf } = await import("../src/lib/book/pages");
   const { CHAPTERS: chapters } = await import("../src/lib/story");
   const read = (name: string) =>
@@ -47,6 +47,7 @@ async function layout(realm = ""): Promise<readonly Spread[]> {
     },
     chapters,
     realm,
+    roomy,
   );
 }
 
@@ -1004,7 +1005,15 @@ for (const [width, height] of [
 
   It walks the whole book by the corner rather than by URL, so it also asserts the two things a book
   has to do: every page is reachable by turning, and the folios run without a gap.
+
+  And in every type setting, because the hand is not the only book. The walk ran in the hand alone,
+  and the other two settings set different faces at different leadings on the same leaves: walked
+  with them chosen, the dyslexia setting had 20 of 112 pages off the leaf at 1024x768 and the clear
+  setting one, while this guard passed. Each setting is a book a reader can be holding, so each is
+  walked -- in its own arrangement, which for the dyslexia setting is the roomy one `pages.ts` gives
+  it.
 */
+for (const type of ["hand", "clear", "dyslexic"] as const)
 for (const [width, height] of [
   [1600, 900],
   [1280, 800],
@@ -1023,13 +1032,22 @@ for (const [width, height] of [
   [1280, 720],
   [1024, 768],
 ] as const) {
-  test(`no page in the book overflows itself at ${width}x${height}`, async ({
-    page,
-  }) => {
+  test(`no page in the book overflows itself at ${width}x${height}${
+    type === "hand" ? "" : ` in the ${type} type`
+  }`, async ({ page }) => {
+    // A hang detector, not a budget: the roomy book is a fifth longer than the hand's.
+    test.setTimeout(120_000);
     await page.setViewportSize({ width, height });
+    await page.addInitScript((choice) => localStorage.setItem("migratlas:type", choice), type);
     await openBook(page, "#ch=how-to-read&p=0");
+    // The setting's faces are fetched when its text first needs them, and the pages re-fit when
+    // they land; measuring before then would be measuring the fallback.
+    await expect
+      .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+      .toBe("loaded");
 
-    const spreads = (await layout()).length;
+    const { ROOMY_TYPES } = await import("../src/lib/book/pages");
+    const spreads = (await layout("", ROOMY_TYPES.includes(type))).length;
     const over: string[] = [];
     /*
       And the other way a page can be too full, which `scrollHeight` cannot see.
@@ -1294,6 +1312,303 @@ for (const [preset, label] of [
       .toBe(inHand);
   });
 }
+
+test("the dyslexia setting gets more paper, and loses nothing to it", async () => {
+  /*
+    Its arrangement is the roomy one in `spreadsOf`: the phone's seams and two of its own. A split
+    that dropped a half would pass the overflow walk by having less on the page, so this holds the
+    roomy book to the hand's -- every panel the hand prints for a claim, the roomy book prints too,
+    and every split panel arrives with both of its halves.
+  */
+  const hand = await layout();
+  const roomy = await layout("", true);
+  const panels = (spreads: readonly Spread[]) =>
+    spreads.flatMap((spread) => [spread.verso, spread.recto]);
+  const carried = (spreads: readonly Spread[]) =>
+    new Set(panels(spreads).map((panel) => `${panel.kind} ${"key" in panel ? panel.key : ""}`));
+
+  const kept = carried(roomy);
+  expect([...carried(hand)].filter((panel) => !kept.has(panel))).toEqual([]);
+  expect(roomy.length).toBeGreaterThan(hand.length);
+
+  const halves = panels(roomy).flatMap((panel) =>
+    "part" in panel && "key" in panel ? [`${panel.kind} ${panel.key} ${panel.part}`] : [],
+  );
+  for (const [kind, first, rest] of [
+    ["record", "value", "caveat"],
+    ["bias", "first", "rest"],
+    ["survived", "first", "rest"],
+  ] as const) {
+    for (const half of halves.filter((one) => one.startsWith(`${kind} `) && one.endsWith(` ${first}`))) {
+      const other = half.replace(new RegExp(` ${first}$`), ` ${rest}`);
+      expect(halves, `${half} has no ${rest}`).toContain(other);
+    }
+  }
+});
+
+test("a change of type keeps the reader on the claim they were reading", async ({ page }) => {
+  /*
+    The roomy arrangement repaginates under the reader, and the address is an offset into a chapter
+    -- so the same offset in the dyslexia setting's book is an earlier page, or a different claim.
+    The page is kept by what is on it instead: open a claim's record in the hand, choose the
+    dyslexia setting, and the spread the address now names has to carry that same record.
+  */
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const hand = await layout();
+  const spread = hand.find((one) => one.verso.kind === "record");
+  if (!spread || spread.verso.kind !== "record") throw new Error("the book carries no record page");
+  const key = spread.verso.key;
+  await openBook(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+  await expect(page.locator(".spread > .page").filter({ hasText: "For the record" })).toHaveCount(1);
+
+  await page.locator(".type").getByRole("radio", { name: "Dyslexia", exact: true }).check();
+  const roomy = await layout("", true);
+  await expect
+    .poll(
+      async () => {
+        const params = new URLSearchParams((await page.evaluate(() => location.hash)).slice(1));
+        const now = roomy.find(
+          (one) => one.chapter.slug === params.get("ch") && one.at === Number(params.get("p")),
+        );
+        return now
+          ? [now.verso, now.recto].some((panel) => panel.kind === "record" && panel.key === key)
+          : false;
+      },
+      { message: `the dyslexia setting's book opened away from the record of ${key}` },
+    )
+    .toBe(true);
+  await expect(page.locator(".spread > .page").filter({ hasText: "For the record" })).toHaveCount(1);
+});
+
+// The widest of the three faces, and the one every strip was drawn without.
+for (const type of ["hand", "dyslexic"] as const) {
+  test(`every strip chart's names are on its page in the ${type} type`, async ({ page }) => {
+    /*
+      A strip names every bar, and the names were anchored to a fixed 60-unit margin: any longer
+      one ran left out of the chart and off the leaf. At 1280x720 in the hand the eighteen seas'
+      names began 37px left of the page and were cut; OpenDyslexic, wider, lost more. The margin is
+      measured from the names now, so each is held to its page -- in the dyslexia setting too,
+      where the face arrives after the chart is first drawn and the margin has to be measured again.
+    */
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.addInitScript((choice) => localStorage.setItem("migratlas:type", choice), type);
+    const strips = (
+      JSON.parse(readFileSync("public/headline.json", "utf8")).headlines as {
+        key: string;
+        chart: { kind: string };
+      }[]
+    )
+      .filter((headline) => headline.chart.kind === "strip")
+      .map((headline) => headline.key);
+    expect(strips.length, "no strip chart to hold").toBeGreaterThan(0);
+    const spreads = await layout("", type === "dyslexic");
+
+    for (const key of strips) {
+      const at = spreads.find((one) =>
+        [one.verso, one.recto].some((panel) => panel.kind === "figure" && panel.key === key),
+      );
+      if (!at) throw new Error(`${key} has no figure page`);
+      await openBook(page, `#ch=${at.chapter.slug}&p=${at.at}`);
+      await expect
+        .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+        .toBe("loaded");
+      const cut = () =>
+        page.evaluate(() => {
+          const worst: number[] = [];
+          for (const sheet of document.querySelectorAll(".spread > .page")) {
+            const edge = sheet.getBoundingClientRect().left;
+            for (const name of sheet.querySelectorAll(".headline__row"))
+              worst.push(edge - name.getBoundingClientRect().left);
+          }
+          return worst.length ? Math.max(...worst) : Number.NaN;
+        });
+      await expect
+        .poll(cut, { timeout: 10_000, message: `${key}'s names run off the page (px)` })
+        .toBeLessThanOrEqual(0);
+    }
+  });
+}
+
+test("the turning page lands exactly on the page it stands for, number and all", async ({
+  page,
+}) => {
+  /*
+    The leaf and the page parked under it are copies of real pages, and the moment a turn ends the
+    copy is swapped for the page it copies. Anything that differs between the two shows then, at
+    the corner a reader is watching. Two things did. The copies printed no folio, so the number and
+    its arrow appeared only after the page had landed; and the face's border put the copy one pixel
+    in on every side -- two pixels less room, a missed fit cache, and a landed page one pixel right
+    and one down of where the real one then appeared.
+
+    So the turn is stopped where it ends and the copy held against the real page.
+  */
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openBook(page, "#ch=how-to-read&p=0");
+  await expect
+    .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+    .toBe("loaded");
+  await page.locator('.spread > .page--recto [data-turn="on"]').click();
+
+  const landed = await page.evaluate(() => {
+    const leaf = document.querySelector(".leaf");
+    if (!leaf) return null;
+    for (const animation of leaf.getAnimations()) {
+      animation.pause();
+      animation.currentTime = Number(animation.effect?.getTiming().duration ?? 0);
+    }
+    const read = (sheet: Element) => {
+      const inner = sheet.querySelector(".page__inner") as HTMLElement;
+      const first = inner.firstElementChild!.getBoundingClientRect();
+      const folio = sheet.querySelector(".page__folio");
+      return {
+        at: [first.left, first.top],
+        fit: inner.style.getPropertyValue("--fit-type"),
+        folio: folio?.textContent?.trim() ?? null,
+        mark: folio ? getComputedStyle(folio, "::before").content : null,
+      };
+    };
+    return {
+      copy: read(leaf.querySelector(".leaf__back .page")!),
+      real: read(document.querySelector(".spread > .page--verso")!),
+    };
+  });
+
+  expect(landed, "no leaf was turning").not.toBeNull();
+  const { copy, real } = landed!;
+  expect(copy.folio, "the landed page's corner").toBe(real.folio);
+  expect(copy.mark, "the landed page's turn mark").toBe(real.mark);
+  expect(copy.fit, "the landed page's fit").toBe(real.fit);
+  expect(Math.abs(copy.at[0]! - real.at[0]!), "the landed page is off sideways").toBeLessThan(0.5);
+  expect(Math.abs(copy.at[1]! - real.at[1]!), "the landed page is off vertically").toBeLessThan(0.5);
+});
+
+test("the lifted page rises over the desk rather than being cut at the book's edge", async ({
+  page,
+}) => {
+  /*
+    A sheet turning toward the reader is drawn larger than the page it lifted from, and the book cut
+    it off along its own head and foot for most of the turn: 53px each end a ninth of the way in, at
+    1280x720, and 79px when upright. The owner saw that as the page clipping.
+
+    So the turn is stopped where the sheet stands tall, on a window with desk above and below the
+    book, and every ancestor that clips must hold the whole sheet -- which the book no longer is.
+  */
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await openBook(page, "#ch=how-to-read&p=0");
+  await page.locator('.spread > .page--recto [data-turn="on"]').click();
+
+  const cut = await page.evaluate(() => {
+    const leaf = document.querySelector(".leaf");
+    if (!leaf) return null;
+    for (const animation of leaf.getAnimations()) {
+      animation.pause();
+      animation.currentTime = 120;
+    }
+    const sheet = leaf.getBoundingClientRect();
+    const book = document.querySelector(".spread")!.getBoundingClientRect();
+    const clippers: string[] = [];
+    for (let node = leaf.parentElement; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.overflowX === "visible" && style.overflowY === "visible") continue;
+      const box = node.getBoundingClientRect();
+      const holds =
+        box.top <= sheet.top + 0.5 &&
+        box.bottom >= sheet.bottom - 0.5 &&
+        box.left <= sheet.left + 0.5 &&
+        box.right >= sheet.right - 0.5;
+      if (!holds) clippers.push(`${node.tagName.toLowerCase()}.${node.className.split(" ")[0]}`);
+    }
+    return { rises: book.top - sheet.top, clippers };
+  });
+
+  expect(cut, "no leaf was turning").not.toBeNull();
+  // The premise, so this cannot pass by the sheet having stopped rising.
+  expect(cut!.rises, "the lifted sheet no longer stands taller than the book").toBeGreaterThan(20);
+  expect(cut!.clippers, "the lifted sheet is cut by").toEqual([]);
+});
+
+test("the paper darkens into the binding without a step", async ({ page }) => {
+  /*
+    What the owner saw was the gutter as a band laid on the page: the page's own shading fell to
+    the fold in a straight ramp, and the gutter over it was two ramps darkest at their outer edges,
+    so a reader crossing from the paper into the binding met a step of about ten points of darkness
+    within a pixel, and the spine itself was lighter than the band either side of it.
+
+    So a strip of bare paper across the spine is read as painted -- the head of the page, inside its
+    top margin, where nothing is printed -- averaged down each column to take the grain out, and
+    held to three things: it gets darker going in, it never gets lighter going in, and no column is
+    a step from the one beside it.
+
+    The numbers are measured, in five-pixel bins of 0-255 grey. Before: 207 to 181 in one bin at the
+    gutter's edge, then 185 and 190 towards the spine. After: no bin darker than the last by more
+    than 9, the steepest being the last ten pixels where the page curves into the fold, and the grain
+    alone moving a bin by up to 1.3. The limits sit between.
+  */
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBook(page, "#ch=how-to-read&p=1");
+  const box = await page.evaluate(() => {
+    const gutter = document.querySelector(".gutter")!.getBoundingClientRect();
+    const inner = document.querySelector(".spread > .page--recto .page__inner")!;
+    const top = inner.getBoundingClientRect().top;
+    return { spine: gutter.left + gutter.width / 2, top };
+  });
+  const REACH = 130;
+  const shot = await page.screenshot({
+    clip: { x: box.spine - REACH, y: box.top + 6, width: REACH * 2, height: 14 },
+  });
+  const columns = await page.evaluate(async (encoded) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${encoded}`;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d")!;
+    context.drawImage(image, 0, 0);
+    const { data, width, height } = context.getImageData(0, 0, canvas.width, canvas.height);
+    return Array.from({ length: width }, (_, x) => {
+      let sum = 0;
+      for (let y = 0; y < height; y++) {
+        const at = (y * width + x) * 4;
+        sum += (data[at]! + data[at + 1]! + data[at + 2]!) / 3;
+      }
+      return sum / height;
+    });
+  }, shot.toString("base64"));
+
+  // Device pixels per CSS pixel, so the reach and the step are read in the page's own units.
+  const scale = columns.length / (REACH * 2);
+  const binned = (from: number, to: number) => {
+    // Five-pixel bins walking from the outer edge in towards the spine, the 1px crease left out.
+    const out: number[] = [];
+    const step = from < to ? 5 : -5;
+    for (let x = from; step > 0 ? x + step <= to : x + step >= to; x += step) {
+      const lo = Math.round(Math.min(x, x + step) * scale);
+      const hi = Math.round(Math.max(x, x + step) * scale);
+      const slice = columns.slice(lo, hi);
+      out.push(slice.reduce((a, b) => a + b, 0) / slice.length);
+    }
+    return out;
+  };
+  for (const [side, walk] of [
+    ["verso", binned(0, REACH - 3)],
+    ["recto", binned(REACH * 2, REACH + 3)],
+  ] as const) {
+    const outer = walk[0]!;
+    const inner = walk[walk.length - 1]!;
+    expect(outer - inner, `the ${side} does not darken into the binding`).toBeGreaterThan(20);
+    for (let bin = 1; bin < walk.length; bin++) {
+      expect(
+        walk[bin]! - walk[bin - 1]!,
+        `the ${side} gets lighter going in, at ${bin * 5}px from its edge`,
+      ).toBeLessThan(2.5);
+      expect(
+        walk[bin - 1]! - walk[bin]!,
+        `the ${side} steps darker at ${bin * 5}px from its edge`,
+      ).toBeLessThan(13);
+    }
+  }
+});
 
 test("a monitor gets the spread and only the spread", async ({ page }) => {
   // The two containers are a choice, not a fallback: mounting both would run the world chapter's

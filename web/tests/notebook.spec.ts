@@ -1035,16 +1035,23 @@ test("changing the type changes the letterforms and nothing else", async ({
   // The faces do not share an x-height, so each preset carries its own scale and leading. Without
   // that, switching makes the page look a size bigger or smaller rather than differently drawn --
   // which is the whole of what "optimised" means for a type setting.
-  const measure = () =>
-    page.evaluate(() => {
+  //
+  // Followed to the page that carries them, because that is not always the one the switch lands
+  // on: the dyslexia setting's roomier book gives the finding two pages, and why it matters can be
+  // the leaf after the turn.
+  const measure = async () => {
+    if ((await page.locator(".spread > .page .claim__matters").count()) === 0)
+      await page.locator('.spread > .page--recto [data-turn="on"]').click();
+    return page.evaluate(() => {
       const title = getComputedStyle(document.querySelector(".claim__title")!);
-      const body = getComputedStyle(document.querySelector(".claim__matters")!);
+      const body = getComputedStyle(document.querySelector(".spread > .page .claim__matters")!);
       return {
         title: Number.parseFloat(title.fontSize),
         body: Number.parseFloat(body.fontSize),
         leading: Number.parseFloat(body.lineHeight),
       };
     });
+  };
 
   const seen: Record<string, Awaited<ReturnType<typeof measure>>> = {};
   for (const name of ["Hand", "Clear", "Dyslexia"]) {

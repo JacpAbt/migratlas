@@ -13,13 +13,14 @@
   import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
   import { openerOf, type ChaptersDocument } from "./chapters";
-  import { leavesOf, openingOf, spreadsOf, type Panel } from "./pages";
+  import { leavesOf, openingOf, placeOf, ROOMY_TYPES, spreadsOf, type Panel } from "./pages";
   import { world as pocket } from "./pocket.svelte";
   import type { IntroductionDocument } from "./introduction";
   import type { ResponseDocument } from "../sandbox/response";
   import type { SandboxDocument } from "../sandbox/sandbox";
   import { CHAPTERS, chapterAt, chapterOf, realmAt } from "../story";
   import { instrumentFor, type Finding, type Instrument } from "../ledger";
+  import { storedType, type TypeChoice } from "../../state/type";
 
   let {
     findings,
@@ -66,7 +67,19 @@
     Both are derived rather than one, because `narrow` can change under a reader who rotates a
     phone. Deriving the unused one costs a list of objects nobody reads.
   */
-  const spreads = $derived(spreadsOf(sources, CHAPTERS, realm));
+  /*
+    The reader's type setting, because one of the three paginates differently -- see `spreadsOf`.
+
+    Read from storage here rather than off the attribute `Settings` writes, because `Settings`
+    applies the stored choice in an effect, after this component has already resolved the address
+    against a first pagination: a deep link read against the hand's arrangement lands on a different
+    page of the dyslexia setting's. Followed afterwards through that attribute, which is the thing a
+    choice actually changes.
+  */
+  let typeSetting = $state<TypeChoice>(storedType());
+  const roomy = $derived(ROOMY_TYPES.includes(typeSetting));
+
+  const spreads = $derived(spreadsOf(sources, CHAPTERS, realm, roomy));
   const leaves = $derived(leavesOf(sources, CHAPTERS, realm));
 
   /**
@@ -230,7 +243,7 @@
     page you were reading is exactly what a reader means by back -- the same split that module
     already makes between the clock and the claim.
   */
-  function show(at: number): void {
+  function show(at: number, how: "push" | "replace" = "push"): void {
     open = at;
     const spread = pages[at];
     if (!spread) return;
@@ -252,8 +265,33 @@
     // Dropped once the page is written in the address it is written in: leaving `c` behind would
     // make it win over `ch` on the next read and pin the reader to one claim.
     params.delete(CLAIM_PARAM);
-    history.pushState(null, "", `#${params.toString()}`);
+    // Replaced when the reader did not move: a change of type re-addresses the page they are on,
+    // and a history entry for it would make back take them nowhere they had been.
+    if (how === "replace") history.replaceState(null, "", `#${params.toString()}`);
+    else history.pushState(null, "", `#${params.toString()}`);
   }
+
+  /*
+    A change of type setting, which can repaginate the book under the reader.
+
+    The page is kept by what is on it rather than by its number: the same offset in a roomier
+    arrangement is an earlier page of the same chapter, or a different claim altogether. Only the
+    spread moves -- a phone's leaves are one arrangement whatever the face.
+  */
+  $effect(() => {
+    const root = document.documentElement;
+    const follow = new MutationObserver(() => {
+      const next = root.getAttribute("data-type");
+      if ((next !== "hand" && next !== "clear" && next !== "dyslexic") || next === typeSetting) return;
+      const was = narrow ? undefined : spreads[open];
+      typeSetting = next;
+      if (!was) return;
+      const anchor = was.verso.kind === "blank" ? was.recto : was.verso;
+      show(placeOf(spreads, anchor, was.chapter.slug), "replace");
+    });
+    follow.observe(root, { attributes: true, attributeFilter: ["data-type"] });
+    return () => follow.disconnect();
+  });
 
   /**
    * Turning a realm tab, which repaginates the book under the reader.
@@ -368,27 +406,28 @@
     {:else if panel.kind === "how"}
       <How {finding} />
     {:else if panel.kind === "figure"}
-      <Figure {finding} number={figureNumber(panel.key)} {base} at={panel.at} {narrow} />
+      <!-- The list `at` indexes is the arrangement's, and the roomy spread takes the phone's. -->
+      <Figure {finding} number={figureNumber(panel.key)} {base} at={panel.at} narrow={narrow || roomy} />
     {:else if panel.kind === "record"}
       <Claim {finding} part="record" slice={panel.part} onspecimen={toSpecimen} />
     {:else if panel.kind === "bias"}
       <Margin {finding} part="bias" slice={panel.part} />
     {:else if panel.kind === "survived"}
-      <Margin {finding} part="survived" />
-    {:else if panel.kind === "panel" && panel.doc === "safeguards"}
-      <Sandbox
-        doc={safeguards}
-        claim={panel.key}
-        part={panel.part}
-        slice={{ kind: panel.part === "knobs" ? "knob" : "refusal", at: panel.at }}
-      />
+      <Margin {finding} part="survived" slice={panel.part} />
     {:else if panel.kind === "panel"}
-      <Response
-        doc={dial}
-        claim={panel.key}
-        part={panel.part}
-        slice={{ kind: panel.part === "knobs" ? "knob" : "refusal", at: panel.at }}
-      />
+      <!-- A lead page is the knobs' half with no knob on it; `apart` is whether this arrangement
+           gave the lead that page, which only the roomy spread does. -->
+      {@const part = panel.part === "refusals" ? "refusals" : "knobs"}
+      {@const slice = {
+        kind: panel.part === "lead" ? "lead" : panel.part === "knobs" ? "knob" : "refusal",
+        at: panel.at,
+        apart: roomy && !narrow,
+      } as const}
+      {#if panel.doc === "safeguards"}
+        <Sandbox doc={safeguards} claim={panel.key} {part} {slice} />
+      {:else}
+        <Response doc={dial} claim={panel.key} {part} {slice} />
+      {/if}
     {/if}
   {/if}
 {/snippet}

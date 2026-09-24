@@ -129,6 +129,19 @@ function fillOf(inner: HTMLElement): number {
 }
 
 /**
+ * Whether the page would scroll, which `fillOf` cannot see.
+ *
+ * The fill is measured to the last mark that paints, and a trailing margin paints nothing -- but
+ * the leaf's scroll height includes it, so a page could measure as fitting and still carry a
+ * scrollbar. Four pages did: 3 and 4px over their leaves at 1280x720 and 1024x768 in the clear and
+ * dyslexia settings, at scales above the floor that one step smaller would have cleared, and the
+ * overflow guard reads exactly this number. A page fits when both agree.
+ */
+function scrolls(inner: HTMLElement): boolean {
+  return inner.scrollHeight > inner.clientHeight;
+}
+
+/**
  * Set the page's scale from a step, where zero is the size every budget was measured at.
  *
  * One function for both directions so there is one definition of what a step means, and the two
@@ -163,15 +176,16 @@ function refit(inner: HTMLElement): void {
 
   apply(inner, 0);
   const fill = fillOf(inner);
+  const over = fill > FULL || scrolls(inner);
 
-  if (fill <= TARGET) {
+  if (!over && fill <= TARGET) {
     // Room to spare: write it larger, up to the step where it would stop fitting.
     let low = 0;
     let high = STEPS;
     while (low < high) {
       const mid = Math.ceil((low + high) / 2);
       apply(inner, mid);
-      if (fillOf(inner) <= TARGET) low = mid;
+      if (fillOf(inner) <= TARGET && !scrolls(inner)) low = mid;
       else high = mid - 1;
     }
     apply(inner, low);
@@ -179,7 +193,7 @@ function refit(inner: HTMLElement): void {
     return;
   }
 
-  if (fill > FULL) {
+  if (over) {
     /*
       Off the end of the leaf: write it smaller, down to the step where it comes back on.
 
@@ -193,7 +207,7 @@ function refit(inner: HTMLElement): void {
     while (low < high) {
       const mid = Math.ceil((low + high) / 2);
       apply(inner, mid);
-      if (fillOf(inner) <= FULL) low = mid;
+      if (fillOf(inner) <= FULL && !scrolls(inner)) low = mid;
       else high = mid - 1;
     }
     apply(inner, low);
@@ -247,10 +261,25 @@ let settled = false;
 /** The live pages, so the one answer that arrives late can reach all of them. */
 const waiting = new Set<() => void>();
 
+/** Anything else in the book measured in its type, which has to be told the same thing. */
+const others = new Set<() => void>();
+
+/**
+ * Call `again` whenever the book's type may have changed: a face landing, or a type setting chosen.
+ *
+ * The same moments the pages re-fit at, offered to the other thing that measures text -- the strip
+ * chart, whose margin is its longest name. Returns the unsubscribe, for an effect to hand back.
+ */
+export function onTypeChange(again: () => void): () => void {
+  others.add(again);
+  return () => others.delete(again);
+}
+
 /** Forget every answer and measure the live pages again: their type has changed under them. */
 function refitAll(): void {
   measured.clear();
   for (const again of waiting) again();
+  for (const again of others) again();
 }
 
 if (typeof document !== "undefined" && document.fonts) {
