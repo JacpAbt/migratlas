@@ -95,6 +95,18 @@
     border-top: 1px solid var(--rule);
   }
 
+  /*
+    Except where it opens the page, which in the book is every time.
+
+    The margin parts this section from the claim above it, which is what `claim/Evidence.svelte`
+    mounts it under; a leaf that begins with it has nothing above to part it from, and the gap was
+    the page's own head margin paid twice. It was also the difference on the one knob page the
+    dyslexia setting could not fit at 1024x768 -- 13px over at the floor of the fit.
+  */
+  .sandbox:first-child {
+    margin-top: 0;
+  }
+
   h3 {
     margin: 0;
     font-family: var(--font-hand);
