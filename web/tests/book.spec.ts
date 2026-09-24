@@ -1077,16 +1077,30 @@ for (const [width, height] of [
             `scrollHeight`, for `fit.ts`'s reason: a flex column's scroll height is its client
             height whenever the content is short, so the box says nothing about where the ink is.
           */
+          /*
+            As drawn, not as laid out: a mark inside a box that clips it shows only down to that
+            box's bottom. The world's tools page keeps its layer list in a slip that scrolls, and
+            the rows scrolled out of it were counted as printing 45px under the folio at 1366x768
+            -- on main's CI, and only when the walk reached that page after the map had loaded.
+          */
+          const shown = (node: Element): number => {
+            let bottom = node.getBoundingClientRect().bottom;
+            for (let up = node.parentElement; up && up !== inner; up = up.parentElement)
+              if (getComputedStyle(up).overflowY !== "visible")
+                bottom = Math.min(bottom, up.getBoundingClientRect().bottom);
+            return bottom;
+          };
           const marks = [...inner.querySelectorAll("*")]
             .filter(
               (node) =>
                 node.children.length === 0 || node.tagName.toLowerCase() === "svg",
             )
-            .map((node) => node.getBoundingClientRect())
-            .filter((rect) => rect.height > 0 && rect.width > 0);
-          const lowest = marks.length
-            ? Math.max(...marks.map((rect) => rect.bottom))
-            : Number.NEGATIVE_INFINITY;
+            .filter((node) => {
+              const rect = node.getBoundingClientRect();
+              return rect.height > 0 && rect.width > 0;
+            })
+            .map(shown);
+          const lowest = marks.length ? Math.max(...marks) : Number.NEGATIVE_INFINITY;
           const corner = document
             .querySelector(`.spread > .page--${side} .page__folio`)
             ?.getBoundingClientRect();
