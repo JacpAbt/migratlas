@@ -127,7 +127,8 @@
     /* Its height is its width over `PLATE_RATIO`, set inline because the number belongs to the
        projection. Not `flex: 1`: that is what gave the map the page's leftover height. */
     flex: 0 0 auto;
-    width: 100%;
+    /* Drawn smaller when its page is written smaller, and never larger: see `Headline.svelte`. */
+    width: calc(100% * min(1, var(--fit-type, 1)));
     background: var(--plate-paper);
     transform: rotate(-1.1deg);
     box-shadow:
@@ -148,7 +149,7 @@
     map is not a less accountable one.
   */
   .plate--compact .plate__sheet {
-    width: 60%;
+    width: calc(60% * min(1, var(--fit-type, 1)));
     margin-left: auto;
     transform: rotate(-2.6deg);
   }

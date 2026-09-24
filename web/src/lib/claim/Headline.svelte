@@ -337,7 +337,18 @@
   /* A hair off square, like everything else on the page. */
   .headline__svg {
     display: block;
-    width: 100%;
+    /*
+      Drawn smaller when the page is written smaller, and never larger.
+
+      A drawing takes its height from its width, so it was the one thing on a page `fit.ts` could
+      not shrink: at the floor of the fit the words around it had given up a sixth of their size
+      and it had given up nothing. In the dyslexia setting at 1024x768 that left seven chart and
+      plate pages printing under their own folios, 3 to 37px, at a fit that had nothing left to
+      give. Scaled by the page's type below 1 and held at full width above it, because a page with
+      room to spare grows its words, not its pictures.
+    */
+    width: calc(100% * min(1, var(--fit-type, 1)));
+    margin-inline: auto;
     height: auto;
     overflow: visible;
     rotate: -0.6deg;

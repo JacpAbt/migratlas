@@ -217,7 +217,9 @@
 
   .chart__svg {
     display: block;
-    width: 100%;
+    /* Drawn smaller when its page is written smaller, and never larger: see `Headline.svelte`. */
+    width: calc(100% * min(1, var(--fit-type, 1)));
+    margin-inline: auto;
     height: auto;
     overflow: visible;
   }
