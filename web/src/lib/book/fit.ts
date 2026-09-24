@@ -129,6 +129,19 @@ function fillOf(inner: HTMLElement): number {
 }
 
 /**
+ * Whether the page would scroll, which `fillOf` cannot see.
+ *
+ * The fill is measured to the last mark that paints, and a trailing margin paints nothing -- but
+ * the leaf's scroll height includes it, so a page could measure as fitting and still carry a
+ * scrollbar. Four pages did: 3 and 4px over their leaves at 1280x720 and 1024x768 in the clear and
+ * dyslexia settings, at scales above the floor that one step smaller would have cleared, and the
+ * overflow guard reads exactly this number. A page fits when both agree.
+ */
+function scrolls(inner: HTMLElement): boolean {
+  return inner.scrollHeight > inner.clientHeight;
+}
+
+/**
  * Set the page's scale from a step, where zero is the size every budget was measured at.
  *
  * One function for both directions so there is one definition of what a step means, and the two
@@ -163,15 +176,16 @@ function refit(inner: HTMLElement): void {
 
   apply(inner, 0);
   const fill = fillOf(inner);
+  const over = fill > FULL || scrolls(inner);
 
-  if (fill <= TARGET) {
+  if (!over && fill <= TARGET) {
     // Room to spare: write it larger, up to the step where it would stop fitting.
     let low = 0;
     let high = STEPS;
     while (low < high) {
       const mid = Math.ceil((low + high) / 2);
       apply(inner, mid);
-      if (fillOf(inner) <= TARGET) low = mid;
+      if (fillOf(inner) <= TARGET && !scrolls(inner)) low = mid;
       else high = mid - 1;
     }
     apply(inner, low);
@@ -179,7 +193,7 @@ function refit(inner: HTMLElement): void {
     return;
   }
 
-  if (fill > FULL) {
+  if (over) {
     /*
       Off the end of the leaf: write it smaller, down to the step where it comes back on.
 
@@ -193,7 +207,7 @@ function refit(inner: HTMLElement): void {
     while (low < high) {
       const mid = Math.ceil((low + high) / 2);
       apply(inner, mid);
-      if (fillOf(inner) <= FULL) low = mid;
+      if (fillOf(inner) <= FULL && !scrolls(inner)) low = mid;
       else high = mid - 1;
     }
     apply(inner, low);
