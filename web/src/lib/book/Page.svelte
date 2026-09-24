@@ -8,6 +8,7 @@
     fitted = false,
     folio = null,
     onturn,
+    mark = false,
     children,
   }: {
     side: "verso" | "recto";
@@ -39,6 +40,14 @@
      * corner button beside it -- which is how this got noticed.
      */
     onturn?: () => void;
+    /**
+     * The turn mark without the control, for a copy of a page whose folio is one.
+     *
+     * The turning leaf and the page parked under it print the folio of the page they stand for, and
+     * that folio has its arrow: without either, the number and its mark appeared only when the turn
+     * finished and the real page took over, which is the moment a reader is looking at that corner.
+     */
+    mark?: boolean;
     children: Snippet;
   } = $props();
 </script>
@@ -82,7 +91,7 @@
       {String(folio).padStart(3, "0")} · migratlas
     </button>
   {:else if folio !== null}
-    <p class="page__folio">{String(folio).padStart(3, "0")} · migratlas</p>
+    <p class="page__folio" class:page__folio--mark={mark}>{String(folio).padStart(3, "0")} · migratlas</p>
   {/if}
 </div>
 
@@ -181,19 +190,23 @@
     the thing the owner found missing.
   */
   .page__folio--turn::before,
-  .page__folio--turn::after {
+  .page__folio--turn::after,
+  .page__folio--mark::before,
+  .page__folio--mark::after {
     font-family: var(--font-hand);
     font-size: 1.25em;
     line-height: 1;
     vertical-align: -0.08em;
   }
 
-  .page--verso .page__folio--turn::before {
+  .page--verso .page__folio--turn::before,
+  .page--verso .page__folio--mark::before {
     content: "‹";
     margin-right: 0.35em;
   }
 
-  .page--recto .page__folio--turn::after {
+  .page--recto .page__folio--turn::after,
+  .page--recto .page__folio--mark::after {
     content: "›";
     margin-left: 0.35em;
   }

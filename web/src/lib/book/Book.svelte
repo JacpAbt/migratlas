@@ -38,8 +38,8 @@
   const index = $derived(Math.min(Math.max(open, 0), Math.max(spreads.length - 1, 0)));
   const current = $derived(spreads[index] ?? spreads[0]);
 
-  /** The spread being turned away from, and which way. Null when nothing is turning. */
-  let leaving = $state<{ spread: Spread; forward: boolean } | null>(null);
+  /** The spread being turned away from, where it was, and which way. Null when nothing is turning. */
+  let leaving = $state<{ spread: Spread; at: number; forward: boolean } | null>(null);
   let settling: ReturnType<typeof setTimeout> | undefined;
 
   /*
@@ -64,7 +64,7 @@
     }
 
     clearTimeout(settling);
-    leaving = { spread: current!, forward: to > index };
+    leaving = { spread: current!, at: index, forward: to > index };
     onopen(to);
 
     /*
@@ -79,6 +79,13 @@
   /* The folio in each outer corner is the button that turns that way -- see `Page.svelte`. Arrow
      keys do the same, because a reader on a keyboard should not have to find a corner. */
   const numbers = $derived(folio(index));
+
+  /* What the copies print: the folio of the page each stands for, and its mark wherever that page's
+     corner turns -- the same test the two live pages apply to decide whether they have a control. */
+  const was = $derived(leaving ? folio(leaving.at) : null);
+  const turns = (at: number, side: "verso" | "recto"): boolean =>
+    side === "verso" ? at > 0 : at < spreads.length - 1;
+  const of = (side: "verso" | "recto"): 0 | 1 => (side === "verso" ? 0 : 1);
 
   function keys(event: KeyboardEvent): void {
     if (event.target !== document.body) return;
@@ -131,16 +138,40 @@
       {#if leaving && current}
         <!-- The outgoing page, held on the half the leaf is about to land on. -->
         <div class="stale stale--{arriving}" aria-hidden="true">
-          <Page side={arriving} fill fitted>{@render page(leaving.spread[arriving], arriving)}</Page>
+          <Page
+            side={arriving}
+            fill
+            fitted
+            folio={was?.[of(arriving)] ?? null}
+            mark={turns(leaving.at, arriving)}
+          >
+            {@render page(leaving.spread[arriving], arriving)}
+          </Page>
         </div>
         <!-- The shadow the turning page throws: a sibling, because a child would rotate with it. -->
         <div class="cast cast--{lifted}" aria-hidden="true"></div>
         <div class="leaf leaf--{lifted}" aria-hidden="true">
           <div class="leaf__face leaf__front">
-            <Page side={lifted} fill fitted>{@render page(leaving.spread[lifted], lifted)}</Page>
+            <Page
+              side={lifted}
+              fill
+              fitted
+              folio={was?.[of(lifted)] ?? null}
+              mark={turns(leaving.at, lifted)}
+            >
+              {@render page(leaving.spread[lifted], lifted)}
+            </Page>
           </div>
           <div class="leaf__face leaf__back">
-            <Page side={arriving} fill fitted>{@render page(current[arriving], arriving)}</Page>
+            <Page
+              side={arriving}
+              fill
+              fitted
+              folio={numbers[of(arriving)]}
+              mark={turns(index, arriving)}
+            >
+              {@render page(current[arriving], arriving)}
+            </Page>
           </div>
         </div>
       {/if}
@@ -498,8 +529,27 @@
     position: absolute;
     inset: 0;
     backface-visibility: hidden;
-    border: 1px solid var(--rule);
     overflow: hidden;
+  }
+
+  /*
+    The sheet's edge, drawn over the page rather than around it, and only while it is lifted.
+
+    It was a border on the face, which put the page inside it one pixel in from every side: two
+    pixels less room than the page it copies, so the copy missed the fit's cache and measured itself,
+    and sat a pixel off. At the end of the turn the real page replaced it, a pixel over and with the
+    edge gone, and that was a visible jump. Over the page, it takes no room; on the cast shadow's
+    curve, it is not there at either end of the turn, so nothing appears or vanishes when it lands.
+  */
+  .leaf__face::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    border: 1px solid var(--rule);
+    pointer-events: none;
+    opacity: 0;
+    animation: sweep var(--draw-slow) var(--ease-pen) forwards;
   }
 
   .leaf__back {

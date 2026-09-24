@@ -1429,6 +1429,59 @@ for (const type of ["hand", "dyslexic"] as const) {
   });
 }
 
+test("the turning page lands exactly on the page it stands for, number and all", async ({
+  page,
+}) => {
+  /*
+    The leaf and the page parked under it are copies of real pages, and the moment a turn ends the
+    copy is swapped for the page it copies. Anything that differs between the two shows then, at
+    the corner a reader is watching. Two things did. The copies printed no folio, so the number and
+    its arrow appeared only after the page had landed; and the face's border put the copy one pixel
+    in on every side -- two pixels less room, a missed fit cache, and a landed page one pixel right
+    and one down of where the real one then appeared.
+
+    So the turn is stopped where it ends and the copy held against the real page.
+  */
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openBook(page, "#ch=how-to-read&p=0");
+  await expect
+    .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+    .toBe("loaded");
+  await page.locator('.spread > .page--recto [data-turn="on"]').click();
+
+  const landed = await page.evaluate(() => {
+    const leaf = document.querySelector(".leaf");
+    if (!leaf) return null;
+    for (const animation of leaf.getAnimations()) {
+      animation.pause();
+      animation.currentTime = Number(animation.effect?.getTiming().duration ?? 0);
+    }
+    const read = (sheet: Element) => {
+      const inner = sheet.querySelector(".page__inner") as HTMLElement;
+      const first = inner.firstElementChild!.getBoundingClientRect();
+      const folio = sheet.querySelector(".page__folio");
+      return {
+        at: [first.left, first.top],
+        fit: inner.style.getPropertyValue("--fit-type"),
+        folio: folio?.textContent?.trim() ?? null,
+        mark: folio ? getComputedStyle(folio, "::before").content : null,
+      };
+    };
+    return {
+      copy: read(leaf.querySelector(".leaf__back .page")!),
+      real: read(document.querySelector(".spread > .page--verso")!),
+    };
+  });
+
+  expect(landed, "no leaf was turning").not.toBeNull();
+  const { copy, real } = landed!;
+  expect(copy.folio, "the landed page's corner").toBe(real.folio);
+  expect(copy.mark, "the landed page's turn mark").toBe(real.mark);
+  expect(copy.fit, "the landed page's fit").toBe(real.fit);
+  expect(Math.abs(copy.at[0]! - real.at[0]!), "the landed page is off sideways").toBeLessThan(0.5);
+  expect(Math.abs(copy.at[1]! - real.at[1]!), "the landed page is off vertically").toBeLessThan(0.5);
+});
+
 test("a monitor gets the spread and only the spread", async ({ page }) => {
   // The two containers are a choice, not a fallback: mounting both would run the world chapter's
   // map twice and put two of every page in the accessibility tree.
