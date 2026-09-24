@@ -234,6 +234,12 @@
     edge catches a little light. Light rather than paint, so it survives a surface change, and one
     element rather than a pseudo-element on `.page` because the mock put it in two places at once
     and shaded the turning sheet twice.
+
+    The darkening is a curve rather than a ramp: a page bends into the spine faster the closer it
+    gets, so it loses light slowly a quarter of the page out and quickly in the last few percent.
+    It used to be a straight 13% ramp that met the gutter's own band -- darkest at its two edges --
+    in a step, so the binding read as a grey stripe laid over the paper. This carries the whole
+    fall to the fold, and `Book.svelte`'s gutter only deepens the valley at the centre.
   */
   .page__curl {
     position: absolute;
@@ -244,13 +250,29 @@
   .page--verso .page__curl {
     background:
       linear-gradient(to right, rgb(255 255 255 / 5%) 0 6%, transparent 22%),
-      linear-gradient(to left, rgb(0 0 0 / 13%), transparent 16%);
+      linear-gradient(
+        to left,
+        rgb(0 0 0 / 18%),
+        rgb(0 0 0 / 12.5%) 2%,
+        rgb(0 0 0 / 7.5%) 5%,
+        rgb(0 0 0 / 3.5%) 10%,
+        rgb(0 0 0 / 1%) 16%,
+        transparent 24%
+      );
   }
 
   .page--recto .page__curl {
     background:
       linear-gradient(to left, rgb(255 255 255 / 5%) 0 6%, transparent 22%),
-      linear-gradient(to right, rgb(0 0 0 / 13%), transparent 16%);
+      linear-gradient(
+        to right,
+        rgb(0 0 0 / 18%),
+        rgb(0 0 0 / 12.5%) 2%,
+        rgb(0 0 0 / 7.5%) 5%,
+        rgb(0 0 0 / 3.5%) 10%,
+        rgb(0 0 0 / 1%) 16%,
+        transparent 24%
+      );
   }
 
   @media (width < 62rem) {

@@ -1527,6 +1527,89 @@ test("the lifted page rises over the desk rather than being cut at the book's ed
   expect(cut!.clippers, "the lifted sheet is cut by").toEqual([]);
 });
 
+test("the paper darkens into the binding without a step", async ({ page }) => {
+  /*
+    What the owner saw was the gutter as a band laid on the page: the page's own shading fell to
+    the fold in a straight ramp, and the gutter over it was two ramps darkest at their outer edges,
+    so a reader crossing from the paper into the binding met a step of about ten points of darkness
+    within a pixel, and the spine itself was lighter than the band either side of it.
+
+    So a strip of bare paper across the spine is read as painted -- the head of the page, inside its
+    top margin, where nothing is printed -- averaged down each column to take the grain out, and
+    held to three things: it gets darker going in, it never gets lighter going in, and no column is
+    a step from the one beside it.
+
+    The numbers are measured, in five-pixel bins of 0-255 grey. Before: 207 to 181 in one bin at the
+    gutter's edge, then 185 and 190 towards the spine. After: no bin darker than the last by more
+    than 9, the steepest being the last ten pixels where the page curves into the fold, and the grain
+    alone moving a bin by up to 1.3. The limits sit between.
+  */
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBook(page, "#ch=how-to-read&p=1");
+  const box = await page.evaluate(() => {
+    const gutter = document.querySelector(".gutter")!.getBoundingClientRect();
+    const inner = document.querySelector(".spread > .page--recto .page__inner")!;
+    const top = inner.getBoundingClientRect().top;
+    return { spine: gutter.left + gutter.width / 2, top };
+  });
+  const REACH = 130;
+  const shot = await page.screenshot({
+    clip: { x: box.spine - REACH, y: box.top + 6, width: REACH * 2, height: 14 },
+  });
+  const columns = await page.evaluate(async (encoded) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${encoded}`;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d")!;
+    context.drawImage(image, 0, 0);
+    const { data, width, height } = context.getImageData(0, 0, canvas.width, canvas.height);
+    return Array.from({ length: width }, (_, x) => {
+      let sum = 0;
+      for (let y = 0; y < height; y++) {
+        const at = (y * width + x) * 4;
+        sum += (data[at]! + data[at + 1]! + data[at + 2]!) / 3;
+      }
+      return sum / height;
+    });
+  }, shot.toString("base64"));
+
+  // Device pixels per CSS pixel, so the reach and the step are read in the page's own units.
+  const scale = columns.length / (REACH * 2);
+  const binned = (from: number, to: number) => {
+    // Five-pixel bins walking from the outer edge in towards the spine, the 1px crease left out.
+    const out: number[] = [];
+    const step = from < to ? 5 : -5;
+    for (let x = from; step > 0 ? x + step <= to : x + step >= to; x += step) {
+      const lo = Math.round(Math.min(x, x + step) * scale);
+      const hi = Math.round(Math.max(x, x + step) * scale);
+      const slice = columns.slice(lo, hi);
+      out.push(slice.reduce((a, b) => a + b, 0) / slice.length);
+    }
+    return out;
+  };
+  for (const [side, walk] of [
+    ["verso", binned(0, REACH - 3)],
+    ["recto", binned(REACH * 2, REACH + 3)],
+  ] as const) {
+    const outer = walk[0]!;
+    const inner = walk[walk.length - 1]!;
+    expect(outer - inner, `the ${side} does not darken into the binding`).toBeGreaterThan(20);
+    for (let bin = 1; bin < walk.length; bin++) {
+      expect(
+        walk[bin]! - walk[bin - 1]!,
+        `the ${side} gets lighter going in, at ${bin * 5}px from its edge`,
+      ).toBeLessThan(2.5);
+      expect(
+        walk[bin - 1]! - walk[bin]!,
+        `the ${side} steps darker at ${bin * 5}px from its edge`,
+      ).toBeLessThan(13);
+    }
+  }
+});
+
 test("a monitor gets the spread and only the spread", async ({ page }) => {
   // The two containers are a choice, not a fallback: mounting both would run the world chapter's
   // map twice and put two of every page in the accessibility tree.

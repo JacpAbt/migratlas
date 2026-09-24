@@ -436,9 +436,9 @@
     transform: translateX(-50%);
     z-index: 7;
     pointer-events: none;
-    background:
-      linear-gradient(to right, rgb(0 0 0 / 12%), rgb(0 0 0 / 2%) 42%),
-      linear-gradient(to left, rgb(0 0 0 / 12%), rgb(0 0 0 / 2%) 42%);
+    /* The bottom of the valley, and nothing at its edges: it was two ramps darkest where the band
+       began, which is what drew a hard line down each page where the paper met it. */
+    background: linear-gradient(to right, transparent, rgb(0 0 0 / 7%) 50%, transparent);
   }
 
   .gutter__line {
