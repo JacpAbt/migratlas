@@ -1005,7 +1005,15 @@ for (const [width, height] of [
 
   It walks the whole book by the corner rather than by URL, so it also asserts the two things a book
   has to do: every page is reachable by turning, and the folios run without a gap.
+
+  And in every type setting, because the hand is not the only book. The walk ran in the hand alone,
+  and the other two settings set different faces at different leadings on the same leaves: walked
+  with them chosen, the dyslexia setting had 20 of 112 pages off the leaf at 1024x768 and the clear
+  setting one, while this guard passed. Each setting is a book a reader can be holding, so each is
+  walked -- in its own arrangement, which for the dyslexia setting is the roomy one `pages.ts` gives
+  it.
 */
+for (const type of ["hand", "clear", "dyslexic"] as const)
 for (const [width, height] of [
   [1600, 900],
   [1280, 800],
@@ -1024,13 +1032,22 @@ for (const [width, height] of [
   [1280, 720],
   [1024, 768],
 ] as const) {
-  test(`no page in the book overflows itself at ${width}x${height}`, async ({
-    page,
-  }) => {
+  test(`no page in the book overflows itself at ${width}x${height}${
+    type === "hand" ? "" : ` in the ${type} type`
+  }`, async ({ page }) => {
+    // A hang detector, not a budget: the roomy book is a fifth longer than the hand's.
+    test.setTimeout(120_000);
     await page.setViewportSize({ width, height });
+    await page.addInitScript((choice) => localStorage.setItem("migratlas:type", choice), type);
     await openBook(page, "#ch=how-to-read&p=0");
+    // The setting's faces are fetched when its text first needs them, and the pages re-fit when
+    // they land; measuring before then would be measuring the fallback.
+    await expect
+      .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+      .toBe("loaded");
 
-    const spreads = (await layout()).length;
+    const { ROOMY_TYPES } = await import("../src/lib/book/pages");
+    const spreads = (await layout("", ROOMY_TYPES.includes(type))).length;
     const over: string[] = [];
     /*
       And the other way a page can be too full, which `scrollHeight` cannot see.

@@ -13,7 +13,7 @@
   import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
   import { openerOf, type ChaptersDocument } from "./chapters";
-  import { leavesOf, openingOf, placeOf, spreadsOf, type Panel } from "./pages";
+  import { leavesOf, openingOf, placeOf, ROOMY_TYPES, spreadsOf, type Panel } from "./pages";
   import { world as pocket } from "./pocket.svelte";
   import type { IntroductionDocument } from "./introduction";
   import type { ResponseDocument } from "../sandbox/response";
@@ -77,7 +77,7 @@
     choice actually changes.
   */
   let typeSetting = $state<TypeChoice>(storedType());
-  const roomy = $derived(typeSetting === "dyslexic");
+  const roomy = $derived(ROOMY_TYPES.includes(typeSetting));
 
   const spreads = $derived(spreadsOf(sources, CHAPTERS, realm, roomy));
   const leaves = $derived(leavesOf(sources, CHAPTERS, realm));

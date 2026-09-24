@@ -491,6 +491,14 @@ function sectionsOf(
 }
 
 /**
+ * The type settings that need the roomy arrangement below.
+ *
+ * One list, read by `Reader` to paginate and by the overflow guard to know which book it is
+ * walking: a guard that assumed the arrangement would pass a setting whose pages it never saw.
+ */
+export const ROOMY_TYPES: readonly string[] = ["dyslexic"];
+
+/**
  * The spreads, in the arrangement the reader's type setting needs.
  *
  * `roomy` is the dyslexia setting's. OpenDyslexic sets wider and taller than the hand, at a leading
