@@ -1363,6 +1363,55 @@ test("a change of type keeps the reader on the claim they were reading", async (
   await expect(page.locator(".spread > .page").filter({ hasText: "For the record" })).toHaveCount(1);
 });
 
+// The widest of the three faces, and the one every strip was drawn without.
+for (const type of ["hand", "dyslexic"] as const) {
+  test(`every strip chart's names are on its page in the ${type} type`, async ({ page }) => {
+    /*
+      A strip names every bar, and the names were anchored to a fixed 60-unit margin: any longer
+      one ran left out of the chart and off the leaf. At 1280x720 in the hand the eighteen seas'
+      names began 37px left of the page and were cut; OpenDyslexic, wider, lost more. The margin is
+      measured from the names now, so each is held to its page -- in the dyslexia setting too,
+      where the face arrives after the chart is first drawn and the margin has to be measured again.
+    */
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.addInitScript((choice) => localStorage.setItem("migratlas:type", choice), type);
+    const strips = (
+      JSON.parse(readFileSync("public/headline.json", "utf8")).headlines as {
+        key: string;
+        chart: { kind: string };
+      }[]
+    )
+      .filter((headline) => headline.chart.kind === "strip")
+      .map((headline) => headline.key);
+    expect(strips.length, "no strip chart to hold").toBeGreaterThan(0);
+    const spreads = await layout("", type === "dyslexic");
+
+    for (const key of strips) {
+      const at = spreads.find((one) =>
+        [one.verso, one.recto].some((panel) => panel.kind === "figure" && panel.key === key),
+      );
+      if (!at) throw new Error(`${key} has no figure page`);
+      await openBook(page, `#ch=${at.chapter.slug}&p=${at.at}`);
+      await expect
+        .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+        .toBe("loaded");
+      const cut = () =>
+        page.evaluate(() => {
+          const worst: number[] = [];
+          for (const sheet of document.querySelectorAll(".spread > .page")) {
+            const edge = sheet.getBoundingClientRect().left;
+            for (const name of sheet.querySelectorAll(".headline__row"))
+              worst.push(edge - name.getBoundingClientRect().left);
+          }
+          return worst.length ? Math.max(...worst) : Number.NaN;
+        });
+      await expect
+        .poll(cut, { timeout: 10_000, message: `${key}'s names run off the page (px)` })
+        .toBeLessThanOrEqual(0);
+    }
+  });
+}
+
 test("a monitor gets the spread and only the spread", async ({ page }) => {
   // The two containers are a choice, not a fallback: mounting both would run the world chapter's
   // map twice and put two of every page in the accessibility tree.

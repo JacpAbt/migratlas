@@ -261,10 +261,25 @@ let settled = false;
 /** The live pages, so the one answer that arrives late can reach all of them. */
 const waiting = new Set<() => void>();
 
+/** Anything else in the book measured in its type, which has to be told the same thing. */
+const others = new Set<() => void>();
+
+/**
+ * Call `again` whenever the book's type may have changed: a face landing, or a type setting chosen.
+ *
+ * The same moments the pages re-fit at, offered to the other thing that measures text -- the strip
+ * chart, whose margin is its longest name. Returns the unsubscribe, for an effect to hand back.
+ */
+export function onTypeChange(again: () => void): () => void {
+  others.add(again);
+  return () => others.delete(again);
+}
+
 /** Forget every answer and measure the live pages again: their type has changed under them. */
 function refitAll(): void {
   measured.clear();
   for (const again of waiting) again();
+  for (const again of others) again();
 }
 
 if (typeof document !== "undefined" && document.fonts) {

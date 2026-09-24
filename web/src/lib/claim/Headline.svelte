@@ -9,6 +9,7 @@
     type Strip,
     type Years,
   } from "./headline";
+  import { onTypeChange } from "../book/fit";
 
   let { headline, drawn = true }: { headline: Headline; drawn?: boolean } = $props();
 
@@ -28,7 +29,37 @@
   const ROW = 15;
 
   const chart = $derived(headline.chart);
-  const plotWidth = BOX.width - PAD.left - PAD.right;
+
+  /*
+    The strip's left margin is its longest name, measured.
+
+    The names were set against a fixed 60 units and anchored to its edge, so a longer name ran out
+    of the chart to the left and off the page: at 1280x720 in the hand, the eighteen-sea strip's
+    names began 37px left of the leaf and were cut, and in the dyslexia setting's wider face they
+    lost more. How wide a name is is a fact about the face it is set in, so it is measured, again
+    whenever the face changes -- and in viewBox units, so the window's size does not enter into it.
+  */
+  let svg = $state<SVGSVGElement | null>(null);
+  let nameWidth = $state(0);
+  $effect(() => {
+    const drawing = svg;
+    if (!drawing) return;
+    const measure = () => {
+      const names = [...drawing.querySelectorAll<SVGTextElement>(".headline__row")];
+      nameWidth = Math.max(0, ...names.map((name) => name.getComputedTextLength()));
+    };
+    measure();
+    return onTypeChange(measure);
+  });
+
+  /* The strip pays for its names out of the right margin, which only a years chart's end labels
+     use: its own labels are its marks', and those are written along the top. */
+  const pad = $derived(
+    chart.kind === "strip"
+      ? { ...PAD, left: Math.max(PAD.left, Math.ceil(nameWidth) + 14), right: 24 }
+      : PAD,
+  );
+  const plotWidth = $derived(BOX.width - pad.left - pad.right);
   const plotHeight = $derived(
     (chart.kind === "strip" ? Math.max(BOX.height, 34 + chart.bars.length * ROW) : BOX.height) -
       PAD.top -
@@ -47,7 +78,7 @@
       last,
       low,
       high,
-      xOf: linear([first, last], [PAD.left, PAD.left + plotWidth]),
+      xOf: linear([first, last], [pad.left, pad.left + plotWidth]),
       // Larger values sit higher, so an earlier date reads as *down* and a later one as *up*:
       // the axis is the calendar's, not the ribbon's inverted one, because these charts carry
       // speeds and distances as well as dates and one convention has to hold for all of them.
@@ -65,7 +96,7 @@
     return {
       low,
       high,
-      xOf: linear([low, high], [PAD.left, PAD.left + plotWidth]),
+      xOf: linear([low, high], [pad.left, pad.left + plotWidth]),
       hOf: linear([0, tallest], [0, plotHeight]),
     };
   });
@@ -86,7 +117,7 @@
       low,
       high,
       rowHeight,
-      xOf: linear([low, high], [PAD.left, PAD.left + plotWidth]),
+      xOf: linear([low, high], [pad.left, pad.left + plotWidth]),
       yOf: (index: number) => PAD.top + rowHeight * (index + 0.5),
     };
   });
@@ -113,6 +144,7 @@
 <figure class="headline" class:headline--drawn={drawn}>
   <h3 class="headline__title">{headline.title}</h3>
   <svg
+    bind:this={svg}
     class="headline__svg"
     viewBox="0 0 {BOX.width} {boxHeight}"
     role="img"
@@ -123,12 +155,12 @@
       {#each ticks(scale.low, scale.high) as value (value)}
         <line
           class="headline__grid"
-          x1={PAD.left}
-          x2={PAD.left + plotWidth}
+          x1={pad.left}
+          x2={pad.left + plotWidth}
           y1={scale.yOf(value)}
           y2={scale.yOf(value)}
         />
-        <text class="headline__tick" x={PAD.left - 8} y={scale.yOf(value) + 4} text-anchor="end">
+        <text class="headline__tick" x={pad.left - 8} y={scale.yOf(value) + 4} text-anchor="end">
           {tickLabel(value, years.unit, scale.high - scale.low)}
         </text>
       {/each}
@@ -162,14 +194,14 @@
           />
           <text
             class="headline__label headline__label--{index}"
-            x={PAD.left + plotWidth + 8}
+            x={pad.left + plotWidth + 8}
             y={scale.yOf(series.trend.end) + 4 + (index === 1 ? 14 : 0)}
           >
             {series.label}
           </text>
         {/if}
       {/each}
-      <text class="headline__unit" x={PAD.left} y={PAD.top - 6}>{years.unit}</text>
+      <text class="headline__unit" x={pad.left} y={PAD.top - 6}>{years.unit}</text>
     {:else if pile && pileScale}
       {@const scale = pileScale}
       {#each pile.bins as bin (bin.low)}
@@ -185,8 +217,8 @@
       {/each}
       <line
         class="headline__base"
-        x1={PAD.left}
-        x2={PAD.left + plotWidth}
+        x1={pad.left}
+        x2={pad.left + plotWidth}
         y1={PAD.top + plotHeight}
         y2={PAD.top + plotHeight}
       />
@@ -218,7 +250,7 @@
           </text>
         {/if}
       {/each}
-      <text class="headline__unit" x={PAD.left + plotWidth} y={PAD.top + plotHeight + 36} text-anchor="end">
+      <text class="headline__unit" x={pad.left + plotWidth} y={PAD.top + plotHeight + 36} text-anchor="end">
         {pile.n.toLocaleString()} counted, in {pile.unit}{pile.clipped > 0 ? `; ${pile.clipped} beyond the edges` : ""}
       </text>
     {:else if strip && stripScale}
@@ -238,7 +270,7 @@
       {#each strip.bars as bar, index (bar.label)}
         <text
           class="headline__row"
-          x={PAD.left - 8}
+          x={pad.left - 8}
           y={scale.yOf(index) + 4}
           text-anchor="end"
         >
@@ -274,7 +306,7 @@
           {tickLabel(value, strip.unit, scale.high - scale.low)}
         </text>
       {/each}
-      <text class="headline__unit" x={PAD.left + plotWidth} y={PAD.top + plotHeight + 36} text-anchor="end">
+      <text class="headline__unit" x={pad.left + plotWidth} y={PAD.top + plotHeight + 36} text-anchor="end">
         {strip.unit}
       </text>
     {/if}
@@ -291,11 +323,14 @@
     min-height: 0;
   }
 
+  /* A multiple of `--size-margin` rather than a rem, for the reason every other panel's type is:
+     1.15rem over the token's root 0.66, so the phone is as it was and the spread's title follows
+     the page. Set in rem it was the one line on the page `fit.ts` could not shrink. */
   .headline__title {
     margin: 0;
     font-family: var(--font-hand);
     font-weight: 400;
-    font-size: calc(1.15rem * var(--font-scale-hand));
+    font-size: calc(var(--size-margin) * 1.742 * var(--font-scale-hand));
     line-height: var(--leading-hand);
   }
 
