@@ -394,8 +394,8 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     /*
-      The perspective lives here, on the element that also clips, and both halves of that are the
-      fix for what the owner called "some small clipping while I switch pages".
+      The perspective lives here, and that was the fix for what the owner called "some small
+      clipping while I switch pages".
 
       It was declared on `.book`, one generation too far up: perspective applies to an element's
       own children, and the leaf is a grandchild through this grid. So the book asked for a 3D turn
@@ -407,21 +407,16 @@
       drawn larger than the bound edge, so the page beneath is something a sheet is rising off
       rather than something with a slice missing.
 
-      It has to be clipped for the same reason, because a foreshortened sheet is *bigger* than the
-      page it came from: measured across the turn it reaches 17px past the outer edge and further
-      past the head and the foot, onto the desk and under the type controls. `overflow: clip` here
-      is what `.book` cannot do -- the filter tabs hang below that block by design -- and it is
-      safe on this element in particular: the rule that flattens 3D applies to an element's own
-      `transform-style`, and this one has nothing to preserve. The leaf below still does, for its
-      two faces.
-
-      What it costs is a third of the way through the turn, where the lifted sheet is drawn taller
-      than the book and loses about 30px at the head. That is inherent rather than unfixed: a sheet
-      near the eye *is* bigger, and the two alternatives are letting it run over the controls or
-      going back to a squash.
+      And it is not clipped, which it was, and which the owner then saw as the same complaint.
+      A foreshortened sheet is bigger than the page it came from: measured at 1280x720 it stands
+      53px past the head and the foot a ninth of the way through the turn and 79px when it is
+      upright, and `overflow: clip` here cut it off in a straight line along the book's own edge for
+      most of the turn -- a sheet that seemed to pass into the desk. It rises over the desk instead,
+      the way a page lifted toward the eye does. The type controls are fixed above everything and the
+      thumb tabs and the filter sit above this element in the book, so it passes under all three; on
+      a window short enough, the top of the window is what it rises past.
     */
     perspective: 2800px;
-    overflow: clip;
     background: var(--paper);
     border: 1px solid var(--rule);
     box-shadow:

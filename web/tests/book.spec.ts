@@ -1482,6 +1482,51 @@ test("the turning page lands exactly on the page it stands for, number and all",
   expect(Math.abs(copy.at[1]! - real.at[1]!), "the landed page is off vertically").toBeLessThan(0.5);
 });
 
+test("the lifted page rises over the desk rather than being cut at the book's edge", async ({
+  page,
+}) => {
+  /*
+    A sheet turning toward the reader is drawn larger than the page it lifted from, and the book cut
+    it off along its own head and foot for most of the turn: 53px each end a ninth of the way in, at
+    1280x720, and 79px when upright. The owner saw that as the page clipping.
+
+    So the turn is stopped where the sheet stands tall, on a window with desk above and below the
+    book, and every ancestor that clips must hold the whole sheet -- which the book no longer is.
+  */
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await openBook(page, "#ch=how-to-read&p=0");
+  await page.locator('.spread > .page--recto [data-turn="on"]').click();
+
+  const cut = await page.evaluate(() => {
+    const leaf = document.querySelector(".leaf");
+    if (!leaf) return null;
+    for (const animation of leaf.getAnimations()) {
+      animation.pause();
+      animation.currentTime = 120;
+    }
+    const sheet = leaf.getBoundingClientRect();
+    const book = document.querySelector(".spread")!.getBoundingClientRect();
+    const clippers: string[] = [];
+    for (let node = leaf.parentElement; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.overflowX === "visible" && style.overflowY === "visible") continue;
+      const box = node.getBoundingClientRect();
+      const holds =
+        box.top <= sheet.top + 0.5 &&
+        box.bottom >= sheet.bottom - 0.5 &&
+        box.left <= sheet.left + 0.5 &&
+        box.right >= sheet.right - 0.5;
+      if (!holds) clippers.push(`${node.tagName.toLowerCase()}.${node.className.split(" ")[0]}`);
+    }
+    return { rises: book.top - sheet.top, clippers };
+  });
+
+  expect(cut, "no leaf was turning").not.toBeNull();
+  // The premise, so this cannot pass by the sheet having stopped rising.
+  expect(cut!.rises, "the lifted sheet no longer stands taller than the book").toBeGreaterThan(20);
+  expect(cut!.clippers, "the lifted sheet is cut by").toEqual([]);
+});
+
 test("a monitor gets the spread and only the spread", async ({ page }) => {
   // The two containers are a choice, not a fallback: mounting both would run the world chapter's
   // map twice and put two of every page in the accessibility tree.
