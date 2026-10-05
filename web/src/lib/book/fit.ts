@@ -107,14 +107,16 @@ function contentBottom(inner: HTMLElement): number {
   return low;
 }
 
-/** The height a page has for text, which is also half of what its fit is a function of. */
+/**
+ * The height a page has for text at the scale it is currently written in.
+ *
+ * Its layout height rather than its drawn one, so that a sheet drawn foreshortened in mid-turn
+ * still reports the page it is. Not a key for the cache -- the foot it reserves for the folio grows
+ * and shrinks with the fit, so this moves whenever the scale does; see `signatureOf`.
+ */
 function roomOf(inner: HTMLElement): number {
   const style = getComputedStyle(inner);
-  return (
-    inner.getBoundingClientRect().height -
-    parseFloat(style.paddingTop) -
-    parseFloat(style.paddingBottom)
-  );
+  return inner.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
 }
 
 /** The filled fraction of the page at whatever scale is currently set. */
@@ -164,10 +166,9 @@ function apply(inner: HTMLElement, step: number): void {
  * answer is measured rather than modelled.
  */
 function refit(inner: HTMLElement): void {
-  const room = roomOf(inner);
-  if (room <= 0) return;
+  if (roomOf(inner) <= 0) return;
 
-  const signature = signatureOf(inner, room);
+  const signature = signatureOf(inner);
   const known = measured.get(signature);
   if (known !== undefined) {
     apply(inner, known);
@@ -230,6 +231,11 @@ function refit(inner: HTMLElement): void {
  * The cache is what makes that unnecessary rather than a special case: a page's fit is a function
  * of what is on it and how much leaf there is, both of which a copy shares exactly with its
  * original, so the copy looks up the answer instead of taking a measurement it cannot take.
+ *
+ * And only looks it up -- see `follow`. It used to measure itself on a miss, and a miss is exactly
+ * what a face landing mid-turn produces, since that empties the cache: the copy then measured the
+ * foreshortened sheet, came out a step larger than the page beneath, and the type shrank by that
+ * step the moment the turn ended. The owner saw it as the text moving up as the page landed.
  */
 const measured = new Map<string, number>();
 
@@ -260,6 +266,9 @@ let settled = false;
 
 /** The live pages, so the one answer that arrives late can reach all of them. */
 const waiting = new Set<() => void>();
+
+/** The turning copies, told whenever a page they may stand for has been measured. */
+const copies = new Set<() => void>();
 
 /** Anything else in the book measured in its type, which has to be told the same thing. */
 const others = new Set<() => void>();
@@ -319,8 +328,18 @@ if (typeof document !== "undefined" && typeof MutationObserver !== "undefined") 
   });
 }
 
-function signatureOf(inner: HTMLElement, room: number): string {
-  return `${Math.round(room)}|${(inner.textContent ?? "").trim()}`;
+/**
+ * What a page's fit is a function of: what is written on it, and how tall its leaf is.
+ *
+ * The leaf's height, and not the room inside it. The room is the leaf less its padding, and the
+ * padding at the foot is reserved for the folio in the page's own fitted units -- so the room read
+ * at one scale is not the room read at another, and a page's key depended on whatever scale it
+ * happened to be at when it was asked. A turning copy, still at the default, never once matched
+ * the page it copies: 571.8px of room against 564.9 on the same leaf. It measured itself instead,
+ * which came out right only while the sheet was flat.
+ */
+function signatureOf(inner: HTMLElement): string {
+  return `${inner.clientHeight}|${(inner.textContent ?? "").trim()}`;
 }
 
 function remember(signature: string, step: number): void {
@@ -328,6 +347,23 @@ function remember(signature: string, step: number): void {
   if (!settled) return;
   if (measured.size >= CACHE_MAX) measured.clear();
   measured.set(signature, step);
+  for (const again of copies) again();
+}
+
+/**
+ * A copy's fit: the page it stands for's answer, or no change until there is one.
+ *
+ * Before the faces have settled nothing is remembered, so there is no answer to take and the copy
+ * measures itself as it always did -- the first second of a visit, before anyone has turned a page.
+ */
+function follow(inner: HTMLElement): void {
+  if (!settled) {
+    refit(inner);
+    return;
+  }
+  if (roomOf(inner) <= 0) return;
+  const known = measured.get(signatureOf(inner));
+  if (known !== undefined) apply(inner, known);
 }
 
 /**
@@ -338,7 +374,7 @@ function remember(signature: string, step: number): void {
  * mount. Attributes are deliberately not observed: the fit writes two custom properties onto this
  * same element, and observing them would be a loop.
  */
-export function fit(inner: HTMLElement, on: boolean): { destroy: () => void } {
+export function fit(inner: HTMLElement, on: boolean | "copy"): { destroy: () => void } {
   /* The flag is the action's argument rather than a wrapper in the component, because Svelte
      hoists a template's function references to module scope where it can and a local arrow
      declared for the purpose came back as `ReferenceError: maybeFit is not defined` at runtime --
@@ -367,22 +403,24 @@ export function fit(inner: HTMLElement, on: boolean): { destroy: () => void } {
     queued = true;
     queueMicrotask(() => {
       queued = false;
-      refit(inner);
+      if (on === "copy") follow(inner);
+      else refit(inner);
     });
   };
 
   schedule();
   waiting.add(schedule);
+  if (on === "copy") copies.add(schedule);
   const changes = new MutationObserver(schedule);
   changes.observe(inner, { childList: true, subtree: true, characterData: true });
 
   /* Only a real change of leaf, because a fit can move a scrollbar and a scrollbar resizes the
      box that was being observed -- which is a loop, not a resize. */
-  let room = 0;
+  let leaf = 0;
   const resizes = new ResizeObserver(() => {
-    const now = Math.round(roomOf(inner));
-    if (now === room) return;
-    room = now;
+    const now = inner.clientHeight;
+    if (now === leaf) return;
+    leaf = now;
     schedule();
   });
   resizes.observe(inner);
@@ -390,6 +428,7 @@ export function fit(inner: HTMLElement, on: boolean): { destroy: () => void } {
   return {
     destroy() {
       waiting.delete(schedule);
+      copies.delete(schedule);
       changes.disconnect();
       resizes.disconnect();
     },

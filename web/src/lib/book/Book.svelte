@@ -149,7 +149,7 @@
           <Page
             side={arriving}
             fill
-            fitted
+            fitted="copy"
             folio={was?.[of(arriving)] ?? null}
             mark={turns(leaving.at, arriving)}
           >
@@ -163,7 +163,7 @@
             <Page
               side={lifted}
               fill
-              fitted
+              fitted="copy"
               folio={was?.[of(lifted)] ?? null}
               mark={turns(leaving.at, lifted)}
             >
@@ -174,7 +174,7 @@
             <Page
               side={arriving}
               fill
-              fitted
+              fitted="copy"
               folio={numbers[of(arriving)]}
               mark={turns(index, arriving)}
             >

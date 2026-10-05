@@ -1655,6 +1655,60 @@ test("a turn started during a turn is drawn too", async ({ page }) => {
   expect(second.at, "the second turn's sheet is not at the start of its turn").toBeLessThan(250);
 });
 
+test("a page re-fitted in mid-turn lands in the hand of the page it stands for", async ({
+  page,
+}) => {
+  /*
+    The owner saw the text move as a turned page landed. Walking the book at 1280x720, three turns
+    of about fifty ended with the copy a step larger than the real page beneath it -- 1.00 against
+    0.98, 0.98 against 0.96 -- so the type shrank by a step at the swap. Each was a headline page,
+    where something re-fits the pages while the sheet is in the air; the copy then measured itself
+    foreshortened.
+
+    So the sheet is stood exactly edge-on, where nothing on it has any width and a copy measuring
+    itself finds an empty page and grows to the largest hand there is; the re-fit is forced there --
+    a change of the type attribute re-fits every page -- and the landed copy must be in the real
+    page's hand. The eighteen-sea chart's page, which at this size is written below the largest hand
+    -- 0.96 when this was found -- so an empty-page answer cannot match it by coincidence.
+  */
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const spreads = await layout();
+  const before = spreads.findIndex((_, at) => {
+    const next = spreads[at + 1]?.verso;
+    return next?.kind === "figure" && next.key === "seas-disagree";
+  });
+  expect(before, "the eighteen-sea chart is not on a left-hand page").toBeGreaterThanOrEqual(0);
+  const spread = spreads[before]!;
+  await openBook(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+  await expect
+    .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+    .toBe("loaded");
+  await page.locator('.spread > .page--recto [data-turn="on"]').click();
+
+  const landed = await page.evaluate(async () => {
+    const leaf = document.querySelector(".leaf");
+    if (!leaf) return null;
+    for (const animation of leaf.getAnimations()) animation.cancel();
+    const sheet = leaf as HTMLElement;
+    sheet.style.transform = "rotateY(-90deg)";
+    const root = document.documentElement;
+    root.setAttribute("data-type", root.getAttribute("data-type") ?? "hand");
+    await new Promise((settle) => setTimeout(settle, 50));
+    sheet.style.transform = "rotateY(-180deg)";
+    const fitOf = (sheet: Element) =>
+      (sheet.querySelector(".page__inner") as HTMLElement).style.getPropertyValue("--fit-type");
+    return {
+      copy: fitOf(leaf.querySelector(".leaf__back .page")!),
+      real: fitOf(document.querySelector(".spread > .page--verso")!),
+    };
+  });
+
+  expect(landed, "no leaf was turning").not.toBeNull();
+  // The premise: below the largest hand, or this proves nothing.
+  expect(Number(landed!.real), "the real page is already in the largest hand").toBeLessThan(1.16);
+  expect(landed!.copy, "the landed copy's hand").toBe(landed!.real);
+});
+
 test("a monitor gets the spread and only the spread", async ({ page }) => {
   // The two containers are a choice, not a fallback: mounting both would run the world chapter's
   // map twice and put two of every page in the accessibility tree.

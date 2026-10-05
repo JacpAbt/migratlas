@@ -19,10 +19,11 @@
      *
      * Off by default, and the phone is what leaves it off: a leaf there is a scroll-snap track at
      * its own reading size, so there is no fixed leaf to fill and nothing for a search to find.
-     * The turning leaf and the page parked under it *do* set it -- they would otherwise be written
-     * in a different hand from the page they are copies of, and the turn would flicker.
+     * The turning leaf and the page parked under it set it to `"copy"`: written in the hand of the
+     * page they copy, which they take from that page's measurement rather than their own. A sheet
+     * in mid-turn is drawn foreshortened and cannot be measured.
      */
-    fitted?: boolean;
+    fitted?: boolean | "copy";
     /**
      * The folio, counted over the whole book. Null on the one page that has none.
      *
