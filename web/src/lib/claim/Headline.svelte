@@ -45,6 +45,13 @@
   $effect(() => {
     const drawing = svg;
     if (!drawing) return;
+    /*
+      And again whenever the names change, which is not the same as the drawing changing: a page
+      turned from one figure to another keeps this component and its <svg> and hands it a new chart.
+      Keyed on the drawing alone, the eighteen seas kept the width the histogram before them had
+      measured -- none -- and their names ran off the page until a face happened to land.
+    */
+    void strip?.bars.map((bar) => bar.label);
     const measure = () => {
       const names = [...drawing.querySelectorAll<SVGTextElement>(".headline__row")];
       nameWidth = Math.max(0, ...names.map((name) => name.getComputedTextLength()));

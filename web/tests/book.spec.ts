@@ -1406,23 +1406,37 @@ for (const type of ["hand", "dyslexic"] as const) {
     */
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.addInitScript((choice) => localStorage.setItem("migratlas:type", choice), type);
-    const strips = (
-      JSON.parse(readFileSync("public/headline.json", "utf8")).headlines as {
-        key: string;
-        chart: { kind: string };
-      }[]
-    )
-      .filter((headline) => headline.chart.kind === "strip")
-      .map((headline) => headline.key);
+    const headlines = JSON.parse(readFileSync("public/headline.json", "utf8")).headlines as {
+      key: string;
+      chart: { kind: string };
+    }[];
+    const strips = headlines.filter((one) => one.chart.kind === "strip").map((one) => one.key);
+    const others = headlines.filter((one) => one.chart.kind !== "strip").map((one) => one.key);
     expect(strips.length, "no strip chart to hold").toBeGreaterThan(0);
     const spreads = await layout("", type === "dyslexic");
+    const sideOf = (key: string) => {
+      for (const one of spreads)
+        for (const side of ["verso", "recto"] as const) {
+          const panel = one[side];
+          if (panel.kind === "figure" && panel.key === key) return { one, side };
+        }
+      return null;
+    };
 
     for (const key of strips) {
-      const at = spreads.find((one) =>
-        [one.verso, one.recto].some((panel) => panel.kind === "figure" && panel.key === key),
-      );
+      const at = sideOf(key);
       if (!at) throw new Error(`${key} has no figure page`);
-      await openBook(page, `#ch=${at.chapter.slug}&p=${at.at}`);
+      /*
+        Arrived at from another chart on the same side of the spread, the way a reader turning pages
+        arrives: the page keeps its chart component and hands it the strip. Opened cold, as this test
+        first did, the strip measured itself fresh and passed while the turn left its names cut.
+      */
+      const before = spreads
+        .flatMap((one) => (["verso", "recto"] as const).map((side) => ({ one, side, panel: one[side] })))
+        .find((slot) => slot.side === at.side && slot.panel.kind === "figure" && others.includes(slot.panel.key));
+      if (before) await openBook(page, `#ch=${before.one.chapter.slug}&p=${before.one.at}`);
+      await expect(page.locator(".spread > .page .headline__svg").first()).toBeVisible();
+      await openBook(page, `#ch=${at.one.chapter.slug}&p=${at.one.at}`);
       await expect
         .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
         .toBe("loaded");
