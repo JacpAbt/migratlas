@@ -136,6 +136,14 @@
       {/if}
 
       {#if leaving && current}
+        <!--
+          Keyed on the turn, so a second turn is a second sheet.
+
+          The leaf's animation runs when the element is made. A turn started while one was still in
+          flight reused the same elements with new pages on them, already at the end of their
+          animation -- so a reader pressing the arrow twice saw the pages change and nothing turn.
+        -->
+        {#key leaving}
         <!-- The outgoing page, held on the half the leaf is about to land on. -->
         <div class="stale stale--{arriving}" aria-hidden="true">
           <Page
@@ -174,6 +182,7 @@
             </Page>
           </div>
         </div>
+        {/key}
       {/if}
 
       <div class="gutter" aria-hidden="true"><span class="gutter__line"></span></div>

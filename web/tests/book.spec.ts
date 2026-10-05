@@ -1624,6 +1624,37 @@ test("the paper darkens into the binding without a step", async ({ page }) => {
   }
 });
 
+test("a turn started during a turn is drawn too", async ({ page }) => {
+  /*
+    The owner pressed the arrow several times and saw the pages jump with no turn. The leaf is made
+    when a turn starts and its animation runs once, when it is made; a second turn arriving while
+    the first was in flight put new pages on the same, already finished, sheet.
+
+    So the arrow is pressed twice, a third of a turn apart, and the second has to be a new sheet
+    whose animation is at its start rather than at the first one's end.
+  */
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBook(page, "#ch=how-to-read&p=0");
+  await page.locator("body").press("ArrowRight");
+  await expect(page.locator(".leaf")).toHaveCount(1);
+  await page.evaluate(() => {
+    (window as unknown as { first: Element | null }).first = document.querySelector(".leaf");
+  });
+  await page.waitForTimeout(300);
+  await page.locator("body").press("ArrowRight");
+
+  const second = await page.evaluate(() => {
+    const leaf = document.querySelector(".leaf");
+    const animation = leaf?.getAnimations()[0];
+    return {
+      fresh: leaf !== null && leaf !== (window as unknown as { first: Element | null }).first,
+      at: Number(animation?.currentTime ?? Number.NaN),
+    };
+  });
+  expect(second.fresh, "the second turn reused the first turn's sheet").toBe(true);
+  expect(second.at, "the second turn's sheet is not at the start of its turn").toBeLessThan(250);
+});
+
 test("a monitor gets the spread and only the spread", async ({ page }) => {
   // The two containers are a choice, not a fallback: mounting both would run the world chapter's
   // map twice and put two of every page in the accessibility tree.
