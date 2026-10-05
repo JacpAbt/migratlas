@@ -1,5 +1,6 @@
 <script lang="ts">
   import { REPOSITORY } from "../ledger";
+  import DrawnLink from "../notebook/DrawnLink.svelte";
   import { format, type Refusal } from "./sandbox";
 
   let { refusal }: { refusal: Refusal } = $props();
@@ -58,9 +59,9 @@
 
   <p class="refusal__verdict"><strong>Why it is not reported.</strong> {refusal.verdict}</p>
   <p class="refusal__method">
-    <a href={`${REPOSITORY}${refusal.method}`} rel="noopener" target="_blank">
+    <DrawnLink href={`${REPOSITORY}${refusal.method}`} seed="refusal-plan-{refusal.key}">
       The plan, written down before we looked
-    </a>
+    </DrawnLink>
   </p>
 </section>
 
@@ -86,7 +87,7 @@
 
   .refusal__label {
     margin: 0;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-label);
     font-weight: 500;
     letter-spacing: 0.09em;
@@ -152,7 +153,7 @@
 
   .refusal__n {
     margin: var(--gap-hair) 0 0;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-label);
     color: var(--pencil);
   }
@@ -178,7 +179,5 @@
 
   .refusal__method {
     margin: var(--gap-hair) 0 0;
-    font-family: var(--font-mono);
-    font-size: calc(var(--size-margin) * 1.03);
   }
 </style>

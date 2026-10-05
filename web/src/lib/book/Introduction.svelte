@@ -73,7 +73,7 @@
      from the ledger on every build, and setting them in a hand would make them look written down. */
   .intro__counted {
     margin: var(--gap) 0 0;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-margin);
     color: var(--ink-soft);
   }

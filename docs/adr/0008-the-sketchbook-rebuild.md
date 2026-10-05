@@ -164,3 +164,23 @@ for a use beyond the layer checkboxes. `docs/TASKS.md` item 7.
 `graphite #8a8578` where the tokens shipped `#6b6157` and, now, `#9a9384` — each darkened or
 lightened after the contrast test failed it. The ADR is a record of a decision on a date, not a
 description of the current file; `tokens.css` is the current file.
+
+## Amendment, 2026-10-05, the owner reading the book as finished
+
+The owner found the parts of the book a hand had not written, and named them: the audit's domains
+and verdicts, its headings, the "For the record" register, the direction banner, the refusal's
+label, a knob's settings, and every "The plan, written down before we looked" link. All were set in
+the typewriter face under section 2's "numbers and dense labels stay mono".
+
+**Labels are no longer mono.** They are words, and the reason section 2 gave for mono -- tabular
+figures, so a number stays a measurement -- reaches figures, not words. The small-size legibility
+reason survives intact, because they move to the body face, Shantell Sans, a marker hand drawn to
+stay legible at interface sizes, and not to the display hand, which section 2 still keeps at 16px
+and above. A link is underlined by `notebook/DrawnLink.svelte` with the same stroke as the rule
+under a heading, not the browser's line.
+
+**Figures are unchanged and still enforced:** a value, a column of counts, an axis, a code path stay
+mono, and `web/tests/notebook.spec.ts` holds the record's figure to it beside the labels it now
+differs from. Whether a standalone figure -- the record's headline value, a knob's reading -- should
+be written instead is the owner's call and is not taken here.
+

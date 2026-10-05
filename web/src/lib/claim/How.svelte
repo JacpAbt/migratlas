@@ -1,6 +1,7 @@
 <script lang="ts">
   import Instrument from "../notebook/Instrument.svelte";
   import Rule from "../notebook/Rule.svelte";
+  import DrawnLink from "../notebook/DrawnLink.svelte";
   import { SKETCHES } from "../notebook/ink";
   import { instrumentFor, REPOSITORY, type Finding } from "../ledger";
 
@@ -31,9 +32,9 @@
   <h2 class="how__lead">{finding.plain_how}</h2>
   <Rule seed="how-{finding.key}" {draw} />
 
-  <a class="how__method" href={`${REPOSITORY}${finding.method}`} rel="noopener" target="_blank">
+  <DrawnLink class="how__method" href={`${REPOSITORY}${finding.method}`} seed="how-plan-{finding.key}">
     The plan, written down before we looked
-  </a>
+  </DrawnLink>
 
   <!--
     The apparatus, drawn at the foot of the page where somebody would have drawn it.
@@ -138,12 +139,7 @@
     color: var(--pencil);
   }
 
-  .how__method {
+  .how :global(.how__method) {
     margin-top: var(--gap-wide);
-    font-family: var(--font-mono);
-    font-size: var(--size-margin);
-    color: var(--rust);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 3px;
   }
 </style>

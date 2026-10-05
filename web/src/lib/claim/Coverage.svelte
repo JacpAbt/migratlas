@@ -258,13 +258,19 @@
     flex: 1;
   }
 
-  .coverage__legend em,
-  .coverage__ceiling {
+  .coverage__legend em {
     font-family: var(--font-mono);
     font-style: normal;
     font-size: calc(var(--size-margin) * 1.06);
     color: var(--pencil);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* A verdict in words, not a figure: written, beside the counts that stay typed so they line up. */
+  .coverage__ceiling {
+    font-family: var(--font-body);
+    font-size: calc(var(--size-margin) * 1.06);
+    color: var(--pencil);
   }
 
   .coverage__sources {
@@ -277,7 +283,7 @@
 
   caption {
     margin-bottom: var(--gap-hair);
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-label);
     letter-spacing: 0.08em;
     text-transform: uppercase;

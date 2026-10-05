@@ -115,7 +115,9 @@
     line-height: var(--leading-hand);
   }
 
-  .sandbox :global(.rule) {
+  /* The heading's rule only -- a child of the section. As a descendant selector it also caught the
+     underline drawn under a link further down, and cut it short of the words. */
+  .sandbox > :global(.rule) {
     max-width: 14rem;
     margin-bottom: var(--gap);
   }

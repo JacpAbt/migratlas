@@ -130,12 +130,18 @@
 </aside>
 
 <style>
+  /*
+    The marker face throughout, which the findings already were. The headings, the domain names and
+    the verdicts were set in the typewriter face, and the owner read the page as the one in the book
+    a hand had not written. They are words, not figures, so ADR 0008's reason for mono -- digits that
+    line up -- does not reach them, and the marker face was drawn to stay legible at this size.
+  */
   .margin {
     display: grid;
     grid-template-columns: 8px 1fr;
     gap: 0 var(--gap-tight);
     align-items: stretch;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-margin);
     line-height: 1.55;
     color: var(--pencil);

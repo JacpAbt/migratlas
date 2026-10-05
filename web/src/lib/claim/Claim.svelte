@@ -1,6 +1,7 @@
 <script lang="ts">
   import Instrument from "../notebook/Instrument.svelte";
   import Rule from "../notebook/Rule.svelte";
+  import DrawnLink from "../notebook/DrawnLink.svelte";
   import Margin from "./Margin.svelte";
   import { DIRECTION_LABEL, instrumentFor, REPOSITORY, type Finding } from "../ledger";
 
@@ -136,14 +137,13 @@
       <!-- With the caveat rather than with the number: the reader who wants the pre-registration is
            the one who has just been told what would make the number wrong. -->
       {#if slice !== "value"}
-        <a
+        <DrawnLink
           class="claim__method"
           href={`${REPOSITORY}${finding.method}`}
-          rel="noopener"
-          target="_blank"
+          seed="method-{finding.key}"
         >
           The plan, written down before we looked
-        </a>
+        </DrawnLink>
       {/if}
     {/if}
     {#if part !== "finding" && slice !== "value" && finding.specimen_key !== null && finding.specimen && onspecimen}
@@ -202,7 +202,7 @@
 
   .claim__banner {
     margin: 0;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-label);
     font-weight: 500;
     letter-spacing: 0.1em;
@@ -288,7 +288,7 @@
   /* The label on the signpost, so a reader can see the page is the same finding said again rather
      than a further one -- without it the two registers read as two claims. */
   .claim__register {
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-label);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -323,14 +323,9 @@
     cursor: pointer;
   }
 
-  .claim__method {
+  .claim__body :global(.claim__method) {
     justify-self: start;
     margin-top: var(--gap-tight);
-    font-family: var(--font-mono);
-    font-size: var(--size-margin);
-    color: var(--rust);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 3px;
   }
 
   /* Child components need `:global` to be placed: Svelte scopes styles to the component that

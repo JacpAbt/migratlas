@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import type { Leaf, Sources, Spread } from "../src/lib/book/pages";
+import type { Leaf, Panel, Sources, Spread } from "../src/lib/book/pages";
 
 /*
   The size the book is designed at, stated rather than inherited.
@@ -1071,6 +1071,62 @@ test("changing the type changes the letterforms and nothing else", async ({
   expect(new Set(Object.values(seen).map((s) => s.title)).size).toBeGreaterThan(
     1,
   );
+});
+
+test("a word on a page is written, and a figure is typed", async ({ page }) => {
+  /*
+    The owner read the audit, the method links, the registers and the refusal's label as the parts
+    of the book a hand had not written: every one was set in the typewriter face. They are words, and
+    ADR 0008 kept mono for digits that have to line up, which words never do -- so they are written
+    in the marker face the prose is in, and the figure beside them stays typed.
+
+    Each is read on the page that prints it.
+  */
+  const spreads = await layout();
+  const where = (match: (panel: Panel) => boolean) => {
+    const spread = spreads.find((one) => match(one.verso) || match(one.recto));
+    if (!spread) throw new Error("no page carries that panel");
+    return `#ch=${spread.chapter.slug}&p=${spread.at}`;
+  };
+  const token = (name: string) =>
+    page.evaluate(
+      (property) =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue(property)
+          .split(",")[0]!
+          .replaceAll('"', "")
+          .trim(),
+      name,
+    );
+  const faceOf = (selector: string) =>
+    page
+      .locator(`.spread > .page ${selector}`)
+      .first()
+      .evaluate((node) => getComputedStyle(node).fontFamily);
+
+  const words: [string, string, (panel: Panel) => boolean][] = [
+    ["the audit's heading", ".margin h3", (p) => p.kind === "bias"],
+    ["a bias domain", ".bias__domain", (p) => p.kind === "bias"],
+    ["a bias verdict", "[class*='bias__status--']", (p) => p.kind === "bias"],
+    ["the direction banner", ".claim__banner", (p) => p.kind === "finding"],
+    ["the register label", ".claim__register", (p) => p.kind === "record"],
+    ["the record's plan link", ".claim__method", (p) => p.kind === "record"],
+    ["the method page's plan link", ".how__method", (p) => p.kind === "how"],
+    ["a knob's setting", ".option", (p) => p.kind === "panel" && p.part === "knobs"],
+  ];
+  let body = "";
+  let mono = "";
+  for (const [what, selector, match] of words) {
+    await at(page, where(match));
+    body ||= await token("--font-body");
+    mono ||= await token("--font-mono");
+    const face = await faceOf(selector);
+    expect(face, `${what} is not in the marker face`).toContain(body);
+    expect(face, `${what} is typed`).not.toContain(mono);
+  }
+
+  await at(page, where((p) => p.kind === "record"));
+  expect(await faceOf(".claim__value"), "the record's figure is not typed").toContain(mono);
 });
 
 test("a figure is never set in a face that cannot line one up", async ({
