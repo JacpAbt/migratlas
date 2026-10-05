@@ -60,6 +60,66 @@ export function mark(host: SVGSVGElement, name: string, node: SVGGElement): void
  */
 export const HAND: Options = { roughness: 1.6, bowing: 1.3, strokeWidth: 1.5 };
 
+/*
+  A generator beside the pen: the same strokes as path data, for a component that renders its own
+  elements with its own classes -- a chart, whose inks are tokens in its stylesheet.
+
+  A chart is held looser than a heading's rule and tighter than a doodle, because it carries the
+  published numbers. At these roughnesses rough.js moves an endpoint by about a unit and a half of the
+  chart's 640-unit box, under one percent of either axis -- the hand shows, the value does not move.
+*/
+const pencil = rough.generator();
+
+/** One drawn line as path data: two passes unless `single`, which is what reads as a hand. */
+export function sketchLine(
+  key: string,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  roughness = 0.7,
+  single = false,
+): string[] {
+  return pencil
+    .toPaths(
+      pencil.line(x1, y1, x2, y2, {
+        roughness,
+        bowing: 0.6,
+        seed: seedOf(key),
+        disableMultiStroke: single,
+      }),
+    )
+    .map((path) => path.d);
+}
+
+/** A drawn bar: its edge and the hatching inside it, apart, so each takes its own ink. */
+export function sketchBar(
+  key: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): { edge: string[]; hatch: string[] } {
+  const HATCH = "hatch";
+  const paths = pencil.toPaths(
+    pencil.rectangle(x, y, width, height, {
+      roughness: 0.7,
+      bowing: 0.5,
+      seed: seedOf(key),
+      stroke: "edge",
+      fill: HATCH,
+      fillStyle: "hachure",
+      hachureGap: 3,
+      hachureAngle: -41,
+      fillWeight: 0.8,
+    }),
+  );
+  return {
+    edge: paths.filter((path) => path.stroke !== HATCH).map((path) => path.d),
+    hatch: paths.filter((path) => path.stroke === HATCH).map((path) => path.d),
+  };
+}
+
 /** Height of the box a rule is drawn in, so the component and the generator agree on one number. */
 export const RULE_HEIGHT = 10;
 
