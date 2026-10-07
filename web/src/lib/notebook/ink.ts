@@ -233,6 +233,63 @@ export function lasso(
 }
 
 /** A tick, in the two strokes a hand makes: a short fall and a long rise, overshooting its box. */
+/** The four marks a verdict can get. */
+export type VerdictMark = "tick" | "wave" | "query" | "dash";
+
+/**
+ * A verdict's mark, drawn into a square of `size`: held is ticked, limited is a wave, open is a
+ * question ringed, and not applicable is struck through with a dash.
+ */
+export function verdict(
+  host: SVGSVGElement,
+  key: string,
+  kind: VerdictMark,
+  size: number,
+  stroke: string,
+): void {
+  const s = size;
+  const ink = { ...HAND, stroke, seed: seedOf(`${key}:${kind}`) };
+  const draw = pen(host);
+  if (kind === "tick") {
+    tick(host, key, s, stroke);
+  } else if (kind === "wave") {
+    mark(
+      host,
+      "verdict",
+      draw.curve(
+        [
+          [s * 0.06, s * 0.56],
+          [s * 0.3, s * 0.36],
+          [s * 0.52, s * 0.62],
+          [s * 0.76, s * 0.38],
+          [s * 0.96, s * 0.52],
+        ],
+        { ...ink, strokeWidth: 1.8, roughness: 0.9 },
+      ),
+    );
+  } else if (kind === "query") {
+    mark(host, "verdict", draw.circle(s / 2, s / 2, s * 1.02, { ...ink, strokeWidth: 1.3, roughness: 1.2 }));
+    mark(
+      host,
+      "verdict",
+      draw.curve(
+        [
+          [s * 0.36, s * 0.36],
+          [s * 0.44, s * 0.2],
+          [s * 0.62, s * 0.22],
+          [s * 0.64, s * 0.4],
+          [s * 0.5, s * 0.52],
+          [s * 0.5, s * 0.64],
+        ],
+        { ...ink, strokeWidth: 1.6, roughness: 0.6 },
+      ),
+    );
+    mark(host, "verdict", draw.line(s * 0.5, s * 0.77, s * 0.51, s * 0.8, { ...ink, strokeWidth: 2.2, roughness: 0.2 }));
+  } else {
+    mark(host, "verdict", draw.line(s * 0.18, s * 0.56, s * 0.82, s * 0.5, { ...ink, strokeWidth: 1.7, roughness: 0.8 }));
+  }
+}
+
 export function tick(host: SVGSVGElement, key: string, size: number, stroke: string): void {
   mark(
     host,

@@ -794,6 +794,36 @@ test("an addressed status is legible too, and is not the only signal", async ({
   });
 });
 
+test("every verdict in the audit is marked by hand beside its word", async ({ page }) => {
+  /*
+    The owner read the audit as a form: four verdict words, small, at the ends of rows. Each verdict
+    now carries the mark a reader grading by hand would leave -- and a different one for each, so
+    the shape agrees with the word and never stands in for it.
+  */
+  const spreads = await layout();
+  const marks = new Map<string, Set<string>>();
+  for (const spread of spreads) {
+    if (![spread.verso, spread.recto].some((panel) => panel.kind === "bias")) continue;
+    await at(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll(".spread > .page [class*='bias__status--']")].map((node) => ({
+        status: /bias__status--([\w-]+)/.exec(node.className)?.[1] ?? "",
+        mark: node.querySelector("svg.verdict")?.getAttribute("class")?.split("verdict--")[1] ?? "",
+        strokes: node.querySelectorAll("svg.verdict path").length,
+      })),
+    );
+    for (const row of rows) {
+      expect(row.strokes, `a ${row.status} verdict has no mark drawn`).toBeGreaterThan(0);
+      if (!marks.has(row.status)) marks.set(row.status, new Set());
+      marks.get(row.status)!.add(row.mark);
+    }
+  }
+  // One mark per verdict, and no two verdicts sharing one.
+  const seen = [...marks.values()].map((set) => [...set]);
+  for (const one of seen) expect(one, "a verdict is marked two ways").toHaveLength(1);
+  expect(new Set(seen.flat()).size, "two verdicts share a mark").toBe(seen.length);
+});
+
 test("a chart says which line is which without colour", async ({ page }) => {
   await ready(page);
   // The other exclusion from the colour-vision floor, and the same deal: the scatter sits 16 from

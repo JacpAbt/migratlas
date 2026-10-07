@@ -1,5 +1,6 @@
 <script lang="ts">
   import Ticked from "../notebook/Ticked.svelte";
+  import Verdict from "../notebook/Verdict.svelte";
   import Rule from "../notebook/Rule.svelte";
   import { BRACKET_WIDTH, bracket } from "../notebook/ink";
   import { BIAS_DOMAIN_WORDS, BIAS_STATUS_WORDS, type Finding } from "../ledger";
@@ -94,7 +95,7 @@
         {#each shown as domain (domain.domain)}
           <dt class="bias__domain">{BIAS_DOMAIN_WORDS[domain.domain] ?? domain.domain}</dt>
           <dd class="bias__status bias__status--{domain.status.replace(/ /g, '-')}">
-            {BIAS_STATUS_WORDS[domain.status] ?? domain.status}
+            <Verdict seed="{finding.key}-{domain.domain}" status={domain.status} />{BIAS_STATUS_WORDS[domain.status] ?? domain.status}
           </dd>
           <dd class="bias__finding">{domain.finding}</dd>
         {/each}
