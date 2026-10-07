@@ -1175,6 +1175,9 @@ test("a word on a page is written, and a figure is typed", async ({ page }) => {
     ["the record's plan link", ".claim__method", (p) => p.kind === "record"],
     ["the method page's plan link", ".how__method", (p) => p.kind === "how"],
     ["a knob's setting", ".option", (p) => p.kind === "panel" && p.part === "knobs"],
+    ["the world's headings", ".explore h2", (p) => p.kind === "world"],
+    ["a layer's kind", ".layers em", (p) => p.kind === "world"],
+    ["the world's date", ".clockface", (p) => p.kind === "world"],
   ];
   let body = "";
   let mono = "";
