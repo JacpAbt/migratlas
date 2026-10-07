@@ -290,6 +290,31 @@ export function verdict(
   }
 }
 
+/**
+ * A drawn arrow from the top right of its box to the bottom left, head and all: a margin note's,
+ * pointing back into the text it annotates.
+ */
+export function arrow(host: SVGSVGElement, key: string, width: number, height: number, stroke: string): void {
+  const draw = pen(host);
+  const ink = { ...HAND, stroke, strokeWidth: 1.5, seed: seedOf(key) };
+  const tip: [number, number] = [4, height - 4];
+  mark(
+    host,
+    "arrow",
+    draw.curve(
+      [
+        [width - 4, 4],
+        [width * 0.55, height * 0.2],
+        [width * 0.25, height * 0.55],
+        tip,
+      ],
+      { ...ink, roughness: 0.8 },
+    ),
+  );
+  mark(host, "arrow", draw.line(tip[0], tip[1], tip[0] + 2, tip[1] - 11, { ...ink, roughness: 0.6 }));
+  mark(host, "arrow", draw.line(tip[0], tip[1], tip[0] + 11, tip[1] - 2, { ...ink, roughness: 0.6 }));
+}
+
 export function tick(host: SVGSVGElement, key: string, size: number, stroke: string): void {
   mark(
     host,

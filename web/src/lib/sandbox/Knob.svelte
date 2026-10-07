@@ -154,13 +154,14 @@
     color: var(--rust);
   }
 
+  /* A reading, on its own line: written, as the record's figure is (ADR 0008, 2026-10-07). */
   .knob__value {
     margin: var(--gap-tight) 0 0;
-    font-family: var(--font-mono);
-    font-weight: 500;
-    font-size: calc(var(--size-margin) * 1.89);
+    font-family: var(--font-hand);
+    font-weight: 400;
+    font-size: calc(var(--size-margin) * 1.89 * var(--font-scale-hand));
+    line-height: var(--leading-hand);
     color: var(--rust);
-    font-variant-numeric: tabular-nums;
   }
 
   /* An alternative reads in ink, not the accent: only the published number gets to look published. */

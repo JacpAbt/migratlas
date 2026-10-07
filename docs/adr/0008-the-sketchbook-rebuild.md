@@ -184,3 +184,17 @@ mono, and `web/tests/notebook.spec.ts` holds the record's figure to it beside th
 differs from. Whether a standalone figure -- the record's headline value, a knob's reading -- should
 be written instead is the owner's call and is not taken here.
 
+## Amendment, 2026-10-07, the owner's decision on standalone figures
+
+The 2026-10-05 amendment left one question to the owner: whether a figure that stands alone -- the
+record's headline value, a knob's reading -- should be written rather than typed. Shown one
+record page with its value written, its plain caveat in the margin and an arrow back to the
+paragraph, the owner answered: do it for all thirteen.
+
+**A standalone figure is written.** The record's value and a knob's reading are set in the display
+hand, at sizes above section 2's 16px floor. **A figure in a column of figures stays typed** -- the
+coverage shares, a refusal's numbers, an axis, a table's counts -- because that is what section 2's
+tabular-figures reason was always about: digits that have to line up with the digits above them.
+`web/tests/notebook.spec.ts` now holds the coverage legend's shares to the typed face where it held
+the record's value. The margin note is the claim's own plain caveat, the sentence its finding page
+already carries; no words were written for it.

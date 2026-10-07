@@ -1723,6 +1723,48 @@ test("a page re-fitted in mid-turn lands in the hand of the page it stands for",
   expect(landed!.copy, "the landed copy's hand").toBe(landed!.real);
 });
 
+test("a margin note gives way where a page has no room for it, and only there", async ({
+  page,
+}) => {
+  /*
+    The record pages carry their plain caveat in the margin, and on the four longest that was more
+    than a 1024x768 leaf holds at the smallest hand. The note repeats the finding page's sentence,
+    so the page sets it down there -- and nowhere a page has room. So: at the reference window no
+    record page drops its note; at the narrowest spread every record page fits, whether or not it
+    had to.
+  */
+  const spreads = await layout();
+  const records = spreads.filter((one) => [one.verso, one.recto].some((p) => p.kind === "record"));
+  const walk = async () => {
+    const out: { crowded: boolean; over: number }[] = [];
+    for (const spread of records) {
+      await openBook(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+      await expect
+        .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+        .toBe("loaded");
+      out.push(
+        await page.evaluate(() => {
+          const inner = [...document.querySelectorAll(".spread > .page .page__inner")].find(
+            (one) => one.querySelector(".claim__value"),
+          ) as HTMLElement;
+          return {
+            crowded: inner.hasAttribute("data-crowded"),
+            over: inner.scrollHeight - inner.clientHeight,
+          };
+        }),
+      );
+    }
+    return out;
+  };
+
+  await page.setViewportSize({ width: 1600, height: 900 });
+  expect((await walk()).filter((one) => one.crowded), "a roomy page dropped its note").toEqual([]);
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const narrow = await walk();
+  expect(narrow.filter((one) => one.over > 2), "a record page still overflows").toEqual([]);
+});
+
 test("a monitor gets the spread and only the spread", async ({ page }) => {
   // The two containers are a choice, not a fallback: mounting both would run the world chapter's
   // map twice and put two of every page in the accessibility tree.

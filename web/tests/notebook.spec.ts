@@ -856,6 +856,38 @@ test("nothing on a page is ruled by a stylesheet", async ({ page }) => {
   expect([...ruled], "still ruled by the stylesheet").toEqual([]);
 });
 
+test("every record page is written on: its figure, and a note in its margin", async ({ page }) => {
+  /*
+    The owner asked for the record page to look as if somebody had written on it, for all thirteen
+    claims. Each record page carries its figure written by hand and its claim's plain caveat in the
+    margin, with an arrow drawn back to the paragraph it says plainly.
+  */
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const findings = JSON.parse(readFileSync("public/findings.json", "utf8")).findings as {
+    key: string;
+    plain_caveat: string | null;
+  }[];
+  const spreads = await layout();
+  for (const finding of findings) {
+    const spread = spreads.find((one) =>
+      [one.verso, one.recto].some((panel) => panel.kind === "record" && panel.key === finding.key),
+    );
+    if (!spread) continue;
+    await at(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+    const sheet = page.locator(".spread > .page").filter({ has: page.locator(".claim__value") });
+    await expect(sheet.locator(".claim__value--hand"), `${finding.key}: figure not written`).toBeVisible();
+    if (finding.plain_caveat) {
+      await expect(sheet.locator(".claim__note"), `${finding.key}: no margin note`).toContainText(
+        finding.plain_caveat.slice(0, 40),
+      );
+      expect(
+        await sheet.locator(".claim__note svg.arrow path").count(),
+        `${finding.key}: the note has no arrow`,
+      ).toBeGreaterThan(0);
+    }
+  }
+});
+
 test("a chart says which line is which without colour", async ({ page }) => {
   await ready(page);
   // The other exclusion from the colour-vision floor, and the same deal: the scatter sits 16 from
@@ -1190,8 +1222,13 @@ test("a word on a page is written, and a figure is typed", async ({ page }) => {
     expect(face, `${what} is typed`).not.toContain(mono);
   }
 
+  // The record's figure stands alone and is written (ADR 0008, 2026-10-07); a column of shares has
+  // to line up and stays typed.
+  const hand = await token("--font-hand");
   await at(page, where((p) => p.kind === "record"));
-  expect(await faceOf(".claim__value"), "the record's figure is not typed").toContain(mono);
+  expect(await faceOf(".claim__value"), "the record's figure is not written").toContain(hand);
+  await at(page, where((p) => p.kind === "figure" && p.key === "coverage-bias"));
+  expect(await faceOf(".coverage__legend em"), "a column of shares is not typed").toContain(mono);
 });
 
 test("a figure is never set in a face that cannot line one up", async ({
@@ -1247,7 +1284,17 @@ test("a figure is never set in a face that cannot line one up", async ({
     ),
   )!;
 
-  expect(await faceOf(".claim__value")).toContain(mono);
+  /*
+    Narrowed, on the owner's decision of 2026-10-07 recorded in ADR 0008: a figure on its own line --
+    the record's -- is written now, because nothing beside it has to line up. A figure in a column
+    of figures is what the rule exists for, and that is what this holds to the typed face.
+  */
+  expect(await faceOf(".claim__value"), "the record's figure is not written").toContain(hand);
+  const coverageAt = spreads.find((one) =>
+    [one.verso, one.recto].some((panel) => panel.kind === "figure" && panel.key === "coverage-bias"),
+  )!;
+  await at(page, `#ch=${coverageAt.chapter.slug}&p=${coverageAt.at}`);
+  expect(await faceOf(".coverage__legend em"), "a column of shares is not typed").toContain(mono);
 
   await at(page, `#ch=${findingAt.chapter.slug}&p=${findingAt.at}`);
   expect(

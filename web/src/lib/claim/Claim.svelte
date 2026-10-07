@@ -2,6 +2,7 @@
   import Instrument from "../notebook/Instrument.svelte";
   import Rule from "../notebook/Rule.svelte";
   import DrawnLink from "../notebook/DrawnLink.svelte";
+  import Arrow from "../notebook/Arrow.svelte";
   import Margin from "./Margin.svelte";
   import { DIRECTION_LABEL, instrumentFor, REPOSITORY, type Finding } from "../ledger";
 
@@ -109,7 +110,20 @@
     {/if}
 
     {#if part !== "finding" && slice !== "caveat"}
-      <p class="claim__value">{finding.value}</p>
+      <!--
+        Written on the book's record page, typed everywhere else the component is mounted.
+
+        The owner, 2026-10-07: the record page should look as if somebody wrote on it. The figure is
+        the thing a reader of a notebook would see written largest, so it is written, and underlined
+        the way a heading is. ADR 0008 carries the amendment; a figure that stacks in a column with
+        others stays typed, because that is the one place digits have to line up.
+      -->
+      {#if part === "record"}
+        <p class="claim__value claim__value--hand">{finding.value}</p>
+        <Rule seed="value-{finding.key}" draw={false} />
+      {:else}
+        <p class="claim__value">{finding.value}</p>
+      {/if}
     {/if}
 
     <!-- Gated one element at a time rather than in two blocks, so `part="all"` emits the same
@@ -130,6 +144,18 @@
           <p class="claim__scope">{finding.scope}</p>
         {/if}
         {#if slice !== "value"}
+          <!--
+            The claim's own plain caveat, written in the margin beside the paragraph it says plainly,
+            with an arrow to it: what a reader annotating the page would write there. No new words --
+            it is the sentence the finding page already carries, here as the margin's summary of the
+            long one.
+          -->
+          {#if part === "record" && finding.plain_caveat}
+            <aside class="claim__note" data-droppable>
+              <span>{finding.plain_caveat}</span>
+              <Arrow seed="note-{finding.key}" />
+            </aside>
+          {/if}
           <p class="claim__caveat">{finding.caveat}</p>
         {/if}
       </div>
@@ -253,6 +279,46 @@
 
   .claim__signpost + .claim__value {
     margin-top: var(--gap-tight);
+  }
+
+  /* The figure written rather than typed, a little off level like everything a hand writes. */
+  .claim__value.claim__value--hand {
+    font-family: var(--font-hand);
+    font-weight: 400;
+    font-size: calc(var(--size-value) * 1.12 * var(--font-scale-hand));
+    line-height: var(--leading-hand);
+    font-variant-numeric: normal;
+    rotate: -0.8deg;
+    transform-origin: left center;
+  }
+
+  .claim__note {
+    float: right;
+    width: 38%;
+    margin: var(--gap-tight) 0 var(--gap-tight) var(--gap);
+    rotate: -2.4deg;
+    font-family: var(--font-hand);
+    font-size: calc(var(--size-margin) * 1.5 * var(--font-scale-hand));
+    line-height: 1.25;
+    color: var(--ink-soft);
+  }
+
+  .claim__note :global(.arrow) {
+    margin: 2px 0 0 -18px;
+  }
+
+  /* A phone's column has no margin to write in: the note goes under the paragraph instead. */
+  @media (width < 62rem) {
+    .claim__note {
+      float: none;
+      width: auto;
+      margin: var(--gap-tight) 0;
+      rotate: -1deg;
+    }
+
+    .claim__note :global(.arrow) {
+      display: none;
+    }
   }
 
   .claim__value {
