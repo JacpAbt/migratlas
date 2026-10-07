@@ -66,6 +66,10 @@
   }
 
   .how__kicker {
+    /* Askew like every label in the book: see `.chapter` in `Reader.svelte`. */
+    width: fit-content;
+    rotate: -1.4deg;
+    transform-origin: left center;
     margin: 0 0 var(--gap-hair);
     font-size: var(--size-label);
     letter-spacing: var(--tracking-label);

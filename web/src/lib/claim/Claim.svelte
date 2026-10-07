@@ -201,6 +201,10 @@
   }
 
   .claim__banner {
+    /* Askew like every label in the book: see `.chapter` in `Reader.svelte`. */
+    width: fit-content;
+    rotate: -2.2deg;
+    transform-origin: left center;
     margin: 0;
     font-family: var(--font-body);
     font-size: var(--size-label);
