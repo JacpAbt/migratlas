@@ -888,6 +888,49 @@ test("every record page is written on: its figure, and a note in its margin", as
   }
 });
 
+test("the prose is laid down by hand in the hand setting, and square in the others", async ({
+  page,
+}) => {
+  /*
+    Paragraphs placed a little differently from one another, which is what a page written by hand
+    has and a typeset one does not -- and only in the hand setting: the clear and dyslexia settings
+    exist to be read without effort, so their text stays square. And nothing in the book is
+    justified or hyphenated by the browser in any setting.
+  */
+  const spreads = await layout();
+  const intro = spreads.find((one) => one.verso.kind === "intro" || one.recto.kind === "intro")!;
+  const placements = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll(".spread > .page .page__inner p")].map(
+        (node) => `${getComputedStyle(node).rotate}|${getComputedStyle(node).translate}`,
+      ),
+    );
+
+  await at(page, `#ch=${intro.chapter.slug}&p=${intro.at}`);
+  const hand = await placements();
+  expect(new Set(hand).size, "every paragraph sits the same way").toBeGreaterThan(1);
+
+  await page.locator(".type").getByRole("radio", { name: "Clear", exact: true }).check();
+  const clear = await placements();
+  expect(
+    clear.filter((one) => one !== "none|none"),
+    "the clear setting's paragraphs are not square",
+  ).toEqual([]);
+
+  for (const spread of spreads.filter((one) => one.verso.kind === "opener" || one.recto.kind === "opener")) {
+    await at(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+    const typeset = await page.evaluate(() =>
+      [...document.querySelectorAll(".spread > .page .page__inner *")]
+        .filter((node) => {
+          const style = getComputedStyle(node);
+          return style.textAlign === "justify" || style.hyphens === "auto";
+        })
+        .map((node) => node.className),
+    );
+    expect(typeset, "text justified or hyphenated by the browser").toEqual([]);
+  }
+});
+
 test("a chart says which line is which without colour", async ({ page }) => {
   await ready(page);
   // The other exclusion from the colour-vision floor, and the same deal: the scatter sits 16 from
