@@ -64,7 +64,7 @@
   is a distinction this project spent two phases earning the right to make.
 -->
 {#if (part !== "refusals" && dials.length > 0) || (part !== "knobs" && refusals.length > 0)}
-  <section class="response">
+  <section class="response hand-rule">
     <h3>
       {part === "refusals"
         ? "And what this will not be turned into"
@@ -111,7 +111,6 @@
   .response {
     margin-top: var(--gap-wide);
     padding-top: var(--gap);
-    border-top: 1px solid var(--rule);
   }
 
   /*

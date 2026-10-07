@@ -119,7 +119,7 @@
     {/if}
 
     {#if part !== "finding"}
-      <div class="claim__prose">
+      <div class="claim__prose hand-rule">
         {#if slice !== "caveat"}
           <p class="claim__precise">{finding.claim}</p>
         {/if}
@@ -275,7 +275,7 @@
   .claim__prose {
     margin-top: var(--gap-wide);
     padding-top: var(--gap);
-    border-top: 1px dotted var(--rule-faint);
+    --hand-rule-ink: var(--rule-faint);
     font-size: var(--size-body);
     line-height: var(--leading-body);
     max-width: 34rem;

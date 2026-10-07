@@ -82,6 +82,35 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+/*
+  A rule drawn by hand along an element's top, where a stylesheet drew a ruler-straight border.
+
+  The owner asked whether the book reads as a journal, and the separators were part of why it did
+  not: every one was a 1px solid or dotted CSS border, perfectly level, on a page where every other
+  line wobbles. This is the same two-pass stroke the rules under the headings use, laid over the
+  element's top edge. The ink is `--hand-rule-ink`, a rule colour unless the element names a fainter
+  one. `--under` puts it along the bottom instead.
+*/
+.hand-rule {
+  position: relative;
+}
+
+.hand-rule::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  translate: 0 -3px;
+  background: var(--hand-rule-ink, var(--rule));
+  mask: var(--hand-line) 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+.hand-rule--under::before {
+  inset: auto 0 0;
+  translate: 0 3px;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

@@ -22,7 +22,7 @@
   setting is marked as such, and the difference is stated in words as well as in digits, because
   "the number moved" is not the interesting part. Which direction it moved is.
 -->
-<div class="knob">
+<div class="knob hand-rule">
   <p class="knob__question">{knob.question}</p>
 
   <div class="knob__switch" role="radiogroup" aria-label={knob.question}>
@@ -84,7 +84,7 @@
   */
   .knob {
     padding-top: var(--gap);
-    border-top: 1px dotted var(--rule);
+    --hand-rule-ink: var(--rule-faint);
   }
 
   .knob__question {

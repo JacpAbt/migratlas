@@ -824,6 +824,38 @@ test("every verdict in the audit is marked by hand beside its word", async ({ pa
   expect(new Set(seen.flat()).size, "two verdicts share a mark").toBe(seen.length);
 });
 
+test("nothing on a page is ruled by a stylesheet", async ({ page }) => {
+  /*
+    Asked whether the book reads as a journal, the answer was half: the separators, the callouts and
+    the table rules were 1px CSS borders, perfectly level, on pages where every other line wobbles.
+    They are drawn now -- `.hand-rule`, `Boxed` -- and this walks every spread for any border at
+    least 50px long that is still a stylesheet's. The maps' tape keeps its edge: it is tape.
+  */
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const ruled = new Set<string>();
+  for (const spread of await layout()) {
+    await at(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+    const found = await page.evaluate(() => {
+      const out: string[] = [];
+      for (const node of document.querySelectorAll(".spread > .page .page__inner *")) {
+        if (node.closest(".tape")) continue;
+        const style = getComputedStyle(node);
+        const box = node.getBoundingClientRect();
+        for (const side of ["top", "bottom", "left", "right"]) {
+          const width = Number.parseFloat(style.getPropertyValue(`border-${side}-width`));
+          const kind = style.getPropertyValue(`border-${side}-style`);
+          const length = side === "top" || side === "bottom" ? box.width : box.height;
+          if (width > 0 && kind !== "none" && kind !== "hidden" && length >= 50)
+            out.push(`${node.tagName.toLowerCase()}.${[...node.classList].filter((c) => !c.startsWith("svelte-")).join(".")} ${side}`);
+        }
+      }
+      return out;
+    });
+    for (const line of found) ruled.add(line);
+  }
+  expect([...ruled], "still ruled by the stylesheet").toEqual([]);
+});
+
 test("a chart says which line is which without colour", async ({ page }) => {
   await ready(page);
   // The other exclusion from the colour-vision floor, and the same deal: the scatter sits 16 from
