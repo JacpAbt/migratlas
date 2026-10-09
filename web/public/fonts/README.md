@@ -70,6 +70,20 @@ x-height: dropping one in at the same pixel size makes it look a size larger or 
 last. That is the whole of what "optimised" means here — switching changes the letterforms and
 nothing else.
 
+## Shantell Sans is built, not fetched as is
+
+The variable cut, so the hand setting can ask for its bounce and informality axes. Rebuilt from the
+foundry's own release rather than taken from a font host:
+
+1. `ShantellSans[BNCE,INFM,SPAC,wght].ttf` from `shantell_sans-for-googlefonts.zip`, release 1.011
+   of [arrowtype/shantell-sans](https://github.com/arrowtype/shantell-sans/releases/tag/1.011).
+2. `fontTools.varLib.instancer`: spacing pinned at 0, weight limited to 300-700; informality and
+   bounce kept whole.
+3. `fontTools.subset` to the 226 codepoints the previous static file covered, every layout feature
+   kept, written as woff2. 166 KB, against the static cut's 47.
+
+The copyright line in `OFL-shantellsans.txt` is the project's own and is unchanged by the rebuild.
+
 ## Total cost
 
 Eight faces. The three presets never load more than three of them at once, and `font-display: swap`
