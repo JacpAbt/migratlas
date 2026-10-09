@@ -20,6 +20,26 @@ function canvasTexture(width: number, height: number, draw: (c: CanvasRenderingC
   return texture;
 }
 
+/**
+ * Fill `path` blurred by `sigma` pixels, in `color`, whose alpha the path's own fill scales.
+ *
+ * Through the shadow, not `ctx.filter`: Safari supports the filter only behind a developer setting,
+ * and there the flame came out as a hard-edged cut-out. The shape is drawn off the canvas and only
+ * its shadow, blurred and offset back, lands in view; a shadow's blur is twice its sigma.
+ */
+function soft(c: CanvasRenderingContext2D, sigma: number, color: string, fill: string | CanvasGradient, path: () => void) {
+  const away = c.canvas.width + 4 * sigma;
+  c.save();
+  c.shadowColor = color;
+  c.shadowBlur = 2 * sigma;
+  c.shadowOffsetX = away;
+  c.translate(-away, 0);
+  c.fillStyle = fill;
+  path();
+  c.fill();
+  c.restore();
+}
+
 /** Speckle, for paper and the striker: a little noise so a flat colour reads as a material. */
 function speckle(c: CanvasRenderingContext2D, w: number, h: number, light: string, dark: string, n: number) {
   for (let i = 0; i < n; i++) {
@@ -220,23 +240,13 @@ export function flameTexture(): THREE.Texture {
       c.bezierCurveTo(64 + w * 0.6, base - h * 0.75, 64 + w, base - h * 0.25, 64, base);
       c.closePath();
     };
-    c.filter = "blur(7px)";
-    c.fillStyle = "rgba(255,120,30,0.85)";
-    tear(44, 210, 236);
-    c.fill();
-    c.filter = "blur(5px)";
-    c.fillStyle = "rgba(255,196,90,0.95)";
-    tear(32, 170, 232);
-    c.fill();
-    c.filter = "blur(3px)";
-    c.fillStyle = "rgba(255,248,226,1)";
-    tear(18, 110, 226);
-    c.fill();
-    c.filter = "blur(4px)";
-    c.fillStyle = "rgba(90,130,255,0.55)";
-    c.beginPath();
-    c.ellipse(64, 228, 14, 9, 0, 0, Math.PI * 2);
-    c.fill();
+    soft(c, 7, "rgba(255,120,30,0.85)", "#000", () => tear(44, 210, 236));
+    soft(c, 5, "rgba(255,196,90,0.95)", "#000", () => tear(32, 170, 232));
+    soft(c, 3, "rgba(255,248,226,1)", "#000", () => tear(18, 110, 226));
+    soft(c, 4, "rgba(90,130,255,0.55)", "#000", () => {
+      c.beginPath();
+      c.ellipse(64, 228, 14, 9, 0, 0, Math.PI * 2);
+    });
   });
 }
 
@@ -255,19 +265,19 @@ export function glowTexture(): THREE.Texture {
 /** A wisp of smoke: soft grey, fading upward. */
 export function smokeTexture(): THREE.Texture {
   return canvasTexture(64, 128, (c) => {
-    c.filter = "blur(6px)";
+    // The gradient fades the wisp upward: in the shadow it is the alpha, and `color` the grey.
     const g = c.createLinearGradient(0, 128, 0, 0);
-    g.addColorStop(0, "rgba(220,220,220,0.7)");
-    g.addColorStop(1, "rgba(220,220,220,0)");
-    c.fillStyle = g;
-    c.beginPath();
-    c.moveTo(32, 124);
-    c.bezierCurveTo(10, 90, 50, 60, 28, 30);
-    c.bezierCurveTo(20, 18, 40, 8, 32, 0);
-    c.lineTo(40, 0);
-    c.bezierCurveTo(50, 12, 32, 22, 40, 34);
-    c.bezierCurveTo(62, 62, 22, 92, 40, 124);
-    c.closePath();
-    c.fill();
+    g.addColorStop(0, "rgba(0,0,0,0.7)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    soft(c, 6, "rgb(220,220,220)", g, () => {
+      c.beginPath();
+      c.moveTo(32, 124);
+      c.bezierCurveTo(10, 90, 50, 60, 28, 30);
+      c.bezierCurveTo(20, 18, 40, 8, 32, 0);
+      c.lineTo(40, 0);
+      c.bezierCurveTo(50, 12, 32, 22, 40, 34);
+      c.bezierCurveTo(62, 62, 22, 92, 40, 124);
+      c.closePath();
+    });
   });
 }
