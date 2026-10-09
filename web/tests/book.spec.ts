@@ -1785,6 +1785,11 @@ test("the candle on the table is out by day and lit by a match at night, and the
   await expect(table, "the table was never drawn").toHaveAttribute("data-candle", "out", {
     timeout: 20_000,
   });
+  // Shown at once, in the frame it is ready, over nothing painted: the owner saw the painted wood
+  // for a second and then the table fade in over it.
+  expect(await table.evaluate((node) => getComputedStyle(node).visibility)).toBe("visible");
+  expect(await table.evaluate((node) => getComputedStyle(node).transitionDuration)).toBe("0s");
+  await expect(page.locator(".desk-painted")).toHaveCount(0);
 
   await page.locator(".surface").getByRole("radio", { name: "Night", exact: true }).check();
   await expect(table).toHaveAttribute("data-candle", "lighting");
@@ -1792,6 +1797,21 @@ test("the candle on the table is out by day and lit by a match at night, and the
     timeout: 30_000,
   });
   expect(await table.evaluate((node) => getComputedStyle(node).pointerEvents)).toBe("none");
+});
+
+test("where the table cannot be drawn, the painted walnut stands in for it", async ({ page }) => {
+  /*
+    Without `?desk=3d` the runner's software WebGL is detected and no scene is made: the painted
+    walnut is the table, and the canvas never shows. Until the scene is ready the margin is only the
+    table's flat colour, so this is the one case in which the painted wood is drawn at all.
+  */
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("#ch=how-to-read&p=0");
+  await expect(page.locator(".book")).toBeVisible();
+  const table = page.locator("canvas.desk-scene");
+  await expect(table).toHaveAttribute("data-candle", "software");
+  await expect(page.locator(".desk-painted")).toHaveCount(1);
+  expect(await table.evaluate((node) => getComputedStyle(node).visibility)).toBe("hidden");
 });
 
 test("a monitor gets the spread and only the spread", async ({ page }) => {

@@ -597,6 +597,9 @@ export async function createDesk(
   document.addEventListener("visibilitychange", onVisibility);
 
   place();
+  /* Drawn once now, before it is shown: the canvas appears in a single frame with no fade, so that
+     frame has to be the finished table -- shaders compiled and shadows drawn -- not a black one. */
+  frame();
   onState(lit ? "lit" : "out");
 
   return {

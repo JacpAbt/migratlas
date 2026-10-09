@@ -173,9 +173,12 @@
   --attrib: 3.25rem;
   --radius: 3px;
 
-  /* The table the book lies on. The scene is `desk/scene.ts`; this painted wood is what shows if
-     it cannot be drawn. `--candle-lit` is read by the scene: 1 at night, when a match lights the
-     candle and the room is lit by it alone. */
+  /* The table the book lies on. The scene is `desk/scene.ts`. `--table-tone` is the scene's own
+     average colour, measured on its open wood, and fills the margin for the moment before the first
+     frame, so the table arrives without a change of colour; `--wood` is the painted walnut shown
+     where the scene cannot be drawn. `--candle-lit` is read by the scene: 1 at night, when a match
+     lights the candle and the room is lit by it alone. */
+  --table-tone: #683120;
   --wood: #8f6340;
   --wood-light: 26%;
   --candle-lit: 0;
@@ -254,6 +257,7 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-surface="day"]) {
+    --table-tone: #110503;
     --wood: #4a3220;
     --wood-light: 0%;
     --candle-lit: 1;
@@ -307,6 +311,7 @@
 }
 
 :root[data-surface="night"] {
+  --table-tone: #110503;
   --wood: #4a3220;
   --wood-light: 0%;
   --candle-lit: 1;

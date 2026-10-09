@@ -251,37 +251,12 @@
     */
     --tail: 0.8rem;
     padding: var(--gap) var(--gap-tight) calc(var(--gap) + var(--tail));
-    /*
-      A walnut table, painted: what lies under the book wherever the real one -- the scene in
-      `desk/Desk.svelte` -- is not drawn, as in a browser with no graphics card. Boards running across
-      the window, each a slightly different tone with a dark seam between, the grain streaked along
-      them, fine pores across it, daylight from the upper left and the room falling off toward the
-      corners. At night the same wood, darker.
-
-      The grain and the pores are noise generated in the browser, so nothing is downloaded for them.
-    */
-    background-color: var(--wood);
-    background-image:
-      radial-gradient(ellipse 90% 70% at 22% 0%, rgb(255 236 204 / var(--wood-light)), transparent 70%),
-      radial-gradient(ellipse 75% 75% at 50% 50%, transparent 55%, rgb(24 12 4 / 50%) 100%),
-      repeating-linear-gradient(
-        to bottom,
-        rgb(20 9 2 / 0%) 0 calc(24vh - 3px),
-        rgb(20 9 2 / 55%) calc(24vh - 2px),
-        rgb(255 220 180 / 12%) calc(24vh - 1px) 24vh
-      ),
-      repeating-linear-gradient(
-        to bottom,
-        rgb(255 240 220 / 6%) 0 24vh,
-        rgb(0 0 0 / 7%) 24vh 48vh,
-        rgb(255 240 220 / 2%) 48vh 72vh
-      ),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02 0.9' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='.33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E"),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='700'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0016 0.055' numOctaves='5' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='.33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 0 1'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='2.4' intercept='-.7'/%3E%3CfeFuncG type='linear' slope='2.4' intercept='-.7'/%3E%3CfeFuncB type='linear' slope='2.4' intercept='-.7'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-    background-size: auto, auto, auto, auto, 300px 300px, 1200px 700px;
-    background-blend-mode: normal, multiply, normal, normal, soft-light, overlay;
-    /* Its own stacking context, so the table's scene can sit under the book and still above this
-       painted wood, which is the table whenever the scene cannot be drawn -- `desk/Desk.svelte`. */
+    /* The table's own colour, under the scene for the moment before its first frame, so the table
+       arrives without a change of colour. The scene, and the painted walnut that stands in where it
+       cannot be drawn, are `desk/Desk.svelte`. */
+    background-color: var(--table-tone);
+    /* Its own stacking context, so the table -- `desk/Desk.svelte`, at z-index -1 -- sits under the
+       book and above this colour. */
     position: relative;
     isolation: isolate;
   }
