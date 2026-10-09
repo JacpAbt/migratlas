@@ -198,3 +198,31 @@ tabular-figures reason was always about: digits that have to line up with the di
 `web/tests/notebook.spec.ts` now holds the coverage legend's shares to the typed face where it held
 the record's value. The margin note is the claim's own plain caveat, the sentence its finding page
 already carries; no words were written for it.
+
+## Amendment, 2026-10-09, the book lies on a real table
+
+The owner asked for the space around the book to be a table the journal lies on, with a candle that
+is out by day and is lit by a match, animated, when the surface turns to night. Two attempts were
+turned down: a desk drawn in the doodles' ink ("another journal"), and one painted in CSS ("fake
+objects… ignoring depth, perspective"). Offered a live 3D scene, the owner chose it.
+
+**The table is a three.js scene under the book, and the book stays HTML.** The camera looks straight
+down, the one view in which a flat page and a table in perspective can share a picture, and it is
+placed so the book's rectangle on the screen covers a book-sized rectangle of the table: an open
+journal 0.56 m wide. Everything else is at its real size against that, so perspective, shadows and
+the candle's light fall on it as they would on the wood. `web/src/lib/desk/scene.ts` holds the
+geometry; the scanned models and the wood are CC0, from Poly Haven, recorded with the recipe that
+shrank them in `web/public/desk/README.md`. Nothing on the table is an animal: section 2's rule
+against a creature beside a claim that cannot identify one reaches the margin around every claim.
+
+**It costs the reader nothing they came for.** The scene and three.js are a separate chunk, 661 KB
+(167 KB gzipped), plus 0.92 MB of models and wood, loaded after the fonts and the book; the canvas
+takes no pointer events and is hidden from assistive technology. It draws only while something
+moves. Where a browser draws WebGL without a graphics card, one frame took seconds, so there the
+painted walnut under the canvas is the table and no scene is made; `?desk=3d` makes it anyway,
+which is how the suite tests it on a runner that has no graphics card.
+
+**What this fixes for later work.** The camera cannot tilt: a view from the side would need the book
+itself in the scene, which is the book rebuilt, not a background changed. On a window the book
+nearly fills, the things on the table are cropped at its edges, because their size is what makes
+them read as real and there is no margin to move them into.

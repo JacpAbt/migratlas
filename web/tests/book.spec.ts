@@ -1810,31 +1810,33 @@ test("a margin note gives way where a page has no room for it, and only there", 
   expect(narrow.filter((one) => one.over > 2), "a record page still overflows").toEqual([]);
 });
 
-test("the candle on the desk is out by day and lit at night, and the desk takes no clicks", async ({
+test("the candle on the table is out by day and lit by a match at night, and the table takes no clicks", async ({
   page,
 }) => {
   /*
-    The owner asked for the book to lie on a table, with a candle that is out by day and lights when
-    the surface turns to night. The flame follows the surface's own token, so it is read here the
-    way a reader sees it: its drawn opacity, by day and then after choosing night. And nothing lying
-    on the desk may catch a click meant for the book or its tabs.
+    The owner asked for the book to lie on a real table, with a candle a match lights when the
+    surface turns to night. The table is a scene drawn under the page; it reports the candle's state
+    on its canvas, so this reads it: out by day, lighting while the match works, lit after. And the
+    canvas may not catch a click meant for the book.
+
+    `?desk=3d`, because the runner draws WebGL in software, where the page shows painted wood
+    instead; and the narrowest spread, because every frame here is drawn by the processor.
   */
-  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.setViewportSize({ width: 1024, height: 768 });
   await page.addInitScript(() => localStorage.setItem("migratlas:surface", "day"));
-  await openBook(page, "#ch=how-to-read&p=0");
-  const flame = page.locator(".desk-things .flame");
-  const lit = () => flame.evaluate((node) => Number(getComputedStyle(node).opacity));
-  expect(await lit(), "the candle is lit by day").toBe(0);
+  await page.goto("?desk=3d#ch=how-to-read&p=0");
+  await expect(page.locator(".book")).toBeVisible();
+  const table = page.locator("canvas.desk-scene");
+  await expect(table, "the table was never drawn").toHaveAttribute("data-candle", "out", {
+    timeout: 20_000,
+  });
 
   await page.locator(".surface").getByRole("radio", { name: "Night", exact: true }).check();
-  await expect.poll(lit, { message: "the candle did not light at night" }).toBe(1);
-
-  const catches = await page.evaluate(() =>
-    [...document.querySelectorAll(".desk-things, .desk-things *")].filter(
-      (node) => getComputedStyle(node).pointerEvents !== "none",
-    ).length,
-  );
-  expect(catches, "something on the desk catches clicks").toBe(0);
+  await expect(table).toHaveAttribute("data-candle", "lighting");
+  await expect(table, "the match never lit the candle").toHaveAttribute("data-candle", "lit", {
+    timeout: 30_000,
+  });
+  expect(await table.evaluate((node) => getComputedStyle(node).pointerEvents)).toBe("none");
 });
 
 test("a monitor gets the spread and only the spread", async ({ page }) => {

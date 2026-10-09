@@ -1433,12 +1433,8 @@ test("the drawn edge stays put while what is inside it scrolls", async ({
     a torn sheet. So the assertion moved to where it can still fail.
   */
   await world(page);
-  // Settled means every animation that ends has ended: the candle on the desk flickers for as long
-  // as it is lit, and an endless one never will.
   await page.waitForFunction(() =>
-    document
-      .getAnimations()
-      .every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity),
+    document.getAnimations().every((a) => a.playState !== "running"),
   );
 
   const slip = page.locator(".explore__slip");
