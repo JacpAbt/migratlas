@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import Desk from "./Desk.svelte";
 
   import Page from "./Page.svelte";
   import Realms from "./Realms.svelte";
@@ -125,6 +126,7 @@
 -->
 <div class="desk">
   <div class="book">
+    <Desk />
     <div class="block block--under" aria-hidden="true"></div>
     <div class="block block--edge" aria-hidden="true"></div>
 
@@ -281,7 +283,24 @@
        rectangle floating on a colour. */
     background:
       radial-gradient(120% 80% at 30% 0%, rgb(255 255 255 / 5%), transparent 60%),
-      radial-gradient(100% 90% at 75% 100%, rgb(0 0 0 / 7%), transparent 65%);
+      radial-gradient(100% 90% at 75% 100%, rgb(0 0 0 / 7%), transparent 65%),
+      var(--desk-wood);
+    /* Its own stacking context, so what lies on the desk can sit under the book's edges and still
+       above the desk itself -- `Desk.svelte` is z-index -1 inside it. */
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* The wood's grain, drawn: long lines a little out of true, and a knot. Ink is a token, so at night
+     there is no table to see. */
+  .desk::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background: var(--desk-grain);
+    mask: var(--desk-grain-image) 0 0 / 640px 180px repeat;
   }
 
   .book {
