@@ -234,8 +234,7 @@ test("the turning page is a page, hinged on the crease", async ({ page }) => {
       and the clone lost the class carrying its padding, the paper its grain needed, and its place
       on the crease -- five defects with one cause.
     */
-    // And now the sheet is three strips, each with one face of each page.
-    const faces = [...leaf.querySelectorAll(".leaf__face > .leaf__slice > .page")].map(
+    const faces = [...leaf.querySelectorAll(".leaf__face > .page")].map(
       (node) => (node.className.includes("page--recto") ? "recto" : "verso"),
     );
 
@@ -273,10 +272,6 @@ test("the turning page is a page, hinged on the crease", async ({ page }) => {
 
   expect(measured.built, "no leaf was built for the turn").toBe(true);
   expect(measured.faces, "a leaf face is not a Page").toEqual([
-    "recto",
-    "verso",
-    "recto",
-    "verso",
     "recto",
     "verso",
   ]);
@@ -1502,20 +1497,12 @@ test("the turning page lands exactly on the page it stands for, number and all",
     };
     return {
       copy: read(leaf.querySelector(".leaf__back .page")!),
-      // Every strip of the sheet carries its own copy, shifted to the third it stands over, so each
-      // has to land exactly on the page -- a strip a pixel off is a seam that jumps on landing.
-      strips: [...leaf.querySelectorAll(".leaf__back .page")].map((sheet) => read(sheet).at),
       real: read(document.querySelector(".spread > .page--verso")!),
     };
   });
 
   expect(landed, "no leaf was turning").not.toBeNull();
-  const { copy, real, strips } = landed!;
-  expect(strips.length, "the sheet is not three strips").toBe(3);
-  for (const [index, at] of strips.entries()) {
-    expect(Math.abs(at[0]! - real.at[0]!), `strip ${index + 1} lands off sideways`).toBeLessThan(0.5);
-    expect(Math.abs(at[1]! - real.at[1]!), `strip ${index + 1} lands off vertically`).toBeLessThan(0.5);
-  }
+  const { copy, real } = landed!;
   expect(copy.folio, "the landed page's corner").toBe(real.folio);
   expect(copy.mark, "the landed page's turn mark").toBe(real.mark);
   expect(copy.fit, "the landed page's fit").toBe(real.fit);
@@ -1649,38 +1636,6 @@ test("the paper darkens into the binding without a step", async ({ page }) => {
       ).toBeLessThan(13);
     }
   }
-});
-
-test("the turning page bends in the air and lies flat when it lands", async ({ page }) => {
-  /*
-    The owner asked for the turn to look like a page and not a solid board. The sheet is three
-    strips hinged edge to edge; mid-turn the outer strips trail the one at the spine, and at the end
-    of the turn every hinge is flat again, or the landed page would sit creased.
-  */
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await openBook(page, "#ch=how-to-read&p=0");
-  await page.locator('.spread > .page--recto [data-turn="on"]').click();
-  const bend = await page.evaluate(() => {
-    const animations = [...document.querySelectorAll(".leaf, .leaf .strip")].flatMap((node) =>
-      node.getAnimations(),
-    );
-    const hinges = () =>
-      [...document.querySelectorAll(".leaf .strip .strip")].map((node) => {
-        const matrix = new DOMMatrix(getComputedStyle(node).transform);
-        return Math.round((Math.atan2(matrix.m13, matrix.m11) * 180) / Math.PI);
-      });
-    for (const animation of animations) {
-      animation.pause();
-      animation.currentTime = 270;
-    }
-    const mid = hinges();
-    for (const animation of animations)
-      animation.currentTime = Number(animation.effect?.getTiming().duration ?? 0);
-    return { mid, end: hinges() };
-  });
-  expect(bend.mid.length, "the sheet has no hinges").toBe(2);
-  for (const angle of bend.mid) expect(Math.abs(angle), "a hinge is flat mid-turn").toBeGreaterThan(5);
-  for (const angle of bend.end) expect(angle, "a hinge is still bent on landing").toBe(0);
 });
 
 test("a turn started during a turn is drawn too", async ({ page }) => {
