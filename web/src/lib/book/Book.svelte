@@ -87,6 +87,19 @@
     side === "verso" ? at > 0 : at < spreads.length - 1;
   const of = (side: "verso" | "recto"): 0 | 1 => (side === "verso" ? 0 : 1);
 
+  /*
+    The turning sheet is three strips hinged edge to edge, each a child of the one nearer the spine,
+    so that a strip trailing its neighbour bends the sheet rather than tearing it. A rigid sheet was
+    a board swinging on a hinge; the owner asked for a page that flows. Three, not more, because each
+    strip carries a copy of both pages it shows and a page with a map on it is not cheap to copy.
+
+    Which third of a page a strip shows, counted from the page's own left edge: the strip next to
+    the spine shows the spine side of the page it lifts, and of the page it lands as.
+  */
+  const STRIPS = 3;
+  const sliceOf = (strip: number, face: "front" | "back"): number =>
+    (lifted === "recto") === (face === "front") ? strip : STRIPS - 1 - strip;
+
   function keys(event: KeyboardEvent): void {
     if (event.target !== document.body) return;
     if (event.key === "ArrowRight") go(index + 1);
@@ -159,31 +172,49 @@
         <!-- The shadow the turning page throws: a sibling, because a child would rotate with it. -->
         <div class="cast cast--{lifted}" aria-hidden="true"></div>
         <div class="leaf leaf--{lifted}" aria-hidden="true">
-          <div class="leaf__face leaf__front">
-            <Page
-              side={lifted}
-              fill
-              fitted="copy"
-              folio={was?.[of(lifted)] ?? null}
-              mark={turns(leaving.at, lifted)}
-            >
-              {@render page(leaving.spread[lifted], lifted)}
-            </Page>
-          </div>
-          <div class="leaf__face leaf__back">
-            <Page
-              side={arriving}
-              fill
-              fitted="copy"
-              folio={numbers[of(arriving)]}
-              mark={turns(index, arriving)}
-            >
-              {@render page(current[arriving], arriving)}
-            </Page>
-          </div>
+          {@render strip(leaving, 0)}
         </div>
         {/key}
       {/if}
+
+      <!--
+        One strip of the turning sheet and, inside it, the rest of the sheet beyond it. Each face is a
+        window a third of a page wide onto a whole copy of the page, shifted so the third it shows is
+        the third it stands over -- so when the sheet lands every copy lies exactly on its page.
+      -->
+      {#snippet strip(turn: { spread: Spread; at: number }, at: number)}
+        <div class="strip" class:strip--last={at === STRIPS - 1}>
+          <div class="leaf__face leaf__front">
+            <div class="leaf__slice" style="--slice: {sliceOf(at, 'front')}">
+              <Page
+                side={lifted}
+                fill
+                fitted="copy"
+                folio={was?.[of(lifted)] ?? null}
+                mark={turns(turn.at, lifted)}
+              >
+                {@render page(turn.spread[lifted], lifted)}
+              </Page>
+            </div>
+          </div>
+          <div class="leaf__face leaf__back">
+            <div class="leaf__slice" style="--slice: {sliceOf(at, 'back')}">
+              <Page
+                side={arriving}
+                fill
+                fitted="copy"
+                folio={numbers[of(arriving)]}
+                mark={turns(index, arriving)}
+              >
+                {@render page(current![arriving], arriving)}
+              </Page>
+            </div>
+          </div>
+          {#if at < STRIPS - 1}
+            {@render strip(turn, at + 1)}
+          {/if}
+        </div>
+      {/snippet}
 
       <div class="gutter" aria-hidden="true"><span class="gutter__line"></span></div>
 
@@ -529,11 +560,88 @@
     animation: turn-back var(--draw-slow) var(--ease-pen) forwards;
   }
 
+  /* A third of the sheet; the strips beyond it hang off its far edge and turn about it. */
+  .strip {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: calc(100% / 3);
+    transform-style: preserve-3d;
+  }
+
+  .leaf--recto > .strip {
+    left: 0;
+  }
+
+  .leaf--verso > .strip {
+    right: 0;
+  }
+
+  .leaf--recto .strip .strip {
+    left: 100%;
+    width: 100%;
+    transform-origin: left center;
+    animation: bend-forward var(--draw-slow) var(--ease-pen) forwards;
+  }
+
+  .leaf--verso .strip .strip {
+    right: 100%;
+    width: 100%;
+    transform-origin: right center;
+    animation: bend-back var(--draw-slow) var(--ease-pen) forwards;
+  }
+
   .leaf__face {
     position: absolute;
     inset: 0;
     backface-visibility: hidden;
     overflow: hidden;
+  }
+
+  /* The whole page behind a third-of-a-page window, shifted to the third this strip stands over. */
+  .leaf__slice {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--slice) * -100%);
+    width: 300%;
+  }
+
+  /*
+    The light across the bend: a strip turned further from the reader than its neighbour catches
+    less of it. Strongest when the sheet is most bent, gone at both ends of the turn so nothing
+    changes as it lands.
+  */
+  .strip .strip > .leaf__face::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0;
+    animation: sweep var(--draw-slow) var(--ease-pen) forwards;
+  }
+
+  /* Continuous across the seams -- the middle strip darkens to where the outer one begins -- so the
+     bend reads as one curve and not as card folded twice. */
+  .leaf--recto .strip .strip > .leaf__front::before,
+  .leaf--verso .strip .strip > .leaf__back::before {
+    background: linear-gradient(to right, rgb(0 0 0 / 0%), rgb(0 0 0 / 6%));
+  }
+
+  .leaf--verso .strip .strip > .leaf__front::before,
+  .leaf--recto .strip .strip > .leaf__back::before {
+    background: linear-gradient(to left, rgb(0 0 0 / 0%), rgb(0 0 0 / 6%));
+  }
+
+  .leaf--recto .strip .strip .strip > .leaf__front::before,
+  .leaf--verso .strip .strip .strip > .leaf__back::before {
+    background: linear-gradient(to right, rgb(0 0 0 / 6%), rgb(0 0 0 / 13%));
+  }
+
+  .leaf--verso .strip .strip .strip > .leaf__front::before,
+  .leaf--recto .strip .strip .strip > .leaf__back::before {
+    background: linear-gradient(to left, rgb(0 0 0 / 6%), rgb(0 0 0 / 13%));
   }
 
   /*
@@ -550,10 +658,21 @@
     position: absolute;
     inset: 0;
     z-index: 4;
-    border: 1px solid var(--rule);
+    border-block: 1px solid var(--rule);
     pointer-events: none;
     opacity: 0;
     animation: sweep var(--draw-slow) var(--ease-pen) forwards;
+  }
+
+  /* Only the sheet's own free edge, not the seams between its strips. */
+  .leaf--recto .strip--last > .leaf__front::after,
+  .leaf--verso .strip--last > .leaf__back::after {
+    border-right: 1px solid var(--rule);
+  }
+
+  .leaf--verso .strip--last > .leaf__front::after,
+  .leaf--recto .strip--last > .leaf__back::after {
+    border-left: 1px solid var(--rule);
   }
 
   .leaf__back {
@@ -577,6 +696,55 @@
 
     to {
       transform: rotateY(180deg);
+    }
+  }
+
+  /*
+    Each strip's lag behind the one nearer the spine. The free edge trails as the sheet lifts, then
+    overtakes a little as it falls, and every strip is flat with its neighbour again on landing.
+    Two hinges, so the edge trails by twice these.
+  */
+  @keyframes bend-forward {
+    0% {
+      transform: rotateY(0deg);
+    }
+
+    30% {
+      transform: rotateY(12deg);
+    }
+
+    65% {
+      transform: rotateY(5deg);
+    }
+
+    85% {
+      transform: rotateY(-3deg);
+    }
+
+    100% {
+      transform: rotateY(0deg);
+    }
+  }
+
+  @keyframes bend-back {
+    0% {
+      transform: rotateY(0deg);
+    }
+
+    30% {
+      transform: rotateY(-12deg);
+    }
+
+    65% {
+      transform: rotateY(-5deg);
+    }
+
+    85% {
+      transform: rotateY(3deg);
+    }
+
+    100% {
+      transform: rotateY(0deg);
     }
   }
 
@@ -662,6 +830,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .strip,
     .leaf,
     .cast {
       animation: none;
