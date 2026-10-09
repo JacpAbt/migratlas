@@ -112,6 +112,19 @@ button:focus-visible {
 }
 
 /*
+  The marker face writing in its own hand, in the hand setting.
+
+  Shantell Sans's bounce lifts and drops each letter a little off the baseline and its informality
+  loosens the letterforms -- the owner asked for text that does not sit "standard" on the page, and
+  this is the face doing it rather than the layout. Inherited, and ignored by every face without
+  the axes, so it touches nothing but Shantell; not in the clear or dyslexia settings, whose faces
+  are chosen to be read without effort.
+*/
+:root[data-type="hand"] {
+  font-variation-settings: "BNCE" 50, "INFM" 50;
+}
+
+/*
   Prose laid down by hand, in the hand setting, on the spread.
 
   The owner, asked what would make the book read as written: the text sat too "standard" on the

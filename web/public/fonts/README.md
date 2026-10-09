@@ -24,7 +24,7 @@ not resolving and both are fallbacks.
 | --- | --- | --- | --- |
 | `Virgil.woff2` | Virgil | 2021–, Ellinor Rapp | OFL 1.1 |
 | `Excalifont.woff2` | Excalifont | 2024, Excalidraw | OFL 1.1 |
-| `ShantellSans.woff2` | Shantell Sans | 2022, Shantell Martin and Anya Danilova | OFL 1.1 |
+| `ShantellSans.woff2` | Shantell Sans, variable | 2022, Shantell Martin and Anya Danilova | OFL 1.1 |
 | `AtkinsonHyperlegible.woff2` | Atkinson Hyperlegible | 2020, Braille Institute of America | OFL 1.1 |
 | `OpenDyslexic.woff2` | OpenDyslexic | 2019, Abbie Gonzalez | OFL 1.1 |
 | `PlexMono-500.woff2` | IBM Plex Mono | © 2017 IBM Corp., reserved font name "Plex" | OFL 1.1 |

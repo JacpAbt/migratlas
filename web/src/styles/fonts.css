@@ -38,11 +38,17 @@
 }
 
 /* Shantell Sans: a marker face drawn for interfaces, so it survives 13px where a looser hand
-   turns into texture. This is what lets the small parts stop being typed. */
+   turns into texture. This is what lets the small parts stop being typed.
+
+   The variable cut, so its own hand can show: weight 300-700, and the two axes its designers made
+   for exactly this book's problem -- informality, and a bounce that lifts and drops each letter off
+   the baseline the way a hand does. Spacing is pinned, because each preset sets its own tracking.
+   Built from the foundry's release 1.011 and subset to the 226 characters the static file had;
+   `public/fonts/README.md` has the recipe. */
 @font-face {
   font-family: "Shantell Sans";
   src: url("../assets/fonts/ShantellSans.woff2") format("woff2");
-  font-weight: 400;
+  font-weight: 300 700;
   font-style: normal;
   font-display: swap;
 }
