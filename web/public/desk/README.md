@@ -12,6 +12,7 @@ nothing off-origin.
 | --- | --- | --- | --- |
 | `brass_candleholders.glb` | [Brass Candleholders](https://polyhaven.com/a/brass_candleholders), 1k glTF | Tina | CC0 |
 | `seadogs_compass.glb` | [Seadogs Compass](https://polyhaven.com/a/seadogs_compass), 1k glTF | Benny Weimer | CC0 |
+| `magnifying_glass_01.glb` | [Magnifying Glass 01](https://polyhaven.com/a/magnifying_glass_01), 1k glTF | Nazar Borodavka | CC0 |
 | `wood_diff.webp`, `wood_nor.webp` | [Dark Wood](https://polyhaven.com/a/dark_wood): diffuse 2k, normal (GL) 1k | Dimitrios Savva, Rico Cilliers, Dario Barresi | CC0 |
 
 CC0 asks for nothing, so this table is a record rather than an obligation: what to fetch again, and
@@ -19,7 +20,7 @@ who made it.
 
 ## How they were shrunk
 
-0.92 MB all told, against 15.5 MB as downloaded. The page loads them after the book, never
+1.0 MB all told, against 16 MB as downloaded. The page loads them after the book, never
 before it, but a background should still cost little.
 
 - **Models**, with `@gltf-transform/core` and `/functions` 4.5.1, `meshoptimizer` 1.3.0 and

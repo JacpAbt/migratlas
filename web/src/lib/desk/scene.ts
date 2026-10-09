@@ -39,6 +39,8 @@ const BOOK_W = 0.56;
 const CAMERA_HEIGHT = 4.5;
 /** How long the match takes, from the box to the wick and away. */
 const STRIKE = 3.4;
+/** How far the box of matches is turned on the table; the match is struck along its side. */
+const BOX_TURN = 0.12;
 
 const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
@@ -81,10 +83,11 @@ export async function createDesk(
   // --- The light: daylight, and the night that replaces it ---------------------------------------
   const sky = new THREE.HemisphereLight("#fff3e2", "#3b2416", 1);
   const sun = new THREE.DirectionalLight("#fff0dc", 1);
-  /* From a window on the far side of the table, a little to the right, so every shadow falls toward
-     the reader the way the book's own CSS shadow does. From the upper left, the candle's shadow ran
-     under the book -- which is HTML and cannot receive it -- and was cut off at the page's edge. */
-  sun.position.set(0.35, 2.2, -2);
+  /* From a window on the far side of the table, so every shadow falls toward the reader the way the
+     book's own CSS shadow does, and a little to the left, so the candle's, in the right margin,
+     leans away from the book. From the upper left, the candle's shadow ran under the book -- which
+     is HTML and cannot receive it -- and was cut off at the page's edge. */
+  sun.position.set(-0.35, 2.2, -2);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.bias = -0.0004;
@@ -155,10 +158,26 @@ export async function createDesk(
       if (!mesh.isMesh) return;
       mesh.castShadow = true;
       mesh.receiveShadow = true;
+      /* The magnifying glass's lens is a transmissive material, which three.js draws by rendering
+         the whole scene once more into a texture -- every frame. A clear glass that reflects the
+         room looks the same from above at this size and costs nothing extra. */
+      const material = mesh.material as THREE.MeshPhysicalMaterial;
+      if (material.transmission > 0) {
+        material.transmission = 0;
+        material.transparent = true;
+        material.opacity = 0.22;
+        material.roughness = 0.04;
+        material.metalness = 0;
+        mesh.castShadow = false;
+      }
     });
     return loaded.scene;
   };
-  const [holder, compass] = await Promise.all([model("brass_candleholders"), model("seadogs_compass")]);
+  const [holder, compass, magnifier] = await Promise.all([
+    model("brass_candleholders"),
+    model("seadogs_compass"),
+    model("magnifying_glass_01"),
+  ]);
 
   // The candle in its brass holder, centred on its own base and scaled to a desk candle's height.
   const candle = new THREE.Group();
@@ -176,13 +195,31 @@ export async function createDesk(
   compass.scale.setScalar(1.15);
   const compassGroup = new THREE.Group().add(compass);
 
+  /* The magnifying glass is modelled standing on its handle, the lens at the top. Laid on its back,
+     the lens centred on the group's origin and the handle running off toward -z. */
+  const glassScale = 0.8;
+  const glassBox = new THREE.Box3().setFromObject(magnifier);
+  const lensRadius = ((glassBox.max.x - glassBox.min.x) / 2) * glassScale;
+  magnifier.rotation.x = Math.PI / 2;
+  magnifier.scale.setScalar(glassScale);
+  magnifier.position.set(0, glassBox.max.z * glassScale, -(glassBox.max.y * glassScale - lensRadius));
+  const glassGroup = new THREE.Group().add(magnifier);
+
   const box = matchbox();
   const boxGroup = new THREE.Group().add(box);
   const pen = pencil();
   const penGroup = new THREE.Group().add(pen);
   const cup = mug();
   const cupGroup = new THREE.Group().add(cup);
-  scene.add(candle, compassGroup, boxGroup, penGroup, cupGroup);
+  scene.add(candle, compassGroup, glassGroup, boxGroup, penGroup, cupGroup);
+
+  /** How far each thing reaches from its centre on the table, in metres: what it needs kept clear. */
+  const reach = {
+    candle: ((holderBox.max.x - holderBox.min.x) / 2) * candleScale,
+    compass: new THREE.Box3().setFromObject(compass).getSize(new THREE.Vector3()).x / 2,
+    glass: lensRadius,
+    cup: 0.043,
+  };
 
   // --- The flame, its light, its smoke ----------------------------------------------------------------
   const flameMap = flameTexture();
@@ -281,26 +318,48 @@ export async function createDesk(
     const at = (sx: number, sy: number) => toTable(left + sx, top + sy);
     slab.position.copy(at(bw / 2, bh / 2)).setY(0.011);
 
-    anchors.candle.copy(at(-0.075 * H, bh - 0.3 * H));
+    /*
+      Where the owner sketched each thing: the magnifying glass at the top left, the pencil down the
+      left margin, the matches above the book on the right, the candle in the top right corner and
+      the cup below it; the compass, which the sketch left out, in the empty corner at the bottom
+      left. Each is kept clear of the book and its thumb tabs, which nothing may pass under, and
+      drawn into the window when the margin has room for it, but no further from the book than
+      `far`. Where the margin is narrower than the thing, the window's edge cuts it.
+    */
+    const gap = 0.012 * H;
+    const tabs = 0.045 * H;
+    const rightOf = (r: number, far: number) =>
+      Math.max(bw + tabs + gap + r, Math.min(width - left - gap - r, bw + far));
+    const leftOf = (r: number, far: number) => Math.min(-gap - r, Math.max(gap + r - left, -far));
+    const above = (r: number, far: number) => Math.min(-gap - r, Math.max(gap + r - top, -far));
+    const below = (r: number, y: number) => Math.min(height - top - gap - r, y);
+
+    const candleR = reach.candle * k;
+    anchors.candle.copy(at(rightOf(candleR, 0.32 * H), Math.max(gap + candleR - top, 0.05 * H)));
     candle.position.copy(anchors.candle);
-    anchors.box.copy(at(-0.085 * H, bh - 0.05 * H));
+    anchors.box.copy(at(bw - 0.16 * H, above(0.022 * k, 0.15 * H)));
     boxGroup.position.copy(anchors.box);
-    boxGroup.rotation.y = 0.18;
-    penGroup.position.copy(at(-0.13 * H, 0.38 * H));
-    penGroup.rotation.y = 0.42;
-    // Clear of the book and its thumb tabs, which stand out 0.045H: nothing here may pass under them.
-    cupGroup.position.copy(at(bw + 0.18 * H, 0.16 * H));
-    cupGroup.rotation.y = 0.9;
-    compassGroup.position.copy(at(bw + 0.14 * H, bh + 0.02 * H));
-    compassGroup.rotation.y = -0.5;
+    boxGroup.rotation.y = BOX_TURN;
+    const cupR = (reach.cup + 0.008) * k;
+    cupGroup.position.copy(at(rightOf(cupR, 0.3 * H), below(cupR, 0.9 * H)));
+    cupGroup.rotation.y = -0.5;
+    const glassR = reach.glass * k;
+    glassGroup.position.copy(at(-gap - glassR, 0.12 * H));
+    glassGroup.rotation.y = 1.42;
+    penGroup.position.copy(at(-Math.min(0.08 * H, 0.3 * left), 0.25 * H));
+    penGroup.rotation.y = -Math.PI / 2 + 0.05;
+    const compassR = reach.compass * k;
+    compassGroup.position.copy(at(leftOf(compassR, 0.32 * H), below(compassR, 1.0 * H)));
+    // Its lid open toward the window's edge: toward the book, it reached up into the pencil.
+    compassGroup.rotation.y = 0.25;
 
     // The daylight's shadows cover what the camera sees.
-    const reach = Math.max(width, height) / k / 2 + 0.2;
+    const extent = Math.max(width, height) / k / 2 + 0.2;
     const shadowCamera = sun.shadow.camera;
-    shadowCamera.left = -reach;
-    shadowCamera.right = reach;
-    shadowCamera.top = reach;
-    shadowCamera.bottom = -reach;
+    shadowCamera.left = -extent;
+    shadowCamera.right = extent;
+    shadowCamera.top = extent;
+    shadowCamera.bottom = -extent;
     shadowCamera.near = 0.1;
     shadowCamera.far = 6;
     shadowCamera.updateProjectionMatrix();
@@ -372,16 +431,21 @@ export async function createDesk(
     const p = t / STRIKE;
     const group = theMatch.group;
     group.visible = p < 0.97;
+    /* The box lies above the book and the candle stands right of it, so the hand works from beyond
+       the window's top edge: in from there, struck along the side of the box facing the book --
+       the far side is often past the window's edge, and a strike there was never seen -- across to
+       the wick from its upper left, and away toward the top again. Never over the book, which
+       would hide it. Struck a little above the table, so the stick clears the box it crosses. */
     const boxPos = anchors.box;
-    const along = new THREE.Vector3(Math.cos(0.18), 0, -Math.sin(0.18));
-    const side = new THREE.Vector3(Math.sin(0.18), 0, Math.cos(0.18));
-    const start = boxPos.clone().addScaledVector(along, -0.026).addScaledVector(side, 0.021).setY(0.01);
-    const end = boxPos.clone().addScaledVector(along, 0.03).addScaledVector(side, 0.021).setY(0.01);
-    const offstage = boxPos.clone().add(new THREE.Vector3(-0.18, 0.06, 0.14));
-    const lifted = end.clone().add(new THREE.Vector3(0.01, 0.06, -0.02));
-    const atWick = wick.clone().add(new THREE.Vector3(0.006, -0.004, 0.004));
-    const away = wick.clone().add(new THREE.Vector3(-0.07, -0.08, 0.06));
-    const rest = away.clone().add(new THREE.Vector3(-0.02, -0.03, 0.03));
+    const along = new THREE.Vector3(Math.cos(BOX_TURN), 0, -Math.sin(BOX_TURN));
+    const side = new THREE.Vector3(Math.sin(BOX_TURN), 0, Math.cos(BOX_TURN));
+    const start = boxPos.clone().addScaledVector(along, -0.026).addScaledVector(side, 0.021).setY(0.014);
+    const end = boxPos.clone().addScaledVector(along, 0.03).addScaledVector(side, 0.021).setY(0.014);
+    const offstage = boxPos.clone().add(new THREE.Vector3(0.03, 0.08, -0.22));
+    const lifted = end.clone().add(new THREE.Vector3(0.01, 0.06, -0.03));
+    const atWick = wick.clone().add(new THREE.Vector3(-0.005, -0.003, -0.005));
+    const away = wick.clone().add(new THREE.Vector3(-0.03, -0.07, -0.08));
+    const rest = away.clone().add(new THREE.Vector3(-0.02, -0.03, -0.04));
     let pos: THREE.Vector3;
     if (p < 0.16) pos = offstage.clone().lerp(start, span(p, 0, 0.16));
     else if (p < 0.23) pos = start.clone().lerp(end, clamp01((p - 0.16) / 0.07));
@@ -391,9 +455,9 @@ export async function createDesk(
     else if (p < 0.7) pos = atWick.clone().lerp(away, span(p, 0.6, 0.7));
     else pos = away.clone().lerp(rest, span(p, 0.7, 0.92));
     group.position.copy(pos);
-    // Held from below-left, tilted up toward the hand, and shaken out after.
+    // Held from above, the stick running up toward the hand and tilted to it, and shaken out after.
     const shake = p > 0.7 && p < 0.84 ? Math.sin((p - 0.7) * 120) * 0.35 * (1 - (p - 0.7) / 0.14) : 0;
-    group.rotation.set(0, 2.4 + shake, 0.42);
+    group.rotation.set(0, 1.9 + shake, 0.42);
 
     const burning = p >= 0.215 && p < 0.78;
     const flare = p < 0.3 ? 1 + 0.9 * Math.max(0, 1 - Math.abs(p - 0.24) / 0.05) : 1;

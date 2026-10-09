@@ -216,7 +216,7 @@ shrank them in `web/public/desk/README.md`. Nothing on the table is an animal: s
 against a creature beside a claim that cannot identify one reaches the margin around every claim.
 
 **It costs the reader nothing they came for.** The scene and three.js are a separate chunk, 661 KB
-(167 KB gzipped), plus 0.92 MB of models and wood, loaded after the fonts and the book; the canvas
+(167 KB gzipped), plus 1.0 MB of models and wood, loaded after the fonts and the book; the canvas
 takes no pointer events and is hidden from assistive technology. It draws only while something
 moves. Where a browser draws WebGL without a graphics card, one frame took seconds, so there the
 painted walnut under the canvas is the table and no scene is made; `?desk=3d` makes it anyway,
