@@ -1,5 +1,6 @@
 <script lang="ts">
   import RibbonChart from "./RibbonChart.svelte";
+  import Boxed from "../notebook/Boxed.svelte";
   import { frameOf, loadRibbon, type Comparison } from "./ribbon";
 
   let {
@@ -73,6 +74,7 @@
 
     {#if part === "all" || part === "reading" || part === "gap" || part === "precise"}
     <section class="pair__gap" aria-labelledby="ribbon-disagreement">
+      <Boxed seed="ribbon-gap" tone="rust" />
       <h4 id="ribbon-disagreement">
         {doc.ribbons.length > 1 ? "Why the two answers differ" : "Why there is only one answer"}
       </h4>
@@ -93,7 +95,7 @@
     {/if}
 
     {#if part === "all" || part === "reading" || part === "caveat"}
-      <p class="pair__caveat">{doc.shared_caveat}</p>
+      <p class="pair__caveat hand-rule">{doc.shared_caveat}</p>
     {/if}
 
     {#if (part === "all" || part === "notes") && doc.supporting.length > 0}
@@ -129,12 +131,12 @@
     list-style: none;
   }
 
+  /* A scrap laid on the page with a drawn rust edge, like the refusal it is kin to. */
   .pair__gap {
+    position: relative;
+    rotate: -0.35deg;
     margin-top: var(--gap-wide);
     padding: var(--gap);
-    border: 1px solid var(--rule);
-    border-left: 3px solid var(--rust);
-    border-radius: var(--radius);
     background: var(--paper-sunken);
   }
 
@@ -157,7 +159,7 @@
   .pair__caveat {
     margin: var(--gap) 0 0;
     padding-top: var(--gap-tight);
-    border-top: 1px dotted var(--rule);
+    --hand-rule-ink: var(--rule);
     color: var(--pencil);
     font-size: calc(var(--size-margin) * 1.18);
     line-height: 1.5;

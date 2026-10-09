@@ -1,5 +1,6 @@
 <script lang="ts">
   import Ticked from "../notebook/Ticked.svelte";
+  import Verdict from "../notebook/Verdict.svelte";
   import Rule from "../notebook/Rule.svelte";
   import { BRACKET_WIDTH, bracket } from "../notebook/ink";
   import { BIAS_DOMAIN_WORDS, BIAS_STATUS_WORDS, type Finding } from "../ledger";
@@ -94,7 +95,7 @@
         {#each shown as domain (domain.domain)}
           <dt class="bias__domain">{BIAS_DOMAIN_WORDS[domain.domain] ?? domain.domain}</dt>
           <dd class="bias__status bias__status--{domain.status.replace(/ /g, '-')}">
-            {BIAS_STATUS_WORDS[domain.status] ?? domain.status}
+            <Verdict seed="{finding.key}-{domain.domain}" status={domain.status} />{BIAS_STATUS_WORDS[domain.status] ?? domain.status}
           </dd>
           <dd class="bias__finding">{domain.finding}</dd>
         {/each}
@@ -130,12 +131,18 @@
 </aside>
 
 <style>
+  /*
+    The marker face throughout, which the findings already were. The headings, the domain names and
+    the verdicts were set in the typewriter face, and the owner read the page as the one in the book
+    a hand had not written. They are words, not figures, so ADR 0008's reason for mono -- digits that
+    line up -- does not reach them, and the marker face was drawn to stay legible at this size.
+  */
   .margin {
     display: grid;
     grid-template-columns: 8px 1fr;
     gap: 0 var(--gap-tight);
     align-items: stretch;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-margin);
     line-height: 1.55;
     color: var(--pencil);
@@ -163,6 +170,10 @@
   }
 
   h3 {
+    /* Askew like every label in the book: see `.chapter` in `Reader.svelte`. */
+    width: fit-content;
+    rotate: -1.6deg;
+    transform-origin: left center;
     margin: 0 0 var(--gap-hair);
     font-size: var(--size-label);
     font-weight: 500;

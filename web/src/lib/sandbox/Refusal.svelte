@@ -1,5 +1,7 @@
 <script lang="ts">
   import { REPOSITORY } from "../ledger";
+  import Boxed from "../notebook/Boxed.svelte";
+  import DrawnLink from "../notebook/DrawnLink.svelte";
   import { format, type Refusal } from "./sandbox";
 
   let { refusal }: { refusal: Refusal } = $props();
@@ -31,6 +33,7 @@
   mistake rather than being shown it as a result.
 -->
 <section class="refusal">
+  <Boxed seed="refusal-{refusal.key}" tone="rust" />
   <p class="refusal__label">The analysis we did not run</p>
   <p class="refusal__question">{refusal.question}</p>
   <p class="refusal__naive">{refusal.naive}</p>
@@ -52,15 +55,16 @@
     {/if}
   {:else}
     <button type="button" onclick={() => (shown = true)}>
+      <Boxed seed="refusal-show-{refusal.key}" tone="rust" />
       Show me the wrong answer, and the numbers behind it
     </button>
   {/if}
 
   <p class="refusal__verdict"><strong>Why it is not reported.</strong> {refusal.verdict}</p>
   <p class="refusal__method">
-    <a href={`${REPOSITORY}${refusal.method}`} rel="noopener" target="_blank">
+    <DrawnLink href={`${REPOSITORY}${refusal.method}`} seed="refusal-plan-{refusal.key}">
       The plan, written down before we looked
-    </a>
+    </DrawnLink>
   </p>
 </section>
 
@@ -74,19 +78,31 @@
     token's root value, so a phone -- which reads the root tokens -- is exactly as it was, and on
     the spread the words follow the page like everything else on it.
   */
+  /*
+    A scrap of paper laid on the page, turned a little, with its edge drawn in rust.
+
+    It was a callout -- a sunken panel with a coloured left border and rounded corners -- which is the
+    one shape on the page that came from an interface rather than a sketchbook; the owner read it as
+    computer-made. What it has to say has not changed: it holds a number the project calls wrong, so
+    it still sits on a darker sheet than the page, and the rust edge says why at a glance.
+  */
   .refusal {
+    position: relative;
+    rotate: -0.4deg;
     margin-top: var(--gap);
     padding: var(--gap);
     /* Its own ground, and a drawn edge in the accent: this is the one block on the page that
        contains a number we say is wrong, so it should not look like the rest. */
     background: var(--paper-sunken);
-    border-left: 2px solid var(--rust-ink);
-    border-radius: 0 var(--radius) var(--radius) 0;
   }
 
   .refusal__label {
+    /* Askew like every label in the book: see `.chapter` in `Reader.svelte`. */
+    width: fit-content;
+    rotate: -2deg;
+    transform-origin: left center;
     margin: 0;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-label);
     font-weight: 500;
     letter-spacing: 0.09em;
@@ -109,20 +125,21 @@
     color: var(--ink-soft);
   }
 
+  /* Drawn round like a knob's setting, and written like everything else a reader is asked to do. */
   button {
+    position: relative;
     margin-top: var(--gap-tight);
-    padding: 3px var(--gap-tight);
+    padding: 4px var(--gap-tight) 5px;
     background: transparent;
-    border: 1px solid var(--rust-ink);
-    border-radius: var(--radius);
-    font-family: var(--font-mono);
-    font-size: calc(var(--size-margin) * 1.06);
+    border: 0;
+    font-family: var(--font-body);
+    font-size: calc(var(--size-margin) * 1.12);
     color: var(--rust);
     cursor: pointer;
   }
 
   button:hover {
-    background: var(--paper);
+    color: var(--rust-ink);
   }
 
   .refusal__rows {
@@ -152,7 +169,7 @@
 
   .refusal__n {
     margin: var(--gap-hair) 0 0;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-label);
     color: var(--pencil);
   }
@@ -178,7 +195,5 @@
 
   .refusal__method {
     margin: var(--gap-hair) 0 0;
-    font-family: var(--font-mono);
-    font-size: calc(var(--size-margin) * 1.03);
   }
 </style>

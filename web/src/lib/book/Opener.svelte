@@ -118,8 +118,10 @@
     font-size: calc(var(--size-body) * 1.03);
     line-height: 1.6;
     margin: 0;
-    text-align: justify;
-    hyphens: auto;
+    /* Ragged and unbroken, as a hand writes: justified and hyphenated was the book's most
+       typeset-looking page, and a ragged edge is the easier read for the dyslexia setting too. */
+    text-align: start;
+    hyphens: manual;
   }
 
   /*

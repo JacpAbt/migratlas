@@ -316,9 +316,11 @@
     background: linear-gradient(var(--pencil) 62%, var(--rust-ink) 62%);
   }
 
+  /* Words in the marker face, as on every other page since the labels left the typewriter; the
+     shares beside the key stay typed, because they stack and have to line up. */
   h2 {
     margin: 0;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-label);
     font-weight: 500;
     letter-spacing: 0.09em;
@@ -379,7 +381,7 @@
 
   .layers em {
     grid-column: 2;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-style: normal;
     font-size: var(--size-label);
     letter-spacing: 0.06em;
@@ -433,7 +435,7 @@
 
   .clockface {
     margin: 0;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: 0.78rem;
     color: var(--ink);
   }
@@ -457,7 +459,7 @@
     padding: 4px 0.6rem;
     background: transparent;
     border: 0;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: 0.7rem;
     color: var(--ink);
     cursor: pointer;

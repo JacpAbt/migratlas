@@ -24,7 +24,7 @@ not resolving and both are fallbacks.
 | --- | --- | --- | --- |
 | `Virgil.woff2` | Virgil | 2021–, Ellinor Rapp | OFL 1.1 |
 | `Excalifont.woff2` | Excalifont | 2024, Excalidraw | OFL 1.1 |
-| `ShantellSans.woff2` | Shantell Sans | 2022, Shantell Martin and Anya Danilova | OFL 1.1 |
+| `ShantellSans.woff2` | Shantell Sans, variable | 2022, Shantell Martin and Anya Danilova | OFL 1.1 |
 | `AtkinsonHyperlegible.woff2` | Atkinson Hyperlegible | 2020, Braille Institute of America | OFL 1.1 |
 | `OpenDyslexic.woff2` | OpenDyslexic | 2019, Abbie Gonzalez | OFL 1.1 |
 | `PlexMono-500.woff2` | IBM Plex Mono | © 2017 IBM Corp., reserved font name "Plex" | OFL 1.1 |
@@ -69,6 +69,20 @@ Each preset carries its own scale and leading in `tokens.css`, because the faces
 x-height: dropping one in at the same pixel size makes it look a size larger or smaller than the
 last. That is the whole of what "optimised" means here — switching changes the letterforms and
 nothing else.
+
+## Shantell Sans is built, not fetched as is
+
+The variable cut, so the hand setting can ask for its bounce and informality axes. Rebuilt from the
+foundry's own release rather than taken from a font host:
+
+1. `ShantellSans[BNCE,INFM,SPAC,wght].ttf` from `shantell_sans-for-googlefonts.zip`, release 1.011
+   of [arrowtype/shantell-sans](https://github.com/arrowtype/shantell-sans/releases/tag/1.011).
+2. `fontTools.varLib.instancer`: spacing pinned at 0, weight limited to 300-700; informality and
+   bounce kept whole.
+3. `fontTools.subset` to the 226 codepoints the previous static file covered, every layout feature
+   kept, written as woff2. 166 KB, against the static cut's 47.
+
+The copyright line in `OFL-shantellsans.txt` is the project's own and is unchanged by the rebuild.
 
 ## Total cost
 

@@ -88,4 +88,34 @@
     gap: var(--gap);
     flex-wrap: wrap;
   }
+
+  /*
+    On the spread they are a slip of paper lying on the table, a corner of tape holding it -- the
+    owner wanted the switches to belong to the table rather than float over it, and dark labels on
+    walnut would not be legible anyway. The phone has no table, and keeps them as they were.
+  */
+  @media (width >= 62rem) {
+    .settings {
+      padding: 6px 12px 7px;
+      rotate: -1.6deg;
+      background: var(--paper);
+      border-radius: 1px;
+      box-shadow:
+        0 1px 1px rgb(0 0 0 / 18%),
+        2px 5px 9px rgb(20 10 2 / 35%);
+    }
+
+    .settings::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -7px;
+      width: 46px;
+      height: 15px;
+      translate: -50% 0;
+      rotate: 3deg;
+      background: rgb(245 238 215 / 62%);
+      box-shadow: 0 0 1px rgb(0 0 0 / 15%);
+    }
+  }
 </style>

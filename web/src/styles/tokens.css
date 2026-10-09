@@ -173,6 +173,16 @@
   --attrib: 3.25rem;
   --radius: 3px;
 
+  /* The table the book lies on. The scene is `desk/scene.ts`; this painted wood is what shows if
+     it cannot be drawn. `--candle-lit` is read by the scene: 1 at night, when a match lights the
+     candle and the room is lit by it alone. */
+  --wood: #8f6340;
+  --wood-light: 26%;
+  --candle-lit: 0;
+  /* A ruled line drawn by hand: two passes of a slightly bowed stroke, as a mask, so whatever paints
+     it is a colour token and it follows the surface. See `.hand-rule` in `base.css`. */
+  --hand-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 6' preserveAspectRatio='none'%3E%3Cpath d='M2 3.4C60 2.3 120 4 180 3.1S268 2.6 298 3.5' fill='none' stroke='black' stroke-width='1.2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M5 2.9C80 3.8 150 2.5 220 3.3S284 3.7 295 2.8' fill='none' stroke='black' stroke-opacity='.55' stroke-width='.9' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+
   /* --- Motion ------------------------------------------------------------- */
   --draw-slow: 900ms;
   --draw: 600ms;
@@ -244,6 +254,9 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-surface="day"]) {
+    --wood: #4a3220;
+    --wood-light: 0%;
+    --candle-lit: 1;
     --paper: #0d131e;
     --paper-sunken: #070c14;
     --plate-paper: color-mix(in srgb, var(--paper) 86%, var(--pencil));
@@ -294,6 +307,9 @@
 }
 
 :root[data-surface="night"] {
+  --wood: #4a3220;
+  --wood-light: 0%;
+  --candle-lit: 1;
   --paper: #0d131e;
   --paper-sunken: #070c14;
   --plate-paper: color-mix(in srgb, var(--paper) 86%, var(--pencil));

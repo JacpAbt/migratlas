@@ -50,7 +50,7 @@
 </script>
 
 {#if (part !== "refusals" && knobs.length > 0) || (part !== "knobs" && refusals.length > 0)}
-  <section class="sandbox">
+  <section class="sandbox hand-rule">
     <h3>
       {part === "refusals" ? "And what we would not compute" : "Switch the safeguards off"}
     </h3>
@@ -92,7 +92,6 @@
   .sandbox {
     margin-top: var(--gap-wide);
     padding-top: var(--gap);
-    border-top: 1px solid var(--rule);
   }
 
   /*
@@ -115,7 +114,9 @@
     line-height: var(--leading-hand);
   }
 
-  .sandbox :global(.rule) {
+  /* The heading's rule only -- a child of the section. As a descendant selector it also caught the
+     underline drawn under a link further down, and cut it short of the words. */
+  .sandbox > :global(.rule) {
     max-width: 14rem;
     margin-bottom: var(--gap);
   }

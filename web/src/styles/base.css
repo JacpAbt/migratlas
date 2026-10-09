@@ -82,6 +82,104 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+/*
+  A rule drawn by hand along an element's top, where a stylesheet drew a ruler-straight border.
+
+  The owner asked whether the book reads as a journal, and the separators were part of why it did
+  not: every one was a 1px solid or dotted CSS border, perfectly level, on a page where every other
+  line wobbles. This is the same two-pass stroke the rules under the headings use, laid over the
+  element's top edge. The ink is `--hand-rule-ink`, a rule colour unless the element names a fainter
+  one. `--under` puts it along the bottom instead.
+*/
+.hand-rule {
+  position: relative;
+}
+
+.hand-rule::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  translate: 0 -3px;
+  background: var(--hand-rule-ink, var(--rule));
+  mask: var(--hand-line) 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+.hand-rule--under::before {
+  inset: auto 0 0;
+  translate: 0 3px;
+}
+
+/*
+  The marker face writing in its own hand, in the hand setting.
+
+  Shantell Sans's bounce lifts and drops each letter a little off the baseline and its informality
+  loosens the letterforms -- the owner asked for text that does not sit "standard" on the page, and
+  this is the face doing it rather than the layout. Inherited, and ignored by every face without
+  the axes, so it touches nothing but Shantell; not in the clear or dyslexia settings, whose faces
+  are chosen to be read without effort.
+*/
+:root[data-type="hand"] {
+  font-variation-settings: "BNCE" 50, "INFM" 50;
+}
+
+/*
+  Prose laid down by hand, in the hand setting, on the spread.
+
+  The owner, asked what would make the book read as written: the text sat too "standard" on the
+  page -- every paragraph square to the leaf, every left edge on one line, every right edge at one
+  width. Each paragraph, list item and audit finding now takes one of five placements in turn: a
+  turn of a tenth to a quarter of a degree, a nudge of a few pixels, and its own right edge. Small
+  on purpose -- the lines themselves stay level, because a hand keeps a line of writing level and a
+  tilted line reads as a fault -- and none in the clear or dyslexia settings, which exist to be read
+  without effort.
+
+  `:where` gives these no weight at all, so anything a component sets on purpose -- a label's
+  tilt, a note's float -- wins; `translate` and `padding-right` because they move nothing else on
+  the page.
+*/
+:where(:root[data-type="hand"] .spread .page__inner :is(p, li, dd):nth-of-type(5n+1)) {
+  rotate: -0.18deg;
+  translate: 2px 0;
+  padding-right: 6px;
+}
+
+:where(:root[data-type="hand"] .spread .page__inner :is(p, li, dd):nth-of-type(5n+2)) {
+  rotate: 0.12deg;
+  translate: 6px 0;
+  padding-right: 0px;
+}
+
+:where(:root[data-type="hand"] .spread .page__inner :is(p, li, dd):nth-of-type(5n+3)) {
+  rotate: -0.08deg;
+  translate: 0px 0;
+  padding-right: 14px;
+}
+
+:where(:root[data-type="hand"] .spread .page__inner :is(p, li, dd):nth-of-type(5n+4)) {
+  rotate: 0.22deg;
+  translate: 4px 0;
+  padding-right: 4px;
+}
+
+:where(:root[data-type="hand"] .spread .page__inner :is(p, li, dd):nth-of-type(5n+5)) {
+  rotate: -0.25deg;
+  translate: 1px 0;
+  padding-right: 10px;
+}
+
+/*
+  What a page sets down when it has no room for it: see `settle` in `book/fit.ts`.
+
+  Here and not in `Page.svelte`, because the attribute is written by the fit at runtime and never
+  appears in a template -- Svelte prunes a scoped selector on an attribute it cannot see, and the
+  first version of this rule was compiled away while the page it was for stayed 75px over.
+*/
+.page__inner[data-crowded] [data-droppable] {
+  display: none;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

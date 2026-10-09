@@ -60,6 +60,66 @@ export function mark(host: SVGSVGElement, name: string, node: SVGGElement): void
  */
 export const HAND: Options = { roughness: 1.6, bowing: 1.3, strokeWidth: 1.5 };
 
+/*
+  A generator beside the pen: the same strokes as path data, for a component that renders its own
+  elements with its own classes -- a chart, whose inks are tokens in its stylesheet.
+
+  A chart is held looser than a heading's rule and tighter than a doodle, because it carries the
+  published numbers. At these roughnesses rough.js moves an endpoint by about a unit and a half of the
+  chart's 640-unit box, under one percent of either axis -- the hand shows, the value does not move.
+*/
+const pencil = rough.generator();
+
+/** One drawn line as path data: two passes unless `single`, which is what reads as a hand. */
+export function sketchLine(
+  key: string,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  roughness = 0.7,
+  single = false,
+): string[] {
+  return pencil
+    .toPaths(
+      pencil.line(x1, y1, x2, y2, {
+        roughness,
+        bowing: 0.6,
+        seed: seedOf(key),
+        disableMultiStroke: single,
+      }),
+    )
+    .map((path) => path.d);
+}
+
+/** A drawn bar: its edge and the hatching inside it, apart, so each takes its own ink. */
+export function sketchBar(
+  key: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): { edge: string[]; hatch: string[] } {
+  const HATCH = "hatch";
+  const paths = pencil.toPaths(
+    pencil.rectangle(x, y, width, height, {
+      roughness: 0.7,
+      bowing: 0.5,
+      seed: seedOf(key),
+      stroke: "edge",
+      fill: HATCH,
+      fillStyle: "hachure",
+      hachureGap: 3,
+      hachureAngle: -41,
+      fillWeight: 0.8,
+    }),
+  );
+  return {
+    edge: paths.filter((path) => path.stroke !== HATCH).map((path) => path.d),
+    hatch: paths.filter((path) => path.stroke === HATCH).map((path) => path.d),
+  };
+}
+
 /** Height of the box a rule is drawn in, so the component and the generator agree on one number. */
 export const RULE_HEIGHT = 10;
 
@@ -173,6 +233,88 @@ export function lasso(
 }
 
 /** A tick, in the two strokes a hand makes: a short fall and a long rise, overshooting its box. */
+/** The four marks a verdict can get. */
+export type VerdictMark = "tick" | "wave" | "query" | "dash";
+
+/**
+ * A verdict's mark, drawn into a square of `size`: held is ticked, limited is a wave, open is a
+ * question ringed, and not applicable is struck through with a dash.
+ */
+export function verdict(
+  host: SVGSVGElement,
+  key: string,
+  kind: VerdictMark,
+  size: number,
+  stroke: string,
+): void {
+  const s = size;
+  const ink = { ...HAND, stroke, seed: seedOf(`${key}:${kind}`) };
+  const draw = pen(host);
+  if (kind === "tick") {
+    tick(host, key, s, stroke);
+  } else if (kind === "wave") {
+    mark(
+      host,
+      "verdict",
+      draw.curve(
+        [
+          [s * 0.06, s * 0.56],
+          [s * 0.3, s * 0.36],
+          [s * 0.52, s * 0.62],
+          [s * 0.76, s * 0.38],
+          [s * 0.96, s * 0.52],
+        ],
+        { ...ink, strokeWidth: 1.8, roughness: 0.9 },
+      ),
+    );
+  } else if (kind === "query") {
+    mark(host, "verdict", draw.circle(s / 2, s / 2, s * 1.02, { ...ink, strokeWidth: 1.3, roughness: 1.2 }));
+    mark(
+      host,
+      "verdict",
+      draw.curve(
+        [
+          [s * 0.36, s * 0.36],
+          [s * 0.44, s * 0.2],
+          [s * 0.62, s * 0.22],
+          [s * 0.64, s * 0.4],
+          [s * 0.5, s * 0.52],
+          [s * 0.5, s * 0.64],
+        ],
+        { ...ink, strokeWidth: 1.6, roughness: 0.6 },
+      ),
+    );
+    mark(host, "verdict", draw.line(s * 0.5, s * 0.77, s * 0.51, s * 0.8, { ...ink, strokeWidth: 2.2, roughness: 0.2 }));
+  } else {
+    mark(host, "verdict", draw.line(s * 0.18, s * 0.56, s * 0.82, s * 0.5, { ...ink, strokeWidth: 1.7, roughness: 0.8 }));
+  }
+}
+
+/**
+ * A drawn arrow from the top right of its box to the bottom left, head and all: a margin note's,
+ * pointing back into the text it annotates.
+ */
+export function arrow(host: SVGSVGElement, key: string, width: number, height: number, stroke: string): void {
+  const draw = pen(host);
+  const ink = { ...HAND, stroke, strokeWidth: 1.5, seed: seedOf(key) };
+  const tip: [number, number] = [4, height - 4];
+  mark(
+    host,
+    "arrow",
+    draw.curve(
+      [
+        [width - 4, 4],
+        [width * 0.55, height * 0.2],
+        [width * 0.25, height * 0.55],
+        tip,
+      ],
+      { ...ink, roughness: 0.8 },
+    ),
+  );
+  mark(host, "arrow", draw.line(tip[0], tip[1], tip[0] + 2, tip[1] - 11, { ...ink, roughness: 0.6 }));
+  mark(host, "arrow", draw.line(tip[0], tip[1], tip[0] + 11, tip[1] - 2, { ...ink, roughness: 0.6 }));
+}
+
 export function tick(host: SVGSVGElement, key: string, size: number, stroke: string): void {
   mark(
     host,

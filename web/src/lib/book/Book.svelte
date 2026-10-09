@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import Desk from "../desk/Desk.svelte";
 
   import Page from "./Page.svelte";
   import Realms from "./Realms.svelte";
@@ -37,6 +38,9 @@
 
   const index = $derived(Math.min(Math.max(open, 0), Math.max(spreads.length - 1, 0)));
   const current = $derived(spreads[index] ?? spreads[0]);
+
+  /** The book on the desk, for the desk to lay the table around. */
+  let bookEl = $state<HTMLElement | null>(null);
 
   /** The spread being turned away from, where it was, and which way. Null when nothing is turning. */
   let leaving = $state<{ spread: Spread; at: number; forward: boolean } | null>(null);
@@ -111,7 +115,8 @@
   The lift is box-shadows on the sheets.
 -->
 <div class="desk">
-  <div class="book">
+  <Desk book={bookEl} />
+  <div class="book" bind:this={bookEl}>
     <div class="block block--under" aria-hidden="true"></div>
     <div class="block block--edge" aria-hidden="true"></div>
 
@@ -136,12 +141,20 @@
       {/if}
 
       {#if leaving && current}
+        <!--
+          Keyed on the turn, so a second turn is a second sheet.
+
+          The leaf's animation runs when the element is made. A turn started while one was still in
+          flight reused the same elements with new pages on them, already at the end of their
+          animation -- so a reader pressing the arrow twice saw the pages change and nothing turn.
+        -->
+        {#key leaving}
         <!-- The outgoing page, held on the half the leaf is about to land on. -->
         <div class="stale stale--{arriving}" aria-hidden="true">
           <Page
             side={arriving}
             fill
-            fitted
+            fitted="copy"
             folio={was?.[of(arriving)] ?? null}
             mark={turns(leaving.at, arriving)}
           >
@@ -155,7 +168,7 @@
             <Page
               side={lifted}
               fill
-              fitted
+              fitted="copy"
               folio={was?.[of(lifted)] ?? null}
               mark={turns(leaving.at, lifted)}
             >
@@ -166,7 +179,7 @@
             <Page
               side={arriving}
               fill
-              fitted
+              fitted="copy"
               folio={numbers[of(arriving)]}
               mark={turns(index, arriving)}
             >
@@ -174,6 +187,7 @@
             </Page>
           </div>
         </div>
+        {/key}
       {/if}
 
       <div class="gutter" aria-hidden="true"><span class="gutter__line"></span></div>
@@ -237,11 +251,39 @@
     */
     --tail: 0.8rem;
     padding: var(--gap) var(--gap-tight) calc(var(--gap) + var(--tail));
-    /* Two faint washes rather than a flat fill: a flat ground under a shadowed object reads as a
-       rectangle floating on a colour. */
-    background:
-      radial-gradient(120% 80% at 30% 0%, rgb(255 255 255 / 5%), transparent 60%),
-      radial-gradient(100% 90% at 75% 100%, rgb(0 0 0 / 7%), transparent 65%);
+    /*
+      A walnut table, painted: what lies under the book wherever the real one -- the scene in
+      `desk/Desk.svelte` -- is not drawn, as in a browser with no graphics card. Boards running across
+      the window, each a slightly different tone with a dark seam between, the grain streaked along
+      them, fine pores across it, daylight from the upper left and the room falling off toward the
+      corners. At night the same wood, darker.
+
+      The grain and the pores are noise generated in the browser, so nothing is downloaded for them.
+    */
+    background-color: var(--wood);
+    background-image:
+      radial-gradient(ellipse 90% 70% at 22% 0%, rgb(255 236 204 / var(--wood-light)), transparent 70%),
+      radial-gradient(ellipse 75% 75% at 50% 50%, transparent 55%, rgb(24 12 4 / 50%) 100%),
+      repeating-linear-gradient(
+        to bottom,
+        rgb(20 9 2 / 0%) 0 calc(24vh - 3px),
+        rgb(20 9 2 / 55%) calc(24vh - 2px),
+        rgb(255 220 180 / 12%) calc(24vh - 1px) 24vh
+      ),
+      repeating-linear-gradient(
+        to bottom,
+        rgb(255 240 220 / 6%) 0 24vh,
+        rgb(0 0 0 / 7%) 24vh 48vh,
+        rgb(255 240 220 / 2%) 48vh 72vh
+      ),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02 0.9' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='.33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='700'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0016 0.055' numOctaves='5' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='.33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 0 1'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='2.4' intercept='-.7'/%3E%3CfeFuncG type='linear' slope='2.4' intercept='-.7'/%3E%3CfeFuncB type='linear' slope='2.4' intercept='-.7'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size: auto, auto, auto, auto, 300px 300px, 1200px 700px;
+    background-blend-mode: normal, multiply, normal, normal, soft-light, overlay;
+    /* Its own stacking context, so the table's scene can sit under the book and still above this
+       painted wood, which is the table whenever the scene cannot be drawn -- `desk/Desk.svelte`. */
+    position: relative;
+    isolation: isolate;
   }
 
   .book {

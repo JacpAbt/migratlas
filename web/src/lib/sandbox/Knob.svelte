@@ -22,7 +22,7 @@
   setting is marked as such, and the difference is stated in words as well as in digits, because
   "the number moved" is not the interesting part. Which direction it moved is.
 -->
-<div class="knob">
+<div class="knob hand-rule">
   <p class="knob__question">{knob.question}</p>
 
   <div class="knob__switch" role="radiogroup" aria-label={knob.question}>
@@ -84,7 +84,7 @@
   */
   .knob {
     padding-top: var(--gap);
-    border-top: 1px dotted var(--rule);
+    --hand-rule-ink: var(--rule-faint);
   }
 
   .knob__question {
@@ -111,7 +111,7 @@
     gap: 0.3rem;
     padding: 0.2rem 0.55rem;
     border: 0;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: calc(var(--size-margin) * 1.06);
     color: var(--ink-soft);
     cursor: pointer;
@@ -154,13 +154,14 @@
     color: var(--rust);
   }
 
+  /* A reading, on its own line: written, as the record's figure is (ADR 0008, 2026-10-07). */
   .knob__value {
     margin: var(--gap-tight) 0 0;
-    font-family: var(--font-mono);
-    font-weight: 500;
-    font-size: calc(var(--size-margin) * 1.89);
+    font-family: var(--font-hand);
+    font-weight: 400;
+    font-size: calc(var(--size-margin) * 1.89 * var(--font-scale-hand));
+    line-height: var(--leading-hand);
     color: var(--rust);
-    font-variant-numeric: tabular-nums;
   }
 
   /* An alternative reads in ink, not the accent: only the published number gets to look published. */
@@ -170,7 +171,7 @@
 
   .knob__delta {
     margin: 1px 0 0;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: calc(var(--size-margin) * 1.06);
     color: var(--ink-soft);
   }
@@ -200,7 +201,7 @@
 
   .knob__register {
     margin-right: var(--gap-tight);
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-label);
     letter-spacing: 0.1em;
     text-transform: uppercase;

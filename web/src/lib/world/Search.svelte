@@ -2,6 +2,7 @@
   import { TaxonIndex, type SpeciesSurfaces, type TaxonHit } from "../../search/taxon";
   import type { SpeciesSelection } from "../../layers/selection";
   import Study from "../species/Study.svelte";
+  import Boxed from "../notebook/Boxed.svelte";
   import { SpeciesStudies, type SpeciesCard } from "../species/study";
 
   let {
@@ -86,14 +87,17 @@
 
 <div class="search">
   <label class="sr-only" for="taxon-search">Search for an animal</label>
-  <input
-    id="taxon-search"
-    type="search"
-    autocomplete="off"
-    spellcheck="false"
-    bind:value={query}
-    placeholder={index ? `Search ${index.size.toLocaleString()} animals…` : "Loading…"}
-  />
+  <span class="search__box">
+    <input
+      id="taxon-search"
+      type="search"
+      autocomplete="off"
+      spellcheck="false"
+      bind:value={query}
+      placeholder={index ? `Search ${index.size.toLocaleString()} animals…` : "Loading…"}
+    />
+    <Boxed seed="taxon-search" />
+  </span>
 
   {#if hits.length > 0}
     <ul class="hits" role="listbox">
@@ -133,12 +137,19 @@
     position: relative;
   }
 
+  /* Drawn round like every other box on a page, not bordered: the walk in `notebook.spec.ts` that
+     holds pages to drawn lines found this one only when it reached the world after its tools had
+     loaded, which is why it passed for a while. */
+  .search__box {
+    position: relative;
+    display: block;
+  }
+
   input {
     width: 100%;
     padding: var(--gap-hair) var(--gap-tight);
     background: var(--paper);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius);
+    border: 0;
     font-family: var(--font-body);
     font-size: 0.8rem;
     color: var(--ink);

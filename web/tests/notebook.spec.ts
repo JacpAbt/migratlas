@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import type { Leaf, Sources, Spread } from "../src/lib/book/pages";
+import type { Leaf, Panel, Sources, Spread } from "../src/lib/book/pages";
 
 /*
   The size the book is designed at, stated rather than inherited.
@@ -794,6 +794,143 @@ test("an addressed status is legible too, and is not the only signal", async ({
   });
 });
 
+test("every verdict in the audit is marked by hand beside its word", async ({ page }) => {
+  /*
+    The owner read the audit as a form: four verdict words, small, at the ends of rows. Each verdict
+    now carries the mark a reader grading by hand would leave -- and a different one for each, so
+    the shape agrees with the word and never stands in for it.
+  */
+  const spreads = await layout();
+  const marks = new Map<string, Set<string>>();
+  for (const spread of spreads) {
+    if (![spread.verso, spread.recto].some((panel) => panel.kind === "bias")) continue;
+    await at(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll(".spread > .page [class*='bias__status--']")].map((node) => ({
+        status: /bias__status--([\w-]+)/.exec(node.className)?.[1] ?? "",
+        mark: node.querySelector("svg.verdict")?.getAttribute("class")?.split("verdict--")[1] ?? "",
+        strokes: node.querySelectorAll("svg.verdict path").length,
+      })),
+    );
+    for (const row of rows) {
+      expect(row.strokes, `a ${row.status} verdict has no mark drawn`).toBeGreaterThan(0);
+      if (!marks.has(row.status)) marks.set(row.status, new Set());
+      marks.get(row.status)!.add(row.mark);
+    }
+  }
+  // One mark per verdict, and no two verdicts sharing one.
+  const seen = [...marks.values()].map((set) => [...set]);
+  for (const one of seen) expect(one, "a verdict is marked two ways").toHaveLength(1);
+  expect(new Set(seen.flat()).size, "two verdicts share a mark").toBe(seen.length);
+});
+
+test("nothing on a page is ruled by a stylesheet", async ({ page }) => {
+  /*
+    Asked whether the book reads as a journal, the answer was half: the separators, the callouts and
+    the table rules were 1px CSS borders, perfectly level, on pages where every other line wobbles.
+    They are drawn now -- `.hand-rule`, `Boxed` -- and this walks every spread for any border at
+    least 50px long that is still a stylesheet's. The maps' tape keeps its edge: it is tape.
+  */
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const ruled = new Set<string>();
+  for (const spread of await layout()) {
+    await at(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+    const found = await page.evaluate(() => {
+      const out: string[] = [];
+      for (const node of document.querySelectorAll(".spread > .page .page__inner *")) {
+        if (node.closest(".tape")) continue;
+        const style = getComputedStyle(node);
+        const box = node.getBoundingClientRect();
+        for (const side of ["top", "bottom", "left", "right"]) {
+          const width = Number.parseFloat(style.getPropertyValue(`border-${side}-width`));
+          const kind = style.getPropertyValue(`border-${side}-style`);
+          const length = side === "top" || side === "bottom" ? box.width : box.height;
+          if (width > 0 && kind !== "none" && kind !== "hidden" && length >= 50)
+            out.push(`${node.tagName.toLowerCase()}.${[...node.classList].filter((c) => !c.startsWith("svelte-")).join(".")} ${side}`);
+        }
+      }
+      return out;
+    });
+    for (const line of found) ruled.add(line);
+  }
+  expect([...ruled], "still ruled by the stylesheet").toEqual([]);
+});
+
+test("every record page is written on: its figure, and a note in its margin", async ({ page }) => {
+  /*
+    The owner asked for the record page to look as if somebody had written on it, for all thirteen
+    claims. Each record page carries its figure written by hand and its claim's plain caveat in the
+    margin, with an arrow drawn back to the paragraph it says plainly.
+  */
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const findings = JSON.parse(readFileSync("public/findings.json", "utf8")).findings as {
+    key: string;
+    plain_caveat: string | null;
+  }[];
+  const spreads = await layout();
+  for (const finding of findings) {
+    const spread = spreads.find((one) =>
+      [one.verso, one.recto].some((panel) => panel.kind === "record" && panel.key === finding.key),
+    );
+    if (!spread) continue;
+    await at(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+    const sheet = page.locator(".spread > .page").filter({ has: page.locator(".claim__value") });
+    await expect(sheet.locator(".claim__value--hand"), `${finding.key}: figure not written`).toBeVisible();
+    if (finding.plain_caveat) {
+      await expect(sheet.locator(".claim__note"), `${finding.key}: no margin note`).toContainText(
+        finding.plain_caveat.slice(0, 40),
+      );
+      expect(
+        await sheet.locator(".claim__note svg.arrow path").count(),
+        `${finding.key}: the note has no arrow`,
+      ).toBeGreaterThan(0);
+    }
+  }
+});
+
+test("the prose is laid down by hand in the hand setting, and square in the others", async ({
+  page,
+}) => {
+  /*
+    Paragraphs placed a little differently from one another, which is what a page written by hand
+    has and a typeset one does not -- and only in the hand setting: the clear and dyslexia settings
+    exist to be read without effort, so their text stays square. And nothing in the book is
+    justified or hyphenated by the browser in any setting.
+  */
+  const spreads = await layout();
+  const intro = spreads.find((one) => one.verso.kind === "intro" || one.recto.kind === "intro")!;
+  const placements = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll(".spread > .page .page__inner p")].map(
+        (node) => `${getComputedStyle(node).rotate}|${getComputedStyle(node).translate}`,
+      ),
+    );
+
+  await at(page, `#ch=${intro.chapter.slug}&p=${intro.at}`);
+  const hand = await placements();
+  expect(new Set(hand).size, "every paragraph sits the same way").toBeGreaterThan(1);
+
+  await page.locator(".type").getByRole("radio", { name: "Clear", exact: true }).check();
+  const clear = await placements();
+  expect(
+    clear.filter((one) => one !== "none|none"),
+    "the clear setting's paragraphs are not square",
+  ).toEqual([]);
+
+  for (const spread of spreads.filter((one) => one.verso.kind === "opener" || one.recto.kind === "opener")) {
+    await at(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+    const typeset = await page.evaluate(() =>
+      [...document.querySelectorAll(".spread > .page .page__inner *")]
+        .filter((node) => {
+          const style = getComputedStyle(node);
+          return style.textAlign === "justify" || style.hyphens === "auto";
+        })
+        .map((node) => node.className),
+    );
+    expect(typeset, "text justified or hyphenated by the browser").toEqual([]);
+  }
+});
+
 test("a chart says which line is which without colour", async ({ page }) => {
   await ready(page);
   // The other exclusion from the colour-vision floor, and the same deal: the scatter sits 16 from
@@ -1073,6 +1210,70 @@ test("changing the type changes the letterforms and nothing else", async ({
   );
 });
 
+test("a word on a page is written, and a figure is typed", async ({ page }) => {
+  /*
+    The owner read the audit, the method links, the registers and the refusal's label as the parts
+    of the book a hand had not written: every one was set in the typewriter face. They are words, and
+    ADR 0008 kept mono for digits that have to line up, which words never do -- so they are written
+    in the marker face the prose is in, and the figure beside them stays typed.
+
+    Each is read on the page that prints it.
+  */
+  const spreads = await layout();
+  const where = (match: (panel: Panel) => boolean) => {
+    const spread = spreads.find((one) => match(one.verso) || match(one.recto));
+    if (!spread) throw new Error("no page carries that panel");
+    return `#ch=${spread.chapter.slug}&p=${spread.at}`;
+  };
+  const token = (name: string) =>
+    page.evaluate(
+      (property) =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue(property)
+          .split(",")[0]!
+          .replaceAll('"', "")
+          .trim(),
+      name,
+    );
+  const faceOf = (selector: string) =>
+    page
+      .locator(`.spread > .page ${selector}`)
+      .first()
+      .evaluate((node) => getComputedStyle(node).fontFamily);
+
+  const words: [string, string, (panel: Panel) => boolean][] = [
+    ["the audit's heading", ".margin h3", (p) => p.kind === "bias"],
+    ["a bias domain", ".bias__domain", (p) => p.kind === "bias"],
+    ["a bias verdict", "[class*='bias__status--']", (p) => p.kind === "bias"],
+    ["the direction banner", ".claim__banner", (p) => p.kind === "finding"],
+    ["the register label", ".claim__register", (p) => p.kind === "record"],
+    ["the record's plan link", ".claim__method", (p) => p.kind === "record"],
+    ["the method page's plan link", ".how__method", (p) => p.kind === "how"],
+    ["a knob's setting", ".option", (p) => p.kind === "panel" && p.part === "knobs"],
+    ["the world's headings", ".explore h2", (p) => p.kind === "world"],
+    ["a layer's kind", ".layers em", (p) => p.kind === "world"],
+    ["the world's date", ".clockface", (p) => p.kind === "world"],
+  ];
+  let body = "";
+  let mono = "";
+  for (const [what, selector, match] of words) {
+    await at(page, where(match));
+    body ||= await token("--font-body");
+    mono ||= await token("--font-mono");
+    const face = await faceOf(selector);
+    expect(face, `${what} is not in the marker face`).toContain(body);
+    expect(face, `${what} is typed`).not.toContain(mono);
+  }
+
+  // The record's figure stands alone and is written (ADR 0008, 2026-10-07); a column of shares has
+  // to line up and stays typed.
+  const hand = await token("--font-hand");
+  await at(page, where((p) => p.kind === "record"));
+  expect(await faceOf(".claim__value"), "the record's figure is not written").toContain(hand);
+  await at(page, where((p) => p.kind === "figure" && p.key === "coverage-bias"));
+  expect(await faceOf(".coverage__legend em"), "a column of shares is not typed").toContain(mono);
+});
+
 test("a figure is never set in a face that cannot line one up", async ({
   page,
 }) => {
@@ -1126,7 +1327,17 @@ test("a figure is never set in a face that cannot line one up", async ({
     ),
   )!;
 
-  expect(await faceOf(".claim__value")).toContain(mono);
+  /*
+    Narrowed, on the owner's decision of 2026-10-07 recorded in ADR 0008: a figure on its own line --
+    the record's -- is written now, because nothing beside it has to line up. A figure in a column
+    of figures is what the rule exists for, and that is what this holds to the typed face.
+  */
+  expect(await faceOf(".claim__value"), "the record's figure is not written").toContain(hand);
+  const coverageAt = spreads.find((one) =>
+    [one.verso, one.recto].some((panel) => panel.kind === "figure" && panel.key === "coverage-bias"),
+  )!;
+  await at(page, `#ch=${coverageAt.chapter.slug}&p=${coverageAt.at}`);
+  expect(await faceOf(".coverage__legend em"), "a column of shares is not typed").toContain(mono);
 
   await at(page, `#ch=${findingAt.chapter.slug}&p=${findingAt.at}`);
   expect(

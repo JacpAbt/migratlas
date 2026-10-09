@@ -1,5 +1,6 @@
 <script lang="ts">
   import { legendRows, type DetectabilityDocument } from "../../layers/detectability";
+  import Boxed from "../notebook/Boxed.svelte";
 
   let {
     doc,
@@ -101,6 +102,7 @@
       <!-- The heading only where this rides under a claim. On its own page `book/figures.ts`
            carries the title, and printing it twice is what the first pass did. -->
       <section class="held" aria-labelledby={part === "all" ? "coverage-held" : undefined}>
+        <Boxed seed="coverage-held" tone="rust" />
         {#if part === "all"}
           <h4 id="coverage-held">Held, and never drawn</h4>
         {/if}
@@ -116,7 +118,7 @@
         {/if}
         <ul class="held__list">
           {#each withheld as source (source.source_id)}
-            <li>
+            <li class="hand-rule">
               <p class="held__who">
                 <em>{source.taxon}</em>
                 <span class="held__meta">
@@ -142,7 +144,7 @@
     <!-- With the summary rather than with the table: it qualifies what the percentage means, and the
          table is the working behind it. -->
     {#if part === "all" || part === "measured" || part === "summary"}
-      <p class="coverage__caveat">{doc.caveat}</p>
+      <p class="coverage__caveat hand-rule">{doc.caveat}</p>
     {/if}
   </section>
 {/if}
@@ -162,13 +164,13 @@
     line-height: 1.5;
   }
 
+  /* The same drawn rust edge the ledger gives a refusal, so a reader who has met one recognises
+     this: a scrap of darker paper laid on the page, turned a little, not a callout box. */
   .held {
+    position: relative;
+    rotate: 0.35deg;
     margin-top: var(--gap-wide);
     padding: var(--gap);
-    border: 1px solid var(--rule);
-    /* The same rust edge the ledger gives a refusal, so a reader who has met one recognises this. */
-    border-left: 3px solid var(--rust);
-    border-radius: var(--radius);
     background: var(--paper-sunken);
   }
 
@@ -193,7 +195,11 @@
   .held__list li + li {
     margin-top: var(--gap-tight);
     padding-top: var(--gap-tight);
-    border-top: 1px dotted var(--rule);
+  }
+
+  /* Between entries and not above the first, as the dotted border was. */
+  .held__list li:first-child::before {
+    content: none;
   }
 
   .held__who {
@@ -258,13 +264,19 @@
     flex: 1;
   }
 
-  .coverage__legend em,
-  .coverage__ceiling {
+  .coverage__legend em {
     font-family: var(--font-mono);
     font-style: normal;
     font-size: calc(var(--size-margin) * 1.06);
     color: var(--pencil);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* A verdict in words, not a figure: written, beside the counts that stay typed so they line up. */
+  .coverage__ceiling {
+    font-family: var(--font-body);
+    font-size: calc(var(--size-margin) * 1.06);
+    color: var(--pencil);
   }
 
   .coverage__sources {
@@ -277,7 +289,7 @@
 
   caption {
     margin-bottom: var(--gap-hair);
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: var(--size-label);
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -290,10 +302,23 @@
     /* In the page's own air rather than 2px: sixteen rows of fixed padding were the last 9px this
        page could not give back at 1024x768. 0.6 of the hairline gap is the same 2px at the
        reference window, and breathes with the page everywhere else. */
+    position: relative;
     padding: calc(var(--gap-hair) * 0.6) var(--gap-tight) calc(var(--gap-hair) * 0.6) 0;
-    border-bottom: 1px dotted var(--rule-faint);
     font-weight: 400;
     vertical-align: top;
+  }
+
+  /* Ruled by hand like the page's other lines, a cell at a time, so a row's line has its joins. */
+  th::after,
+  td::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 6px;
+    translate: 0 3px;
+    background: var(--rule-faint);
+    mask: var(--hand-line) 0 0 / 100% 100% no-repeat;
+    pointer-events: none;
   }
 
   thead th {
@@ -311,9 +336,9 @@
   }
 
   .coverage__caveat {
+    --hand-rule-ink: var(--rule);
     margin: var(--gap) 0 0;
     padding-top: var(--gap-tight);
-    border-top: 1px dotted var(--rule);
     font-size: calc(var(--size-margin) * 1.15);
     color: var(--pencil);
   }

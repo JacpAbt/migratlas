@@ -460,6 +460,11 @@
 
 <style>
   .chapter {
+    /* A label is written above its notes, not set on a baseline: a degree or two, each
+       kind its own, and only as wide as its words so the tilt costs the page little height. */
+    width: fit-content;
+    rotate: -1.8deg;
+    transform-origin: left center;
     margin: 0 0 var(--gap);
     font-size: var(--size-label);
     letter-spacing: var(--tracking-label);

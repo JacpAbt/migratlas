@@ -10,6 +10,7 @@
     type Years,
   } from "./headline";
   import { onTypeChange } from "../book/fit";
+  import { sketchBar, sketchLine } from "../notebook/ink";
 
   let { headline, drawn = true }: { headline: Headline; drawn?: boolean } = $props();
 
@@ -44,6 +45,13 @@
   $effect(() => {
     const drawing = svg;
     if (!drawing) return;
+    /*
+      And again whenever the names change, which is not the same as the drawing changing: a page
+      turned from one figure to another keeps this component and its <svg> and hands it a new chart.
+      Keyed on the drawing alone, the eighteen seas kept the width the histogram before them had
+      measured -- none -- and their names ran off the page until a face happened to land.
+    */
+    void strip?.bars.map((bar) => bar.label);
     const measure = () => {
       const names = [...drawing.querySelectorAll<SVGTextElement>(".headline__row")];
       nameWidth = Math.max(0, ...names.map((name) => name.getComputedTextLength()));
@@ -153,13 +161,9 @@
     {#if years && yearScale}
       {@const scale = yearScale}
       {#each ticks(scale.low, scale.high) as value (value)}
-        <line
-          class="headline__grid"
-          x1={pad.left}
-          x2={pad.left + plotWidth}
-          y1={scale.yOf(value)}
-          y2={scale.yOf(value)}
-        />
+        {#each sketchLine(`${headline.key}-grid-${value}`, pad.left, scale.yOf(value), pad.left + plotWidth, scale.yOf(value), 0.45) as d}
+          <path class="headline__grid" {d} />
+        {/each}
         <text class="headline__tick" x={pad.left - 8} y={scale.yOf(value) + 4} text-anchor="end">
           {tickLabel(value, years.unit, scale.high - scale.low)}
         </text>
@@ -184,14 +188,9 @@
           </circle>
         {/each}
         {#if series.trend}
-          <line
-            class="headline__trend headline__trend--{index}"
-            style="--order: {index}"
-            x1={scale.xOf(scale.first)}
-            x2={scale.xOf(scale.last)}
-            y1={scale.yOf(series.trend.start)}
-            y2={scale.yOf(series.trend.end)}
-          />
+          {#each sketchLine(`${headline.key}-trend-${series.key}`, scale.xOf(scale.first), scale.yOf(series.trend.start), scale.xOf(scale.last), scale.yOf(series.trend.end), 0.55) as d}
+            <path class="headline__trend headline__trend--{index}" style="--order: {index}" {d} />
+          {/each}
           <text
             class="headline__label headline__label--{index}"
             x={pad.left + plotWidth + 8}
@@ -205,23 +204,24 @@
     {:else if pile && pileScale}
       {@const scale = pileScale}
       {#each pile.bins as bin (bin.low)}
-        <rect
-          class="headline__bar"
-          x={scale.xOf(bin.low) + 0.5}
-          y={PAD.top + plotHeight - scale.hOf(bin.count)}
-          width={Math.max(scale.xOf(bin.high) - scale.xOf(bin.low) - 1, 1)}
-          height={scale.hOf(bin.count)}
-        >
-          <title>{bin.count} between {tickLabel(bin.low, pile.unit, scale.high - scale.low)} and {tickLabel(bin.high, pile.unit, scale.high - scale.low)}</title>
-        </rect>
+        {#if bin.count > 0}
+          {@const bar = sketchBar(
+            `${headline.key}-bin-${bin.low}`,
+            scale.xOf(bin.low) + 0.5,
+            PAD.top + plotHeight - scale.hOf(bin.count),
+            Math.max(scale.xOf(bin.high) - scale.xOf(bin.low) - 1, 1),
+            scale.hOf(bin.count),
+          )}
+          <g class="headline__bar">
+            <title>{bin.count} between {tickLabel(bin.low, pile.unit, scale.high - scale.low)} and {tickLabel(bin.high, pile.unit, scale.high - scale.low)}</title>
+            {#each bar.hatch as d}<path class="headline__hatch" {d} />{/each}
+            {#each bar.edge as d}<path class="headline__edge" {d} />{/each}
+          </g>
+        {/if}
       {/each}
-      <line
-        class="headline__base"
-        x1={pad.left}
-        x2={pad.left + plotWidth}
-        y1={PAD.top + plotHeight}
-        y2={PAD.top + plotHeight}
-      />
+      {#each sketchLine(`${headline.key}-base`, pad.left, PAD.top + plotHeight, pad.left + plotWidth, PAD.top + plotHeight, 0.55) as d}
+        <path class="headline__base" {d} />
+      {/each}
       {#each ticks(scale.low, scale.high) as value, index (value)}
         <text
           class="headline__tick"
@@ -234,13 +234,9 @@
       {/each}
       {#each pile.marks as mark, index (mark.label)}
         {#if mark.value >= scale.low && mark.value <= scale.high}
-          <line
-            class="headline__mark headline__mark--{index}"
-            x1={scale.xOf(mark.value)}
-            x2={scale.xOf(mark.value)}
-            y1={PAD.top}
-            y2={PAD.top + plotHeight}
-          />
+          {#each sketchLine(`${headline.key}-mark-${mark.label}`, scale.xOf(mark.value), PAD.top, scale.xOf(mark.value), PAD.top + plotHeight, 0.5, true) as d}
+            <path class="headline__mark headline__mark--{index}" {d} />
+          {/each}
           <text
             class="headline__label headline__label--{index}"
             x={scale.xOf(mark.value) + 5}
@@ -256,13 +252,9 @@
     {:else if strip && stripScale}
       {@const scale = stripScale}
       {#each strip.marks as mark, index (mark.label)}
-        <line
-          class="headline__mark headline__mark--{index}"
-          x1={scale.xOf(mark.value)}
-          x2={scale.xOf(mark.value)}
-          y1={PAD.top}
-          y2={PAD.top + plotHeight}
-        />
+        {#each sketchLine(`${headline.key}-mark-${mark.label}`, scale.xOf(mark.value), PAD.top, scale.xOf(mark.value), PAD.top + plotHeight, 0.5, true) as d}
+          <path class="headline__mark headline__mark--{index}" {d} />
+        {/each}
         <text class="headline__label" x={scale.xOf(mark.value) + 5} y={PAD.top - 5}>
           {mark.label}
         </text>
@@ -277,21 +269,13 @@
           {bar.label}
         </text>
         {#if bar.low !== null && bar.high !== null}
-          <line
-            class="headline__interval"
-            x1={scale.xOf(bar.low)}
-            x2={scale.xOf(bar.high)}
-            y1={scale.yOf(index)}
-            y2={scale.yOf(index)}
-          />
+          {#each sketchLine(`${headline.key}-interval-${bar.label}`, scale.xOf(bar.low), scale.yOf(index), scale.xOf(bar.high), scale.yOf(index), 0.6, true) as d}
+            <path class="headline__interval" {d} />
+          {/each}
         {/if}
-        <line
-          class="headline__stem"
-          x1={scale.xOf(0)}
-          x2={scale.xOf(bar.value)}
-          y1={scale.yOf(index)}
-          y2={scale.yOf(index)}
-        />
+        {#each sketchLine(`${headline.key}-stem-${bar.label}`, scale.xOf(0), scale.yOf(index), scale.xOf(bar.value), scale.yOf(index), 0.6) as d}
+          <path class="headline__stem" {d} />
+        {/each}
         <circle class="headline__point headline__point--0" cx={scale.xOf(bar.value)} cy={scale.yOf(index)} r="3.2">
           <title>{bar.label}: {tickLabel(bar.value, strip.unit, scale.high - scale.low)}</title>
         </circle>
@@ -354,6 +338,13 @@
     rotate: -0.6deg;
   }
 
+  /* Every mark the chart draws is a stroke: rough.js hands back outlines, never filled shapes. */
+  .headline__svg path {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
   .headline__grid,
   .headline__base {
     stroke: var(--rule);
@@ -390,9 +381,20 @@
     fill: var(--line-counterfactual);
   }
 
-  .headline__bar {
-    fill: var(--line-scatter);
-    opacity: 0.75;
+  /*
+    A bar is drawn the way a hand fills one: hatched, inside a drawn edge. It was a flat rectangle at
+    three-quarters opacity -- the one shape on the page that looked printed, which is what the owner
+    named first.
+  */
+  .headline__hatch {
+    stroke: var(--line-scatter);
+    stroke-width: 0.9;
+    opacity: 0.8;
+  }
+
+  .headline__edge {
+    stroke: var(--line-scatter);
+    stroke-width: 1.2;
   }
 
   .headline__trend {

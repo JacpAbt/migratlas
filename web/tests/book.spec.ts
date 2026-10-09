@@ -1406,23 +1406,37 @@ for (const type of ["hand", "dyslexic"] as const) {
     */
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.addInitScript((choice) => localStorage.setItem("migratlas:type", choice), type);
-    const strips = (
-      JSON.parse(readFileSync("public/headline.json", "utf8")).headlines as {
-        key: string;
-        chart: { kind: string };
-      }[]
-    )
-      .filter((headline) => headline.chart.kind === "strip")
-      .map((headline) => headline.key);
+    const headlines = JSON.parse(readFileSync("public/headline.json", "utf8")).headlines as {
+      key: string;
+      chart: { kind: string };
+    }[];
+    const strips = headlines.filter((one) => one.chart.kind === "strip").map((one) => one.key);
+    const others = headlines.filter((one) => one.chart.kind !== "strip").map((one) => one.key);
     expect(strips.length, "no strip chart to hold").toBeGreaterThan(0);
     const spreads = await layout("", type === "dyslexic");
+    const sideOf = (key: string) => {
+      for (const one of spreads)
+        for (const side of ["verso", "recto"] as const) {
+          const panel = one[side];
+          if (panel.kind === "figure" && panel.key === key) return { one, side };
+        }
+      return null;
+    };
 
     for (const key of strips) {
-      const at = spreads.find((one) =>
-        [one.verso, one.recto].some((panel) => panel.kind === "figure" && panel.key === key),
-      );
+      const at = sideOf(key);
       if (!at) throw new Error(`${key} has no figure page`);
-      await openBook(page, `#ch=${at.chapter.slug}&p=${at.at}`);
+      /*
+        Arrived at from another chart on the same side of the spread, the way a reader turning pages
+        arrives: the page keeps its chart component and hands it the strip. Opened cold, as this test
+        first did, the strip measured itself fresh and passed while the turn left its names cut.
+      */
+      const before = spreads
+        .flatMap((one) => (["verso", "recto"] as const).map((side) => ({ one, side, panel: one[side] })))
+        .find((slot) => slot.side === at.side && slot.panel.kind === "figure" && others.includes(slot.panel.key));
+      if (before) await openBook(page, `#ch=${before.one.chapter.slug}&p=${before.one.at}`);
+      await expect(page.locator(".spread > .page .headline__svg").first()).toBeVisible();
+      await openBook(page, `#ch=${at.one.chapter.slug}&p=${at.one.at}`);
       await expect
         .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
         .toBe("loaded");
@@ -1622,6 +1636,162 @@ test("the paper darkens into the binding without a step", async ({ page }) => {
       ).toBeLessThan(13);
     }
   }
+});
+
+test("a turn started during a turn is drawn too", async ({ page }) => {
+  /*
+    The owner pressed the arrow several times and saw the pages jump with no turn. The leaf is made
+    when a turn starts and its animation runs once, when it is made; a second turn arriving while
+    the first was in flight put new pages on the same, already finished, sheet.
+
+    So the arrow is pressed twice, a third of a turn apart, and the second has to be a new sheet
+    whose animation is at its start rather than at the first one's end.
+  */
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBook(page, "#ch=how-to-read&p=0");
+  await page.locator("body").press("ArrowRight");
+  await expect(page.locator(".leaf")).toHaveCount(1);
+  await page.evaluate(() => {
+    (window as unknown as { first: Element | null }).first = document.querySelector(".leaf");
+  });
+  await page.waitForTimeout(300);
+  await page.locator("body").press("ArrowRight");
+
+  const second = await page.evaluate(() => {
+    const leaf = document.querySelector(".leaf");
+    const animation = leaf?.getAnimations()[0];
+    return {
+      fresh: leaf !== null && leaf !== (window as unknown as { first: Element | null }).first,
+      at: Number(animation?.currentTime ?? Number.NaN),
+    };
+  });
+  expect(second.fresh, "the second turn reused the first turn's sheet").toBe(true);
+  expect(second.at, "the second turn's sheet is not at the start of its turn").toBeLessThan(250);
+});
+
+test("a page re-fitted in mid-turn lands in the hand of the page it stands for", async ({
+  page,
+}) => {
+  /*
+    The owner saw the text move as a turned page landed. Walking the book at 1280x720, three turns
+    of about fifty ended with the copy a step larger than the real page beneath it -- 1.00 against
+    0.98, 0.98 against 0.96 -- so the type shrank by a step at the swap. Each was a headline page,
+    where something re-fits the pages while the sheet is in the air; the copy then measured itself
+    foreshortened.
+
+    So the sheet is stood exactly edge-on, where nothing on it has any width and a copy measuring
+    itself finds an empty page and grows to the largest hand there is; the re-fit is forced there --
+    a change of the type attribute re-fits every page -- and the landed copy must be in the real
+    page's hand. The eighteen-sea chart's page, which at this size is written below the largest hand
+    -- 0.96 when this was found -- so an empty-page answer cannot match it by coincidence.
+  */
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const spreads = await layout();
+  const before = spreads.findIndex((_, at) => {
+    const next = spreads[at + 1]?.verso;
+    return next?.kind === "figure" && next.key === "seas-disagree";
+  });
+  expect(before, "the eighteen-sea chart is not on a left-hand page").toBeGreaterThanOrEqual(0);
+  const spread = spreads[before]!;
+  await openBook(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+  await expect
+    .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+    .toBe("loaded");
+  await page.locator('.spread > .page--recto [data-turn="on"]').click();
+
+  const landed = await page.evaluate(async () => {
+    const leaf = document.querySelector(".leaf");
+    if (!leaf) return null;
+    for (const animation of leaf.getAnimations()) animation.cancel();
+    const sheet = leaf as HTMLElement;
+    sheet.style.transform = "rotateY(-90deg)";
+    const root = document.documentElement;
+    root.setAttribute("data-type", root.getAttribute("data-type") ?? "hand");
+    await new Promise((settle) => setTimeout(settle, 50));
+    sheet.style.transform = "rotateY(-180deg)";
+    const fitOf = (sheet: Element) =>
+      (sheet.querySelector(".page__inner") as HTMLElement).style.getPropertyValue("--fit-type");
+    return {
+      copy: fitOf(leaf.querySelector(".leaf__back .page")!),
+      real: fitOf(document.querySelector(".spread > .page--verso")!),
+    };
+  });
+
+  expect(landed, "no leaf was turning").not.toBeNull();
+  // The premise: below the largest hand, or this proves nothing.
+  expect(Number(landed!.real), "the real page is already in the largest hand").toBeLessThan(1.16);
+  expect(landed!.copy, "the landed copy's hand").toBe(landed!.real);
+});
+
+test("a margin note gives way where a page has no room for it, and only there", async ({
+  page,
+}) => {
+  /*
+    The record pages carry their plain caveat in the margin, and on the four longest that was more
+    than a 1024x768 leaf holds at the smallest hand. The note repeats the finding page's sentence,
+    so the page sets it down there -- and nowhere a page has room. So: at the reference window no
+    record page drops its note; at the narrowest spread every record page fits, whether or not it
+    had to.
+  */
+  const spreads = await layout();
+  const records = spreads.filter((one) => [one.verso, one.recto].some((p) => p.kind === "record"));
+  const walk = async () => {
+    const out: { crowded: boolean; over: number }[] = [];
+    for (const spread of records) {
+      await openBook(page, `#ch=${spread.chapter.slug}&p=${spread.at}`);
+      await expect
+        .poll(() => page.evaluate(() => document.fonts.status), { timeout: 20_000 })
+        .toBe("loaded");
+      out.push(
+        await page.evaluate(() => {
+          const inner = [...document.querySelectorAll(".spread > .page .page__inner")].find(
+            (one) => one.querySelector(".claim__value"),
+          ) as HTMLElement;
+          return {
+            crowded: inner.hasAttribute("data-crowded"),
+            over: inner.scrollHeight - inner.clientHeight,
+          };
+        }),
+      );
+    }
+    return out;
+  };
+
+  await page.setViewportSize({ width: 1600, height: 900 });
+  expect((await walk()).filter((one) => one.crowded), "a roomy page dropped its note").toEqual([]);
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const narrow = await walk();
+  expect(narrow.filter((one) => one.over > 2), "a record page still overflows").toEqual([]);
+});
+
+test("the candle on the table is out by day and lit by a match at night, and the table takes no clicks", async ({
+  page,
+}) => {
+  /*
+    The owner asked for the book to lie on a real table, with a candle a match lights when the
+    surface turns to night. The table is a scene drawn under the page; it reports the candle's state
+    on its canvas, so this reads it: out by day, lighting while the match works, lit after. And the
+    canvas may not catch a click meant for the book.
+
+    `?desk=3d`, because the runner draws WebGL in software, where the page shows painted wood
+    instead; and the narrowest spread, because every frame here is drawn by the processor.
+  */
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.addInitScript(() => localStorage.setItem("migratlas:surface", "day"));
+  await page.goto("?desk=3d#ch=how-to-read&p=0");
+  await expect(page.locator(".book")).toBeVisible();
+  const table = page.locator("canvas.desk-scene");
+  await expect(table, "the table was never drawn").toHaveAttribute("data-candle", "out", {
+    timeout: 20_000,
+  });
+
+  await page.locator(".surface").getByRole("radio", { name: "Night", exact: true }).check();
+  await expect(table).toHaveAttribute("data-candle", "lighting");
+  await expect(table, "the match never lit the candle").toHaveAttribute("data-candle", "lit", {
+    timeout: 30_000,
+  });
+  expect(await table.evaluate((node) => getComputedStyle(node).pointerEvents)).toBe("none");
 });
 
 test("a monitor gets the spread and only the spread", async ({ page }) => {

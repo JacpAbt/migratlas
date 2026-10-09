@@ -183,7 +183,7 @@
     {/each}
   </dl>
 
-  <p class="chart__aside chart__aside--caveat">{ribbon.caveat}</p>
+  <p class="chart__aside chart__aside--caveat hand-rule">{ribbon.caveat}</p>
 </figure>
 
 <style>
@@ -339,7 +339,7 @@
 
   .chart__aside--caveat {
     padding-top: var(--gap-tight);
-    border-top: 1px dotted var(--rule);
+    --hand-rule-ink: var(--rule);
   }
 
   .chart__notes {
