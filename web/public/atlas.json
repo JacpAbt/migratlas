@@ -146,6 +146,7 @@
       "key": [],
       "lead": "Each dot is a one-degree cell where tracked animals were.",
       "name": "marine-space-use",
+      "plate": null,
       "title": "Where tracked sea animals went",
       "unit": "tracked animals"
     },
@@ -157,12 +158,13 @@
       "key": [],
       "lead": "Each dot is a one-degree cell, larger where more kinds of moving sea animal have at least one record.",
       "name": "marine-taxa-recorded",
+      "plate": null,
       "title": "How many kinds of sea animal have been recorded",
       "unit": "kinds recorded"
     },
     {
       "button": "southern Africa's two atlases",
-      "caption": "The larger the mark, the larger the change. Drawn enlarged in the box, because the whole region is a few pixels wide on the world. A before and an after, not a trend, and a hole is a place nobody atlassed twice.",
+      "caption": "The larger the mark, the larger the change. A before and an after, not a trend, and a hole is a place nobody atlassed twice.",
       "credit": "Data: Southern African Bird Atlas Project (SABAP1) \u2014 atlas cards, 1987\u20131991 (CC BY 4.0). Published at source resolution.",
       "data": "layers/atlas-taxa-change.grid.json",
       "key": [
@@ -177,6 +179,21 @@
       ],
       "lead": "A solid dot is a quarter-degree cell where the second atlas recorded more kinds than the first, a ring one where it recorded fewer.",
       "name": "atlas-taxa-change",
+      "plate": {
+        "centre": [
+          25.2,
+          -28.4
+        ],
+        "credit": "Map: Natural Earth \u2014 1:10m land, coastline and rivers (Public domain).",
+        "frame": [
+          16.5,
+          34.0,
+          -35.4,
+          -21.4
+        ],
+        "map": "basemap/plates/southern-africa.geojson",
+        "name": "southern-africa"
+      },
       "title": "Southern Africa's two atlases: more kinds recorded, or fewer",
       "unit": ""
     },
@@ -205,6 +222,7 @@
       ],
       "lead": "Inked where some source has a long enough series with its effort measured, pencilled where something stops it.",
       "name": "detectability",
+      "plate": null,
       "title": "Where a change could be measured at all",
       "unit": ""
     }

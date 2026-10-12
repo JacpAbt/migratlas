@@ -129,3 +129,17 @@ prose is authored in Python.
 
 - **What does not move:** still maps in the atlas, not dropped and not deferred.
 - **The green wave:** on the world view, under the rest, with no plate of its own.
+
+## Amended 2026-10-12: a regional still map has a plate
+
+Decision 7 put every still map on the world view, and southern Africa's two atlases do not fit it.
+Their 496 quarter-degree cells span about 60 by 45 pixels of the spread's world map, and the one
+empty ocean beside them takes an inset of about three times, where a cell is three pixels, a ring
+cannot be told from a dot, and the coast is the 1:110m outline decision 8 refused at a plate's
+scale. So a still map whose data cover one region is drawn on a plate of its own, named for the
+place as the others are -- southern Africa, on Natural Earth 1:10m -- and choosing it moves the
+camera there as choosing a system does. The two marine grids and the detectability map cover the
+world and stay on it.
+
+Kill condition: the plate's map passes `MAX_BYTES`, or a ring cannot be told from a dot at the
+phone's size -- then it goes back to the world view, as an inset.

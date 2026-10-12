@@ -32,7 +32,8 @@ def _from_the_root(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_every_plate_has_words_and_a_published_layer() -> None:
     document = atlas.build()
     named = [plate["name"] for plate in document["plates"]]
-    assert named == [plate.name for plate in PLATES]
+    for_stills = {still["plate"]["name"] for still in document["stills"] if still["plate"]}
+    assert named == [plate.name for plate in PLATES if plate.name not in for_stills]
     layers = {layer["name"] for layer in json.loads(MANIFEST.read_text(encoding="utf-8"))}
     for plate in document["plates"]:
         assert plate["layer"] in layers, plate["name"]
@@ -109,6 +110,15 @@ def test_a_still_map_states_the_terms_it_was_published_under() -> None:
             continue
         assert manifest[still["name"]]["licence"] in still["credit"], still["name"]
         assert str(_meta(still["name"])["dwc:dataGeneralizations"]) in still["credit"]
+
+
+def test_every_plate_map_is_drawn_by_exactly_one_plate_or_still_map() -> None:
+    document = atlas.build()
+    drawn = [plate["map"] for plate in document["plates"]]
+    drawn += [still["plate"]["map"] for still in document["stills"] if still["plate"]]
+    assert sorted(drawn) == sorted(f"basemap/plates/{plate.name}.geojson" for plate in PLATES)
+    for path in drawn:
+        assert (ROOT / "web" / "public" / path).exists(), path
 
 
 def test_the_committed_document_is_current() -> None:

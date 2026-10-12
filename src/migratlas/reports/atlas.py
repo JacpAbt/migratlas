@@ -169,6 +169,8 @@ class StillWords:
     """What a dot counts, beside the key's sample dots. Empty where the key is categories."""
     key: tuple[tuple[str, str], ...]
     """Each kind of mark and what it means, in the order the key lists them."""
+    plate: str = ""
+    """The plate it is drawn on, for a map of one region; empty for the world view."""
 
 
 DETECTABILITY: Final = "detectability"
@@ -226,12 +228,12 @@ def stills() -> list[StillWords]:
                 "than the first, a ring one where it recorded fewer."
             ),
             caption=(
-                "The larger the mark, the larger the change. Drawn enlarged in the box, because "
-                "the whole region is a few pixels wide on the world. A before and an after, not a "
-                "trend, and a hole is a place nobody atlassed twice."
+                "The larger the mark, the larger the change. A before and an after, not a trend, "
+                "and a hole is a place nobody atlassed twice."
             ),
             unit="",
             key=(("gain", "more kinds recorded"), ("loss", "fewer kinds recorded")),
+            plate="southern-africa",
         ),
         StillWords(
             name=DETECTABILITY,
@@ -263,9 +265,19 @@ def terms(layer: str) -> str:
     return f"Data: {source.title} ({source.licence}). {meta['dwc:dataGeneralizations']}"
 
 
+def _plate(name: str) -> dict[str, Any]:
+    """Where a plate's camera looks and whose map it is drawn on."""
+    plate = next(plate for plate in PLATES if plate.name == name)
+    return {
+        "frame": list(plate.frame),
+        "centre": list(plate.centre),
+        "map": f"basemap/plates/{name}.geojson",
+        "credit": credit(sorted({plate.land, *filter(None, [plate.rivers])})),
+    }
+
+
 def build() -> dict[str, Any]:
-    """The whole document, in the shape `web/src/lib/atlas/words.ts` reads."""
-    by_name = {plate.name: plate for plate in PLATES}
+    """The whole document, in the shape `web/src/lib/atlas/data.ts` reads."""
     return {
         "schema_version": SCHEMA_VERSION,
         "world": {
@@ -292,17 +304,7 @@ def build() -> dict[str, Any]:
                 "lead": words.lead,
                 "caption": words.caption,
                 "clock": words.clock,
-                "frame": list(by_name[words.name].frame),
-                "centre": list(by_name[words.name].centre),
-                "map": f"basemap/plates/{words.name}.geojson",
-                "credit": credit(
-                    sorted(
-                        {
-                            by_name[words.name].land,
-                            *filter(None, [by_name[words.name].rivers]),
-                        }
-                    )
-                ),
+                **_plate(words.name),
             }
             for words in plates()
         ],
@@ -323,6 +325,7 @@ def build() -> dict[str, Any]:
                 "credit": DETECTABILITY_CREDIT
                 if words.name == DETECTABILITY
                 else terms(words.name),
+                "plate": {"name": words.plate, **_plate(words.plate)} if words.plate else None,
             }
             for words in stills()
         ],

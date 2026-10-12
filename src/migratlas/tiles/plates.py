@@ -5,7 +5,8 @@ where the bundled 1:110m outline is a few straight lines (ADR 0005's 2026-10-12 
 plate here names a place, the box its camera frames, and where its map comes from: Natural Earth
 1:10m for the continent and for Bylot, the Norwegian Polar Institute's surveyed coast for Svalbard,
 and Canada's National Hydro Network for the Ya Ha Tinda, whose rivers Natural Earth either lacks or
-names by their system.
+names by their system. Southern Africa is the one plate for a still map rather than a moving system
+(the ADR's 2026-10-12 amendment): its atlas cells are a few pixels wide on the world view.
 
 What is written is cut to what the camera can see on the spread -- the frame fitted into its widest
 and a squarer sheet, unprojected -- and thinned to about a pixel at that size; a phone's tall sheet
@@ -128,6 +129,13 @@ PLATES: Final[tuple[Plate, ...]] = (
         centre=(-115.75, 51.64),
         land=NATURAL_EARTH,
         rivers=HYDRO_NETWORK,
+    ),
+    Plate(
+        name="southern-africa",
+        frame=Box(16.5, 34.0, -35.4, -21.4),
+        centre=(25.2, -28.4),
+        land=NATURAL_EARTH,
+        rivers=NATURAL_EARTH,
     ),
 )
 
