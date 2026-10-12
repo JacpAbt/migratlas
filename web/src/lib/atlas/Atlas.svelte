@@ -112,6 +112,17 @@
       };
       fit();
       made.start();
+      /*
+        The still, from the first frames and not only on leaving. Arriving is a turn too, and the
+        incoming page on its leaf showed paper over the atlas's half until this atlas had once been
+        left -- the first visit always. Two frames, so the map and the first marks are on the sheets.
+        Measured at 12 ms at 1x and 40 ms at 2x, once, while the turn runs on the compositor.
+      */
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (!gone && made) pocket.still = made.picture();
+        }),
+      );
       if (new URLSearchParams(location.search).has("debug")) {
         (window as unknown as { migratlas: Record<string, unknown> }).migratlas = {
           ...((window as unknown as { migratlas?: Record<string, unknown> }).migratlas ?? {}),

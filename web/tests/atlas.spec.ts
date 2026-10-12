@@ -222,6 +222,36 @@ test("the atlas takes no pointer meant for the page, and a turning page carries 
   expect(await still.getAttribute("src")).toMatch(/^data:image\/png/);
 });
 
+test("turning onto the atlas for the first time, the incoming page carries it", async ({ page }) => {
+  // The defect this pins: the still was only taken as the atlas was left, so on a first visit the
+  // incoming page on the leaf was blank paper over the atlas's half for the length of the turn.
+  await ready(page);
+  await page.locator('.spread > .page--verso [data-turn="back"]').click();
+  await expect(page.locator(".leaf")).toHaveCount(0);
+  const before = await page.evaluate(() => location.hash);
+
+  // A fresh document on the spread before, so nothing is left of the atlas from this one.
+  await page.goto("about:blank");
+  await page.goto(`?debug=1${before}`);
+  await expect(page.locator(".atlas")).toHaveCount(0);
+
+  // The leaf lives for one turn, about a second: watched rather than polled.
+  await page.evaluate(() => {
+    const seen = { still: false };
+    (window as unknown as { seen: typeof seen }).seen = seen;
+    new MutationObserver(() => {
+      const img = document.querySelector<HTMLImageElement>(".leaf .leaf__back .world__still");
+      if (img?.src.startsWith("data:image/png")) seen.still = true;
+    }).observe(document.body, { subtree: true, childList: true, attributes: true });
+  });
+  await page.locator('.spread > .page--recto [data-turn="on"]').click();
+  await expect(page.locator(".leaf")).toHaveCount(0);
+  expect(
+    await page.evaluate(() => (window as unknown as { seen: { still: boolean } }).seen.still),
+    "the incoming page turned blank over the atlas",
+  ).toBe(true);
+});
+
 test("the atlas follows the paper it is read on", async ({ page }) => {
   await ready(page);
   /** The mean brightness of the world map's ink: dark on day paper, light on night paper. */
