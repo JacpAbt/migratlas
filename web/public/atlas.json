@@ -136,6 +136,17 @@
     }
   },
   "schema_version": 1,
+  "search": {
+    "animals": "animals, by Latin or English name",
+    "away": "put it away",
+    "cells": "cells",
+    "drawn": "drawn from",
+    "label": "find an animal",
+    "missing": "This source's map of it was not published, so nothing is drawn.",
+    "nowhere": "Measured here, and drawn nowhere: what is known about it is below.",
+    "study": "studied, not drawn",
+    "unread": "The list of animals could not be read."
+  },
   "stills": [
     {
       "button": "where tracked sea animals went",

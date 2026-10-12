@@ -329,6 +329,19 @@ def build() -> dict[str, Any]:
             }
             for words in stills()
         ],
+        # The search across every animal with a map or a study (ADR 0021 decision 7). Its count of
+        # animals is the index's, so it is a fragment the atlas puts a number before.
+        "search": {
+            "label": "find an animal",
+            "animals": "animals, by Latin or English name",
+            "cells": "cells",
+            "study": "studied, not drawn",
+            "drawn": "drawn from",
+            "nowhere": "Measured here, and drawn nowhere: what is known about it is below.",
+            "away": "put it away",
+            "missing": "This source's map of it was not published, so nothing is drawn.",
+            "unread": "The list of animals could not be read.",
+        },
         # Fragments the atlas puts its numbers between, rather than templates: a brace in shipped
         # prose is the bug `tests/test_published_prose.py` exists for, and it does not ask why.
         "readout": {

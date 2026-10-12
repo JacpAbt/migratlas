@@ -121,6 +121,11 @@ def test_every_plate_map_is_drawn_by_exactly_one_plate_or_still_map() -> None:
         assert (ROOT / "web" / "public" / path).exists(), path
 
 
+def test_the_search_types_no_count() -> None:
+    for name, words in atlas.build()["search"].items():
+        assert not re.search(r"\d", words), f"search {name} types a number"
+
+
 def test_the_committed_document_is_current() -> None:
     committed = json.loads((ROOT / atlas.DOCUMENT).read_text(encoding="utf-8"))
     assert committed == json.loads(json.dumps(atlas.build()))
