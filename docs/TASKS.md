@@ -80,7 +80,10 @@ judged in the browser led to [ADR 0021](adr/0021-the-globe-becomes-a-moving-atla
 equal-area atlas that opens on the whole world moving — the radar's night as pen strokes, the foxes
 drawn a day at a time, the herds as moving ranges with pen flicks, the ice and the green wave — and flies
 into a regional plate for each system, the still layers and the search kept as still maps. Eight steps on
-the `atlas` branch, one change at a time; the build replaces the globe and MapLibre leaves with it.
+the `atlas` branch, one change at a time; the build replaces the globe and MapLibre leaves with it. Steps
+1–6 have landed, step 6 with a dated amendment (southern Africa's two atlases have a plate of their own,
+their cells being a few pixels on the world). Next: step 7, the green wave on the world view, then step 8,
+MapLibre and the old globe removed.
 
 ## Queued, with a reason to wait
 

@@ -141,6 +141,22 @@ async function figurePage(page: Page, key: string): Promise<void> {
 }
 
 /** One claim's record page, where the number and the specimen invitation are. */
+test("a claim's specimen button opens the animal that carries its argument, in the atlas", async ({
+  page,
+}) => {
+  // The road was built in the old shell, died silently when the book became the front door, was
+  // rebuilt for the globe, and is rebuilt here for the atlas (ADR 0021 step 6).
+  await recordPage(page, "marine-null");
+  // Computed in the reports layer, so the button names whichever species most decisively went both
+  // ways in the current lake rather than one someone typed.
+  const invitation = page.locator(".claim__specimen");
+  await expect(invitation).toBeVisible();
+  await invitation.click();
+  // Thirty seconds: the turn, the atlas's data, the list of animals and the study page, in turn.
+  await expect(page.locator(".atlas .study")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".atlas .study")).toContainText("north");
+});
+
 async function recordPage(page: Page, key: string): Promise<void> {
   await open(
     page,

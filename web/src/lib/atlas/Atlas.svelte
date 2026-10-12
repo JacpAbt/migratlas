@@ -58,6 +58,9 @@
   let card = $state<SpeciesCard | null>(null);
   let animalProblem = $state("");
   let taxa = $state<TaxonIndex | null>(null);
+  let finder = $state<Find | null>(null);
+  /** Whether the stage is made: `stage` itself is not reactive, and the specimen road waits on it. */
+  let staged = $state(false);
   /** The terms of the layer a chosen animal's map is cut from: one of the still maps'. */
   const animalTerms = $derived(animal ? (words?.stills.find((s) => s.name === animal?.layer)?.credit ?? "") : "");
   let paused = $state(false);
@@ -118,6 +121,7 @@
         },
       );
       stage = made;
+      staged = true;
       const fit = (): void => {
         const r = root.getBoundingClientRect();
         size = { w: r.width, h: r.height };
@@ -167,6 +171,7 @@
       if (made) pocket.still = made.picture();
       made?.dispose();
       stage = null;
+      staged = false;
     };
   });
 
@@ -223,6 +228,22 @@
     const found = await studies.get(hit.key);
     if (animal === hit) card = found;
   }
+
+  /*
+    The road from a claim to the animal that carries its argument (`Reader`'s `toSpecimen`): the key
+    is resolved through the same list a reader's typing searches and chosen the way a reader chooses,
+    so the road and the box cannot disagree. Consumed once, and a key the list does not hold is
+    dropped rather than retried: the claim that sent it names an animal the same build published.
+  */
+  $effect(() => {
+    const key = pocket.preselect;
+    if (key === null || !staged || !finder) return;
+    pocket.preselect = null;
+    void finder.load().then((index) => {
+      const hit = index?.byKey(key);
+      if (hit) void chooseAnimal(hit);
+    });
+  });
 
   function putAway(): void {
     forget();
@@ -460,7 +481,13 @@
             </button>
           {/each}
         </div>
-        <Find {base} said={words.search} onchoose={(hit) => void chooseAnimal(hit)} bind:index={taxa} />
+        <Find
+          bind:this={finder}
+          {base}
+          said={words.search}
+          onchoose={(hit) => void chooseAnimal(hit)}
+          bind:index={taxa}
+        />
         <div class="row">
           <button type="button" onclick={toggle}>{paused ? words.controls.play : words.controls.pause}</button>
           <span aria-hidden="true">·</span>

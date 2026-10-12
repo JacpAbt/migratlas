@@ -22,16 +22,16 @@
 
   let query = $state("");
   let problem = $state("");
-  let loading: Promise<void> | null = null;
+  let loading: Promise<TaxonIndex | null> | null = null;
 
-  export function load(): Promise<void> {
+  /** The list of animals, fetched once; null if it could not be read, which the box then says. */
+  export function load(): Promise<TaxonIndex | null> {
     loading ??= TaxonIndex.load(`${base}taxon-index.json`)
-      .then((loaded) => {
-        index = loaded;
-      })
+      .then((loaded) => (index = loaded))
       .catch(() => {
         problem = said.unread;
         loading = null;
+        return null;
       });
     return loading;
   }
