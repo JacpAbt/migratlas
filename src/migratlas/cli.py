@@ -713,6 +713,20 @@ def build_layers(
     print(f"search index -> {index} ({size / 1024:.0f} KiB)")
 
 
+@app.command("build-atlas")
+def build_atlas() -> None:
+    """Publish the atlas's words -> web/public/atlas.json.
+
+    Titles, callouts, captions and the running readout of the world chapter (ADR 0021), authored in
+    `reports/atlas.py` and rendered verbatim. Every count in them is read from the published layers'
+    metadata, so `build-layers` comes first.
+    """
+    from migratlas.reports import atlas  # noqa: PLC0415 -- one command needs it
+
+    path = atlas.write()
+    print(f"atlas words -> {path}")
+
+
 @app.command("build-plates")
 def build_plates(
     out: Annotated[Path, typer.Option(help="Destination directory for the plates' maps.")] = Path(
