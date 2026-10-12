@@ -1,0 +1,1884 @@
+<title>Migratlas Phone Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500&family=Shantell+Sans:wght,BNCE,INFM@300..700,-100..100,0..100&display=swap">
+<style>
+/* Layout: the desktop's 3D table, seen from above on a phone held upright, with mock 3's pad lying
+   on it. The table is the cover and the menu: a contents card and a settings strip lie beside the
+   pad, the matches and the candle are the light switch. Picking the pad up brings the camera down
+   until the page fills the screen; nothing on a page zooms. */
+@font-face {
+  font-family: "Excalifont";
+  src: url("data:font/woff2;base64,{{EXCALIFONT}}") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "OpenDyslexic";
+  src: url("data:font/woff2;base64,{{OPENDYSLEXIC}}") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Virgil";
+  src: url("data:font/woff2;base64,{{VIRGIL}}") format("woff2");
+  font-display: swap;
+}
+
+:root {
+  --paper: #f3eddc;
+  --paper-sunken: #e5dec9;
+  --ink: #26302a;
+  --ink-soft: #46524a;
+  --moss: #4a6b4e;
+  --moss-ink: #5d8562;
+  --rust: #a3441f;
+  --rust-ink: #b4522e;
+  --pencil: #6b6157;
+  --scatter: #8b7a68;
+  --rule: #cdc0aa;
+  --rule-faint: #ded3bf;
+  --blue: #3d6b85;
+  --yellow: #f2cf7d;
+  --table: #683120;
+  --wood: #8f6340;
+  --board: #a98b62;
+  --board-edge: #7d6443;
+  --wire: #8a8f94;
+  --wire-hi: #e9edf0;
+  --hole: #3b2a20;
+  --tape: rgb(236 226 196 / 0.72);
+  --shadow: 38 48 42;
+  --glow: 255 236 200;
+  --glow-a: 0.10;
+  --tab-mix: 68%;
+  --tab-accent: 68%;
+  --control: rgb(0 0 0 / 0.3);
+  --control-ink: #f3eddc;
+  --grain: url("data:image/webp;base64,{{FIBRE}}");
+  --grain-blend: multiply;
+
+  --font-hand: "Virgil", "Comic Sans MS", cursive;
+  --font-body: "Shantell Sans", "Trebuchet MS", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --ease-pen: cubic-bezier(0.32, 0.72, 0.35, 1);
+  --fit: 1;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d131e;
+    --paper-sunken: #070c14;
+    --ink: #d3dceb;
+    --ink-soft: #9fb0c6;
+    --moss: #8fe0b6;
+    --moss-ink: #6ec9a4;
+    --rust: #ffa870;
+    --rust-ink: #f79055;
+    --pencil: #8496ad;
+    --scatter: #9aa8bd;
+    --rule: #2b3648;
+    --rule-faint: #1d2635;
+    --blue: #7fb0cc;
+    --yellow: #d5c08b;
+    --table: #110503;
+    --wood: #4a3220;
+    --board: #2c241d;
+    --board-edge: #1a1410;
+    --wire: #6d7278;
+    --wire-hi: #c9a37a;
+    --hole: #000000;
+    --tape: rgb(140 150 170 / 0.32);
+    --shadow: 0 0 0;
+    --glow: 255 168 96;
+    --glow-a: 0.13;
+    --tab-accent: 86%;
+    --grain: url("data:image/webp;base64,{{ROUGH}}");
+    --grain-blend: soft-light;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #0d131e;
+  --paper-sunken: #070c14;
+  --ink: #d3dceb;
+  --ink-soft: #9fb0c6;
+  --moss: #8fe0b6;
+  --moss-ink: #6ec9a4;
+  --rust: #ffa870;
+  --rust-ink: #f79055;
+  --pencil: #8496ad;
+  --scatter: #9aa8bd;
+  --rule: #2b3648;
+  --rule-faint: #1d2635;
+  --blue: #7fb0cc;
+  --yellow: #d5c08b;
+  --table: #110503;
+  --wood: #4a3220;
+  --board: #2c241d;
+  --board-edge: #1a1410;
+  --wire: #6d7278;
+  --wire-hi: #c9a37a;
+  --hole: #000000;
+  --tape: rgb(140 150 170 / 0.32);
+  --shadow: 0 0 0;
+  --glow: 255 168 96;
+  --glow-a: 0.13;
+  --tab-accent: 86%;
+  --grain: url("data:image/webp;base64,{{ROUGH}}");
+  --grain-blend: soft-light;
+  color-scheme: dark;
+}
+
+:root[data-type="clear"] {
+  --font-hand: "Excalifont", "Comic Sans MS", cursive;
+  --font-body: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+:root[data-type="dyslexic"] {
+  --font-hand: "OpenDyslexic", system-ui, sans-serif;
+  --font-body: "OpenDyslexic", system-ui, sans-serif;
+}
+:root[data-type="clear"] body, :root[data-type="dyslexic"] body { font-variation-settings: normal; }
+
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+html { overscroll-behavior: none; }
+body {
+  margin: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 15% 100%, rgb(var(--glow) / var(--glow-a)), transparent 60%),
+    repeating-linear-gradient(92deg, rgb(0 0 0 / 0.05) 0 2px, transparent 2px 9px),
+    linear-gradient(170deg, var(--wood), var(--table) 70%);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-variation-settings: "BNCE" 50, "INFM" 50;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.stage {
+  position: relative;
+  height: 100%;
+  max-width: 440px;
+  max-height: 940px;
+  margin: 0 auto;
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* --- The camera: the whole pad in writing, a lens over a bigger pad in lens ------------------- */
+.camera { position: absolute; inset: 0; transform-origin: 0 0; z-index: 2; }
+
+/* --- The table: the scene, and the paper lying on it beside the pad --------------------------- */
+.world { position: absolute; inset: 0; transform-origin: 0 0; pointer-events: none; z-index: 1; }
+.world canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; visibility: hidden; }
+.world canvas.is-ready { visibility: visible; }
+.world .paper, .world .hit { pointer-events: auto; }
+.world [hidden] { display: none !important; }
+.paper {
+  position: absolute;
+  box-sizing: border-box;
+  background-color: var(--paper);
+  background-image: var(--grain);
+  background-size: 384px;
+  background-blend-mode: var(--grain-blend);
+  box-shadow: 0 1px 2px rgb(var(--shadow) / 0.28);
+  color: var(--ink);
+}
+.paper__ink { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+/* What can be picked up says so, in the book's hand, chalked on the wood the first time. */
+.world { --tag: #f6edd8; }
+.chalk {
+  position: absolute;
+  z-index: 2;
+  font-family: var(--font-hand);
+  font-size: 19px;
+  line-height: 1;
+  color: var(--tag);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.55);
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* A label is there to find a thing: written in when the table comes into view, gone a few seconds
+   later, and gone for good once its thing has been used. */
+.tag { opacity: 0; transition: opacity 500ms linear var(--at, 0ms); }
+.world.is-written .tag { opacity: 0.92; }
+.world.tags-off .tag { opacity: 0; transition: opacity 800ms linear 0ms; }
+.tag-ink { transition: opacity 800ms; }
+.world.tags-off .tag-ink { opacity: 0; }
+.world.used-light .for-light, .world.used-light #tag-light,
+.world.used-writing .for-writing, .world.used-writing #tag-writing { display: none; }
+/* The hand the pencil has just written in, named for a moment in its own letters. */
+.style-name { font-size: 23px; opacity: 0; transition: opacity 260ms; }
+.world.show-style .style-name { opacity: 1; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.desk-ink { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 2; }
+.tag-ink { color: var(--tag); filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.5)); }
+.world.is-written .draw path { stroke-dashoffset: 0; }
+.hit--pen { height: 50px; margin: -25px 0 0 0; border-radius: 25px; transform-origin: 0 50%; }
+.hit { position: absolute; width: 72px; height: 72px; margin: -36px 0 0 -36px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.hit:focus-visible { outline: 2px dashed var(--rust); }
+
+/* On the table the pad is one thing to pick up; on the page, the table is out of reach. */
+.stage:not([data-view="read"]) .camera { pointer-events: none; }
+.stage[data-view="desk"] .pad { pointer-events: auto; cursor: pointer; }
+.stage:not([data-view="read"]) .pad * { pointer-events: none !important; }
+/* Except the flags: the chapters are in the notebook, and on the table a flag opens it there. */
+.stage[data-view="desk"] .pad .flags { pointer-events: auto !important; cursor: pointer; }
+.stage[data-view="desk"] .pad .flags::after { content: ""; position: absolute; top: -8px; bottom: -8px; left: 0; right: -70px; }
+.stage:not([data-view="desk"]) .world .paper, .stage:not([data-view="desk"]) .world .hit { pointer-events: none; }
+.stage:not([data-view="read"]) .controls { display: none; }
+.stage:not([data-view="read"]) .glow { opacity: 0; }
+.glow { transition: opacity 400ms; }
+.pad:focus-visible { outline: 3px solid var(--rust); outline-offset: 4px; }
+.pad { position: absolute; inset: 8px 10px 10px 10px; }
+.stage[data-mode="lens"] .camera {
+  inset: auto;
+  left: 0;
+  top: 0;
+  width: 600px;
+  height: 980px;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.stage[data-mode="lens"] .pad { inset: 0; }
+
+.board {
+  position: absolute;
+  top: 18px;
+  left: -2px;
+  right: 22px;
+  bottom: 0;
+  border-radius: 3px 3px 6px 6px;
+  background: var(--board);
+  box-shadow: 0 1px 0 var(--board-edge), 0 10px 24px rgb(var(--shadow) / 0.35);
+}
+
+.stack {
+  position: absolute;
+  top: 18px;
+  left: 0;
+  right: 24px;
+  bottom: 14px;
+  perspective: 1900px;
+  perspective-origin: 50% 0;
+}
+
+.leaf {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 14px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background-color: var(--paper);
+  background-image: var(--grain);
+  background-size: 384px;
+  background-blend-mode: var(--grain-blend);
+  border-radius: 2px 2px 3px 3px;
+  box-shadow: 0 1px 0 rgb(var(--shadow) / 0.18), 0 0 0 0.5px rgb(var(--shadow) / 0.12);
+  overflow: hidden;
+}
+.leaf::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 14px;
+  width: var(--holes-w, calc(100% - 28px));
+  height: 9px;
+  background: radial-gradient(ellipse 3.6px 4.2px at center, var(--hole) 92%, transparent 100%) 0 0 / 22px 9px repeat-x;
+  opacity: 0.85;
+}
+.leaf__shade, .leaf__cast {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+}
+.leaf__shade { background: linear-gradient(rgb(var(--shadow) / 0.38), rgb(var(--shadow) / 0.08) 70%); }
+.leaf__cast { bottom: auto; height: 70px; background: linear-gradient(rgb(var(--shadow) / 0.45), transparent); }
+
+.leaf__inner {
+  position: absolute;
+  inset: 34px 16px 46px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: calc(14px * var(--fit));
+  font-size: calc(15.5px * var(--fit));
+  line-height: 1.75;
+  letter-spacing: 0.004em;
+}
+.stage[data-mode="lens"] .leaf__inner { inset: 42px 30px 52px 30px; display: block; }
+.leaf__inner p { margin: 0; }
+.leaf--center .leaf__inner { justify-content: center; }
+.leaf--roomy .leaf__inner { gap: calc(22px * var(--fit)); font-size: calc(17.5px * var(--fit)); }
+.leaf--roomy .value { font-size: calc(38px * var(--fit)); }
+.leaf--roomy .heading-hand { font-size: calc(26px * var(--fit)); }
+.leaf--roomy .note--side { font-size: calc(16px * var(--fit)); }
+.leaf--roomy .row { --side: 84px; }
+
+.ink {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 3;
+}
+.ink path { stroke-linecap: round; stroke-linejoin: round; }
+
+.folio {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  font: 500 10.5px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--pencil);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.corner {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 6;
+  width: 58px;
+  height: 58px;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.corner::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(315deg, var(--board) 0 48%, color-mix(in srgb, var(--paper) 78%, var(--ink)) 50%, var(--paper-sunken) 100%);
+  box-shadow: -2px -2px 4px rgb(var(--shadow) / 0.18);
+}
+.corner:focus-visible { outline: 2px solid var(--rust); outline-offset: -4px; border-radius: 6px; }
+
+/* --- Words on the page ---------------------------------------------------------------- */
+.c-ink { color: var(--ink); }
+.c-soft { color: var(--ink-soft); }
+.c-pencil { color: var(--pencil); }
+.c-scatter { color: var(--scatter); }
+.c-rust { color: var(--rust-ink); }
+.c-moss { color: var(--moss-ink); }
+.c-rule { color: var(--rule); }
+.c-faint { color: var(--rule-faint); }
+
+.kicker {
+  display: block;
+  font: 600 calc(11.5px * var(--fit))/1.3 var(--font-body);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--moss);
+  rotate: -0.6deg;
+}
+.lede { font-family: var(--font-hand); font-size: calc(30px * var(--fit)); line-height: 1.32; }
+.question { font-family: var(--font-hand); font-size: calc(25px * var(--fit)); line-height: 1.3; text-wrap: balance; }
+.statement { font-family: var(--font-hand); font-size: calc(31px * var(--fit)); line-height: 1.3; }
+.hand { font-family: var(--font-hand); font-size: calc(21px * var(--fit)); line-height: 1.38; }
+.small { font-size: 0.82em; line-height: 1.7; color: var(--ink-soft); }
+.big-body { font-size: 1.12em; line-height: 1.8; padding-left: 14px; rotate: 0.3deg; }
+.value { font-family: var(--font-hand); font-size: calc(30px * var(--fit)); line-height: 1.2; color: var(--rust); }
+.register { font-size: 0.8em; color: var(--pencil); line-height: 1.55; }
+.register b {
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.85em;
+  color: var(--moss);
+  margin-right: 0.4em;
+}
+.ring { white-space: nowrap; }
+.note {
+  font-family: var(--font-hand);
+  font-size: calc(19px * var(--fit));
+  line-height: 1.3;
+  color: var(--ink-soft);
+}
+.note--under {
+  align-self: flex-end;
+  width: 84%;
+  margin-top: calc(26px * var(--fit));
+  rotate: -1.6deg;
+}
+.link {
+  align-self: flex-start;
+  font: 500 calc(14px * var(--fit))/1.3 var(--font-body);
+  color: var(--rust);
+  rotate: -0.8deg;
+}
+.stamp {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 calc(11px * var(--fit))/1 var(--font-body);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rust);
+}
+.stamp svg { width: 26px; height: 26px; }
+.heading-hand { font-family: var(--font-hand); font-size: calc(22px * var(--fit)); line-height: 1.25; color: var(--ink); }
+
+.instruments { display: flex; justify-content: space-around; gap: 12px; margin-top: 8px; }
+.instruments figure { margin: 0; display: grid; justify-items: center; gap: 6px; max-width: 9.5rem; text-align: center; }
+.instruments figcaption { font-size: 11.5px; line-height: 1.35; color: var(--ink-soft); rotate: -2deg; }
+.sketch path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.sketch .s { stroke: var(--ink-soft); stroke-width: 1.6; }
+.sketch .r { stroke: var(--pencil); stroke-width: 1.1; stroke-dasharray: 2.5 2.5; opacity: 0.75; }
+.sketch circle { fill: var(--rust-ink); }
+.sketch.draw .r { stroke-dasharray: 2.5 2.5; }
+
+.chart-title { font-family: var(--font-hand); font-size: calc(21px * var(--fit)); line-height: 1.25; }
+.chart svg { display: block; overflow: visible; }
+.chart .lbl { font: 500 9.5px var(--font-mono); fill: var(--pencil); }
+.chart .lbl--line { font-family: var(--font-body); font-size: 11px; fill: var(--rust); }
+
+.plate { margin: 0; display: grid; gap: 8px; }
+.plate__sheet {
+  position: relative;
+  padding: 8px;
+  background: color-mix(in srgb, var(--paper) 55%, var(--paper-sunken));
+  box-shadow: 0 2px 8px rgb(var(--shadow) / 0.22);
+  rotate: -1.8deg;
+}
+.plate__sheet svg { display: block; width: 100%; height: auto; overflow: visible; }
+.tape {
+  position: absolute;
+  width: 54px;
+  height: 18px;
+  background: var(--tape);
+  box-shadow: 0 1px 2px rgb(var(--shadow) / 0.12);
+}
+.tape--a { left: -14px; top: -7px; rotate: -32deg; }
+.tape--b { right: -14px; bottom: -7px; rotate: -28deg; }
+.plate figcaption { font-size: calc(13px * var(--fit)); line-height: 1.55; }
+.plate figcaption b { font-weight: 600; }
+.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: calc(11.5px * var(--fit)); color: var(--ink-soft); }
+.legend li { display: inline-flex; align-items: center; gap: 5px; }
+.legend svg { width: 16px; height: 12px; overflow: visible; }
+
+.audit { display: grid; gap: calc(12px * var(--fit)); padding-left: 18px; margin: 0; }
+.entry { display: grid; gap: 2px; }
+.entry dt { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; }
+.entry .domain { font-weight: 600; font-size: 0.86em; color: var(--ink); }
+.verdict { padding-left: 26px; font-size: 0.78em; color: var(--pencil); white-space: nowrap; }
+.entry dd { margin: 0; font-size: 0.86em; line-height: 1.6; color: var(--ink-soft); }
+
+.tried { list-style: none; margin: 0; padding: 0; display: grid; gap: calc(12px * var(--fit)); }
+.tried li { padding-left: 28px; font-size: 0.92em; line-height: 1.6; }
+
+.mocknote { font-size: 0.8em; color: var(--pencil); border-left: 2px dashed var(--rule); padding-left: 10px; }
+
+/* A margin at the phone's own size: notes and marks sit beside what they are about. */
+.row { display: grid; grid-template-columns: var(--side, 78px) minmax(0, 1fr); column-gap: 14px; align-items: start; }
+.side { min-width: 0; }
+.note--side { font-size: calc(14px * var(--fit)); line-height: 1.22; rotate: -1.5deg; margin-top: 2px; }
+.small-body { font-size: 0.92em; line-height: 1.72; }
+.verdict--side { display: block; padding: 20px 0 0; white-space: normal; font-family: var(--font-hand); font-size: calc(13px * var(--fit)); line-height: 1.15; rotate: -2deg; }
+.domain { font-weight: 600; font-size: 0.9em; line-height: 1.4; }
+.entry-text { font-size: 0.86em; line-height: 1.6; color: var(--ink-soft); }
+.tick-side { display: block; height: 22px; }
+.tight { font-size: 0.92em; line-height: 1.6; }
+.side-sketch { margin: 0; display: grid; justify-items: center; gap: 4px; text-align: center; }
+.side-sketch figcaption { font-family: var(--font-hand); font-size: calc(11.5px * var(--fit)); line-height: 1.2; color: var(--ink-soft); rotate: -2deg; }
+.legend--side { flex-direction: column; gap: 9px; font-family: var(--font-hand); font-size: calc(12.5px * var(--fit)); line-height: 1.15; }
+.legend--side li { align-items: flex-start; }
+.legend--side svg { margin-top: 1px; }
+
+/* Lens pages: a reading column and a margin beside it, like a page of the spread. */
+.sheet { position: relative; height: 100%; }
+.main { width: 330px; display: flex; flex-direction: column; gap: calc(16px * var(--fit)); }
+.main--wide { width: 392px; }
+.margin { position: absolute; top: 0; left: 354px; width: 166px; }
+.margin > * { position: absolute; left: 0; width: 100%; }
+.margin .note { rotate: 1.2deg; font-size: calc(19px * var(--fit)); }
+.margin .tried li { font-size: 12.5px; line-height: 1.5; padding-left: 24px; }
+.margin .heading-hand { font-size: 17px; }
+.margin .instruments figure { max-width: none; }
+.over {
+  position: absolute;
+  right: -6px;
+  bottom: 0;
+  width: 390px;
+}
+
+/* The cover. */
+.leaf--cover { background-color: var(--board); }
+.label {
+  align-self: center;
+  width: 82%;
+  padding: 26px 18px 22px;
+  text-align: center;
+  background-color: var(--paper);
+  background-image: var(--grain);
+  background-size: 384px;
+  background-blend-mode: var(--grain-blend);
+  rotate: -1.4deg;
+  box-shadow: 0 2px 8px rgb(var(--shadow) / 0.25);
+  display: grid;
+  gap: 8px;
+}
+.stage[data-mode="lens"] .leaf--cover .leaf__inner { display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+.label__title { font-family: var(--font-hand); font-size: 40px; line-height: 1; }
+.label__sub { font-size: 14px; color: var(--ink-soft); }
+.cover-note {
+  align-self: center;
+  width: 80%;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 70%, var(--yellow));
+  rotate: 1.2deg;
+  box-shadow: 0 2px 6px rgb(var(--shadow) / 0.2);
+}
+
+/* --- Writing: what the hand adds appears in the order it was put down ----------------------- */
+.draw path {
+  stroke-dasharray: var(--len) var(--len);
+  stroke-dashoffset: var(--len);
+  transition: stroke-dashoffset var(--dur, 520ms) var(--ease-pen) var(--at, 0ms);
+}
+.leaf.is-written .draw path { stroke-dashoffset: 0; }
+.sketch.draw .r { stroke-dasharray: var(--len) var(--len); }
+.pop { opacity: 0; transition: opacity 180ms linear var(--at, 0ms); }
+.leaf.is-written .pop { opacity: 1; }
+.wr .w { opacity: 0; transition: opacity 150ms linear calc(var(--at, 0ms) + var(--i) * 34ms); }
+.leaf.is-written .wr .w { opacity: 1; }
+.stamp {
+  opacity: 0;
+  transform: scale(1.35) rotate(-8deg);
+  transition: opacity 100ms linear var(--at, 0ms), transform 280ms cubic-bezier(0.2, 1.6, 0.4, 1) var(--at, 0ms);
+}
+.leaf.is-written .stamp { opacity: 1; transform: rotate(-3deg); }
+.plate__sheet.pop { transform: translateY(-8px); transition: opacity 200ms linear var(--at, 0ms), transform 320ms var(--ease-pen) var(--at, 0ms); }
+.leaf.is-written .plate__sheet.pop { transform: none; }
+.leaf.is-done *, .leaf.is-done .ink * { transition: none !important; }
+
+/* --- The wire, the flags, the controls -------------------------------------------------- */
+.spiral { position: absolute; top: 0; left: 0; right: 24px; height: 40px; z-index: 50; pointer-events: none; overflow: visible; }
+.spiral path { fill: none; stroke-linecap: round; }
+.spiral .w { stroke: var(--wire); stroke-width: 2.6; }
+.spiral .h { stroke: var(--wire-hi); stroke-width: 0.9; opacity: 0.8; }
+
+.back { position: absolute; top: 0; left: 0; right: 24px; height: 44px; z-index: 60; border: 0; background: none; padding: 0; cursor: pointer; }
+.back:focus-visible { outline: 2px solid var(--rust); outline-offset: -2px; border-radius: 8px; }
+.back[disabled] { cursor: default; }
+
+.flags { position: absolute; top: 70px; bottom: 70px; right: -27px; width: 46px; display: flex; flex-direction: column; gap: 5px; z-index: 1; }
+.flag {
+  --tint: var(--pencil);
+  --mix: var(--tab-mix);
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 44px;
+  border: 0;
+  padding: 0 0 0 14px;
+  border-radius: 0 7px 7px 0;
+  background: color-mix(in srgb, var(--paper) var(--mix), var(--tint));
+  color: var(--ink);
+  font: 500 clamp(9.5px, 1.4vh, 11px)/1 var(--font-body);
+  font-variation-settings: "BNCE" 40, "INFM" 60;
+  writing-mode: vertical-rl;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 1px 1px 2px rgb(var(--shadow) / 0.2);
+  transition: transform 220ms var(--ease-pen), filter 220ms, opacity 220ms;
+}
+.stage[data-mode="lens"] .flag { font-size: 12px; }
+.flag.is-behind { transform: translateX(-9px); filter: brightness(0.86); opacity: 0.9; }
+.flag.is-here { transform: translateX(4px); font-weight: 700; box-shadow: 2px 2px 5px rgb(var(--shadow) / 0.3); }
+.flag:focus-visible { outline: 2px solid var(--rust); outline-offset: 1px; }
+
+.bubble {
+  position: absolute;
+  right: 60px;
+  z-index: 80;
+  max-width: 230px;
+  padding: 10px 14px 12px;
+  background-color: var(--paper);
+  background-image: var(--grain);
+  background-size: 384px;
+  background-blend-mode: var(--grain-blend);
+  box-shadow: 0 6px 18px rgb(var(--shadow) / 0.35);
+  transform: translateY(-50%) rotate(-1.2deg);
+  pointer-events: none;
+  display: grid;
+  gap: 4px;
+}
+.bubble__tab { font-family: var(--font-hand); font-size: 24px; line-height: 1.1; color: var(--rust); }
+.bubble__q { font-size: 12.5px; line-height: 1.45; color: var(--ink-soft); }
+
+.glow {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  background: radial-gradient(90% 60% at 0% 100%, rgb(var(--glow) / var(--glow-a)), transparent 70%);
+  mix-blend-mode: screen;
+  animation: flicker 3.2s ease-in-out infinite;
+}
+@keyframes flicker { 0%, 100% { opacity: 1; } 30% { opacity: 0.86; } 55% { opacity: 0.97; } 75% { opacity: 0.9; } }
+
+.controls {
+  position: absolute;
+  left: 4px;
+  bottom: 2px;
+  z-index: 90;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.controls button {
+  height: 32px;
+  min-width: 32px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--control);
+  color: var(--control-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  font: 500 12px/1 var(--font-body);
+  cursor: pointer;
+}
+.controls #surface { padding: 0; width: 32px; }
+.controls svg { width: 17px; height: 17px; flex: none; }
+.controls button:focus-visible { outline: 2px solid var(--control-ink); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .glow { animation: none; }
+  .flag { transition: none; }
+}
+</style>
+
+<div class="stage" id="stage" data-mode="writing" data-view="desk">
+  <div class="world" id="world">
+    <canvas id="desk-canvas"></canvas>
+    <svg class="desk-ink" id="desk-ink" aria-hidden="true"></svg>
+    <span class="chalk tag" id="tag-light" style="--at: 700ms">light</span>
+    <span class="chalk tag" id="tag-writing" style="--at: 1300ms">writing</span>
+    <span class="chalk style-name" id="style-name" aria-hidden="true"></span>
+    <button class="hit" id="hit-box" type="button" aria-label="Strike a match and light the candle (night)"></button>
+    <button class="hit" id="hit-candle" type="button" aria-label="Light or put out the candle (night or day)"></button>
+    <button class="hit hit--pen" id="hit-pen" type="button" aria-label="The pencil. The book is written in Hand; touch for the next hand"></button>
+  </div>
+  <div class="camera" id="camera">
+    <div class="pad" id="pad" tabindex="0" role="button" aria-label="The pad. Pick it up to read">
+      <div class="board"></div>
+      <div class="stack" id="stack">
+        <div class="flags" id="flags"></div>
+      </div>
+      <svg class="spiral" id="spiral" aria-hidden="true"></svg>
+      <button class="back" id="back" type="button" aria-label="Turn back a page"></button>
+    </div>
+  </div>
+  <p class="sr-only" id="live" aria-live="polite"></p>
+  <div class="glow" aria-hidden="true"></div>
+  <div class="controls">
+    <button id="to-desk" type="button" aria-label="Put the pad down on the table"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 12.5h14M5 12.5v4.5M15 12.5v4.5M6.5 9.5 10 3l3.5 6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>table</span></button>
+    <button id="surface" type="button" aria-label="Day or night" hidden></button>
+    <button id="mode" type="button" hidden></button>
+    <button id="glance" type="button" hidden></button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
+<script>
+{{DESKJS}}
+</script>
+<script>const DESK_FILES = {{DESKFILES}};</script>
+<script>
+const DATA = {{DATA}};
+const I = DATA.intro, C = DATA.calendar, F = DATA.finding;
+const NS = "http://www.w3.org/2000/svg";
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---- Pieces of a page ------------------------------------------------------------------ */
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+const P = (t, cls = "", attrs = "") => `<p class="${cls}" ${attrs}>${esc(t)}</p>`;
+function words(t) {
+  let k = 0;
+  return t.split(/(\s+)/).map((s) => (!s.trim() ? s : `<span class="w" style="--i:${k++}">${esc(s)}</span>`)).join("");
+}
+function ringed(text, phrase, id) {
+  const at = text.indexOf(phrase);
+  if (at < 0) return esc(text);
+  return `${esc(text.slice(0, at))}<span class="ring" id="${id}" data-ink="ring">${esc(phrase)}</span>${esc(text.slice(at + phrase.length))}`;
+}
+const kicker = (t) => `<span class="kicker">${esc(t)}</span>`;
+
+const RADAR_PATHS = `<path class="s" d="M 9 27 C 12 11 26 5 37 12"/><path class="s" d="M 9 27 C 17 24 30 19 37 12"/><path class="s" d="M 21 16 l 5 5"/><path class="s" d="M 20 26 l -2 13"/><path class="s" d="M 11 39 l 15 0"/><path class="r" d="M 40 8 A 15 15 0 0 1 45 21"/><path class="r" d="M 34 3 A 22 22 0 0 1 45 15"/><circle cx="24" cy="20" r="1.4"/>`;
+const ROUTE_PATHS = `<path class="s" d="M 5 27 C 13 20 21 33 30 25 C 36 20 41 24 44 21"/>${[9, 13, 17, 21, 25, 29, 33, 37, 41].map((x) => `<path class="s" d="M ${x} ${(23 + Math.sin(x) * 2).toFixed(1)} l 0 6"/>`).join("")}<circle cx="5" cy="27" r="1.8"/><circle cx="44" cy="21" r="1.4"/>`;
+const sketch = (paths, label, size = 50) => `<svg class="sketch" data-ink="doodle" viewBox="0 0 48 48" width="${size}" height="${size}" role="img" aria-label="${label}">${paths}</svg>`;
+const RADAR_CAP = "a weather radar: one instrument, one protocol, nightly";
+const ROUTE_CAP = "a survey route: the same stops, the same season, every year";
+const instruments = () => `<div class="instruments"><figure>${sketch(RADAR_PATHS, RADAR_CAP)}<figcaption>${RADAR_CAP}</figcaption></figure><figure>${sketch(ROUTE_PATHS, ROUTE_CAP)}<figcaption>${ROUTE_CAP}</figcaption></figure></div>`;
+const stamp = () => `<span class="stamp" data-ink="stamp"><svg class="sketch" viewBox="0 0 48 48" aria-hidden="true">${RADAR_PATHS}</svg>change detected</span>`;
+const link = (attrs = "") => `<span class="link" data-ink="link" ${attrs}>The plan, written down before we looked</span>`;
+const note = (text, forId, cls = "", attrs = "") => `<p class="note wr ${cls}" data-ink="note" data-for="${forId}" ${attrs}>${words(text)}</p>`;
+const chart = (attrs = "") => `<div class="chart" data-ink="chart" ${attrs}><svg aria-label="${esc(F.chart.title)}" role="img"></svg></div>`;
+const plate = (attrs = "") => `<figure class="plate" data-ink="plate" ${attrs}>
+  <div class="plate__sheet pop"><svg role="img" aria-label="${esc(F.plate.caption)}"></svg><span class="tape tape--a pop"></span><span class="tape tape--b pop"></span></div>
+  <figcaption><b>Plate 1.</b> ${esc(F.plate.caption)}</figcaption>
+  <ul class="legend">
+    <li><svg viewBox="0 0 16 12" aria-hidden="true"><ellipse cx="8" cy="6" rx="6.5" ry="4.6" style="fill:none;stroke:var(--rust-ink);stroke-width:1.6"/></svg>${esc(F.plate.legend[0])}</li>
+    <li><svg viewBox="0 0 16 12" aria-hidden="true"><path d="M1 8 C4 3 7 10 10 5 S14 6 15 4" style="fill:none;stroke:var(--ink);stroke-width:1.3"/></svg>${esc(F.plate.legend[1])}</li>
+    <li><svg viewBox="0 0 16 12" aria-hidden="true"><path d="M5 0v12M11 0v12M0 6h16" style="stroke:var(--rule);stroke-width:1.2"/></svg>${esc(F.plate.legend[2])}</li>
+  </ul>
+</figure>`;
+const entry = (b, attrs = "") => `<div class="entry" ${attrs}><dt><span class="domain">${esc(b.domain)}</span><span class="verdict" data-ink="verdict" data-status="${b.status}">${esc(b.verdict)}</span></dt><dd>${esc(b.text)}</dd></div>`;
+const tried = (attrs = "") => `<ul class="tried" ${attrs}>${F.supporting.map((s) => `<li data-ink="tick">${esc(s)}</li>`).join("")}</ul>`;
+const signpost = `<p class="register"><b>For the record</b>The same finding as a specialist would check it. Not needed to follow the story.</p>`;
+const opener = (o) => `${kicker(o.title)}${P(o.question, "question", 'data-stop="1"')}${P(o.paragraph, "", 'data-stop="2"')}<p class="mocknote">In this mock the chapter stops here. The book goes on.</p>`;
+const COVER_NOTE = "Mock 4c. You opened the book cold, so it starts on the table. Lift this cover to read. The table button at the bottom left, or a pinch, puts the pad back down. On the table the things are the settings: the candle is the light, each touch of the pencil writes the book in the next hand, and the flags on this pad are the chapters.";
+const cover = `<div class="label"><span class="label__title">Migratlas</span><span class="label__sub">${esc(I.title)}</span></div><p class="cover-note">${esc(COVER_NOTE)} <a href="#page-6">Open a shared link to one finding</a>, which skips the table.</p>`;
+const GLOBE = `<svg class="sketch" viewBox="0 0 48 48" width="120" height="120" role="img" aria-label="a gridded surface"><path class="s" d="M 7 12 C 18 9 31 9 42 12"/><path class="s" d="M 6 24 C 18 21 31 21 43 24"/><path class="s" d="M 7 36 C 18 33 31 33 42 36"/><path class="s" d="M 12 10 C 10 20 10 29 12 38"/><path class="s" d="M 24 9 C 23 20 23 28 24 39"/><path class="s" d="M 36 10 C 38 20 38 29 36 38"/><path class="r" d="M 13 12 L 23 11 L 23 22 L 13 23 Z"/><path class="r" d="M 25 23 L 36 23 L 36 34 L 25 34 Z"/></svg>`;
+const globe = `${kicker("The world")}<div class="instruments" data-stop="1">${GLOBE}</div><p class="mocknote">The live globe sits on this leaf, as it does on the phone today. It is not part of this mock.</p>`;
+const half = Math.ceil(F.bias.length / 2);
+
+/* The pages, composed at the phone's own size. */
+const row = (side, text, attrs = "") => `<div class="row" ${attrs}><div class="side">${side}</div><div class="text">${text}</div></div>`;
+const sideNote = (text, forId) => `<p class="note note--side wr" data-ink="note" data-for="${forId}">${words(text)}</p>`;
+const sideSketch = (paths, label) => `<figure class="side-sketch">${sketch(paths, label, 44)}<figcaption>${esc(label)}</figcaption></figure>`;
+const auditRow = (b) => row(`<span class="verdict verdict--side" data-ink="verdict" data-status="${b.status}">${esc(b.verdict)}</span>`, `<p class="domain">${esc(b.domain)}</p><p class="entry-text">${esc(b.text)}</p>`);
+const triedRow = (line) => row(`<span class="tick-side" data-ink="tick"></span>`, `<p class="tight">${esc(line)}</p>`);
+const sideLegend = `<ul class="legend legend--side">
+  <li><svg viewBox="0 0 16 12" aria-hidden="true"><ellipse cx="8" cy="6" rx="6.5" ry="4.6" style="fill:none;stroke:var(--rust-ink);stroke-width:1.6"/></svg>${esc(F.plate.legend[0])}</li>
+  <li><svg viewBox="0 0 16 12" aria-hidden="true"><path d="M1 8 C4 3 7 10 10 5 S14 6 15 4" style="fill:none;stroke:var(--ink);stroke-width:1.3"/></svg>${esc(F.plate.legend[1])}</li>
+  <li><svg viewBox="0 0 16 12" aria-hidden="true"><path d="M5 0v12M11 0v12M0 6h16" style="stroke:var(--rule);stroke-width:1.2"/></svg>${esc(F.plate.legend[2])}</li>
+</ul>`;
+const platePlain = () => `<figure class="plate" data-ink="plate"><div class="plate__sheet pop"><svg role="img" aria-label="${esc(F.plate.caption)}"></svg><span class="tape tape--a pop"></span><span class="tape tape--b pop"></span></div></figure>`;
+
+const WRITING = [
+  { tab: null, cover: true, center: true, html: cover },
+  { tab: 0, html: `${kicker(I.title)}${P(I.standfirst, "lede", 'data-ink="underline" data-tone="c-rust"')}${P(I.counted, "small")}` },
+  { tab: 1, html: `${kicker(C.title)}${P(C.question, "question")}${P(C.paragraphs[0])}` },
+  { tab: 1, html: `${P(C.paragraphs[1])}${P(C.paragraphs[2])}` },
+  { tab: 1, center: true, html: P(C.paragraphs[3], "hand") },
+  { tab: 1, center: true, html: `${kicker(C.title)}${P(C.paragraphs[4], "question")}${instruments()}` },
+  { tab: 1, html: `${stamp()}<p class="statement" data-ink="underline" data-tone="c-rust">${ringed(F.plain, "Whatever flies", "w-ring-1")}</p>${row(sideNote(F.plain_caveat, "w-ring-1"), P(F.matters, "small-body"), 'style="margin-top:8px"')}` },
+  { tab: 1, html: `${kicker("How we found it?")}${P(F.plain_how, "hand")}${row(sideSketch(RADAR_PATHS, RADAR_CAP), link())}` },
+  { tab: 1, html: `${P(F.chart.title, "chart-title")}${chart()}${P(F.chart.reading, "small")}` },
+  { tab: 1, html: `${platePlain()}${row(sideLegend, `<p class="small-body"><b>Plate 1.</b> ${esc(F.plate.caption)}</p>`)}${P(F.scope, "small")}${P(F.plate.elsewhere, "small")}` },
+  { tab: 1, roomy: true, html: `${signpost}<p class="value" data-ink="underline" data-tone="c-rust">${esc(F.value)}</p>${P(F.claim, "small-body")}${row(sideNote(F.plain_caveat, "w-cav"), `<p id="w-cav" class="small-body" data-ink="bracket">${esc(F.caveat)}</p>`)}${link()}` },
+  { tab: 1, roomy: true, html: `<p class="heading-hand" data-ink="underline" data-tone="c-rule">What we tried to break it with</p>${F.supporting.map(triedRow).join("")}` },
+  { tab: 1, html: `<p class="heading-hand">How this could mislead you</p>${F.bias.slice(0, half).map(auditRow).join("")}` },
+  { tab: 1, html: `<p class="heading-hand">How this could mislead you, continued</p>${F.bias.slice(half).map(auditRow).join("")}` },
+  ...DATA.openers.map((o) => ({ tab: o.tab, html: opener(o) })),
+  { tab: 7, center: true, html: globe },
+];
+
+/* ---- The pad ------------------------------------------------------------------------- */
+const stage = document.getElementById("stage");
+const camera = document.getElementById("camera");
+const stack = document.getElementById("stack");
+const flagsEl = document.getElementById("flags");
+const spiral = document.getElementById("spiral");
+const CHAPTERS = DATA.chapters;
+const TINTS = ["--pencil", "--rust", "--blue", "--yellow", "--moss", "--rust-ink", "--ink-soft", "--pencil"];
+const MIXES = { 1: "var(--tab-accent)", 3: "84%", 5: "var(--tab-accent)" };
+const PERSPECTIVE = 1900;
+const LIFT = `<span class="lift" style="position:absolute;right:54px;bottom:30px;font-family:var(--font-hand);font-size:18px;opacity:.8;display:flex;gap:6px;align-items:center;pointer-events:none">lift <svg width="22" height="28" viewBox="0 0 22 28" aria-hidden="true"><path d="M11 26 C 10 18 12 10 11 3 M4 9 C 7 7 9 5 11 2 C 13 5 15 7 18 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>`;
+
+let mode = "writing";
+let LEAVES = WRITING;
+let els = [];
+let N = 0;
+let cur = 0;
+let angle = [];
+let STOPS = [];
+let busy = false;
+
+const flags = CHAPTERS.map((ch, i) => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "flag";
+  b.textContent = ch.tab;
+  b.style.setProperty("--tint", `var(${TINTS[i]})`);
+  b.style.setProperty("--mix", MIXES[i] ?? "var(--tab-mix)");
+  b.dataset.i = String(i);
+  b.setAttribute("aria-label", `${ch.tab} ${ch.title}`);
+  flagsEl.appendChild(b);
+  return b;
+});
+
+function build() {
+  for (const el of els) el.remove();
+  LEAVES = WRITING;
+  N = LEAVES.length;
+  angle = new Array(N).fill(0);
+  els = LEAVES.map((leaf, i) => {
+    const el = document.createElement("section");
+    el.className = "leaf" + (leaf.cover ? " leaf--cover" : "") + (leaf.center ? " leaf--center" : "") + (leaf.roomy ? " leaf--roomy" : "");
+    el.style.zIndex = String(10 + N - i);
+    el.setAttribute("aria-label", leaf.cover ? "Cover" : `Page ${i}`);
+    el.innerHTML = `<div class="leaf__inner">${leaf.html}</div><svg class="ink" aria-hidden="true"></svg>
+      ${leaf.cover ? "" : `<span class="folio">${String(i).padStart(3, "0")} · migratlas</span>`}
+      ${i === 0 ? LIFT : ""}
+      ${i < N - 1 ? `<button class="corner" type="button" aria-label="Turn the page"></button>` : ""}
+      <div class="leaf__cast"></div><div class="leaf__shade"></div>`;
+    stack.appendChild(el);
+    return el;
+  });
+}
+
+const startOf = (tab) => LEAVES.findIndex((l) => l.tab === tab);
+function tabOf(i) {
+  for (let k = i; k >= 0; k--) if (LEAVES[k].tab !== null) return LEAVES[k].tab;
+  return -1;
+}
+
+/* ---- Measuring, with every sheet flat and the lens at arm's length ------------------------ */
+function flat(fn) {
+  const saved = camera.style.transform;
+  camera.style.transition = "none";
+  camera.style.transform = "none";
+  for (const el of els) { el.hidden = false; el.style.transform = "none"; }
+  try { fn(); } finally {
+    camera.style.transform = saved;
+    paintAll();
+  }
+}
+
+function fit() {
+  for (const el of els) {
+    const inner = el.querySelector(".leaf__inner");
+    let f = 1;
+    inner.style.setProperty("--fit", "1");
+    const over = () => inner.scrollHeight > inner.clientHeight + 1 || [...inner.querySelectorAll(".main")].some((m) => m.scrollHeight > inner.clientHeight + 1);
+    while (over() && f > 0.72) {
+      f -= 0.03;
+      inner.style.setProperty("--fit", f.toFixed(2));
+    }
+  }
+}
+
+function boxIn(leaf) {
+  const L = leaf.getBoundingClientRect();
+  return (el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.left - L.left, y: r.top - L.top, w: r.width, h: r.height };
+  };
+}
+
+/* Margin notes sit beside what they are about. */
+function alignMargins() {
+  for (const leaf of els) {
+    const box = boxIn(leaf);
+    for (const item of leaf.querySelectorAll("[data-align]")) {
+      const target = leaf.querySelector("#" + item.dataset.align);
+      if (!target) continue;
+      item.style.top = "0px";
+      const top = box(target).y - box(item).y + Number(item.dataset.nudge || 0);
+      item.style.top = `${top}px`;
+    }
+  }
+}
+
+/* ---- The hand ------------------------------------------------------------------------------ */
+function seedOf(text) {
+  let h = 2166136261;
+  for (const ch of String(text)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return Math.abs(h % 2 ** 31) || 1;
+}
+const HAND = { roughness: 1.6, bowing: 1.3, strokeWidth: 1.5 };
+
+function group(svg, cls) {
+  const g = document.createElementNS(NS, "g");
+  g.setAttribute("class", cls);
+  svg.appendChild(g);
+  return g;
+}
+function drawn(g, node, at, dur) {
+  g.appendChild(node);
+  node.classList.add("draw");
+  node.style.setProperty("--at", `${at}ms`);
+  node.style.setProperty("--dur", `${dur}ms`);
+  for (const p of node.querySelectorAll("path")) p.style.setProperty("--len", String(Math.ceil(p.getTotalLength() + 2)));
+}
+function popped(g, node, at) {
+  g.appendChild(node);
+  node.classList.add("pop");
+  node.style.setProperty("--at", `${at}ms`);
+}
+
+function arrow(rc, g, a, b, at, seed) {
+  const ac = { x: a.x + a.w / 2, y: a.y + a.h / 2 }, bc = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+  const dx = bc.x - ac.x, dy = bc.y - ac.y;
+  let s, e, m;
+  // A note written beside its passage needs no arrow: the bracket and the margin already join them.
+  if (a.x + a.w <= b.x + 4 && a.y < b.y + b.h && a.y + a.h > b.y) return at;
+  if (dy < 0 && a.y - (b.y + b.h) > 24) {
+    // Lines of writing lie between the note and what it is about: go round by the margin, never through them.
+    s = { x: a.x - 6, y: a.y + 14 };
+    e = { x: b.x - 11, y: b.y + b.h * 0.7 };
+    m = { x: Math.max(4, Math.min(s.x, e.x) - 26), y: (s.y + e.y) / 2 };
+  } else {
+    if (Math.abs(dy) > Math.abs(dx) * 0.6) {
+      s = { x: Math.min(a.x + a.w - 10, Math.max(a.x + 10, bc.x + 24)), y: dy < 0 ? a.y - 6 : a.y + a.h + 6 };
+      e = { x: bc.x + 6, y: dy < 0 ? b.y + b.h + 8 : b.y - 8 };
+    } else {
+      s = { x: dx < 0 ? a.x - 6 : a.x + a.w + 6, y: a.y + Math.min(20, a.h / 2) };
+      e = { x: dx < 0 ? b.x + b.w + 6 : b.x - 6, y: Math.min(b.y + b.h - 10, Math.max(b.y + 10, s.y + 30)) };
+    }
+    const len = Math.hypot(e.x - s.x, e.y - s.y) || 1;
+    const bend = len * 0.2;
+    m = { x: (s.x + e.x) / 2 - ((e.y - s.y) / len) * bend, y: (s.y + e.y) / 2 + ((e.x - s.x) / len) * bend };
+  }
+  const shaft = rc.curve([[s.x, s.y], [m.x, m.y], [e.x, e.y]], { roughness: 1, strokeWidth: 1.5, seed });
+  const ang = Math.atan2(e.y - m.y, e.x - m.x), k = 10;
+  const head = rc.linearPath([[e.x - k * Math.cos(ang - 0.45), e.y - k * Math.sin(ang - 0.45)], [e.x, e.y], [e.x - k * Math.cos(ang + 0.45), e.y - k * Math.sin(ang + 0.45)]], { roughness: 0.7, strokeWidth: 1.5, seed: seed + 1 });
+  drawn(g, shaft, at, 420);
+  drawn(g, head, at + 400, 160);
+  return at + 560;
+}
+
+function verdictGlyph(rc, status, x, y, seed) {
+  if (status === "addressed") return rc.linearPath([[x, y], [x + 5, y + 5], [x + 16, y - 8]], { roughness: 0.9, strokeWidth: 1.9, seed });
+  if (status === "open") return rc.ellipse(x + 8, y, 19, 16, { roughness: 1.3, strokeWidth: 1.6, seed });
+  const pts = [];
+  for (let k = 0; k <= 8; k++) pts.push([x + k * 2.2, y + Math.sin(k * 1.3) * 3]);
+  return rc.curve(pts, { roughness: 0.6, strokeWidth: 1.6, seed });
+}
+
+function drawChart(el, t) {
+  const svg = el.querySelector("svg");
+  svg.innerHTML = "";
+  const w = el.clientWidth, h = Math.round(w * 0.6);
+  svg.setAttribute("width", w);
+  svg.setAttribute("height", h);
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  const rc = rough.svg(svg, { options: { stroke: "currentColor" } });
+  const c = F.chart, L = 44, R = 84, T = 10, B = 22;
+  const X = (y) => L + ((y - 1995) / 30) * (w - L - R);
+  const Y = (v) => T + ((273.5 - v) / 13) * (h - T - B);
+  const grid = group(svg, "c-rule");
+  [[262, "19 Sept"], [267, "24 Sept"], [272, "29 Sept"]].forEach(([v, name]) => {
+    drawn(grid, rc.line(L, Y(v), w - R + 10, Y(v), { roughness: 1.2, strokeWidth: 0.9, seed: seedOf(name) }), t, 420);
+    const tx = document.createElementNS(NS, "text");
+    tx.setAttribute("class", "lbl");
+    tx.setAttribute("x", L - 6);
+    tx.setAttribute("y", Y(v) + 3);
+    tx.setAttribute("text-anchor", "end");
+    tx.textContent = name;
+    popped(svg, tx, t);
+  });
+  [1995, 2025].forEach((yr) => {
+    const tx = document.createElementNS(NS, "text");
+    tx.setAttribute("class", "lbl");
+    tx.setAttribute("x", X(yr));
+    tx.setAttribute("y", h - 4);
+    tx.setAttribute("text-anchor", "middle");
+    tx.textContent = yr;
+    popped(svg, tx, t);
+  });
+  t += 420;
+  const dots = group(svg, "c-scatter");
+  c.points.forEach((d, i) => popped(dots, rc.circle(X(d.year), Y(d.value), 5.5, { roughness: 0.7, strokeWidth: 1.1, seed: d.year }), t + i * 38));
+  t += c.points.length * 38 + 100;
+  const line = group(svg, "c-rust");
+  drawn(line, rc.line(X(1995), Y(c.trend.start), X(2025), Y(c.trend.end), { roughness: 1, bowing: 0.6, strokeWidth: 2.3, seed: 7 }), t, 650);
+  const lbl = document.createElementNS(NS, "text");
+  lbl.setAttribute("class", "lbl lbl--line");
+  lbl.setAttribute("x", X(2025) + 8);
+  lbl.setAttribute("y", Y(c.trend.end) + 4);
+  lbl.textContent = c.label;
+  popped(svg, lbl, t + 600);
+  return t + 750;
+}
+
+function drawPlate(el, t) {
+  const sheet = el.querySelector(".plate__sheet");
+  const svg = sheet.querySelector("svg");
+  svg.innerHTML = "";
+  const w = sheet.clientWidth - 16, h = Math.round(w / F.plate.aspect);
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  const rc = rough.svg(svg, { options: { stroke: "currentColor" } });
+  sheet.style.setProperty("--at", `${t}ms`);
+  for (const tape of sheet.querySelectorAll(".tape")) tape.style.setProperty("--at", `${t + 260}ms`);
+  t += 460;
+  const grat = group(svg, "c-faint");
+  for (const u of F.plate.meridians) grat.appendChild(rc.line(u * w, 0, u * w, h, { roughness: 1.5, strokeWidth: 1, seed: seedOf("m" + u) }));
+  for (const v of F.plate.parallels) grat.appendChild(rc.line(0, v * h, w, v * h, { roughness: 1.5, strokeWidth: 1, seed: seedOf("p" + v) }));
+  const hatch = group(svg, "c-pencil");
+  const coast = group(svg, "c-ink");
+  F.plate.rings.forEach((ring, i) => {
+    const pts = ring.map(([u, v]) => [u * w, v * h]);
+    const seed = seedOf("ring" + i);
+    if (i < 8) hatch.appendChild(rc.polygon(pts, { ...HAND, stroke: "none", fill: "currentColor", fillStyle: "hachure", hachureAngle: -41, hachureGap: Math.max(4, (7 * w) / 280), fillWeight: 0.7, seed }));
+    coast.appendChild(rc.polygon(pts, { ...HAND, stroke: "currentColor", strokeWidth: 1.1, seed }));
+  });
+  const [cu, cv] = F.plate.center;
+  drawn(group(svg, "c-rust"), rc.circle(cu * w, cv * h, Math.max(26, w * 0.05) * 1.15, { ...HAND, roughness: 2.2, strokeWidth: 2, seed: 42 }), t, 620);
+  return t + 640;
+}
+
+/* Everything the hand adds to one sheet, in the order it would have been put down. */
+function inkLeaf(leaf) {
+  const svg = leaf.querySelector(".ink");
+  svg.innerHTML = "";
+  const rc = rough.svg(svg, { options: { stroke: "currentColor" } });
+  const box = boxIn(leaf);
+  let t = 420;
+  for (const el of leaf.querySelectorAll("[data-ink]")) {
+    const b = box(el);
+    const seed = seedOf(el.textContent.slice(0, 40) + el.dataset.ink);
+    switch (el.dataset.ink) {
+      case "stamp":
+        el.style.setProperty("--at", `${t}ms`);
+        t += 320;
+        break;
+      case "underline": {
+        const g = group(svg, el.dataset.tone || "c-rust");
+        const y = b.y + b.h + 3;
+        drawn(g, rc.line(b.x, y, b.x + Math.min(b.w * 0.86, 300), y + 2, { roughness: 1.3, bowing: 2, strokeWidth: 2.1, seed }), t, 480);
+        t += 480;
+        break;
+      }
+      case "link": {
+        const g = group(svg, "c-rust");
+        drawn(g, rc.line(b.x, b.y + b.h + 2, b.x + b.w, b.y + b.h + 3, { roughness: 1, bowing: 1.5, strokeWidth: 1.4, seed }), t, 380);
+        t += 380;
+        break;
+      }
+      case "ring": {
+        drawn(group(svg, "c-rust"), rc.ellipse(b.x + b.w / 2, b.y + b.h / 2, b.w + 18, b.h + 8, { roughness: 1.4, strokeWidth: 1.8, seed }), t, 520);
+        t += 520;
+        break;
+      }
+      case "note": {
+        el.style.setProperty("--at", `${t}ms`);
+        t += el.querySelectorAll(".w").length * 34 + 160;
+        const target = leaf.querySelector("#" + el.dataset.for);
+        if (target) t = arrow(rc, group(svg, "c-soft"), box(el), box(target), t, seed);
+        break;
+      }
+      case "bracket": {
+        const x = b.x - 7, y = b.y + 2, h = b.h - 4;
+        const path = `M ${x + 9} ${y} C ${x + 2} ${y} ${x} ${y + 4} ${x} ${y + 14} L ${x} ${y + h - 14} C ${x} ${y + h - 4} ${x + 2} ${y + h} ${x + 9} ${y + h}`;
+        drawn(group(svg, "c-pencil"), rc.path(path, { roughness: 1, strokeWidth: 1.5, seed }), t, 620);
+        t += 620;
+        break;
+      }
+      case "verdict": {
+        const status = el.dataset.status;
+        const tone = status === "addressed" ? "c-moss" : status === "open" ? "c-rust" : "c-pencil";
+        const g = group(svg, tone);
+        const side = el.classList.contains("verdict--side");
+        const gy = side ? b.y + 9 : b.y + b.h / 2;
+        drawn(g, verdictGlyph(rc, status, b.x + 2, gy, seed), t, 360);
+        if (status === "open") {
+          const q = document.createElementNS(NS, "text");
+          q.setAttribute("x", b.x + 10);
+          q.setAttribute("y", gy + 4.5);
+          q.setAttribute("text-anchor", "middle");
+          q.setAttribute("style", "font: 12px var(--font-hand); fill: currentColor");
+          q.textContent = "?";
+          popped(g, q, t + 200);
+        }
+        t += 380;
+        break;
+      }
+      case "tick":
+        drawn(group(svg, "c-moss"), verdictGlyph(rc, "addressed", b.x + b.w - 24, b.y + 12, seed), t, 300);
+        t += 320;
+        break;
+      case "doodle": {
+        el.classList.add("draw");
+        el.style.setProperty("--at", `${t}ms`);
+        el.style.setProperty("--dur", "820ms");
+        for (const p of el.querySelectorAll("path")) p.style.setProperty("--len", String(Math.ceil(p.getTotalLength() + 2)));
+        t += 600;
+        break;
+      }
+      case "chart":
+        t = drawChart(el, t);
+        break;
+      case "plate":
+        t = drawPlate(el, t);
+        break;
+    }
+  }
+  leaf.dataset.total = String(t);
+}
+
+/* Where the lens stops on each sheet, in reading order. */
+function measureStops() {
+  STOPS = els.map((leaf) => {
+    const box = boxIn(leaf);
+    return [...leaf.querySelectorAll("[data-stop]")]
+      .sort((a, b) => Number(a.dataset.stop) - Number(b.dataset.stop))
+      .map((el) => {
+        const r = box(el);
+        const reach = Number(el.dataset.reach || 0);
+        const x = r.x - reach, w = r.w + reach;
+        return { x, y: r.y + 18, w, h: r.h };
+      });
+  });
+}
+
+/* ---- Turning ------------------------------------------------------------------------------- */
+function offsetOf(i) {
+  const below = i - cur;
+  return below <= 0 ? 0 : Math.min(below, 6) * 1.6;
+}
+function paint(i) {
+  const el = els[i];
+  const a = angle[i];
+  el.hidden = a >= 90;
+  el.style.transform = `translateY(${offsetOf(i)}px) rotateX(${a.toFixed(2)}deg)`;
+  el.querySelector(".leaf__shade").style.opacity = String(Math.min(1, a / 70) * 0.7);
+  const under = els[i + 1];
+  if (under) {
+    const cast = under.querySelector(".leaf__cast");
+    const h = el.clientHeight - 14;
+    const r = (a * Math.PI) / 180;
+    const edge = 14 + (h * Math.cos(r) * PERSPECTIVE) / Math.max(1, PERSPECTIVE - h * Math.sin(r));
+    cast.style.top = `${edge.toFixed(1)}px`;
+    cast.style.opacity = a > 0 && a < 90 ? String(Math.sin(r) * 0.9) : "0";
+  }
+}
+function paintAll() {
+  for (let i = 0; i < N; i++) paint(i);
+  const here = tabOf(cur);
+  flags.forEach((f, i) => {
+    f.classList.toggle("is-here", i === here);
+    f.classList.toggle("is-behind", i < here);
+    f.setAttribute("aria-current", i === here ? "page" : "false");
+  });
+  document.getElementById("back").disabled = cur === 0;
+}
+
+function tween(i, to, ms, delay = 0) {
+  return new Promise((resolve) => {
+    const from = angle[i];
+    if (reduce) { angle[i] = to; paint(i); return resolve(); }
+    let t0 = null;
+    const step = (t) => {
+      if (t0 === null) t0 = t + delay;
+      const k = Math.max(0, Math.min(1, (t - t0) / ms));
+      angle[i] = from + (to - from) * (1 - Math.pow(1 - k, 3));
+      paint(i);
+      if (k < 1) requestAnimationFrame(step);
+      else resolve();
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+/* A page is written the first time it is the open one, and stays written. */
+function arrive() {
+  if (where !== "read") return;
+  const leaf = els[cur];
+  if (!leaf || leaf.classList.contains("is-written")) return;
+  if (mode === "lens" || reduce) leaf.classList.add("is-done");
+  void leaf.offsetWidth;
+  leaf.classList.add("is-written");
+  leaf.dataset.since = String(performance.now());
+}
+function finishWriting() {
+  const leaf = els[cur];
+  const since = Number(leaf?.dataset.since || 0), total = Number(leaf?.dataset.total || 0);
+  if (leaf && !leaf.classList.contains("is-done") && performance.now() - since < total + 300) {
+    leaf.classList.add("is-done");
+    return true;
+  }
+  return false;
+}
+
+async function next() {
+  if (busy || cur >= N - 1) return;
+  busy = true;
+  await tween(cur, 90, 380);
+  cur += 1;
+  paintAll();
+  arrive();
+  busy = false;
+}
+async function prev() {
+  if (busy || cur <= 0) return;
+  busy = true;
+  cur -= 1;
+  angle[cur] = 90;
+  paintAll();
+  await tween(cur, 0, 420);
+  busy = false;
+}
+async function goTo(target) {
+  if (busy || target === cur || target < 0 || target >= N) return;
+  busy = true;
+  const SHOW = 7, GAP = 55, MS = 300;
+  if (target > cur) {
+    const run = [];
+    for (let i = cur; i < target; i++) run.push(i);
+    const skip = run.slice(0, Math.max(0, run.length - SHOW));
+    for (const i of skip) { angle[i] = 90; paint(i); }
+    await Promise.all(run.slice(skip.length).map((i, k) => tween(i, 90, MS, k * GAP)));
+  } else {
+    const run = [];
+    for (let i = cur - 1; i >= target; i--) run.push(i);
+    const shown = run.slice(Math.max(0, run.length - SHOW));
+    for (const i of run) angle[i] = shown.includes(i) ? 90 : 0;
+    cur = target;
+    paintAll();
+    await Promise.all(shown.map((i, k) => tween(i, 0, MS, k * GAP)));
+  }
+  cur = target;
+  paintAll();
+  arrive();
+  busy = false;
+}
+
+/* ---- The lens ------------------------------------------------------------------------------ */
+let view = { kind: "glance", s: 1, tx: 0, ty: 0, stop: -1 };
+const glanceBtn = document.getElementById("glance");
+
+function setView(v, animate = true) {
+  view = v;
+  camera.style.transition = animate && !reduce ? "transform 560ms cubic-bezier(0.32, 0.72, 0.35, 1)" : "none";
+  camera.style.transform = `translate(${v.tx}px, ${v.ty}px) scale(${v.s})`;
+  glanceBtn.hidden = mode !== "lens" || v.kind === "glance";
+}
+function glanceView() {
+  const W = stage.clientWidth, H = stage.clientHeight;
+  const s = Math.min(W / 600, (H - 40) / 980) * 0.98;
+  return { kind: "glance", s, tx: (W - 600 * s) / 2, ty: (H - 980 * s) / 2 - 8, stop: -1 };
+}
+function stopView(i) {
+  const r = STOPS[cur][i];
+  const W = stage.clientWidth, H = stage.clientHeight;
+  const s = Math.min(1.14, (W - 22) / r.w);
+  const tx = W / 2 - (r.x + r.w / 2) * s;
+  const ty = r.h * s > H - 70 ? 30 - r.y * s : H / 2 - (r.y + r.h / 2) * s - 10;
+  return { kind: "stop", s, tx, ty, stop: i };
+}
+function toGlance() { setView(glanceView()); }
+function toStop(i) { setView(stopView(i)); }
+
+function lensForward() {
+  const stops = STOPS[cur] || [];
+  if (view.kind === "glance") {
+    if (stops.length) toStop(0);
+    else next();
+    return;
+  }
+  if (view.stop < stops.length - 1) return toStop(view.stop + 1);
+  // The end of a page: hold it at arm's length again, then turn it.
+  toGlance();
+  setTimeout(() => next(), reduce ? 0 : 520);
+}
+function lensBack() {
+  if (view.kind === "glance") return prev();
+  if (view.stop > 0) return toStop(view.stop - 1);
+  toGlance();
+}
+
+/* ---- The hand on the page ------------------------------------------------------------------- */
+let drag = null;
+stage.addEventListener("pointerdown", (e) => {
+  if (where !== "read" || busy || e.target.closest(".flag, .controls, .back, a")) return;
+  drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, lt: e.timeStamp, v: 0, mode: null, corner: !!e.target.closest(".corner") };
+  stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener("pointermove", (e) => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+  if (!drag.mode) {
+    if (Math.hypot(dx, dy) < 8) return;
+    if (mode === "lens" && view.kind === "stop") drag.mode = "pan";
+    else if (Math.abs(dy) > Math.abs(dx) && dy < 0 && cur < N - 1) drag.mode = "on";
+    else if (Math.abs(dy) > Math.abs(dx) && dy > 0 && cur > 0) {
+      drag.mode = "back";
+      cur -= 1;
+      angle[cur] = 90;
+      paintAll();
+    } else return;
+  }
+  const dt = Math.max(1, e.timeStamp - drag.lt);
+  drag.v = (e.clientY - drag.ly) / dt;
+  if (drag.mode === "pan") {
+    setView({ ...view, tx: view.tx + (e.clientX - drag.lx), ty: view.ty + (e.clientY - drag.ly) }, false);
+  } else {
+    const s = mode === "lens" ? view.s : 1;
+    const box = els[cur].getBoundingClientRect();
+    const axis = box.top + 14 * s;
+    const h = box.height / s - 14;
+    if (drag.mode === "on") {
+      const held = Math.max(80, (drag.y0 - axis) / s);
+      const y = Math.max(0, (e.clientY - axis) / s);
+      angle[cur] = Math.min(90, (heldAngle(held, y) * 180) / Math.PI);
+    } else {
+      angle[cur] = 90 * (1 - Math.max(0, Math.min(1, dy / s / (h * 0.75))));
+    }
+    paint(cur);
+  }
+  drag.lx = e.clientX;
+  drag.ly = e.clientY;
+  drag.lt = e.timeStamp;
+});
+
+function heldAngle(held, y) {
+  let lo = 0, hi = Math.PI / 2;
+  for (let k = 0; k < 24; k++) {
+    const mid = (lo + hi) / 2;
+    const proj = (held * Math.cos(mid) * PERSPECTIVE) / (PERSPECTIVE - held * Math.sin(mid));
+    if (proj > y) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+function tap(e) {
+  if (mode === "writing") {
+    if (finishWriting()) return;
+    if (drag?.corner) next();
+    return;
+  }
+  if (view.kind === "glance") {
+    if (drag?.corner) return next();
+    // Tap the part you want to read, and the lens goes there.
+    const st = stage.getBoundingClientRect();
+    const p = { x: (e.clientX - st.left - view.tx) / view.s, y: (e.clientY - st.top - view.ty) / view.s };
+    const stops = STOPS[cur] || [];
+    const hit = stops.findIndex((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
+    if (hit >= 0) return toStop(hit);
+    return lensForward();
+  }
+  if (e.clientX - stage.getBoundingClientRect().left > stage.clientWidth * 0.3) lensForward();
+  else lensBack();
+}
+
+async function release(e) {
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag;
+  if (!d.mode) {
+    tap(e);
+    drag = null;
+    return;
+  }
+  drag = null;
+  if (d.mode === "pan") return;
+  busy = true;
+  if (d.mode === "on") {
+    const go = angle[cur] > 48 || d.v < -0.45;
+    await tween(cur, go ? 90 : 0, go ? 220 : 260);
+    if (go) cur += 1;
+  } else {
+    const go = angle[cur] < 60 || d.v > 0.45;
+    await tween(cur, go ? 0 : 90, 260);
+    if (!go) cur += 1;
+  }
+  paintAll();
+  arrive();
+  busy = false;
+}
+stage.addEventListener("pointerup", release);
+stage.addEventListener("pointercancel", release);
+document.getElementById("back").addEventListener("click", () => (mode === "lens" ? (toGlance(), prev()) : prev()));
+
+addEventListener("keydown", (e) => {
+  const on = ["ArrowDown", "ArrowRight", "PageDown", " "].includes(e.key);
+  const off = ["ArrowUp", "ArrowLeft", "PageUp"].includes(e.key);
+  if ((!on && !off) || where !== "read") return;
+  e.preventDefault();
+  if (mode === "lens") (on ? lensForward : lensBack)();
+  else if (on) { if (!finishWriting()) next(); }
+  else prev();
+});
+
+/* ---- Flags ----------------------------------------------------------------------------------- */
+const bubble = document.createElement("div");
+bubble.className = "bubble";
+bubble.hidden = true;
+bubble.innerHTML = `<span class="bubble__tab"></span><span class="bubble__q"></span>`;
+stage.appendChild(bubble);
+let scrub = null;
+function flagAt(y) {
+  let best = 0, gap = Infinity;
+  flags.forEach((f, i) => {
+    const r = f.getBoundingClientRect();
+    const g = Math.abs(r.top + r.height / 2 - y);
+    if (g < gap) { gap = g; best = i; }
+  });
+  return best;
+}
+function showBubble(i) {
+  const r = flags[i].getBoundingClientRect(), st = stage.getBoundingClientRect();
+  bubble.hidden = false;
+  bubble.style.top = `${r.top + r.height / 2 - st.top}px`;
+  bubble.querySelector(".bubble__tab").textContent = CHAPTERS[i].tab;
+  bubble.querySelector(".bubble__q").textContent = CHAPTERS[i].question;
+}
+flagsEl.addEventListener("pointerdown", (e) => {
+  if (busy) return;
+  e.preventDefault();
+  e.stopPropagation();
+  flagsEl.setPointerCapture(e.pointerId);
+  scrub = { id: e.pointerId, i: flagAt(e.clientY) };
+  showBubble(scrub.i);
+});
+flagsEl.addEventListener("pointermove", (e) => {
+  if (!scrub || e.pointerId !== scrub.id) return;
+  const i = flagAt(e.clientY);
+  if (i !== scrub.i) { scrub.i = i; showBubble(i); }
+});
+flagsEl.addEventListener("pointerup", (e) => {
+  if (!scrub || e.pointerId !== scrub.id) return;
+  const i = scrub.i;
+  scrub = null;
+  bubble.hidden = true;
+  if (mode === "lens") toGlance();
+  goTo(startOf(i));
+});
+flagsEl.addEventListener("pointercancel", () => { scrub = null; bubble.hidden = true; });
+flagsEl.addEventListener("keydown", (e) => {
+  const f = e.target.closest(".flag");
+  if (f && (e.key === "Enter" || e.key === " ")) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (mode === "lens") toGlance();
+    goTo(startOf(Number(f.dataset.i)));
+  }
+});
+
+/* ---- The wire ------------------------------------------------------------------------------ */
+function drawSpiral() {
+  const w = spiral.clientWidth || spiral.getBoundingClientRect().width;
+  const step = 22, start = 25;
+  const count = Math.floor((w - 28) / step);
+  stack.style.setProperty("--holes-w", `${count * step}px`);
+  let d = "", h = "";
+  for (let n = 0, x = start; n < count; n++, x += step) {
+    const j = Math.sin(x * 1.7) * 0.6;
+    d += `M ${x - 1.5} ${30.5 + j} C ${x - 4} 18 ${x + 1} ${2 + j} ${x + 5.5} 6 C ${x + 8} 8 ${x + 7} 14 ${x + 5} 19 `;
+    h += `M ${x - 2.6} 24 C ${x - 3} 15 ${x} 6 ${x + 3.2} 5.4 `;
+  }
+  spiral.setAttribute("viewBox", `0 0 ${w} 40`);
+  spiral.innerHTML = `<path class="w" d="${d}"/><path class="h" d="${h}"/>`;
+}
+
+/* ---- Controls --------------------------------------------------------------------------------- */
+const ICON = {
+  sun: `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 1.5v2.5M10 16v2.5M1.5 10H4M16 10h2.5M4 4l1.8 1.8M14.2 14.2 16 16M4 16l1.8-1.8M14.2 5.8 16 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  moon: `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M14.5 13.2A6.5 6.5 0 0 1 7 3.6a6.5 6.5 0 1 0 7.5 9.6Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
+  lens: `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m12.6 12.6 5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`,
+  pen: `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 17l1.2-4.4L13.5 3.3a1.8 1.8 0 0 1 2.6 0l.6.6a1.8 1.8 0 0 1 0 2.6L7.4 15.8z M11.8 5l3.2 3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
+  back: `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7V3h4M17 7V3h-4M3 13v4h4M17 13v4h-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+};
+const root = document.documentElement;
+const isDark = () => (root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches);
+const surfaceBtn = document.getElementById("surface");
+const modeBtn = document.getElementById("mode");
+const drawControls = () => {
+  surfaceBtn.innerHTML = isDark() ? ICON.sun : ICON.moon;
+  modeBtn.innerHTML = mode === "lens" ? `${ICON.lens}<span>lens</span>` : `${ICON.pen}<span>writing</span>`;
+  modeBtn.setAttribute("aria-label", `Reading mode: ${mode}. Switch`);
+  glanceBtn.innerHTML = `${ICON.back}<span>whole page</span>`;
+};
+surfaceBtn.addEventListener("click", () => {
+  root.dataset.theme = isDark() ? "light" : "dark";
+  drawControls();
+});
+modeBtn.addEventListener("click", () => {
+  const keep = tabOf(cur);
+  mode = mode === "lens" ? "writing" : "lens";
+  stage.dataset.mode = mode;
+  build();
+  cur = Math.max(1, startOf(keep));
+  for (let i = 0; i < cur; i++) angle[i] = 90;
+  layout();
+  drawControls();
+});
+glanceBtn.addEventListener("click", toGlance);
+
+/* ---- The desk: the cover, and the menu between readings ------------------------------------- */
+const world = document.getElementById("world");
+const deskCanvas = document.getElementById("desk-canvas");
+const deskInk = document.getElementById("desk-ink");
+const padEl = document.getElementById("pad");
+const hitCandle = document.getElementById("hit-candle");
+const hitBox = document.getElementById("hit-box");
+const hitPen = document.getElementById("hit-pen");
+const tags = { light: document.getElementById("tag-light"), writing: document.getElementById("tag-writing") };
+const styleName = document.getElementById("style-name");
+const live = document.getElementById("live");
+/** How the pad lies on the table: turned a little, as a thing put down by hand. */
+const PAD_ANGLE = -2.5;
+/** Its width on the table, which sets the scale of everything else on it. */
+const PAD_METRES = 0.21;
+/** The pencil lies below the pad, pointing right and a little down the table. */
+const PEN_TURN = -0.16;
+const PEN_METRES = 0.17;
+
+/** "desk", "read", or "moving" between them. */
+let where = "desk";
+/** 0 is the camera up over the table, 1 is the pad filling the screen. */
+let camU = 0;
+/** The scene, once it has loaded; null if this browser cannot draw it, and the painted wood stands in. */
+let desk = null;
+/** Whether the table has been shown once, which is when the pencil rolls to say it can be picked up. */
+let introduced = false;
+/** Which things the reader has used. A label is for finding a thing, so once it is found it goes. */
+const used = { light: false, writing: false };
+
+function geometry() {
+  const W = stage.clientWidth, H = stage.clientHeight;
+  const pw = padEl.offsetWidth, ph = padEl.offsetHeight;
+  const cr = { x: padEl.offsetLeft + pw / 2, y: padEl.offsetTop + ph / 2 };
+  const sd = (0.56 * W) / pw;
+  const cd = { x: 0.48 * W, y: 0.445 * H };
+  return { W, H, pw, ph, cr, cd, sd };
+}
+
+/*
+  One camera, two layers. The pad is laid out at reading size and drawn smaller on the table; the
+  table is drawn at its own size and magnified when the pad fills the screen. Both transforms come
+  from the same three numbers -- how large the pad looks, how it is turned, where its centre is -- so
+  the table moves with the pad and never slides under it.
+*/
+function camTransform(u) {
+  const g = geometry();
+  const sigma = g.sd * Math.pow(1 / g.sd, u);
+  const alpha = PAD_ANGLE * (1 - u);
+  const cx = g.cd.x + (g.cr.x - g.cd.x) * u;
+  const cy = g.cd.y + (g.cr.y - g.cd.y) * u;
+  camera.style.transform = `translate(${cx}px, ${cy}px) rotate(${alpha}deg) scale(${sigma}) translate(${-g.cr.x}px, ${-g.cr.y}px)`;
+  world.style.transform = `translate(${cx}px, ${cy}px) rotate(${alpha - PAD_ANGLE}deg) scale(${sigma / g.sd}) translate(${-g.cd.x}px, ${-g.cd.y}px)`;
+}
+
+function moveTo(target, ms = 700) {
+  return new Promise((resolve) => {
+    const from = camU;
+    if (reduce) {
+      camU = target;
+      camTransform(camU);
+      return resolve();
+    }
+    let t0 = null;
+    const step = (t) => {
+      if (t0 === null) t0 = t;
+      const k = Math.min(1, (t - t0) / ms);
+      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      camU = from + (target - from) * e;
+      camTransform(camU);
+      if (k < 1) requestAnimationFrame(step);
+      else resolve();
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+function setWhere(next) {
+  where = next;
+  stage.dataset.view = next;
+}
+
+/* Pick the pad up: the camera comes down onto it. The cover stays shut until the reader lifts it. */
+async function openPad() {
+  if (where !== "desk" || busy) return;
+  setWhere("moving");
+  await moveTo(1);
+  setWhere("read");
+  desk?.setRunning(false);
+  arrive();
+}
+
+/* Put it down: the camera rises, and the table is drawn again only now. */
+async function putDown() {
+  if (where !== "read" || busy) return;
+  setWhere("moving");
+  desk?.setRunning(true);
+  await moveTo(0);
+  setWhere("desk");
+  introduce();
+}
+
+padEl.addEventListener("click", (e) => {
+  if (where === "desk" && !e.target.closest(".flags")) openPad();
+});
+padEl.addEventListener("keydown", (e) => {
+  if (where === "desk" && (e.key === "Enter" || e.key === " ")) {
+    e.preventDefault();
+    openPad();
+  }
+});
+document.getElementById("to-desk").addEventListener("click", putDown);
+
+/* ---- The candle and the matches: the light ---- */
+function usedLight() {
+  used.light = true;
+  world.classList.add("used-light");
+}
+hitBox.addEventListener("click", () => {
+  if (where !== "desk") return;
+  usedLight();
+  root.dataset.theme = "dark";
+  desk?.setLit(true, true);
+});
+hitCandle.addEventListener("click", () => {
+  if (where !== "desk") return;
+  usedLight();
+  root.dataset.theme = isDark() ? "light" : "dark";
+  desk?.setLit(isDark(), true);
+});
+
+/*
+  ---- The pencil: the writing ----
+
+  No menu. Each touch rolls the pencil and the pad on the table is written again in the next hand;
+  the hand's name is chalked by the pencil for a moment, in that hand, so the change is seen on the
+  thing it changes and named in its own letters.
+*/
+root.dataset.type = root.dataset.type || "hand";
+const STYLES = [
+  { v: "hand", name: "Hand", face: "Virgil", loads: "Shantell Sans" },
+  { v: "clear", name: "Clear", face: "Atkinson Hyperlegible", loads: "Atkinson Hyperlegible" },
+  { v: "dyslexic", name: "Dyslexia", face: "OpenDyslexic", loads: "OpenDyslexic" },
+];
+let nameTimer;
+hitPen.addEventListener("click", async () => {
+  if (where !== "desk") return;
+  used.writing = true;
+  world.classList.add("used-writing");
+  const at = STYLES.findIndex((s) => s.v === root.dataset.type);
+  const style = STYLES[(at + 1) % STYLES.length];
+  desk?.nudge();
+  root.dataset.type = style.v;
+  styleName.textContent = style.name;
+  styleName.style.fontFamily = `"${style.face}", system-ui, sans-serif`;
+  world.classList.add("show-style");
+  clearTimeout(nameTimer);
+  nameTimer = setTimeout(() => world.classList.remove("show-style"), 1900);
+  hitPen.setAttribute("aria-label", `The pencil. The book is written in ${style.name}; touch for the next hand`);
+  live.textContent = `Written in ${style.name}`;
+  try {
+    await document.fonts.load(`16px "${style.loads}"`);
+  } catch {}
+  layout();
+});
+
+/* ---- The chapters are the pad's own flags: on the table, a flag opens the pad at its chapter ---- */
+flagsEl.addEventListener("pointerup", () => {
+  if (where !== "desk") return;
+  // The flag's own handler has begun turning the pages; once they have turned, pick the pad up.
+  setTimeout(() => {
+    const wait = () => (busy ? setTimeout(wait, 60) : openPad());
+    wait();
+  }, 0);
+});
+
+/* ---- Labels: the table says what can be picked up, in the book's own hand ---- */
+function placeTags() {
+  const svg = deskInk;
+  svg.innerHTML = "";
+  svg.setAttribute("width", stage.clientWidth);
+  svg.setAttribute("height", stage.clientHeight);
+  if (!desk) return;
+  const rc = rough.svg(svg, { options: { stroke: "currentColor" } });
+  const groupFor = (name) => {
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("class", `tag-ink for-${name}`);
+    svg.appendChild(g);
+    return g;
+  };
+  const H = stage.clientHeight;
+  const put = (tag, x, y) => {
+    tag.style.left = `${x}px`;
+    tag.style.top = `${y}px`;
+  };
+  const arrowTo = (g, from, to, seed, at) => {
+    const m = { x: (from.x + to.x) / 2 + (to.y - from.y) * 0.18, y: (from.y + to.y) / 2 - (to.x - from.x) * 0.18 };
+    const shaft = rc.curve([[from.x, from.y], [m.x, m.y], [to.x, to.y]], { roughness: 0.9, strokeWidth: 1.6, seed });
+    const a = Math.atan2(to.y - m.y, to.x - m.x), k = 8;
+    const head = rc.linearPath([[to.x - k * Math.cos(a - 0.5), to.y - k * Math.sin(a - 0.5)], [to.x, to.y], [to.x - k * Math.cos(a + 0.5), to.y - k * Math.sin(a + 0.5)]], { roughness: 0.6, strokeWidth: 1.6, seed: seed + 1 });
+    drawn(g, shaft, at, 420);
+    drawn(g, head, at + 380, 160);
+  };
+
+  // Light: on the open wood left of the candle, clear of it and of its shadow, which falls to the right.
+  const [cx, cy] = desk.screenOf("candle");
+  put(tags.light, cx - 104, cy + 0.03 * H);
+  arrowTo(groupFor("light"), { x: cx - 58, y: cy + 0.03 * H + 8 }, { x: cx - 34, y: cy + 2 }, 3, 900);
+
+  // Writing: under the pencil's middle, an arrow up to it.
+  const [px, py] = desk.screenOf("pen");
+  const g0 = geometry();
+  const k = (g0.sd * g0.pw) / PAD_METRES;
+  const mid = { x: px + Math.cos(PEN_TURN) * PEN_METRES * k * 0.5, y: py - Math.sin(PEN_TURN) * PEN_METRES * k * 0.5 };
+  put(tags.writing, mid.x - 30, mid.y + 0.05 * H);
+  put(styleName, mid.x - 30, mid.y + 0.045 * H);
+  arrowTo(groupFor("writing"), { x: mid.x - 8, y: mid.y + 0.05 * H }, { x: mid.x - 4, y: mid.y + 0.014 * H }, 7, 1500);
+  hitPen.style.left = `${px - 10}px`;
+  hitPen.style.top = `${py}px`;
+  hitPen.style.width = `${PEN_METRES * k + 20}px`;
+  hitPen.style.rotate = `${-PEN_TURN}rad`;
+}
+
+/* The labels are written in when the table comes into view and fade a few seconds later. */
+let tagsTimer;
+function introduce() {
+  if (!desk) return;
+  if (!introduced) {
+    introduced = true;
+    setTimeout(() => desk?.nudge(), reduce ? 0 : 1300);
+  }
+  if (used.light && used.writing) return;
+  world.classList.add("is-written");
+  world.classList.remove("tags-off");
+  clearTimeout(tagsTimer);
+  tagsTimer = setTimeout(() => world.classList.add("tags-off"), 6000);
+}
+
+/* ---- The table itself ---- */
+function deskLayout() {
+  const g = geometry();
+  const { W, H } = g;
+  return {
+    pad: { x: g.cd.x - (g.pw * g.sd) / 2, y: g.cd.y - (g.ph * g.sd) / 2, w: g.pw * g.sd, h: g.ph * g.sd, angle: PAD_ANGLE, thick: 0.012 },
+    padWidth: PAD_METRES,
+    sheets: [],
+    at: {
+      glass: [0.13 * W, 0.075 * H],
+      box: [0.62 * W, 0.07 * H],
+      candle: [0.87 * W, 0.1 * H],
+      pen: [0.24 * W, 0.8 * H],
+      compass: [0.13 * W, 0.915 * H],
+      cup: [0.86 * W, 0.905 * H],
+    },
+    penTurn: PEN_TURN,
+  };
+}
+function placeDesk() {
+  if (!desk) return;
+  desk.place(deskLayout());
+  const [cx, cy] = desk.screenOf("candle");
+  const [bx, by] = desk.screenOf("box");
+  hitCandle.style.left = `${cx}px`;
+  hitCandle.style.top = `${cy}px`;
+  hitBox.style.left = `${bx}px`;
+  hitBox.style.top = `${by}px`;
+  // Measured with the camera over the table, where the labels belong, then put back.
+  const saved = camU;
+  camTransform(0);
+  placeTags();
+  camTransform(saved);
+  if (where === "read") desk.setRunning(false);
+}
+async function startDesk() {
+  if (typeof window.createPhoneDesk !== "function") return;
+  try {
+    // The models and the wood travel inside the page, so it needs nothing but itself to draw the table.
+    const blobs = {};
+    for (const [name, data] of Object.entries(DESK_FILES)) {
+      const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
+      blobs[name] = URL.createObjectURL(new Blob([bytes], { type: name.endsWith(".glb") ? "model/gltf-binary" : "image/webp" }));
+    }
+    desk = await window.createPhoneDesk(deskCanvas, (name) => blobs[name], isDark(), (state) => (deskCanvas.dataset.candle = state));
+    placeDesk();
+    // Shown on its first finished frame, with no fade, as the desktop does. Laid out but invisible
+    // until then: a canvas that is not displayed measures nothing, and the table came out 2 px wide.
+    deskCanvas.classList.add("is-ready");
+    if (where === "desk") introduce();
+  } catch (err) {
+    console.warn("The table could not be drawn; the painted wood stands in.", err);
+  }
+}
+
+/* ---- Pinching the page away puts the pad down ---- */
+const pointers = new Map();
+let pinchFrom = 0;
+const spread = () => {
+  const [a, b] = [...pointers.values()];
+  return Math.hypot(a[0] - b[0], a[1] - b[1]);
+};
+stage.addEventListener("pointerdown", (e) => {
+  pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pointers.size === 2 && where === "read") {
+    pinchFrom = spread();
+    if (drag && !drag.mode) drag = null;
+  }
+}, true);
+stage.addEventListener("pointermove", (e) => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pointers.size === 2 && pinchFrom && where === "read" && spread() < pinchFrom * 0.72) {
+    pinchFrom = 0;
+    if (!drag?.mode) {
+      drag = null;
+      putDown();
+    }
+  }
+}, true);
+const lift = (e) => {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchFrom = 0;
+};
+stage.addEventListener("pointerup", lift, true);
+stage.addEventListener("pointercancel", lift, true);
+
+/* ---- A shared link opens the page itself, and the table is one tap away ---- */
+function fromHash() {
+  const m = /^#page-(\d+)$/.exec(location.hash);
+  if (!m) return false;
+  const n = Math.min(N - 1, Math.max(0, Number(m[1])));
+  for (let i = 0; i < N; i++) angle[i] = i < n ? 90 : 0;
+  cur = n;
+  setWhere("read");
+  camU = 1;
+  camTransform(1);
+  desk?.setRunning(false);
+  paintAll();
+  arrive();
+  return true;
+}
+addEventListener("hashchange", fromHash);
+
+/* ---- Start ------------------------------------------------------------------------------------ */
+function layout() {
+  drawSpiral();
+  flat(() => {
+    fit();
+    alignMargins();
+    for (const leaf of els) inkLeaf(leaf);
+    measureStops();
+  });
+  // A lens reads a page that is already written; writing keeps what has been written, written.
+  for (const leaf of els) {
+    if (mode === "lens") leaf.classList.add("is-written");
+    if (leaf.classList.contains("is-written")) leaf.classList.add("is-done");
+  }
+  if (mode === "lens") setView(glanceView(), false);
+  else glanceBtn.hidden = true;
+  paintAll();
+  arrive();
+  camTransform(camU);
+  placeDesk();
+}
+build();
+drawControls();
+layout();
+fromHash();
+startDesk();
+let resizeTimer;
+addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(layout, 150); });
+document.fonts?.ready.then(layout);
+</script>
