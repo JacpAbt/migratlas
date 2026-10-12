@@ -12,7 +12,9 @@ profile reaches (the source's, recorded in `docs/PLAN.md`) and the eight hours a
 
 What a caption does not repeat is the layer's own description and its generalisation, which the
 manifest and the layer's metadata already carry and the atlas prints beside it. A caption is what
-the *mark* means; the description is what the *data* is.
+the *mark* means; the description is what the *data* is. The same holds for the still maps (decision
+7), whose terms -- whose data, which licence, how generalised -- are read from each layer's metadata
+and the registry, except the detectability map's, which is this project's own report and says so.
 
 Plain text, as every published document here is: a caption's `lead` is the clause the atlas sets
 in bold and runs into the rest, so no markup travels in the prose.
@@ -154,6 +156,113 @@ def plates() -> list[PlateWords]:
     ]
 
 
+@dataclass(frozen=True, slots=True)
+class StillWords:
+    """What one still map says: its name in the list, its title over the map, and what a mark is."""
+
+    name: str
+    button: str
+    title: str
+    lead: str
+    caption: str
+    unit: str
+    """What a dot counts, beside the key's sample dots. Empty where the key is categories."""
+    key: tuple[tuple[str, str], ...]
+    """Each kind of mark and what it means, in the order the key lists them."""
+
+
+DETECTABILITY: Final = "detectability"
+"""The one still map that is a report about the lake rather than a published layer."""
+
+DETECTABILITY_CREDIT: Final = (
+    "Worked out by this project from every source it holds, so no upstream licence applies; the "
+    "finest thing it states about anywhere is a one-degree cell."
+)
+
+
+def stills() -> list[StillWords]:
+    """The four maps with no time in them (ADR 0021 decision 7), in the order the atlas lists them.
+
+    The detectability key is in `STATUSES`' order reversed, best first, because the share a reader
+    looks for is how much of the world a change could be measured in at all.
+    """
+    return [
+        StillWords(
+            name="marine-space-use",
+            button="where tracked sea animals went",
+            title="Where tracked sea animals went",
+            lead="Each dot is a one-degree cell where tracked animals were.",
+            caption=(
+                "The more of them, the larger the dot, over the whole period at once and on a "
+                "logarithmic scale, so a cell with a thousand is not drawn a thousand times the "
+                "size of one. It shows where animals were tagged and followed, which is where "
+                "researchers worked, as much as where animals go."
+            ),
+            unit="tracked animals",
+            key=(),
+        ),
+        StillWords(
+            name="marine-taxa-recorded",
+            button="kinds of sea animal recorded",
+            title="How many kinds of sea animal have been recorded",
+            lead=(
+                "Each dot is a one-degree cell, larger where more kinds of moving sea animal have "
+                "at least one record."
+            ),
+            caption=(
+                "It counts what people have seen and reported, so the busiest cells are the best "
+                "surveyed, and a blank cell is one with no record of these animals, not one with "
+                "nothing in it."
+            ),
+            unit="kinds recorded",
+            key=(),
+        ),
+        StillWords(
+            name="atlas-taxa-change",
+            button="southern Africa's two atlases",
+            title="Southern Africa's two atlases: more kinds recorded, or fewer",
+            lead=(
+                "A solid dot is a quarter-degree cell where the second atlas recorded more kinds "
+                "than the first, a ring one where it recorded fewer."
+            ),
+            caption=(
+                "The larger the mark, the larger the change. Drawn enlarged in the box, because "
+                "the whole region is a few pixels wide on the world. A before and an after, not a "
+                "trend, and a hole is a place nobody atlassed twice."
+            ),
+            unit="",
+            key=(("gain", "more kinds recorded"), ("loss", "fewer kinds recorded")),
+        ),
+        StillWords(
+            name=DETECTABILITY,
+            button="where a change can be measured",
+            title="Where a change could be measured at all",
+            lead=(
+                "Inked where some source has a long enough series with its effort measured, "
+                "pencilled where something stops it."
+            ),
+            caption=(
+                "Inked does not mean a change was found, only that one could be, and a blank place "
+                "is one the records say nothing about."
+            ),
+            unit="",
+            key=(
+                ("detectable", "a long enough series, with effort accounted for"),
+                ("too-short", "a repeated protocol, not yet long enough"),
+                ("effort-not-measured", "records, but no measure of how hard anyone looked"),
+                ("no-time-axis", "one pooled period, nothing to trend"),
+            ),
+        ),
+    ]
+
+
+def terms(layer: str) -> str:
+    """What a still layer was published under: whose data, its licence and its generalisation."""
+    meta = _meta(layer)
+    source = catalog.get(str(meta["source_id"]))
+    return f"Data: {source.title} ({source.licence}). {meta['dwc:dataGeneralizations']}"
+
+
 def build() -> dict[str, Any]:
     """The whole document, in the shape `web/src/lib/atlas/words.ts` reads."""
     by_name = {plate.name: plate for plate in PLATES}
@@ -197,6 +306,26 @@ def build() -> dict[str, Any]:
             }
             for words in plates()
         ],
+        "stills": [
+            {
+                "name": words.name,
+                "button": words.button,
+                "title": words.title,
+                "lead": words.lead,
+                "caption": words.caption,
+                "unit": words.unit,
+                "key": [{"value": value, "means": means} for value, means in words.key],
+                "data": (
+                    "detectability.json"
+                    if words.name == DETECTABILITY
+                    else f"layers/{words.name}.grid.json"
+                ),
+                "credit": DETECTABILITY_CREDIT
+                if words.name == DETECTABILITY
+                else terms(words.name),
+            }
+            for words in stills()
+        ],
         # Fragments the atlas puts its numbers between, rather than templates: a brace in shipped
         # prose is the bug `tests/test_published_prose.py` exists for, and it does not ask why.
         "readout": {
@@ -226,6 +355,8 @@ def build() -> dict[str, Any]:
             "fast": "fast",
             "clock": "time of year",
             "journey": "day of each journey",
+            "stills": "still maps",
+            "enlarged": "enlarged",
         },
     }
 

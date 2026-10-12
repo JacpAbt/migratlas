@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from migratlas.reports import atlas
+from migratlas.reports.detectability import STATUSES
 from migratlas.tiles.plates import PLATES
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,6 +71,44 @@ def test_a_plate_credits_its_maps_by_their_licence() -> None:
     plates = {plate["name"]: plate for plate in atlas.build()["plates"]}
     assert "CC BY 4.0" in plates["svalbard"]["credit"]
     assert "Open Government Licence – Canada" in plates["ya-ha-tinda"]["credit"]
+
+
+def test_every_still_map_has_words_and_published_data() -> None:
+    manifest = {layer["name"]: layer for layer in json.loads(MANIFEST.read_text(encoding="utf-8"))}
+    stills = atlas.build()["stills"]
+    for still in stills:
+        assert (ROOT / "web" / "public" / still["data"]).exists(), still["data"]
+        if still["name"] != atlas.DETECTABILITY:
+            assert manifest[still["name"]]["format"] == "grid", still["name"]
+    # Every published layer with no time in it has a still map, and nothing else does.
+    timeless = {name for name, layer in manifest.items() if layer["kind"] == "surface"}
+    assert {still["name"] for still in stills} == timeless | {atlas.DETECTABILITY}
+
+
+def test_a_still_map_types_no_count() -> None:
+    for still in atlas.build()["stills"]:
+        for field in ("lead", "caption", "title", "button"):
+            assert not re.search(r"\d", still[field]), f"{still['name']} {field} types a number"
+
+
+def test_a_still_map_keys_every_mark_it_draws() -> None:
+    stills = {still["name"]: still for still in atlas.build()["stills"]}
+    assessed = [row["value"] for row in stills[atlas.DETECTABILITY]["key"]]
+    assert sorted(assessed) == sorted(STATUSES)
+    assert assessed[0] == "detectable"
+    assert [row["value"] for row in stills["atlas-taxa-change"]["key"]] == ["gain", "loss"]
+    for still in stills.values():
+        assert still["unit"] or still["key"], f"{still['name']} has neither a unit nor a key"
+
+
+def test_a_still_map_states_the_terms_it_was_published_under() -> None:
+    manifest = {layer["name"]: layer for layer in json.loads(MANIFEST.read_text(encoding="utf-8"))}
+    for still in atlas.build()["stills"]:
+        if still["name"] == atlas.DETECTABILITY:
+            assert "no upstream licence" in still["credit"]
+            continue
+        assert manifest[still["name"]]["licence"] in still["credit"], still["name"]
+        assert str(_meta(still["name"])["dwc:dataGeneralizations"]) in still["credit"]
 
 
 def test_the_committed_document_is_current() -> None:

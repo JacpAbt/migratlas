@@ -1,6 +1,7 @@
 {
   "controls": {
     "clock": "time of year",
+    "enlarged": "enlarged",
     "fast": "fast",
     "journey": "day of each journey",
     "normal": "normal",
@@ -8,6 +9,7 @@
     "play": "play",
     "show": "show",
     "slow": "slow",
+    "stills": "still maps",
     "world": "the whole world"
   },
   "plates": [
@@ -135,6 +137,78 @@
     }
   },
   "schema_version": 1,
+  "stills": [
+    {
+      "button": "where tracked sea animals went",
+      "caption": "The more of them, the larger the dot, over the whole period at once and on a logarithmic scale, so a cell with a thousand is not drawn a thousand times the size of one. It shows where animals were tagged and followed, which is where researchers worked, as much as where animals go.",
+      "credit": "Data: MegaMove \u2014 global space use of marine megafauna (CC0 1.0). Published at source resolution.",
+      "data": "layers/marine-space-use.grid.json",
+      "key": [],
+      "lead": "Each dot is a one-degree cell where tracked animals were.",
+      "name": "marine-space-use",
+      "title": "Where tracked sea animals went",
+      "unit": "tracked animals"
+    },
+    {
+      "button": "kinds of sea animal recorded",
+      "caption": "It counts what people have seen and reported, so the busiest cells are the best surveyed, and a blank cell is one with no record of these animals, not one with nothing in it.",
+      "credit": "Data: OBIS speciesgrids \u2014 gridded marine species distributions (H3 level 7) (CC BY 4.0). Published at source resolution.",
+      "data": "layers/marine-taxa-recorded.grid.json",
+      "key": [],
+      "lead": "Each dot is a one-degree cell, larger where more kinds of moving sea animal have at least one record.",
+      "name": "marine-taxa-recorded",
+      "title": "How many kinds of sea animal have been recorded",
+      "unit": "kinds recorded"
+    },
+    {
+      "button": "southern Africa's two atlases",
+      "caption": "The larger the mark, the larger the change. Drawn enlarged in the box, because the whole region is a few pixels wide on the world. A before and an after, not a trend, and a hole is a place nobody atlassed twice.",
+      "credit": "Data: Southern African Bird Atlas Project (SABAP1) \u2014 atlas cards, 1987\u20131991 (CC BY 4.0). Published at source resolution.",
+      "data": "layers/atlas-taxa-change.grid.json",
+      "key": [
+        {
+          "means": "more kinds recorded",
+          "value": "gain"
+        },
+        {
+          "means": "fewer kinds recorded",
+          "value": "loss"
+        }
+      ],
+      "lead": "A solid dot is a quarter-degree cell where the second atlas recorded more kinds than the first, a ring one where it recorded fewer.",
+      "name": "atlas-taxa-change",
+      "title": "Southern Africa's two atlases: more kinds recorded, or fewer",
+      "unit": ""
+    },
+    {
+      "button": "where a change can be measured",
+      "caption": "Inked does not mean a change was found, only that one could be, and a blank place is one the records say nothing about.",
+      "credit": "Worked out by this project from every source it holds, so no upstream licence applies; the finest thing it states about anywhere is a one-degree cell.",
+      "data": "detectability.json",
+      "key": [
+        {
+          "means": "a long enough series, with effort accounted for",
+          "value": "detectable"
+        },
+        {
+          "means": "a repeated protocol, not yet long enough",
+          "value": "too-short"
+        },
+        {
+          "means": "records, but no measure of how hard anyone looked",
+          "value": "effort-not-measured"
+        },
+        {
+          "means": "one pooled period, nothing to trend",
+          "value": "no-time-axis"
+        }
+      ],
+      "lead": "Inked where some source has a long enough series with its effort measured, pencilled where something stops it.",
+      "name": "detectability",
+      "title": "Where a change could be measured at all",
+      "unit": ""
+    }
+  ],
   "world": {
     "caption": "The weather radars' night sky, three tracked animals, the sea ice's edge and the green wave, each through its own year.",
     "lead": "Choose one to look closer.",
