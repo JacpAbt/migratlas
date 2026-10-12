@@ -63,6 +63,17 @@ artefact. The one observable none of them reach is a bird's stopover duration: M
 credentials and EURING is by application, so a second flyway's flight vectors (BALTRAD_VPTS and
 UVA_VPTS, CC0, 151 radars) are queued as a source instead (#88).
 
+The phone, from the owner's sessions of 2026-10-10: the desktop book is very good and the phone loses
+most of it — the object, the turn, and then *the journal part*. Four mocks later the direction is
+[ADR 0020](adr/0020-the-phone-is-a-pad-on-the-desk.md), accepted 2026-10-12 with the owner's answers to
+its five questions (#89): a top-bound pad that turns under the finger, pages composed at the phone's
+size with a margin and written on as they are read, and the 3D desk as cover and menu with the candle,
+the pencil and the pad's flags as the settings. Its core is pagination that follows the type — blocks
+measured in the reader's face and packed, more paper rather than smaller type, a paragraph longer than a
+leaf continuing at a sentence end — and a guard walking all three settings at five phone sizes with no
+overflow allowed. Fifteen steps, one change at a time. Next: A0, the container chosen once from the
+screen so turning a device never changes it, and the spread measured on an upright tablet.
+
 ## Queued, with a reason to wait
 
 | # | Item | Why it waits |
