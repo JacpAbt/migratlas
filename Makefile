@@ -193,6 +193,10 @@ ingest-era5-uk:  ## ERA5 monthly temperature at the butterfly transects -> lake 
 build-findings:  ## Recompute what the research established, for the globe to render
 	$(RUN) migratlas build-findings
 
+.PHONY: plates
+plates:  ## Cut the atlas plates' coast, rivers and lakes -> web/public/basemap/plates
+	$(RUN) migratlas build-plates --out web/public/basemap/plates
+
 .PHONY: build-layers
 build-layers:  ## Export the globe's layers from the lake, through the ethics gate
 	$(RUN) migratlas build-layers --out web/public/layers

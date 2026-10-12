@@ -52,6 +52,7 @@ from migratlas.reports import (
     species,
 )
 from migratlas.tiles import layers as tile_layers
+from migratlas.tiles import plates as tile_plates
 from migratlas.tiles import species as tile_species
 
 DRIFT_SAMPLE = 5
@@ -710,6 +711,18 @@ def build_layers(
     if species.too_small:
         print(f"  {species.too_small} below the {tile_species.MIN_CELLS}-cell floor")
     print(f"search index -> {index} ({size / 1024:.0f} KiB)")
+
+
+@app.command("build-plates")
+def build_plates(
+    out: Annotated[Path, typer.Option(help="Destination directory for the plates' maps.")] = Path(
+        "web/public/basemap/plates"
+    ),
+) -> None:
+    """Cut each atlas plate's coast, rivers and lakes from their sources, through the gate."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    for export in tile_plates.build_plates(out):
+        print(f"{export.features:>7,} features  {export.bytes / 1024:>8.0f} KiB  {export.path}")
 
 
 @report_app.command("phase1d-tracks")
