@@ -23,11 +23,11 @@
   let layerNotes = $state<Record<string, string>>({});
   let stage: Stage | null = null;
   let size = $state({ w: 0, h: 0 });
-  let state = $state<StageState | null>(null);
+  let now = $state<StageState | null>(null);
   let anchors = $state<Record<string, [number, number]>>({});
   let flap = $state<"peek" | "open">("peek");
 
-  const showing = $derived(state?.showing ?? "world");
+  const showing = $derived(now?.showing ?? "world");
   const plate = $derived(words?.plates.find((p) => p.name === showing) ?? null);
   let paused = $state(false);
   let speed = $state(1);
@@ -60,6 +60,7 @@
     if (!canvasA || !canvasB || !trails || !live || !root) return;
     let gone = false;
     let made: Stage | null = null;
+    let cleanup = (): void => {};
 
     void (async () => {
       const cast = await castOf(base);
@@ -81,7 +82,7 @@
         palette(root),
         (clock.state.day / 365) * WEEKS,
         (next) => {
-          state = next;
+          now = next;
           if (!next.moving && !stage?.holding) clock.set({ day: Math.min(365, Math.floor((next.week / WEEKS) * 365)) });
         },
       );
@@ -128,7 +129,6 @@
       };
     })();
 
-    let cleanup = (): void => {};
     return () => {
       gone = true;
       cleanup();
@@ -163,14 +163,14 @@
   const MONTHS = Array.from({ length: 12 }, (_, i) =>
     new Date(Date.UTC(2023, i, 1)).toLocaleString("en-GB", { month: "short", timeZone: "UTC" }),
   );
-  const journey = $derived(state?.clock === "journey");
+  const journey = $derived(now?.clock === "journey");
   const marks = $derived(
     journey
       ? Array.from({ length: 9 }, (_, i) => ({ at: i / 8, text: i === 0 ? "1" : String(i * 50) }))
       : MONTHS.map((month, i) => ({ at: i / 12, text: month })),
   );
   const markAt = $derived(
-    state ? (journey ? Math.min(state.day, JOURNEY_DAYS) / JOURNEY_DAYS : state.week / WEEKS) : 0,
+    now ? (journey ? Math.min(now.day, JOURNEY_DAYS) / JOURNEY_DAYS : now.week / WEEKS) : 0,
   );
   const line = $derived.by(() => {
     let d = "M 0 9";
@@ -207,7 +207,7 @@
   The world chapter as a drawn atlas (ADR 0021). The canvases are the map and what moves on it; the
   words, the controls and the callouts are the page's, so they are read, focused and clicked as text.
 -->
-<div class="atlas atlas--{layout}" bind:this={host} data-showing={showing} data-moving={state?.moving ? "" : undefined}>
+<div class="atlas atlas--{layout}" bind:this={host} data-showing={showing} data-moving={now?.moving ? "" : undefined}>
   <canvas class="sheet" bind:this={sheetA} aria-hidden="true"></canvas>
   <canvas class="sheet sheet--over" bind:this={sheetB} aria-hidden="true"></canvas>
   <canvas class="sheet" bind:this={sheetTrails} aria-hidden="true"></canvas>
@@ -216,12 +216,12 @@
   {#if words}
     <h2 class="atlas__title">{plate?.title ?? words.world.title}</h2>
     <p class="atlas__now" role="status">
-      <span class="atlas__date">{state ? (journey ? "" : dateOf(state.week)) : ""}</span>
-      <span class="atlas__what">{state?.readout ?? ""}</span>
+      <span class="atlas__date">{now ? (journey ? "" : dateOf(now.week)) : ""}</span>
+      <span class="atlas__what">{now?.readout ?? ""}</span>
     </p>
 
     {#if layout === "spread"}
-      <svg class="atlas__leaders" aria-hidden="true" style:opacity={state?.callouts ?? 1}>
+      <svg class="atlas__leaders" aria-hidden="true" style:opacity={now?.callouts ?? 1}>
         {#each words.plates as p (p.name)}
           {@const anchor = anchors[p.name]}
           {#if anchor}
@@ -230,7 +230,7 @@
           {/if}
         {/each}
       </svg>
-      <div class="atlas__callouts" style:opacity={state?.callouts ?? 1} class:is-off={(state?.callouts ?? 1) < 0.9}>
+      <div class="atlas__callouts" style:opacity={now?.callouts ?? 1} class:is-off={(now?.callouts ?? 1) < 0.9}>
         {#each words.plates as p (p.name)}
           {@const anchor = anchors[p.name]}
           {#if anchor}
@@ -241,7 +241,7 @@
               style:left="{anchor[0] + fx * size.w}px"
               style:top="{anchor[1] + fy * size.w}px"
               onclick={() => choose(p.name)}
-              tabindex={(state?.callouts ?? 1) < 0.9 ? -1 : 0}
+              tabindex={(now?.callouts ?? 1) < 0.9 ? -1 : 0}
             >
               {p.callout}<small>{p.under}</small>
             </button>
@@ -290,7 +290,7 @@
         aria-label={journey ? words.controls.journey : words.controls.clock}
         aria-valuemin="0"
         aria-valuemax={journey ? JOURNEY_DAYS : WEEKS}
-        aria-valuenow={Math.round(journey ? (state?.day ?? 0) : (state?.week ?? 0))}
+        aria-valuenow={Math.round(journey ? (now?.day ?? 0) : (now?.week ?? 0))}
         onpointerdown={(e) => {
           if (stage) stage.holding = true;
           rail?.setPointerCapture(e.pointerId);
