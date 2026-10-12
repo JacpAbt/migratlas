@@ -252,6 +252,45 @@ test("turning onto the atlas for the first time, the incoming page carries it", 
   ).toBe(true);
 });
 
+test("the atlas's data is fetched before the reader reaches it, and not from the front door", async ({
+  page,
+}) => {
+  // The defect this pins: the data was fetched when the atlas mounted, which is when the page turns
+  // onto it, so on a slow connection both halves of the spread were paper under the turning leaf.
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.endsWith("/atlas.json") || path.endsWith("/bylot-journeys.geojson")) asked.push(path.split("/").pop()!);
+  });
+
+  await page.goto("?debug=1");
+  await expect(page.locator(".spread")).toBeVisible();
+  await page.waitForTimeout(1500);
+  expect(asked, "the front door fetched the atlas's data").toEqual([]);
+
+  // A pointer on the atlas's tab is a reader who may be about to go there.
+  await page.locator(".tabs .tab").last().hover();
+  await expect.poll(() => asked.length, { message: "pointing at the atlas's tab fetched nothing" }).toBe(2);
+
+  // A fresh document on the spread before the atlas: fetched without a turn, the atlas not mounted.
+  await page.goto("?debug=1#ch=the-world");
+  await page.locator('.spread > .page--verso [data-turn="back"]').click();
+  await expect(page.locator(".leaf")).toHaveCount(0);
+  const before = await page.evaluate(() => location.hash);
+  await page.goto("about:blank");
+  asked.length = 0;
+  await page.goto(`?debug=1${before}`);
+  await expect.poll(() => asked.length, { message: "the spread before the atlas fetched nothing" }).toBe(2);
+  await expect(page.locator(".atlas")).toHaveCount(0);
+
+  // And arriving fetches none of it again: the atlas is handed what was already asked for.
+  await page.locator('.spread > .page--recto [data-turn="on"]').click();
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as AtlasHook).migratlas?.atlas?.drawn.frames ?? 0))
+    .toBeGreaterThan(2);
+  expect(asked.sort()).toEqual(["atlas.json", "bylot-journeys.geojson"]);
+});
+
 test("the atlas follows the paper it is read on", async ({ page }) => {
   await ready(page);
   /** The mean brightness of the world map's ink: dark on day paper, light on night paper. */

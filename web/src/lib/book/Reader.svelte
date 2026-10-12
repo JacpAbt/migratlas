@@ -8,6 +8,7 @@
   import Settings from "./Settings.svelte";
   import World from "./World.svelte";
   import Atlas from "../atlas/Atlas.svelte";
+  import { castOf } from "../atlas/data";
   import Claim from "../claim/Claim.svelte";
   import How from "../claim/How.svelte";
   import Margin from "../claim/Margin.svelte";
@@ -239,6 +240,20 @@
   });
 
   /*
+    The atlas's data, asked for before the reader reaches it (see `castOf`): when its chapter is
+    within two pages, or a pointer is on its tab. Not from the front door, because it is 400 KB that
+    a reader of the claims may never open. The last chapter is the world's, as in `spreadsOf`.
+  */
+  const ATLAS = CHAPTERS[CHAPTERS.length - 1]!.slug;
+  const atlasNear = $derived(pages.slice(open, open + 3).some((page) => page.chapter.slug === ATLAS));
+  $effect(() => {
+    if (atlasNear) void castOf(base);
+  });
+  const aim = (slug: string): void => {
+    if (slug === ATLAS) void castOf(base);
+  };
+
+  /*
     The page goes in the URL for the reason `state/route.ts` gives about claims: a page you cannot
     link to is a page nobody cites. `pushState` rather than `replaceState`, because going back to the
     page you were reading is exactly what a reader means by back -- the same split that module
@@ -463,6 +478,7 @@
     onfilter={filter}
     page={leaf}
     {across}
+    onaim={aim}
   />
 {/if}
 

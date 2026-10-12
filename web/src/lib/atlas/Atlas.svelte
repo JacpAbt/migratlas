@@ -1,16 +1,6 @@
 <script lang="ts">
   import { clock, world as pocket } from "../book/pocket.svelte";
-  import {
-    loadHerd,
-    loadIce,
-    loadJourneys,
-    loadRadar,
-    loadWorld,
-    loadWords,
-    WEEKS,
-    type PlateWords,
-    type Words,
-  } from "./data";
+  import { castOf, WEEKS, type PlateWords, type Words } from "./data";
   import { Herd } from "./herd";
   import { Ice } from "./ice";
   import { palette } from "./ink";
@@ -72,27 +62,19 @@
     let made: Stage | null = null;
 
     void (async () => {
-      const [w, worldMap, radar, journeys, svalbard, yaHaTinda, ice, manifest] = await Promise.all([
-        loadWords(base),
-        loadWorld(base),
-        loadRadar(base),
-        loadJourneys(base),
-        loadHerd(base, "svalbard-herd"),
-        loadHerd(base, "yahatinda-herd"),
-        loadIce(base),
-        fetch(`${base}layers/manifest.json`).then((r) => r.json() as Promise<{ name: string; description: string }[]>),
-      ]);
+      const cast = await castOf(base);
       if (gone) return;
+      const w = cast.words;
       words = w;
-      layerNotes = Object.fromEntries(manifest.map((layer) => [layer.name, layer.description]));
+      layerNotes = cast.notes;
       made = new Stage(
         { A: canvasA, B: canvasB, trails, live },
         {
-          world: worldMap,
-          night: new NightSky(radar),
-          journeys: new Journeys(journeys),
-          herds: { svalbard: new Herd(svalbard), "ya-ha-tinda": new Herd(yaHaTinda) },
-          ice: new Ice(ice),
+          world: cast.world,
+          night: new NightSky(cast.radar),
+          journeys: new Journeys(cast.journeys),
+          herds: { svalbard: new Herd(cast.herds.svalbard), "ya-ha-tinda": new Herd(cast.herds["ya-ha-tinda"]) },
+          ice: new Ice(cast.ice),
         },
         w,
         base,

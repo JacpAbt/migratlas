@@ -18,6 +18,7 @@
     onfilter,
     page,
     across,
+    onaim,
   }: {
     chapters: readonly Chapter[];
     spreads: readonly Spread[];
@@ -41,6 +42,8 @@
      * pages, so a turn lifts a page off it; the pages' own copies carry a still of it.
      */
     across?: Snippet<[Spread]>;
+    /** A chapter's tab has a pointer or the focus on it: the reader may be about to go there. */
+    onaim?: (slug: string) => void;
   } = $props();
 
   const index = $derived(Math.min(Math.max(open, 0), Math.max(spreads.length - 1, 0)));
@@ -214,6 +217,8 @@
           class:is-on={here}
           aria-current={here ? "page" : undefined}
           onclick={() => go(openingOf(spreads, chapter.slug))}
+          onpointerenter={() => onaim?.(chapter.slug)}
+          onfocus={() => onaim?.(chapter.slug)}
         >
           {chapter.tab}
         </button>

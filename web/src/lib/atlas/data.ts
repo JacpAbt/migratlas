@@ -239,3 +239,55 @@ export const frameOf = (plate: PlateWords): Box => {
   const [west, east, south, north] = plate.frame;
   return { west, east, south, north };
 };
+
+// --- Everything at once, once ----------------------------------------------------------------------
+
+/** What a stage is made from, before any of it moves. */
+export interface Cast {
+  words: Words;
+  world: WorldMap;
+  radar: Radar;
+  journeys: Line[];
+  herds: { svalbard: HerdCell[]; "ya-ha-tinda": HerdCell[] };
+  ice: IceEdges;
+  /** Each published layer's own statement, by layer name, for the caption slip. */
+  notes: Record<string, string>;
+}
+
+const casts = new Map<string, Promise<Cast>>();
+
+/**
+ * Everything the atlas opens with, fetched once for the session and shared by whoever asks first.
+ *
+ * The atlas mounts with its spread, and a turn is what mounts it, so data fetched on mount arrived
+ * under a page already turning: on a slow connection both halves of the spread were paper for as
+ * long as 400 KB took. `Reader` asks for this when the chapter is near, and the atlas asks again
+ * and is handed the same promise. Raw data and not stages, because each stage owns its moving
+ * parts. A failed fetch is forgotten, so the next ask tries again rather than failing forever.
+ */
+export function castOf(base: string): Promise<Cast> {
+  let pending = casts.get(base);
+  if (!pending) {
+    pending = Promise.all([
+      loadWords(base),
+      loadWorld(base),
+      loadRadar(base),
+      loadJourneys(base),
+      loadHerd(base, "svalbard-herd"),
+      loadHerd(base, "yahatinda-herd"),
+      loadIce(base),
+      json<{ name: string; description: string }[]>(`${base}layers/manifest.json`),
+    ]).then(([words, world, radar, journeys, svalbard, yaHaTinda, ice, manifest]) => ({
+      words,
+      world,
+      radar,
+      journeys,
+      herds: { svalbard, "ya-ha-tinda": yaHaTinda },
+      ice,
+      notes: Object.fromEntries(manifest.map((layer) => [layer.name, layer.description])),
+    }));
+    pending.catch(() => casts.delete(base));
+    casts.set(base, pending);
+  }
+  return pending;
+}
