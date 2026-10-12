@@ -63,3 +63,23 @@ default run has a non-origin URL.
   for that reason, with `LAND` matching the detailed flavour's `earth`.
 - Anyone deploying with detail must build the tileset themselves. Documented where the variable
   is read.
+
+## Amendment, 2026-10-12, regional detail for the atlas's plates
+
+[ADR 0021](0021-the-globe-becomes-a-moving-atlas.md) replaces the globe with a drawn atlas whose
+plates come down to twenty kilometres across, where this ADR's reason for 1:110m -- a globe's
+rasteriser throws finer detail away -- no longer holds: at a plate's scale the 1:110m outline is a
+few straight lines, and it drew a false coast through the Svalbard herd.
+
+**The world view keeps the 1:110m outline above. Each plate gets its own detail**, cut to its box
+and thinned to about a pixel at that plate's size: Natural Earth 1:10m land, coast and rivers for
+the night sky over North America and for Bylot Island (public domain, like the outline); the
+Norwegian Polar Institute's *Annual coastlines for Svalbard*, 2022 (CC BY 4.0,
+doi:10.21334/npolar.2021.21565514) for the Svalbard plate; and Natural Resources Canada's National
+Hydro Network, work units 05BA, 05BB, 05CA, 05DA and 05DB (Open Government Licence – Canada), for
+the Ya Ha Tinda, whose rivers Natural Earth either lacks or names by their system.
+
+The same rules hold: committed, served from the origin, nothing requested elsewhere at run time.
+What changes is that two of the sources ask for attribution, so their licence texts sit beside the
+files and each plate's caption names its map. The files are built by a step in the Python package,
+not by hand, so they can be rebuilt from the sources and checked against what is committed.

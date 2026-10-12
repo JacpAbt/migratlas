@@ -74,6 +74,14 @@ leaf continuing at a sentence end — and a guard walking all three settings at 
 overflow allowed. Fifteen steps, one change at a time. Next: A0, the container chosen once from the
 screen so turning a device never changes it, and the spread measured on an upright tablet.
 
+The world chapter, from the owner's sessions of 2026-10-09 to 2026-10-12: the globe's interaction was
+sub-par, its purpose unclear, and it showed where animals are rather than how they move. Prototypes
+judged in the browser led to [ADR 0021](adr/0021-the-globe-becomes-a-moving-atlas.md) (#90): a drawn,
+equal-area atlas that opens on the whole world moving — the radar's night as pen strokes, the foxes
+drawn a day at a time, the herds as moving ranges with pen flicks, the ice and the green wave — and flies
+into a regional plate for each system, the still layers and the search kept as still maps. Eight steps on
+the `atlas` branch, one change at a time; the build replaces the globe and MapLibre leaves with it.
+
 ## Queued, with a reason to wait
 
 | # | Item | Why it waits |
