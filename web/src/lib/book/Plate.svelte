@@ -106,9 +106,9 @@
 
     <span class="plate__scope">{finding.scope}</span>
     <!-- Where the measurement itself is, since this sheet carries none of it. The plates exist so a
-         claim chapter need not boot a globe, and that trade is only honest if the globe is named. -->
+         claim chapter need not draw the atlas, and that trade is only honest if the atlas is named. -->
     <span class="plate__elsewhere"
-      >The records themselves are drawn on the globe, in the last chapter.</span
+      >The records themselves are drawn in the atlas, in the last chapter.</span
     >
   </figcaption>
 </figure>

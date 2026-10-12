@@ -328,7 +328,7 @@ export const CHAPTERS: readonly Chapter[] = [
     tab: "Blind spots",
     keys: ["coverage-bias", "protocol-disagreement"],
   },
-  { slug: "the-world", title: "The world", tab: "The globe", keys: [] },
+  { slug: "the-world", title: "The world", tab: "The atlas", keys: [] },
 ];
 
 /** The chapter carrying a claim, or undefined -- which the build guard turns into a failure. */

@@ -59,7 +59,7 @@
     {#if part === "all" || part === "measured" || part === "summary"}
     <p class="coverage__lead">
       <strong>{detectable.toFixed(1)}%</strong> of the squares these records cover have been
-      counted often enough to show a change. The globe in the last chapter shows where.
+      counted often enough to show a change. The atlas in the last chapter shows where.
     </p>
 
     <ul class="coverage__legend">
