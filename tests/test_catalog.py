@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from migratlas.catalog import provenance
-from migratlas.catalog.loader import UnregisteredSourceError, admit, get, load
+from migratlas.catalog.loader import UnregisteredSourceError, admit, get, load, measured
 from migratlas.catalog.models import Redistribution, Source, TaxonSensitivity
 from migratlas.evidence import EvidenceType, Granularity, Realm, TaxonScope
 from migratlas.redact import (
@@ -387,3 +387,22 @@ def test_the_terrestrial_realm_is_no_longer_only_birds() -> None:
     ]
     assert any(source.evidence_type is EvidenceType.TRACK for source in terrestrial)
     assert len({source.evidence_type for source in terrestrial}) > 1
+
+
+def test_a_map_outline_is_registered_but_never_counted_or_evidence() -> None:
+    """Three coastlines are credited in PROVENANCE.md and are not where any finding came from."""
+    outlines = [source for source in load().values() if source.cartographic]
+    assert {source.id for source in outlines} == {
+        "natural_earth",
+        "npi_svalbard_coastlines",
+        "nrcan_national_hydro_network",
+    }
+    assert all(not source.provides_evidence for source in outlines)
+    assert len(measured()) == len(load()) - len(outlines)
+
+
+def test_a_cartographic_source_that_claims_evidence_is_refused() -> None:
+    entry = get("natural_earth").model_dump()
+    entry.update(evidence_type="flux", taxon_scope="unattributed")
+    with pytest.raises(ValueError, match="cartographic"):
+        Source.model_validate(entry)

@@ -35,6 +35,15 @@ def load() -> dict[str, Source]:
     return by_id
 
 
+def measured() -> dict[str, Source]:
+    """Every registered source a finding can come from: all of them but a map's outline.
+
+    The count the introduction and the README's status line both quote, from one place so the
+    two cannot disagree about it.
+    """
+    return {key: source for key, source in load().items() if not source.cartographic}
+
+
 def get(source_id: str) -> Source:
     """Return a registered source, or explain that it must be registered first."""
     try:

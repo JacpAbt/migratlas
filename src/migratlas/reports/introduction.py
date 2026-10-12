@@ -70,7 +70,7 @@ def counts() -> tuple[int, int, int]:
     """
     findings = _findings()
     realms = {str(finding["realm"]) for finding in findings} - {EVERYWHERE}
-    return len(findings), len(realms), len(catalog.load())
+    return len(findings), len(realms), len(catalog.measured())
 
 
 def realm_words() -> list[str]:
