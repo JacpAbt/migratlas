@@ -1,6 +1,8 @@
 {
   "controls": {
+    "clock": "time of year",
     "fast": "fast",
+    "journey": "day of each journey",
     "normal": "normal",
     "pause": "pause",
     "play": "play",

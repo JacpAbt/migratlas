@@ -224,6 +224,8 @@ def build() -> dict[str, Any]:
             "slow": "slow",
             "normal": "normal",
             "fast": "fast",
+            "clock": "time of year",
+            "journey": "day of each journey",
         },
     }
 

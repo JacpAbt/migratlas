@@ -51,6 +51,11 @@ export class NightSky {
     this.strokes.length = 0;
   }
 
+  /** Strokes in flight: what the last frame drew. */
+  get count(): number {
+    return this.strokes.length;
+  }
+
   /** Move every stroke `dt` seconds on and draw the step each took; `comet` draws whole tails. */
   frame(ctx: CanvasRenderingContext2D, dt: number, week: number, view: View, pal: Palette, comet: boolean): void {
     const { stations, ref } = this.radar;

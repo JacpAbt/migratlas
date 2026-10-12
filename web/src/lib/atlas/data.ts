@@ -229,7 +229,7 @@ export interface Words {
     journey: { day: string; each: string; of: string; going: string };
     herd: { in: string; cells: string; reached: string };
   };
-  controls: Record<"show" | "world" | "pause" | "play" | "slow" | "normal" | "fast", string>;
+  controls: Record<"show" | "world" | "pause" | "play" | "slow" | "normal" | "fast" | "clock" | "journey", string>;
 }
 
 export const loadWords = (base: string): Promise<Words> => json<Words>(`${base}atlas.json`);

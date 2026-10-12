@@ -7,13 +7,14 @@
   import Opener from "./Opener.svelte";
   import Settings from "./Settings.svelte";
   import World from "./World.svelte";
+  import Atlas from "../atlas/Atlas.svelte";
   import Claim from "../claim/Claim.svelte";
   import How from "../claim/How.svelte";
   import Margin from "../claim/Margin.svelte";
   import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
   import { openerOf, type ChaptersDocument } from "./chapters";
-  import { leavesOf, openingOf, placeOf, ROOMY_TYPES, spreadsOf, type Panel } from "./pages";
+  import { leavesOf, openingOf, placeOf, ROOMY_TYPES, spreadsOf, type Panel, type Spread } from "./pages";
   import { world as pocket } from "./pocket.svelte";
   import type { IntroductionDocument } from "./introduction";
   import type { ResponseDocument } from "../sandbox/response";
@@ -357,6 +358,12 @@
   keeps that a choice of *container* rather than a second authored version of the book: there is
   nowhere for the two to drift apart, because there is only one of them.
 -->
+{#snippet across(spread: Spread)}
+  {#if spread.verso.kind === "world" && spread.recto.kind === "world"}
+    <Atlas {base} layout="spread" />
+  {/if}
+{/snippet}
+
 {#snippet leaf(panel: Panel, _side: "verso" | "recto")}
   {#if panel.kind === "opening"}
     <Introduction document_={opening} opening />
@@ -374,7 +381,7 @@
   {:else if panel.kind === "intro"}
     <Introduction document_={opening} from={panel.from} to={panel.to} />
   {:else if panel.kind === "world"}
-    <World {base} part={panel.part} />
+    <World {base} part={panel.part} side={_side} />
   {:else if panel.kind === "absent"}
     <Absent chapter={panel.chapter} realm={panel.realm} />
   {:else if panel.kind === "blank"}
@@ -455,6 +462,7 @@
     onopen={show}
     onfilter={filter}
     page={leaf}
+    {across}
   />
 {/if}
 

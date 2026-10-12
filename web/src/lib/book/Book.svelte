@@ -17,6 +17,7 @@
     onopen,
     onfilter,
     page,
+    across,
   }: {
     chapters: readonly Chapter[];
     spreads: readonly Spread[];
@@ -34,6 +35,12 @@
      * lists came from; with a snippet the leaf is another call with different arguments.
      */
     page: Snippet<[Panel, "verso" | "recto"]>;
+    /**
+     * What is drawn over both pages of the open spread at once, if anything -- the world's atlas,
+     * which crosses the fold as an atlas plate does (ADR 0021). Under the turning leaf and over the
+     * pages, so a turn lifts a page off it; the pages' own copies carry a still of it.
+     */
+    across?: Snippet<[Spread]>;
   } = $props();
 
   const index = $derived(Math.min(Math.max(open, 0), Math.max(spreads.length - 1, 0)));
@@ -138,6 +145,9 @@
         >
           {@render page(current.recto, "recto")}
         </Page>
+        {#if across}
+          <div class="across">{@render across(current)}</div>
+        {/if}
       {/if}
 
       {#if leaving && current}
@@ -348,6 +358,13 @@
     position: relative;
     width: calc(var(--book-h) * var(--ratio));
     aspect-ratio: var(--ratio);
+  }
+
+  /* Over both pages and under the leaf, the gutter and the tabs: the fold is drawn across it. */
+  .across {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
   }
 
   .block {

@@ -78,6 +78,8 @@ export interface Part {
    * closed it; those segments fill but are not inked, or they draw straight false shores.
    */
   box?: Box;
+  /** Drawn only outside this box: the world's outline past the edge of a plate's own map. */
+  outside?: Box;
   borders?: readonly Line[];
   rivers?: readonly Line[];
   creeks?: readonly Line[];
@@ -183,6 +185,24 @@ export function drawMap(
 
   for (const part of parts) {
     if (part.alpha <= 0.01) continue;
+    ctx.save();
+    if (part.outside) {
+      const { west, east, south, north } = part.outside;
+      const hole = new Path2D();
+      hole.rect(0, 0, W, H);
+      const edge: [number, number][] = [];
+      for (let i = 0; i <= 48; i++) edge.push([west + ((east - west) * i) / 48, south]);
+      for (let i = 0; i <= 48; i++) edge.push([east, south + ((north - south) * i) / 48]);
+      for (let i = 48; i >= 0; i--) edge.push([west + ((east - west) * i) / 48, north]);
+      for (let i = 48; i >= 0; i--) edge.push([west, south + ((north - south) * i) / 48]);
+      edge.forEach(([lon, lat], i) => {
+        const [x, y] = view.project(lon, lat);
+        if (i) hole.lineTo(x, y);
+        else hole.moveTo(x, y);
+      });
+      hole.closePath();
+      ctx.clip(hole, "evenodd");
+    }
     const shown = part.land.filter(near);
     const fill = new Path2D();
     for (const ring of shown) {
@@ -266,6 +286,7 @@ export function drawMap(
         ctx.restore();
       }
     }
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
   ctx.restore();

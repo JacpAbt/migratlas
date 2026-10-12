@@ -820,7 +820,7 @@ test("no chapter but the world boots a map", async ({ page }) => {
   );
   await openBook(page, drawn.at);
   await expect(page.locator(`.page--${drawn.side} .plate`)).toHaveCount(1);
-  await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
+  await expect(page.locator(".atlas canvas")).toHaveCount(0);
 });
 
 test("a claim reads what, then how, then the picture, then the numbers", async ({
@@ -1105,12 +1105,12 @@ for (const [width, height] of [
             .querySelector(`.spread > .page--${side} .page__folio`)
             ?.getBoundingClientRect();
           /*
-            The world's page is the one exception, and it is deliberate: the map fills that leaf
-            absolutely and `Page.svelte` gives the folio `z-index: 3` so the corner stays legible
-            over it. Its scale bar and its attribution sit low on the map by design, so measuring
-            them against the folio would be asking the globe to behave like a page of prose.
+            The world's pages are the one exception, and it is deliberate: they are paper the atlas is
+            drawn over (ADR 0021), filled edge to edge by one element that carries no words. The
+            atlas's own words sit on the spread above them and keep clear of the folios themselves --
+            measuring the page's paper against its folio would be asking a map to behave like prose.
           */
-          const fullBleed = inner.querySelector("canvas") !== null;
+          const fullBleed = inner.querySelector(".world") !== null;
           return {
             over: inner.scrollHeight - inner.clientHeight,
             under:

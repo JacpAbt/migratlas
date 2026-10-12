@@ -74,6 +74,11 @@ export const world = $state({
     because the clock is the control that most needs the map beside it.
   */
   flap: "peek" as "peek" | "half" | "full",
+  /*
+    The atlas as it last was, for a turning page to carry (ADR 0021): the live atlas is drawn over
+    both pages and leaves with its spread, so the copies of the world's pages show this instead.
+  */
+  still: null as string | null,
 });
 
 /**

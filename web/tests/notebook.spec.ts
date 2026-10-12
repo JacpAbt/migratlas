@@ -711,35 +711,6 @@ test("the surface is a three-way choice, and it survives a reload", async ({
   await expect(page.locator(":root")).not.toHaveAttribute("data-surface", /.*/);
 });
 
-test("the globe follows the paper it is read on", async ({ page }) => {
-  await world(page);
-  // The one thing CSS cannot do for us. MapLibre paint is set in JavaScript, so without an explicit
-  // repaint a reader who switches to night gets black paper around a parchment sphere -- which is
-  // the state this project shipped in for the whole time the palette existed and the switch did not.
-  const ocean = () =>
-    page.evaluate(() => {
-      const map = (window as unknown as { migratlas?: { map?: unknown } })
-        .migratlas?.map as
-        | { getPaintProperty: (id: string, property: string) => unknown }
-        | undefined;
-      return String(map?.getPaintProperty("ocean", "background-color") ?? "");
-    });
-
-  const byDay = await ocean();
-  expect(byDay, "no ocean colour to read").toBeTruthy();
-
-  await surfaceIs(page, "Night");
-  /*
-    An explicit deadline, because the default is five seconds and nobody chose it. See the note on
-    the darts' rotation poll for the flake that made the point.
-  */
-  await expect
-    .poll(ocean, {
-      message: "the surface changed and the ocean did not",
-      timeout: 30_000,
-    })
-    .not.toBe(byDay);
-});
 
 test("an addressed status is legible too, and is not the only signal", async ({
   page,
@@ -1250,9 +1221,6 @@ test("a word on a page is written, and a figure is typed", async ({ page }) => {
     ["the record's plan link", ".claim__method", (p) => p.kind === "record"],
     ["the method page's plan link", ".how__method", (p) => p.kind === "how"],
     ["a knob's setting", ".option", (p) => p.kind === "panel" && p.part === "knobs"],
-    ["the world's headings", ".explore h2", (p) => p.kind === "world"],
-    ["a layer's kind", ".layers em", (p) => p.kind === "world"],
-    ["the world's date", ".clockface", (p) => p.kind === "world"],
   ];
   let body = "";
   let mono = "";
@@ -1385,69 +1353,6 @@ test("the audit is still there on a phone, and still not behind anything", async
   );
 });
 
-test("paper is paper, not a bordered box", async ({ page }) => {
-  /*
-    Two halves, because the subject split.
-
-    A claim is on a *page* now, and a page is not a card: no border and no radius, which is what the
-    arrival's sheet was measured for and is just as true of a leaf. And `Sheet` itself was not
-    rebuilt for the book -- the world chapter still mounts one -- so its torn ground and its lift are
-    still asserted, on the component rather than on the page that used to hold it. `clip-path` and
-    `box-shadow` do not compose, so the lift has to be a drop-shadow filter on an ancestor, and that
-    is the trap worth keeping a test on.
-  */
-  await ready(page);
-  const leaf = await page.locator(".spread > .page--verso").evaluate((node) => {
-    const style = getComputedStyle(node);
-    return { border: style.borderTopWidth, radius: style.borderTopLeftRadius };
-  });
-  expect(leaf.border, "a page has a border, which makes it a card").toBe("0px");
-  expect(leaf.radius, "a page has rounded corners, which makes it a card").toBe(
-    "0px",
-  );
-
-  await world(page);
-  const clip = await page
-    .locator(".explore .sheet__ground")
-    .evaluate((node) => getComputedStyle(node).clipPath);
-  expect(clip, "the paper is still a rectangle").toContain("path(");
-
-  const lift = await page
-    .locator(".explore .sheet__lift")
-    .evaluate((node) => getComputedStyle(node).filter);
-  expect(lift, "no shadow, or one that the clip will have eaten").toContain(
-    "drop-shadow",
-  );
-});
-
-test("the drawn edge stays put while what is inside it scrolls", async ({
-  page,
-}) => {
-  /*
-    The regression this exists for: an absolutely-positioned edge inside a scrolling box is placed
-    against the padding box, so the tear travels up the screen as a reader scrolls.
-
-    It used to scroll a claim under the arrival's sheet. Book pages do not scroll -- `pages.ts` puts
-    one panel on a page for exactly that reason, and the guard against a page overflowing lives in
-    `book.spec.ts` now -- but the *pattern* is alive in the world chapter, whose tools scroll inside
-    a torn sheet. So the assertion moved to where it can still fail.
-  */
-  await world(page);
-  await page.waitForFunction(() =>
-    document.getAnimations().every((a) => a.playState !== "running"),
-  );
-
-  const slip = page.locator(".explore__slip");
-  const before = await page.locator(".explore .sheet__ink").boundingBox();
-  await slip.evaluate((node) => node.scrollBy(0, 400));
-  await expect
-    .poll(async () => (await slip.evaluate((n) => n.scrollTop)) > 0, {
-      timeout: 15_000,
-    })
-    .toBe(true);
-  const after = await page.locator(".explore .sheet__ink").boundingBox();
-  expect(after?.y).toBeCloseTo(before?.y ?? 0, 0);
-});
 
 test("a control is drawn, not bordered", async ({ page }) => {
   /*
@@ -1570,46 +1475,6 @@ test("nothing on the page is still a bordered control", async ({ page }) => {
   ).toBeLessThanOrEqual(2);
 });
 
-test("switching a layer on draws a tick rather than filling a box", async ({
-  page,
-}) => {
-  await world(page);
-
-  // Layers land one by one and the panel re-renders as they do; clicking a row while the list
-  // grows races the re-render. The debug hook is published once every layer has loaded, so its
-  // existence is the load-complete signal -- the first version of this wait counted to seven,
-  // and the ice layer made the count stale within a day, which is what counting by hand does.
-  await page.waitForFunction(
-    () =>
-      !!(window as unknown as { migratlas?: { loaded?: unknown[] } }).migratlas
-        ?.loaded?.length,
-    undefined,
-    { timeout: 30_000 },
-  );
-
-  const row = page.locator(".layers li").first();
-  const mark = row.locator(".ticked");
-  await expect(mark).toBeVisible();
-
-  // Drawn on, so the state is a dash offset rather than a colour. Reading it this way also pins
-  // that the tick animates in from nothing instead of appearing -- and that reduced motion, which
-  // zeroes `--draw-quick`, still lands it in the final state.
-  const offset = () =>
-    row
-      .locator(".ticked .ink-tick path")
-      .first()
-      .evaluate((node) => getComputedStyle(node).strokeDashoffset);
-
-  const before = await offset();
-  await row.locator("input").click();
-  // Fifteen seconds because the tick redraws on an animation frame, and CI runs two WebGL
-  // workers on a machine with no GPU -- the state lands correctly and late.
-  await expect.poll(offset, { timeout: 15_000 }).not.toBe(before);
-
-  // And the checkbox is still the control: hidden natively, but the thing a pointer and a keyboard
-  // both reach. The tick is ink.
-  await expect(row.locator("input")).toBeFocused();
-});
 
 test("the paper turns and the world does not", async ({ page }) => {
   /*
@@ -1767,48 +1632,6 @@ test("nothing on the page is still set in a type face that came with a glyph", a
   await expect(survived.locator(".ticked .ink-box")).toHaveCount(0);
 });
 
-test("the tools are on the same paper as the claims", async ({ page }) => {
-  await world(page);
-
-  // The panel was the last thing left with a plain background and no edge, which read as a
-  // different material sitting next to the cards.
-  await expect(page.locator(".explore .sheet__ink .ink-box")).toHaveCount(1);
-  const clip = await page
-    .locator(".explore .sheet__ground")
-    .evaluate((node) => getComputedStyle(node).clipPath);
-  expect(clip).toContain("path(");
-
-  // And the scroll is inside the paper, so the torn edge does not travel as the tools scroll.
-  expect(
-    await page
-      .locator(".explore__slip")
-      .evaluate((node) => getComputedStyle(node).overflowY),
-  ).toBe("auto");
-});
-
-test("a slider is a ruled scale, not a platform control", async ({ page }) => {
-  await world(page);
-  const slider = page.locator('.explore input[type="range"]').first();
-  await expect(slider).toBeVisible();
-
-  // `appearance: none` is the load-bearing half: a range input styles nothing in common across
-  // engines, and a half-styled one looks like a rendering fault rather than a decision.
-  const style = await slider.evaluate((node) => {
-    const computed = getComputedStyle(node);
-    return {
-      appearance: computed.appearance,
-      background: computed.backgroundColor,
-    };
-  });
-  expect(style.appearance).toBe("none");
-  expect(style.background).toBe("rgba(0, 0, 0, 0)");
-
-  // Still a real range, so a keyboard still drives it.
-  await slider.focus();
-  const before = await slider.inputValue();
-  await slider.press("ArrowRight");
-  expect(await slider.inputValue()).not.toBe(before);
-});
 
 test("the scrollbar is drawn, and only one of the two APIs is styling it", async ({
   page,
@@ -1845,98 +1668,6 @@ test("the scrollbar is drawn, and only one of the two APIs is styling it", async
   }
 });
 
-test("the map's own controls are in the same hand", async ({ page }) => {
-  await world(page);
-
-  // MapLibre ships these as white rounded boxes with a grey shadow and near-black icons in fixed
-  // colours -- the last borrowed furniture on the page, and the only part of it that sits directly
-  // on the paper.
-  const group = page.locator(".maplibregl-ctrl-group").first();
-  const box = await group.evaluate((node) => {
-    const style = getComputedStyle(node);
-    return { radius: style.borderTopLeftRadius, shadow: style.boxShadow };
-  });
-  expect(box.radius).toBe("0px");
-  expect(box.shadow).toBe("none");
-
-  for (const role of ["zoom-in", "zoom-out"]) {
-    const button = page.locator(`.maplibregl-ctrl-${role}`);
-    const image = await button.evaluate(
-      (node) => getComputedStyle(node).backgroundImage,
-    );
-    // Two: the mark and the box it is in, both generated with the same pen as the page.
-    expect(image, `${role} is not drawn`).toContain("data:image/svg+xml");
-    expect(
-      image.match(/data:image\/svg\+xml/g)?.length,
-      `${role} has no drawn box`,
-    ).toBe(2);
-
-    // And MapLibre's own icon is off rather than underneath, which would be two plus signs.
-    const inner = await button
-      .locator(".maplibregl-ctrl-icon")
-      .evaluate((node) => getComputedStyle(node).backgroundImage);
-    expect(inner, `${role} still carries MapLibre's icon`).toBe("none");
-  }
-
-  // The scale bar is a measure before it is a mark: its rule must span the element MapLibre sized,
-  // because the width *is* the distance printed beside it.
-  const scale = await page
-    .locator(".maplibregl-ctrl-scale")
-    .evaluate((node) =>
-      getComputedStyle(node).backgroundSize.split(",")[0]?.trim(),
-    );
-  expect(scale).toBe("100% 6px");
-});
-
-test("the licence notice is restyled and not shrunk", async ({ page }) => {
-  await world(page);
-  // The one piece of map furniture that is a legal obligation rather than a control. It may be
-  // recoloured and it may be moved; it may not be made smaller or fainter than the page's own
-  // smallest prose, and it has to clear AA against whatever it is sitting on.
-  const notice = page.locator(".maplibregl-ctrl-attrib").first();
-  // Resolved through a probe rather than parsed off the token, because `--size-margin` is a rem
-  // string and the comparison has to be in the pixels the reader actually gets.
-  const smallest = await page.evaluate(() => {
-    const probe = document.createElement("span");
-    probe.style.fontSize = "var(--size-margin)";
-    // Resolved *inside* the book rather than on the body. The spread scales its reading sizes
-    // against the page's own height, so `--size-margin` on the root is a different number from the
-    // one the notice sitting on that page actually inherits -- and comparing the two measured the
-    // scale rather than the notice. 10.03px against a root 10.56px, which is what this caught.
-    (
-      document.querySelector(".leaves, .spread, .world") ?? document.body
-    ).append(probe);
-    const resolved = Number.parseFloat(getComputedStyle(probe).fontSize);
-    probe.remove();
-    return resolved;
-  });
-  const size = await notice.evaluate((node) =>
-    Number.parseFloat(getComputedStyle(node).fontSize),
-  );
-  expect(
-    size,
-    `the licence notice is ${size}px against the page's smallest prose at ${smallest}px`,
-  ).toBeGreaterThanOrEqual(smallest);
-
-  const ratio = await notice.evaluate((node) => {
-    const channel = (value: number) =>
-      value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-    const luminance = (colour: string) => {
-      const parts = colour.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
-      const [r = 0, g = 0, b = 0] = parts.map((value) => channel(value / 255));
-      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    };
-    const style = getComputedStyle(node);
-    const ink = luminance(style.color);
-    const paper = luminance(style.backgroundColor);
-    const [high, low] = ink > paper ? [ink, paper] : [paper, ink];
-    return (high + 0.05) / (low + 0.05);
-  });
-  expect(
-    ratio,
-    `the licence notice is ${ratio.toFixed(2)}:1`,
-  ).toBeGreaterThanOrEqual(AA_SMALL);
-});
 
 test("the furniture follows the paper it is drawn on", async ({ page }) => {
   await ready(page);
