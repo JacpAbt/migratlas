@@ -1,6 +1,10 @@
 <script lang="ts">
   import { clock, world as pocket } from "../book/pocket.svelte";
-  import { castOf, loadCells, WEEKS, type PlateWords, type Words } from "./data";
+  import { SpeciesSurfaces, type TaxonHit, type TaxonIndex } from "../../search/taxon";
+  import Study from "../species/Study.svelte";
+  import { SpeciesStudies, type SpeciesCard } from "../species/study";
+  import { castOf, decode, loadCells, WEEKS, type PlateWords, type StillWords, type Words } from "./data";
+  import Find from "./Find.svelte";
   import { Herd } from "./herd";
   import { Ice } from "./ice";
   import { palette } from "./ink";
@@ -41,6 +45,21 @@
   const shownMap = $derived(still && stillMap?.words.name === still.name ? stillMap : null);
   /** A still layer's own description, or the assessment's statement, which no layer manifest holds. */
   const stillNote = $derived(still ? (layerNotes[still.name] ?? shownMap?.cells.note ?? "") : "");
+
+  /*
+    One animal, chosen from the search: its map, if one of its sources published one, and what is
+    known about it. Both fetched when it is chosen -- a keystroke costs nothing.
+  */
+  const surfaces = $derived(new SpeciesSurfaces(base));
+  const studies = $derived(new SpeciesStudies(base));
+  // Raw, not proxied: `chooseAnimal` asks whether the animal is still the one it fetched for, and a
+  // deep proxy is never identical to the object it wraps, so every answer was dropped as stale.
+  let animal = $state.raw<TaxonHit | null>(null);
+  let card = $state<SpeciesCard | null>(null);
+  let animalProblem = $state("");
+  let taxa = $state<TaxonIndex | null>(null);
+  /** The terms of the layer a chosen animal's map is cut from: one of the still maps'. */
+  const animalTerms = $derived(animal ? (words?.stills.find((s) => s.name === animal?.layer)?.credit ?? "") : "");
   let paused = $state(false);
   let speed = $state(1);
 
@@ -152,13 +171,68 @@
   });
 
   function choose(name: string): void {
+    forget();
     void stage?.show(name);
     flap = "peek";
+  }
+
+  function forget(): void {
+    animal = null;
+    card = null;
+    animalProblem = "";
+  }
+
+  /** The still map one animal's surface is drawn as: its own cells, in the accent. */
+  function speciesWords(hit: TaxonHit): StillWords {
+    const name = hit.vernacular || hit.scientific;
+    return {
+      name: `species-${hit.key}-${hit.layer}`,
+      button: name,
+      title: name,
+      lead: "",
+      caption: "",
+      unit: "",
+      key: [],
+      data: "",
+      credit: animalTerms,
+      plate: null,
+    };
+  }
+
+  async function chooseAnimal(hit: TaxonHit): Promise<void> {
+    flap = "peek";
+    if (!stage || !words) return;
+    forget();
+    animal = hit;
+    if (hit.layer) {
+      const grid = await surfaces.get(hit).catch(() => undefined);
+      if (!stage || animal !== hit) return;
+      // A row whose source's map of it was not published must not show another source's map under
+      // its name: two layers' surfaces for one taxon share a key in the shards, and one is lost.
+      if (grid && grid.layer === hit.layer) {
+        const map = new StillMap(speciesWords(hit), { ...decode(grid), categories: null, note: null }, "accent");
+        stillMap = map;
+        void stage.show("world", map);
+      } else {
+        animalProblem = words.search.missing;
+        void stage.show("world");
+      }
+    } else {
+      void stage.show("world");
+    }
+    const found = await studies.get(hit.key);
+    if (animal === hit) card = found;
+  }
+
+  function putAway(): void {
+    forget();
+    void stage?.show("world");
   }
 
   /** Switch a still map on, where it is drawn; or off again, back to the moving world. */
   async function chooseStill(name: string): Promise<void> {
     flap = "peek";
+    forget();
     const said = words?.stills.find((s) => s.name === name);
     if (!stage || !said) return;
     if (now?.still === name) {
@@ -248,7 +322,9 @@
   <canvas class="sheet" bind:this={sheetLive} aria-hidden="true"></canvas>
 
   {#if words}
-    <h2 class="atlas__title">{still?.title ?? plate?.title ?? words.world.title}</h2>
+    <h2 class="atlas__title">
+      {animal ? animal.vernacular || animal.scientific : (still?.title ?? plate?.title ?? words.world.title)}
+    </h2>
     <p class="atlas__now" role="status">
       <span class="atlas__date">{now ? (journey ? "" : dateOf(now.week)) : ""}</span>
       <span class="atlas__what">{now?.readout ?? ""}</span>
@@ -291,7 +367,24 @@
         </button>
       {/if}
       <div class="slip slip--caption">
-        {#if still}
+        {#if animal}
+          <p class="chosen">
+            <strong>{animal.scientific}</strong>
+            {#if !animal.layer}
+              {words.search.nowhere}
+            {:else if !animalProblem}
+              {words.search.drawn} {animal.layer_title} · {animal.cells.toLocaleString("en-GB")}
+              {words.search.cells}
+            {/if}
+            <button type="button" class="chosen__away" onclick={putAway}>{words.search.away}</button>
+          </p>
+          {#if animalProblem}<p class="slip__note">{animalProblem}</p>{/if}
+          {#if animal.layer && !animalProblem}
+            <p class="slip__note">{words.world.still}</p>
+            {#if animalTerms}<p class="slip__note terms">{animalTerms}</p>{/if}
+          {/if}
+          {#if card}<Study {card} />{/if}
+        {:else if still}
           <p><strong>{still.lead}</strong> {still.caption}</p>
           {#if shownMap}
             <ul class="key" class:key--count={shownMap.kind === "count"}>
@@ -367,6 +460,7 @@
             </button>
           {/each}
         </div>
+        <Find {base} said={words.search} onchoose={(hit) => void chooseAnimal(hit)} bind:index={taxa} />
         <div class="row">
           <button type="button" onclick={toggle}>{paused ? words.controls.play : words.controls.pause}</button>
           <span aria-hidden="true">·</span>
@@ -604,6 +698,28 @@
     fill: none;
     stroke: var(--rust-ink);
     stroke-width: 1.5;
+  }
+
+  /* A chosen animal's study card can run long, so the slip it is on scrolls rather than climbing
+     past the head of the page. */
+  .atlas--spread .slip--caption {
+    max-height: 70%;
+    overflow-y: auto;
+  }
+
+  .chosen strong {
+    font-style: italic;
+  }
+
+  .chosen__away {
+    font: inherit;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    padding: 0 0.2em;
+    cursor: pointer;
+    text-decoration: underline wavy color-mix(in srgb, var(--rust-ink) 70%, transparent);
+    text-underline-offset: 0.25em;
   }
 
   .slip__note {

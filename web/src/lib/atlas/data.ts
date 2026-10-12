@@ -255,6 +255,7 @@ export interface Words {
     "show" | "world" | "pause" | "play" | "slow" | "normal" | "fast" | "clock" | "journey" | "stills",
     string
   >;
+  search: Record<"label" | "animals" | "cells" | "study" | "drawn" | "nowhere" | "away" | "missing" | "unread", string>;
 }
 
 export const loadWords = (base: string): Promise<Words> => json<Words>(`${base}atlas.json`);

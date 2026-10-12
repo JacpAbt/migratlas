@@ -49,6 +49,7 @@ interface Words {
   }[];
   readout: { herd: { in: string; cells: string } };
   controls: { pause: string; play: string; world: string; show: string };
+  search: { missing: string; nowhere: string };
 }
 
 const words = (page: Page): Promise<Words> =>
@@ -455,6 +456,127 @@ test("a drawn still map carries its terms, and goes when a place is chosen", asy
   await settledOn(page, herd.name);
   expect((await drawn(page)).still).toBe("");
   await expect(page.locator(".atlas__title")).toHaveText(herd.title);
+});
+
+/** Search the atlas for an animal and choose one of the rows it offers, as a reader does. */
+async function find(page: Page, query: string, row = 0): Promise<void> {
+  await page.locator("#find-animal").fill(query);
+  const hits = page.locator(".find .hits button");
+  await expect(hits.first()).toBeVisible({ timeout: 15_000 });
+  await hits.nth(row).click();
+}
+
+test("searching an animal draws its own map, says which it is, and puts it away", async ({ page }) => {
+  await ready(page);
+  const said = await words(page);
+  const index = (await page.request.get("taxon-index.json").then((r) => r.json())) as {
+    taxa: { key: number; scientific: string; layer: string; layer_title: string; cells: number }[];
+  };
+  // Every row the index offers for one animal, a map in each of two sources.
+  const rows = index.taxa.filter((t) => t.scientific === "Physeter macrocephalus");
+  expect(rows.length).toBeGreaterThan(0);
+  let drew = 0;
+  for (const [n, row] of rows.entries()) {
+    await page.locator("#find-animal").fill("Physeter");
+    const offered = page.locator(".find .hits button");
+    await expect(offered).toHaveCount(rows.length);
+    // The rows are listed widest first, and each says its own size, which is how this finds it.
+    await offered.filter({ hasText: row.cells.toLocaleString("en-GB") }).first().click();
+    await expect(page.locator(".chosen")).toContainText(row.scientific);
+    /*
+      What is drawn is the chosen row's own map, or nothing, said so -- never another source's map
+      under its name. Two sources' maps of one taxon share a key in the shards and one is lost
+      (`tiles/species.py`), so this is the invariant and not today's answer for either row.
+    */
+    await expect
+      .poll(async () => {
+        const now = await drawn(page);
+        if (now.still.startsWith("species-")) return now.dots === row.cells ? "its own" : `${now.dots} cells`;
+        return (await page.locator(".slip--caption").textContent())?.includes(said.search.missing) ? "said" : "";
+      }, { message: `row ${n}, ${row.layer}` })
+      .toMatch(/its own|said/);
+    if ((await drawn(page)).still.startsWith("species-")) {
+      drew += 1;
+      await expect(page.locator(".chosen")).toContainText(row.layer_title);
+    }
+  }
+  expect(drew, "no row of the animal drew a map").toBeGreaterThan(0);
+
+  // Put away: the map goes, and the words with it.
+  await page.locator(".chosen__away").click();
+  await stillIs(page, "");
+  await expect(page.locator(".chosen")).toHaveCount(0);
+});
+
+test("a keystroke costs nothing, and choosing an animal fetches its own page and map", async ({ page }) => {
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    const name = new URL(request.url()).pathname.split("/").pop()!;
+    if (/^(species-\d+|species-study-\d+|taxon-index)\.json$/.test(name)) asked.push(name);
+  });
+  await ready(page);
+  expect(asked, "the atlas fetched the search's files on arrival").toEqual([]);
+
+  await page.locator("#find-animal").fill("Scomber");
+  await expect(page.locator(".find .hits button").first()).toBeVisible({ timeout: 15_000 });
+  expect(asked, "typing fetched more than the list of animals").toEqual(["taxon-index.json"]);
+
+  await page.locator(".find .hits button").first().click();
+  await expect(page.locator(".study")).toBeVisible();
+  const pages = asked.filter((name) => name.startsWith("species-study-"));
+  const maps = asked.filter((name) => /^species-\d+\.json$/.test(name));
+  expect(pages.length, "choosing fetched more than its own study page").toBe(1);
+  expect(maps.length, "choosing fetched more than its own map").toBeLessThanOrEqual(1);
+});
+
+test("choosing an animal says what is known about it, not just where it is", async ({ page }) => {
+  await ready(page);
+  const said = await words(page);
+  // Atlantic mackerel: measured in fourteen bottom-trawl surveys, which disagree, and drawn nowhere.
+  await find(page, "Scomber scombrus");
+  await expect(page.locator(".chosen")).toContainText(said.search.nowhere);
+  const study = page.locator(".study");
+  await expect(study).toBeVisible();
+  await expect(study.locator("h3")).toHaveText(/Scomber scombrus/);
+  // The rows are the point: the surveys' disagreement, which a median alone would average away.
+  expect(await study.locator(".study__rows div").count()).toBeGreaterThan(3);
+  await expect(study.locator(".study__caveat").first()).not.toBeEmpty();
+});
+
+test("an animal the gate refuses has a page saying so, with no location on it", async ({ page }) => {
+  await ready(page);
+  await find(page, "Canis lupus");
+  const withheld = page.locator(".study__one--withheld");
+  await expect(withheld).toBeVisible();
+  await expect(withheld).toContainText(/held back/i);
+  // The rationale, not only the refusal: an unexplained refusal cannot be reviewed.
+  await expect(withheld.locator(".study__caveat")).toContainText(/Cooke et al/);
+  // And nothing on it could put anyone within reach of an animal.
+  expect((await withheld.textContent()) ?? "").not.toMatch(/-?\d{1,3}\.\d{3,}/);
+});
+
+test("a studied bird has a page, and it carries both numbers", async ({ page }) => {
+  await ready(page);
+  await find(page, "Acridotheres");
+  const card = page.locator(".study__one--occupancy");
+  await expect(card).toBeVisible();
+  await expect(card.locator(".study__kind")).toHaveText("how much of the region it occupies");
+  // The atlas finding's second claim is that correcting for detection did not change the answer,
+  // and a reader can check that only against the two numbers.
+  await expect(card.locator(".study__rows dt")).toHaveText([
+    "Occupancy, corrected for detection",
+    "Reporting rate, uncorrected",
+    "Against the other five-year window",
+  ]);
+});
+
+test("a study card leads back to the claim its evidence feeds", async ({ page }) => {
+  await ready(page);
+  await find(page, "Scomber scombrus");
+  await expect(page.locator(".study")).toBeVisible();
+  await page.locator(".study__claim").first().click();
+  await expect(page.locator(".claim__title")).toContainText("Fish are not all moving");
+  await expect(page).toHaveURL(/[#&]c=marine-null/);
 });
 
 test("on a phone the world is one leaf, the atlas on it, its words in the flap", async ({ page }) => {

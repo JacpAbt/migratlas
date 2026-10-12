@@ -39,11 +39,20 @@ export class StillMap {
   readonly kind: "count" | "change" | "status";
   /** The scale's end: the largest count, or the largest change either way. */
   readonly top: number;
+  /** The smallest dot, as a fraction of its cell. */
+  private readonly least: number;
 
+  /**
+   * `tone` is the ink a count is stippled in. One animal chosen from the search is the answer to a
+   * question just asked, so it is drawn in the accent and every cell of it at least a third of a
+   * cell across -- louder than a pooled map, where a faint sparse cell is the right reading.
+   */
   constructor(
     readonly words: StillWords,
     readonly cells: Cells,
+    readonly tone: "ink" | "accent" = "ink",
   ) {
+    this.least = tone === "accent" ? 0.3 : 0.14;
     let top = 0;
     let least = 0;
     for (const value of cells.v) {
@@ -66,7 +75,7 @@ export class StillMap {
   /** A count's dot, as a fraction of its cell: logarithmic, so the typical cell still shows. */
   dot(value: number): number {
     const t = Math.log10(Math.max(1, value)) / Math.log10(Math.max(10, this.top));
-    return 0.14 + 0.34 * Math.min(1, t);
+    return this.least + (0.48 - this.least) * Math.min(1, t);
   }
 
   /** A change's mark, as a fraction of its cell: linear in the change, the same scale both ways. */
@@ -167,7 +176,7 @@ export class StillMap {
         bins[bin]!.arc(x, y, r, 0, Math.PI * 2);
         drawn.dots += 1;
       }
-      c.fillStyle = pal.ink;
+      c.fillStyle = this.tone === "accent" ? pal.accent : pal.ink;
       bins.forEach((path, bin) => {
         c.globalAlpha = 0.3 + (0.6 * (bin + 0.5)) / 8;
         c.fill(path);
