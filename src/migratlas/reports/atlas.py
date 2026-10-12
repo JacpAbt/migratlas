@@ -359,7 +359,6 @@ def build() -> dict[str, Any]:
             "clock": "time of year",
             "journey": "day of each journey",
             "stills": "still maps",
-            "enlarged": "enlarged",
         },
     }
 

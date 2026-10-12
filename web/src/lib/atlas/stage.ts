@@ -30,6 +30,7 @@ import {
   frameOf,
   loadPlateMap,
   WEEKS,
+  type Place,
   type PlateMap,
   type PlateWords,
   type Words,
@@ -40,6 +41,7 @@ import { NightSky } from "./night";
 import { JOURNEY_DAYS, Journeys } from "./journeys";
 import type { Herd } from "./herd";
 import type { Ice } from "./ice";
+import type { StillDrawn, StillMap } from "./still";
 
 const WORLD_BOX: Box = { west: -180, east: 180, south: -90, north: 90 };
 const FOCUS = 0.4;
@@ -47,6 +49,8 @@ const DIVE = 1.4;
 const SETTLE = 0.35;
 /** Pixels: the spot left round a place when the camera changes projection. */
 const SPOT = 130;
+/** How strongly what moves is drawn over a still map on the world view: there, but not the subject. */
+const UNDER_STILL = 0.3;
 
 /** What the stage draws, loaded before it is made. */
 export interface Cast {
@@ -67,6 +71,8 @@ export interface StageState {
   week: number;
   day: number;
   readout: string;
+  /** The still map shown, or empty. */
+  still: string;
 }
 
 /** What one frame drew, for the suite to ask -- the map's answer, not the DOM's. */
@@ -77,6 +83,12 @@ export interface Drawn {
   herd: number;
   ice: boolean;
   frames: number;
+  /** The still map on the settled sheet, or empty; its cells decoded, and what of them was drawn. */
+  still: string;
+  cells: number;
+  dots: number;
+  rings: number;
+  squares: number;
 }
 
 interface Sheets {
@@ -119,6 +131,11 @@ export class Stage {
   private mode = "world";
   private move: Move | null = null;
   private queued: string | null = null;
+  private queuedStill: StillMap | null = null;
+  /** The still map shown, and during a move the one on the place being left. */
+  private stillOn: StillMap | null = null;
+  private leaving: StillMap | null = null;
+  private stillDrawn = new Map<string, StillDrawn>();
   private raf = 0;
   private last = 0;
   private told = "";
@@ -129,7 +146,19 @@ export class Stage {
   speed = 1;
   /** While a reader drags the clock, the stage does not advance it under their hand. */
   holding = false;
-  readonly drawn: Drawn = { showing: "world", strokes: 0, journeys: 0, herd: 0, ice: false, frames: 0 };
+  readonly drawn: Drawn = {
+    showing: "world",
+    strokes: 0,
+    journeys: 0,
+    herd: 0,
+    ice: false,
+    frames: 0,
+    still: "",
+    cells: 0,
+    dots: 0,
+    rings: 0,
+    squares: 0,
+  };
 
   constructor(
     private readonly sheets: Sheets,
@@ -166,10 +195,11 @@ export class Stage {
     this.box = map;
     this.worldView = View.fit(equalEarth(), WORLD_BOX, map);
     this.plates.clear();
-    for (const plate of this.words.plates) {
-      this.plates.set(plate.name, View.fit(lambert(plate.centre[0], plate.centre[1]), frameOf(plate), map));
+    for (const place of this.places()) {
+      this.plates.set(place.name, View.fit(lambert(place.centre[0], place.centre[1]), frameOf(place), map));
     }
     this.cache.clear();
+    this.stillDrawn.clear();
     this.move = null;
     this.settle();
   }
@@ -178,6 +208,7 @@ export class Stage {
   repaint(pal: Palette): void {
     this.pal = pal;
     this.cache.clear();
+    this.stillDrawn.clear();
     if (!this.move) this.settle();
   }
 
@@ -206,6 +237,7 @@ export class Stage {
   dispose(): void {
     this.stop();
     this.cache.clear();
+    this.stillDrawn.clear();
   }
 
   /** The sheets as one picture: what a turning page shows of the atlas while it turns. */
@@ -224,27 +256,40 @@ export class Stage {
 
   // --- Choosing a place ------------------------------------------------------------------------
 
-  /** Go to a plate, or to `world`. A choice made during a move waits for it to end. */
-  async show(key: string): Promise<void> {
+  /**
+   * Go to a plate, or to `world`, showing `still` there or no still map. A choice made during a move
+   * waits for it to end.
+   */
+  async show(key: string, still: StillMap | null = null): Promise<void> {
     if (key !== "world" && !this.maps.has(key)) {
-      const plate = this.plate(key);
-      this.maps.set(key, await loadPlateMap(this.base, plate.map));
+      this.maps.set(key, await loadPlateMap(this.base, this.place(key).map));
     }
     if (this.move) {
       this.queued = key;
+      this.queuedStill = still;
       return;
     }
-    if (key === this.mode) return;
+    if (key === this.mode) {
+      // The same place with another still map, or none: only its settled sheet changes.
+      const changed = still !== this.stillOn;
+      this.stillOn = still;
+      if (changed) this.settle();
+      this.tell(true);
+      return;
+    }
+    this.leaving = this.stillOn;
+    this.stillOn = still;
     const steps =
       this.mode === "world"
-        ? this.stepsIn(key)
+        ? this.stepsIn(key, this.leaving ? UNDER_STILL : 1)
         : key === "world"
-          ? this.stepsOut(this.mode)
+          ? this.stepsOut(this.mode, still && !still.words.plate ? UNDER_STILL : 1)
           : this.stepsBetween(this.mode, key);
     if (key === "bylot") this.day = 0;
     if (this.still) {
       // Reduced motion: no move to watch, only where it ends.
       this.mode = key;
+      this.leaving = null;
       this.settle();
       this.tell(true);
       return;
@@ -258,10 +303,37 @@ export class Stage {
     return this.move?.target ?? this.mode;
   }
 
+  /** The still map shown, or empty. */
+  get stillShown(): string {
+    return this.stillOn?.words.name ?? "";
+  }
+
   private plate(name: string): PlateWords {
     const plate = this.words.plates.find((p) => p.name === name);
     if (!plate) throw new Error(`no plate ${name}`);
     return plate;
+  }
+
+  /** Every place the camera can go: the systems' plates, then the still maps' of one region. */
+  private places(): Place[] {
+    return [...this.words.plates, ...this.words.stills.flatMap((s) => (s.plate ? [s.plate] : []))];
+  }
+
+  private place(name: string): Place {
+    const place = this.places().find((p) => p.name === name);
+    if (!place) throw new Error(`no place ${name}`);
+    return place;
+  }
+
+  /** The still map on a place's sheet: during a move, the arriving one where the camera is going. */
+  private stillOnSheet(key: string): StillMap | null {
+    const pick = this.move && key !== this.move.target ? this.leaving : this.stillOn;
+    return pick && (pick.words.plate?.name ?? "world") === key ? pick : null;
+  }
+
+  /** How strongly what moves is drawn at a place: dimmed under the world's still map. */
+  private dim(key: string): number {
+    return key === "world" && this.stillOnSheet(key) ? UNDER_STILL : 1;
   }
 
   // --- The maps --------------------------------------------------------------------------------
@@ -325,12 +397,17 @@ export class Stage {
     if (key === "world") return { lon: 30, lat: 20 };
     if (key === "north-america") return { lon: 10, lat: 10 };
     if (key === "bylot") return { lon: 15, lat: 5 };
+    if (key === "southern-africa") return { lon: 5, lat: 5 };
     return { lon: 0.5, lat: 0.25 };
   }
 
-  /** A settled map -- the world, or a plate hatched or in outline -- drawn once and kept. */
+  /**
+   * A settled map -- the world, or a plate hatched or in outline, with its still map if it has one
+   * -- drawn once and kept.
+   */
   private sheet(key: string, hatch: boolean): HTMLCanvasElement {
-    const id = `${key}:${hatch}`;
+    const still = hatch ? this.stillOnSheet(key) : null;
+    const id = `${key}:${hatch}:${still?.words.name ?? ""}`;
     const cached = this.cache.get(id);
     if (cached) return cached;
     const canvas = document.createElement("canvas");
@@ -348,6 +425,13 @@ export class Stage {
         graticule: hatch ? this.graticule(key) : null,
       });
     }
+    if (still) {
+      c.save();
+      c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      const view = key === "world" ? this.worldView : this.plates.get(key)!;
+      this.stillDrawn.set(id, still.draw(c, view, this.pal, this.W, this.H));
+      c.restore();
+    }
     this.cache.set(id, canvas);
     return canvas;
   }
@@ -361,7 +445,16 @@ export class Stage {
     this.lay(this.ctx.A, this.mode, true);
     this.ctx.B.clearRect(0, 0, this.sheets.B.width, this.sheets.B.height);
     this.sheets.B.style.opacity = "0";
-    this.opacity(1, 1);
+    this.opacity(1, this.dim(this.mode));
+    const still = this.stillOnSheet(this.mode);
+    const drew = this.stillDrawn.get(`${this.mode}:true:${still?.words.name ?? ""}`);
+    Object.assign(this.drawn, {
+      still: still?.words.name ?? "",
+      cells: still?.cells.v.length ?? 0,
+      dots: drew?.dots ?? 0,
+      rings: drew?.rings ?? 0,
+      squares: drew?.squares ?? 0,
+    });
     this.mask(0, 0, this.full());
     this.clearTrails();
     this.cast.night.reset();
@@ -399,7 +492,7 @@ export class Stage {
   }
 
   private camera(name: string): Camera {
-    const plate = this.plate(name);
+    const plate = this.place(name);
     const view = this.plates.get(name)!;
     return { lon: plate.centre[0], lat: plate.centre[1], s: view.scale, tx: view.tx, ty: view.ty };
   }
@@ -409,7 +502,7 @@ export class Stage {
    * projections are equal-area on the unit sphere, so the place is drawn the size the world shows it.
    */
   private spot(name: string): Camera {
-    const plate = this.plate(name);
+    const plate = this.place(name);
     const [x, y] = this.worldView.project(plate.centre[0], plate.centre[1]);
     return { lon: plate.centre[0], lat: plate.centre[1], s: this.worldView.scale, tx: x, ty: y };
   }
@@ -443,7 +536,8 @@ export class Stage {
     return ["world", ...this.words.plates.map((p) => p.name)];
   }
 
-  private stepsIn(name: string): Step[] {
+  /** In from the world; `moving` is how strongly the world's moving layers were drawn. */
+  private stepsIn(name: string, moving: number): Step[] {
     const spot = this.spot(name);
     const cam = this.camera(name);
     const full = this.full();
@@ -452,7 +546,7 @@ export class Stage {
         dur: FOCUS,
         run: (f) => {
           this.mask(spot.tx, spot.ty, full + (SPOT - full) * ease(f));
-          this.opacity(1, 1);
+          this.opacity(1, moving);
           return { view: this.worldView, shown: f < 0.5 ? this.everything() : [name], comet: false, callouts: 1 - Math.min(1, f * 3) };
         },
       },
@@ -481,7 +575,8 @@ export class Stage {
     ];
   }
 
-  private stepsOut(name: string): Step[] {
+  /** Out to the world; `moving` is how strongly the world's moving layers will be drawn there. */
+  private stepsOut(name: string, moving: number): Step[] {
     const spot = this.spot(name);
     const cam = this.camera(name);
     const full = this.full();
@@ -514,7 +609,7 @@ export class Stage {
         enter: () => this.lay(this.ctx.A, "world", true),
         run: (f) => {
           this.mask(spot.tx, spot.ty, SPOT + (full - SPOT) * ease(f));
-          this.opacity(1, f);
+          this.opacity(1, f * moving);
           return { view: this.worldView, shown: this.everything(), comet: false, callouts: Math.max(0, (f - 0.6) / 0.4) };
         },
       },
@@ -596,10 +691,13 @@ export class Stage {
     const move = this.move!;
     this.move = null;
     this.mode = move.target;
+    this.leaving = null;
     this.settle();
     const queued = this.queued;
+    const queuedStill = this.queuedStill;
     this.queued = null;
-    if (queued && queued !== this.mode) void this.show(queued);
+    this.queuedStill = null;
+    if (queued && (queued !== this.mode || queuedStill !== this.stillOn)) void this.show(queued, queuedStill);
     this.tell(true);
   }
 
@@ -687,12 +785,12 @@ export class Stage {
       const day = this.mode === "bylot" && !this.move ? this.day : (performance.now() / 1000) * 7 % (JOURNEY_DAYS + 25);
       this.drawn.journeys = this.cast.journeys.frame(live, day, view, this.pal, far);
     }
-    if (!this.move && this.mode !== "world") this.scaleBar(live, view, this.plate(this.mode));
+    if (!this.move && this.mode !== "world") this.scaleBar(live, view, this.place(this.mode));
     live.restore();
   }
 
   /** A pencil scale bar, a round distance long, at the plate's lower left. */
-  private scaleBar(c: CanvasRenderingContext2D, view: View, plate: PlateWords): void {
+  private scaleBar(c: CanvasRenderingContext2D, view: View, plate: Place): void {
     const ppk = view.pxPerKm(plate.centre[0], plate.centre[1]);
     const target = (this.W * 0.12) / ppk;
     const nice = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000].reduce((p, n) => (n <= target ? n : p), 1);
@@ -727,6 +825,8 @@ export class Stage {
       const { cells, reached } = herd.counts(this.week);
       return `${r.herd.in} ${cells} ${r.herd.cells} · ${reached} ${r.herd.reached}`;
     }
+    // A still map has no week to read out; what is on the sheet is named instead.
+    if (this.stillOn) return this.stillOn.words.button;
     return this.words.world.readout;
   }
 
@@ -740,6 +840,7 @@ export class Stage {
       week: this.week,
       day: this.day,
       readout: this.readout(showing),
+      still: this.stillShown,
     };
     const key = JSON.stringify(state);
     if (!force && key === this.told) return;

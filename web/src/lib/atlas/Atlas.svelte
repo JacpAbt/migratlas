@@ -1,12 +1,13 @@
 <script lang="ts">
   import { clock, world as pocket } from "../book/pocket.svelte";
-  import { castOf, WEEKS, type PlateWords, type Words } from "./data";
+  import { castOf, loadCells, WEEKS, type PlateWords, type Words } from "./data";
   import { Herd } from "./herd";
   import { Ice } from "./ice";
   import { palette } from "./ink";
   import { JOURNEY_DAYS, Journeys } from "./journeys";
   import { NightSky } from "./night";
   import { Stage, type StageState } from "./stage";
+  import { STATUS_INK, StillMap } from "./still";
 
   /**
    * `spread`: drawn across both pages, as an atlas plate crosses the fold. `leaf`: one phone leaf,
@@ -29,6 +30,17 @@
 
   const showing = $derived(now?.showing ?? "world");
   const plate = $derived(words?.plates.find((p) => p.name === showing) ?? null);
+
+  /*
+    The still maps, each fetched the first time it is switched on and kept: never on arrival, so the
+    chapter's opening payload is what it was before they existed (ADR 0021 step 6's kill condition).
+  */
+  const stillMaps = new Map<string, Promise<StillMap>>();
+  let stillMap = $state<StillMap | null>(null);
+  const still = $derived(words?.stills.find((s) => s.name === now?.still) ?? null);
+  const shownMap = $derived(still && stillMap?.words.name === still.name ? stillMap : null);
+  /** A still layer's own description, or the assessment's statement, which no layer manifest holds. */
+  const stillNote = $derived(still ? (layerNotes[still.name] ?? shownMap?.cells.note ?? "") : "");
   let paused = $state(false);
   let speed = $state(1);
 
@@ -144,6 +156,28 @@
     flap = "peek";
   }
 
+  /** Switch a still map on, where it is drawn; or off again, back to the moving world. */
+  async function chooseStill(name: string): Promise<void> {
+    flap = "peek";
+    const said = words?.stills.find((s) => s.name === name);
+    if (!stage || !said) return;
+    if (now?.still === name) {
+      void stage.show("world");
+      return;
+    }
+    let pending = stillMaps.get(name);
+    if (!pending) {
+      pending = loadCells(base, said).then((cells) => new StillMap(said, cells));
+      // A failed fetch is forgotten, so the next press asks again.
+      pending.catch(() => stillMaps.delete(name));
+      stillMaps.set(name, pending);
+    }
+    const map = await pending;
+    if (!stage) return;
+    stillMap = map;
+    void stage.show(said.plate?.name ?? "world", map);
+  }
+
   function toggle(): void {
     if (!stage) return;
     stage.playing = !stage.playing;
@@ -214,7 +248,7 @@
   <canvas class="sheet" bind:this={sheetLive} aria-hidden="true"></canvas>
 
   {#if words}
-    <h2 class="atlas__title">{plate?.title ?? words.world.title}</h2>
+    <h2 class="atlas__title">{still?.title ?? plate?.title ?? words.world.title}</h2>
     <p class="atlas__now" role="status">
       <span class="atlas__date">{now ? (journey ? "" : dateOf(now.week)) : ""}</span>
       <span class="atlas__what">{now?.readout ?? ""}</span>
@@ -257,19 +291,80 @@
         </button>
       {/if}
       <div class="slip slip--caption">
-        <p>
-          <strong>{plate?.lead ?? words.world.lead}</strong>
-          {plate?.caption ?? words.world.caption}
-        </p>
-        {#if note}<p class="slip__note">{note}</p>{/if}
-        {#if plate}<p class="slip__note">{plate.credit}</p>{/if}
+        {#if still}
+          <p><strong>{still.lead}</strong> {still.caption}</p>
+          {#if shownMap}
+            <ul class="key" class:key--count={shownMap.kind === "count"}>
+              {#if shownMap.kind === "status"}
+                {@const shares = shownMap.shares()}
+                {#each still.key as row (row.value)}
+                  {@const ink = STATUS_INK[row.value]}
+                  <li>
+                    <svg class="key__mark" viewBox="0 0 12 12" aria-hidden="true">
+                      <rect
+                        x="1"
+                        y="1"
+                        width="10"
+                        height="10"
+                        style:fill={ink?.tone === "accent" ? "var(--rust-ink)" : "var(--pencil)"}
+                        style:fill-opacity={ink?.alpha ?? 0.3}
+                      />
+                    </svg>
+                    <span>{row.means}</span>
+                    <em>{(shares[row.value] ?? 0).toFixed(1)}%</em>
+                  </li>
+                {/each}
+              {:else if shownMap.kind === "change"}
+                {#each still.key as row (row.value)}
+                  <li>
+                    <svg class="key__mark" viewBox="0 0 12 12" aria-hidden="true">
+                      <circle cx="6" cy="6" r="4" class={row.value} />
+                    </svg>
+                    <span>{row.means}</span>
+                  </li>
+                {/each}
+              {:else}
+                {#each shownMap.samples() as count (count)}
+                  <li>
+                    <svg class="key__mark" viewBox="0 0 12 12" aria-hidden="true">
+                      <circle cx="6" cy="6" r={(5.5 * shownMap.dot(count)) / 0.48} />
+                    </svg>
+                    <em>{count.toLocaleString("en-GB")}</em>
+                  </li>
+                {/each}
+                <li class="key__unit">{still.unit}</li>
+              {/if}
+            </ul>
+          {/if}
+          <p class="slip__note">{words.world.still}</p>
+          {#if stillNote}<p class="slip__note">{stillNote}</p>{/if}
+          <p class="slip__note terms">{still.credit}</p>
+          {#if still.plate}<p class="slip__note">{still.plate.credit}</p>{/if}
+        {:else}
+          <p>
+            <strong>{plate?.lead ?? words.world.lead}</strong>
+            {plate?.caption ?? words.world.caption}
+          </p>
+          {#if note}<p class="slip__note">{note}</p>{/if}
+          {#if plate}<p class="slip__note">{plate.credit}</p>{/if}
+        {/if}
       </div>
       <div class="slip slip--controls">
         <div class="show" role="group" aria-label={words.controls.show}>
           <span>{words.controls.show}</span>
-          <button type="button" aria-pressed={showing === "world"} onclick={() => choose("world")}>{words.controls.world}</button>
+          <button type="button" aria-pressed={showing === "world" && !now?.still} onclick={() => choose("world")}>
+            {words.controls.world}
+          </button>
           {#each words.plates as p (p.name)}
             <button type="button" aria-pressed={showing === p.name} onclick={() => choose(p.name)}>{p.button}</button>
+          {/each}
+        </div>
+        <div class="show show--stills" role="group" aria-label={words.controls.stills}>
+          <span>{words.controls.stills}</span>
+          {#each words.stills as s (s.name)}
+            <button type="button" aria-pressed={now?.still === s.name} onclick={() => void chooseStill(s.name)}>
+              {s.button}
+            </button>
           {/each}
         </div>
         <div class="row">
@@ -459,6 +554,56 @@
 
   .slip p + p {
     margin-top: 0.4em;
+  }
+
+  /* A still map's key: what each mark is, and for the assessment how much of the world it covers. */
+  .key {
+    list-style: none;
+    margin: 0.45em 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.1em;
+  }
+
+  .key li {
+    display: flex;
+    align-items: center;
+    gap: 0.45em;
+  }
+
+  .key em {
+    margin-left: auto;
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .key--count {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.15em 0.8em;
+  }
+
+  .key--count em {
+    margin-left: 0;
+  }
+
+  .key__mark {
+    flex: none;
+    width: 0.95em;
+    height: 0.95em;
+    overflow: visible;
+  }
+
+  .key--count circle,
+  .key .gain {
+    fill: var(--ink);
+  }
+
+  .key .loss {
+    fill: none;
+    stroke: var(--rust-ink);
+    stroke-width: 1.5;
   }
 
   .slip__note {

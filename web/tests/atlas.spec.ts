@@ -23,6 +23,11 @@ interface Drawn {
   herd: number;
   ice: boolean;
   frames: number;
+  still: string;
+  cells: number;
+  dots: number;
+  rings: number;
+  squares: number;
 }
 
 interface AtlasHook {
@@ -34,6 +39,14 @@ interface AtlasHook {
 interface Words {
   world: { title: string; lead: string };
   plates: { name: string; button: string; title: string; lead: string; credit: string; map: string }[];
+  stills: {
+    name: string;
+    button: string;
+    title: string;
+    credit: string;
+    data: string;
+    plate: { name: string; credit: string } | null;
+  }[];
   readout: { herd: { in: string; cells: string } };
   controls: { pause: string; play: string; world: string; show: string };
 }
@@ -326,6 +339,122 @@ test("the atlas's words are written in the marker face, never typed", async ({ p
     expect(face, `${selector} is not in the marker face`).toContain(body.split(",")[0]!.replace(/["']/g, ""));
     expect(face, `${selector} is typed`).not.toContain(mono.split(",")[0]!.replace(/["']/g, ""));
   }
+});
+
+/** The still map the stage reports on its settled sheet, once it is there. */
+async function stillIs(page: Page, name: string): Promise<void> {
+  await expect.poll(async () => (await drawn(page)).still, { timeout: 15_000 }).toBe(name);
+}
+
+test("a still map is fetched when it is switched on, and draws every cell it was published with", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const fetched: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.endsWith(".grid.json") || path.endsWith("/detectability.json")) fetched.push(path.split("/").pop()!);
+  });
+  await ready(page);
+  const said = await words(page);
+  // Off on arrival, and not fetched: a reader meets what moves before the maps that do not.
+  expect((await drawn(page)).still).toBe("");
+  expect(fetched, "a still map was fetched before anyone asked for it").toEqual([]);
+
+  for (const still of said.stills) {
+    await choose(page, still.button);
+    await settledOn(page, still.plate?.name ?? "world");
+    await stillIs(page, still.name);
+    await expect(page.locator(".atlas__title")).toHaveText(still.title);
+    const now = await drawn(page);
+    // Exact, against what was published: the grid is a compaction, safe only if it decodes whole.
+    // A layer's sidecar records its cell count; the assessment is a report with its grid inside.
+    const published = still.data.startsWith("layers/")
+      ? ((await page.request.get(still.data.replace(".grid.json", ".meta.json")).then((r) => r.json())) as {
+          cells: number;
+        }).cells
+      : ((await page.request.get(still.data).then((r) => r.json())) as { grid: { v: number[] } }).grid.v.length;
+    expect(now.cells, `${still.name} decoded ${now.cells} of ${published} cells`).toBe(published);
+    expect(now.dots + now.rings + now.squares, `${still.name} drew nothing`).toBeGreaterThan(0);
+  }
+  expect(fetched.sort()).toEqual(said.stills.map((s) => s.data.split("/").pop()).sort());
+});
+
+test("the two atlases' change is drawn on its own plate, losses ringed and gains solid", async ({ page }) => {
+  await ready(page);
+  const said = await words(page);
+  const change = said.stills.find((s) => s.plate !== null)!;
+  const grid = (await page.request.get(change.data).then((r) => r.json())) as { v: number[] };
+  await choose(page, change.button);
+  await settledOn(page, change.plate!.name);
+  await stillIs(page, change.name);
+
+  // Direction carried by shape as well as colour: every loss a ring, every gain a solid dot.
+  const now = await drawn(page);
+  expect(now.rings, "the losses are not each ringed").toBe(grid.v.filter((v) => v < 0).length);
+  expect(now.dots, "the gains are not each solid").toBe(grid.v.filter((v) => v > 0).length);
+  expect(now.rings, "no cell lost kinds, which the layer says most did").toBeGreaterThan(50);
+  expect(now.dots, "no cell gained kinds").toBeGreaterThan(10);
+
+  // And on the canvas: the rings are the accent's ink, which nothing else on this plate is drawn in.
+  const rust = await page.evaluate(() => {
+    const sheet = document.querySelector<HTMLCanvasElement>(".atlas .sheet")!;
+    const pixels = sheet.getContext("2d")!.getImageData(0, 0, sheet.width, sheet.height).data;
+    let count = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (pixels[i + 3]! > 120 && pixels[i]! > pixels[i + 1]! + 50 && pixels[i]! > pixels[i + 2]! + 50) count += 1;
+    }
+    return count;
+  });
+  expect(rust, "no ring reached the canvas").toBeGreaterThan(500);
+
+  await expect(page.locator(".slip--caption .key li"), "the key does not say which mark is which").toHaveCount(2);
+  await expect(page.locator(".slip--caption .terms")).toHaveText(change.credit);
+  await expect(page.locator(".slip--caption")).toContainText(change.plate!.credit);
+});
+
+test("the detectability map brings its key, and most of the world is not detectable", async ({ page }) => {
+  await ready(page);
+  const said = await words(page);
+  await expect(page.locator(".slip--caption .key li")).toHaveCount(0);
+  const assessed = said.stills.find((s) => s.name === "detectability")!;
+  await choose(page, assessed.button);
+  await stillIs(page, assessed.name);
+
+  // The finding, read through the key a reader reads. If "detectable" were ever most of it, either
+  // the lake changed profoundly or the assessment stopped assessing.
+  await expect(page.locator(".slip--caption .key li")).toHaveCount(4);
+  const shares = await page.locator(".slip--caption .key em").allTextContents();
+  const detectable = Number.parseFloat(shares[0] ?? "0");
+  expect(detectable, "nothing is detectable, so the map is broken").toBeGreaterThan(0);
+  expect(detectable, "most of the world is detectable, which is not true").toBeLessThan(50);
+  expect((await drawn(page)).squares).toBeGreaterThan(40_000);
+});
+
+test("a drawn still map carries its terms, and goes when a place is chosen", async ({ page }) => {
+  await ready(page);
+  const said = await words(page);
+  // The terms of what is drawn: none drawn, none stated -- an empty "published under" would read as
+  // terms that are missing.
+  await expect(page.locator(".slip--caption .terms")).toHaveCount(0);
+  const first = said.stills.find((s) => s.plate === null)!;
+  await choose(page, first.button);
+  await stillIs(page, first.name);
+  await expect(page.locator(".slip--caption .terms")).toHaveText(first.credit);
+
+  // Pressed again, it goes, and its terms with it.
+  await choose(page, first.button);
+  await stillIs(page, "");
+  await expect(page.locator(".slip--caption .terms")).toHaveCount(0);
+
+  // A place chosen while one is drawn puts it away: a plate shows its system and nothing else.
+  await choose(page, first.button);
+  await stillIs(page, first.name);
+  const herd = said.plates.find((p) => p.name === "svalbard")!;
+  await choose(page, herd.button);
+  await settledOn(page, herd.name);
+  expect((await drawn(page)).still).toBe("");
+  await expect(page.locator(".atlas__title")).toHaveText(herd.title);
 });
 
 test("on a phone the world is one leaf, the atlas on it, its words in the flap", async ({ page }) => {

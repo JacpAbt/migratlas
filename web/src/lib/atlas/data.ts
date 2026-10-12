@@ -197,8 +197,17 @@ export async function loadIce(base: string): Promise<IceEdges> {
 
 // --- The words -----------------------------------------------------------------------------------
 
-export interface PlateWords {
+/** Somewhere the camera can go: a system's plate, or the plate of a still map of one region. */
+export interface Place {
   name: string;
+  frame: [number, number, number, number];
+  centre: [number, number];
+  map: string;
+  /** Whose map the plate is drawn on. */
+  credit: string;
+}
+
+export interface PlateWords extends Place {
   layer: string;
   button: string;
   title: string;
@@ -207,16 +216,29 @@ export interface PlateWords {
   lead: string;
   caption: string;
   clock: "year" | "journey";
-  frame: [number, number, number, number];
-  centre: [number, number];
-  map: string;
+}
+
+/** A map with no time in it: its words, where its cells are, and its plate if it is one region's. */
+export interface StillWords {
+  name: string;
+  button: string;
+  title: string;
+  lead: string;
+  caption: string;
+  /** What a dot counts, beside the key's sample dots. Empty where the key is categories. */
+  unit: string;
+  key: { value: string; means: string }[];
+  data: string;
+  /** The terms its data was published under. */
   credit: string;
+  plate: Place | null;
 }
 
 /** `web/public/atlas.json`, written by `reports/atlas.py`. */
 export interface Words {
   world: { title: string; lead: string; caption: string; still: string; readout: string };
   plates: PlateWords[];
+  stills: StillWords[];
   readout: {
     air: {
       little: string;
@@ -229,16 +251,73 @@ export interface Words {
     journey: { day: string; each: string; of: string; going: string };
     herd: { in: string; cells: string; reached: string };
   };
-  controls: Record<"show" | "world" | "pause" | "play" | "slow" | "normal" | "fast" | "clock" | "journey", string>;
+  controls: Record<
+    "show" | "world" | "pause" | "play" | "slow" | "normal" | "fast" | "clock" | "journey" | "stills",
+    string
+  >;
 }
 
 export const loadWords = (base: string): Promise<Words> => json<Words>(`${base}atlas.json`);
 
-/** A plate's frame as a box. */
-export const frameOf = (plate: PlateWords): Box => {
-  const [west, east, south, north] = plate.frame;
+/** A place's frame as a box. */
+export const frameOf = (place: Place): Box => {
+  const [west, east, south, north] = place.frame;
   return { west, east, south, north };
 };
+
+// --- The still maps ------------------------------------------------------------------------------
+
+/** A still map's cells: one value each for the map's whole period, at the cell's centre. */
+export interface Cells {
+  /** Degrees on a side. */
+  size: number;
+  lon: Float32Array;
+  lat: Float32Array;
+  v: Float32Array;
+  /** For an assessment, what each value names: `v` indexes this. */
+  categories: string[] | null;
+  /** The map's own statement, for the one still map the layer manifest does not describe. */
+  note: string | null;
+}
+
+interface Grid {
+  cell_size_deg: number;
+  x: number[];
+  y: number[];
+  v: number[];
+}
+
+/**
+ * Cell centres back from grid indices, as `tiles/` encoded them. Three parallel arrays mean
+ * something only together, so a length that disagrees is refused rather than drawn: a truncated one
+ * would pair values with the wrong cells and look like a map.
+ */
+export function decode(grid: Grid): Pick<Cells, "size" | "lon" | "lat" | "v"> {
+  const { x, y, v, cell_size_deg: size } = grid;
+  if (x.length !== v.length || y.length !== v.length) {
+    throw new Error(`grid arrays disagree: x=${x.length} y=${y.length} v=${v.length}`);
+  }
+  const lon = new Float32Array(v.length);
+  const lat = new Float32Array(v.length);
+  for (let i = 0; i < v.length; i++) {
+    lon[i] = (x[i]! + 0.5) * size - 180;
+    lat[i] = (y[i]! + 0.5) * size - 90;
+  }
+  return { size, lon, lat, v: Float32Array.from(v) };
+}
+
+/** A still map's cells, fetched when it is switched on and not before. */
+export async function loadCells(base: string, still: StillWords): Promise<Cells> {
+  // The assessment ships as a report with its grid inside; a layer ships as the grid alone.
+  const document = await json<Grid & { grid?: Grid & { categories: string[] }; caveat?: string }>(
+    `${base}${still.data}`,
+  );
+  return {
+    ...decode(document.grid ?? document),
+    categories: document.grid?.categories ?? null,
+    note: document.caveat ?? null,
+  };
+}
 
 // --- Everything at once, once ----------------------------------------------------------------------
 
