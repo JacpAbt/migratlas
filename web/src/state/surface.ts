@@ -64,18 +64,6 @@ export function applySurface(surface: Surface): Surface {
 }
 
 /**
- * Whether the page is *currently* dark, whichever way it got there.
- *
- * The globe needs this rather than the setting: `"system"` is not a colour, and the basemap has to
- * be repainted with the palette actually in force.
- */
-export function isNight(surface: Surface): boolean {
-  if (surface === "night") return true;
-  if (surface === "day") return false;
-  return globalThis.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
-}
-
-/**
  * Call `whenever` each time the system preference changes, while the choice is "system".
  *
  * Returns its own teardown. Without this, a reader on "system" whose machine dims at sunset gets
