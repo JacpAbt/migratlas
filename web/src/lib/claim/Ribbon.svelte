@@ -58,7 +58,9 @@
   apart, which invites a reader to average them. These are different quantities, and an average of
   them answers no question at all.
 -->
-<div class="pair">
+<!-- Busy while its document is on its way, which a screen reader announces and a test can wait on:
+     the waiting line shares the failure's class, so nothing else tells the two apart. -->
+<div class="pair" aria-busy={!doc && !failure}>
   {#if failure}
     <p class="pair__failure">The counterfactual is unavailable. {failure}</p>
   {:else if doc && frame}

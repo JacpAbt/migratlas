@@ -656,6 +656,18 @@ test("on a phone the world is one leaf, the atlas on it, its words in the flap",
   expect((await drawn(page)).journeys).toBeGreaterThan(0);
 });
 
+/**
+ * Every ribbon on the page has its document: none is still reading.
+ *
+ * A ribbon shows a waiting line until `counterfactual.json` arrives, after the page itself. Counted
+ * the moment the book showed, a loaded run found no chart on any of the four pages and failed the
+ * scatter test's "more than one chart"; the frame test counts the same pages the same way. Waited
+ * on through `aria-busy`, not on the line's class, which it shares with a real failure.
+ */
+async function ribbonsArrived(page: Page): Promise<void> {
+  await expect(page.locator('.pair[aria-busy="true"]')).toHaveCount(0, { timeout: 15_000 });
+}
+
 test("each counterfactual is drawn to the scatter, and both to one frame", async ({
   page,
 }) => {
@@ -699,6 +711,7 @@ test("each counterfactual is drawn to the scatter, and both to one frame", async
   for (const at of [0, 1, 2, 3]) {
     await page.goto(`?debug=1#ch=why-it-changed&p=${at}`);
     await expect(page.locator(".book")).toBeVisible();
+    await ribbonsArrived(page);
     if ((await page.locator(".chart__svg").count()) === 0) continue;
     charts.push(...(await geometryOf()));
   }
@@ -766,6 +779,7 @@ test("no ribbon is drawn past its own frame, and each shades where its evidence 
   for (const at of [0, 1, 2, 3]) {
     await page.goto(`?debug=1#ch=why-it-changed&p=${at}`);
     await expect(page.locator(".book")).toBeVisible();
+    await ribbonsArrived(page);
     if ((await page.locator(".chart__svg").count()) === 0) continue;
     measured.push(...(await readChart()));
   }
