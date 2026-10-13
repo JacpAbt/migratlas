@@ -9,6 +9,7 @@
     "show": "show",
     "slow": "slow",
     "stills": "still maps",
+    "terms": "the terms of what is drawn",
     "world": "the whole world"
   },
   "plates": [
@@ -32,6 +33,7 @@
       "lead": "Each stroke is one night's flight",
       "map": "basemap/plates/north-america.geojson",
       "name": "north-america",
+      "terms": "Data: Dark Ecology Dataset \u2014 daily time series of aerial biomass, 1995\u20132025 (CC BY 4.0). Published at source resolution.",
       "title": "The night sky over North America",
       "under": "161 weather radars \u00b7 not one species"
     },
@@ -55,6 +57,7 @@
       "lead": "Each line is one of 217 journeys",
       "map": "basemap/plates/bylot.geojson",
       "name": "bylot",
+      "terms": "Data: Arctic fox Bylot - Argos tracking (CC0 1.0). Generalised for animal safety: coordinates generalised to a 0.001-degree grid; records within 30 days of present withheld. Fuller data may be available from the data owner on request.; drawn from daily median positions snapped to 0.01 degrees, coarser than policy, so no den resolves to a point",
       "title": "Arctic foxes from Bylot Island",
       "under": "170 animals, a position a day"
     },
@@ -78,6 +81,7 @@
       "lead": "The inked outline is where collared reindeer",
       "map": "basemap/plates/svalbard.geojson",
       "name": "svalbard",
+      "terms": "Data: Svalbard Reindeer Project - Nordenskiold Land (CC BY-NC 4.0). Generalised for animal safety: coordinates generalised to a 0.01-degree grid; records within 90 days of present withheld; individual identifiers removed. Fuller data may be available from the data owner on request.",
       "title": "Svalbard reindeer",
       "under": "the herd's year, week by week"
     },
@@ -101,6 +105,7 @@
       "lead": "The inked outline is where collared elk",
       "map": "basemap/plates/ya-ha-tinda.geojson",
       "name": "ya-ha-tinda",
+      "terms": "Data: Ya Ha Tinda elk project, Banff National Park, 2001-2024 (females) (CC0 1.0). Generalised for animal safety: coordinates generalised to a 0.01-degree grid; records within 90 days of present withheld; individual identifiers removed. Fuller data may be available from the data owner on request.",
       "title": "The Ya Ha Tinda elk, Alberta",
       "under": "the herd's year, week by week"
     }
@@ -242,6 +247,13 @@
     "lead": "Choose one to look closer.",
     "readout": "choose one to look closer",
     "still": "A still map has one value for each place over its whole period, so it does not move with the clock.",
+    "terms": [
+      "Data: Dark Ecology Dataset \u2014 daily time series of aerial biomass, 1995\u20132025 (CC BY 4.0). Published at source resolution.",
+      "Data: Arctic fox Bylot - Argos tracking (CC0 1.0). Generalised for animal safety: coordinates generalised to a 0.001-degree grid; records within 30 days of present withheld. Fuller data may be available from the data owner on request.; drawn from daily median positions snapped to 0.01 degrees, coarser than policy, so no den resolves to a point",
+      "Data: Svalbard Reindeer Project - Nordenskiold Land (CC BY-NC 4.0). Generalised for animal safety: coordinates generalised to a 0.01-degree grid; records within 90 days of present withheld; individual identifiers removed. Fuller data may be available from the data owner on request.",
+      "Data: Ya Ha Tinda elk project, Banff National Park, 2001-2024 (females) (CC0 1.0). Generalised for animal safety: coordinates generalised to a 0.01-degree grid; records within 90 days of present withheld; individual identifiers removed. Fuller data may be available from the data owner on request.",
+      "Data: Sea Ice Index, version 4 \u2014 monthly median ice edge, 1981\u20132010 (Open access; citation required as a condition of use). Published at source resolution.; unprojected from the product's polar stereographic and split at the antimeridian"
+    ],
     "title": "Where things move, through a year"
   }
 }

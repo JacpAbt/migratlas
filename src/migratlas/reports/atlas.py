@@ -173,6 +173,9 @@ class StillWords:
     """The plate it is drawn on, for a map of one region; empty for the world view."""
 
 
+ICE: Final = "sea-ice-edge"
+"""The one layer the world view draws that has no plate of its own."""
+
 DETECTABILITY: Final = "detectability"
 """The one still map that is a report about the lake rather than a published layer."""
 
@@ -292,6 +295,9 @@ def build() -> dict[str, Any]:
                 "move with the clock."
             ),
             "readout": "choose one to look closer",
+            # Every layer the world view draws, each with the terms it was published under: the
+            # safety generalisation of the animal layers is among them, and is not decoration.
+            "terms": [terms(layer) for layer in [*(words.layer for words in plates()), ICE]],
         },
         "plates": [
             {
@@ -304,6 +310,7 @@ def build() -> dict[str, Any]:
                 "lead": words.lead,
                 "caption": words.caption,
                 "clock": words.clock,
+                "terms": terms(words.layer),
                 **_plate(words.name),
             }
             for words in plates()
@@ -372,6 +379,7 @@ def build() -> dict[str, Any]:
             "clock": "time of year",
             "journey": "day of each journey",
             "stills": "still maps",
+            "terms": "the terms of what is drawn",
         },
     }
 

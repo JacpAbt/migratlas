@@ -209,6 +209,8 @@ export interface Place {
 
 export interface PlateWords extends Place {
   layer: string;
+  /** The terms the plate's layer was published under. */
+  terms: string;
   button: string;
   title: string;
   callout: string;
@@ -236,7 +238,15 @@ export interface StillWords {
 
 /** `web/public/atlas.json`, written by `reports/atlas.py`. */
 export interface Words {
-  world: { title: string; lead: string; caption: string; still: string; readout: string };
+  world: {
+    title: string;
+    lead: string;
+    caption: string;
+    still: string;
+    readout: string;
+    /** The terms of every layer the world view draws. */
+    terms: string[];
+  };
   plates: PlateWords[];
   stills: StillWords[];
   readout: {
@@ -252,7 +262,7 @@ export interface Words {
     herd: { in: string; cells: string; reached: string };
   };
   controls: Record<
-    "show" | "world" | "pause" | "play" | "slow" | "normal" | "fast" | "clock" | "journey" | "stills",
+    "show" | "world" | "pause" | "play" | "slow" | "normal" | "fast" | "clock" | "journey" | "stills" | "terms",
     string
   >;
   search: Record<"label" | "animals" | "cells" | "study" | "drawn" | "nowhere" | "away" | "missing" | "unread", string>;

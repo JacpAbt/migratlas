@@ -126,6 +126,24 @@ def test_the_search_types_no_count() -> None:
         assert not re.search(r"\d", words), f"search {name} types a number"
 
 
+def test_every_drawn_layer_states_its_terms() -> None:
+    """Each plate its own layer's; the world every layer it draws -- the herds' safety terms too."""
+    manifest = {layer["name"]: layer for layer in json.loads(MANIFEST.read_text(encoding="utf-8"))}
+    document = atlas.build()
+
+    def stated(text: str, layer: str) -> bool:
+        meta = _meta(layer)
+        return manifest[layer]["licence"] in text and str(meta["dwc:dataGeneralizations"]) in text
+
+    for plate in document["plates"]:
+        assert stated(plate["terms"], plate["layer"]), plate["name"]
+    drawn = [plate["layer"] for plate in document["plates"]] + [atlas.ICE]
+    assert len(document["world"]["terms"]) == len(drawn)
+    for text, layer in zip(document["world"]["terms"], drawn, strict=True):
+        assert stated(text, layer), layer
+    assert any("animal safety" in text for text in document["world"]["terms"])
+
+
 def test_the_committed_document_is_current() -> None:
     committed = json.loads((ROOT / atlas.DOCUMENT).read_text(encoding="utf-8"))
     assert committed == json.loads(json.dumps(atlas.build()))

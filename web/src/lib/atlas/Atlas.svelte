@@ -460,7 +460,17 @@
             {plate?.caption ?? words.world.caption}
           </p>
           {#if note}<p class="slip__note">{note}</p>{/if}
-          {#if plate}<p class="slip__note">{plate.credit}</p>{/if}
+          {#if plate}
+            <p class="slip__note terms">{plate.terms}</p>
+            <p class="slip__note">{plate.credit}</p>
+          {:else}
+            <!-- Folded, as the globe's attribution was behind its button: five layers' terms in full
+                 would be most of the slip, and the world's caption is a sentence. -->
+            <details class="slip__terms">
+              <summary>{words.controls.terms}</summary>
+              {#each words.world.terms as said (said)}<p class="slip__note terms">{said}</p>{/each}
+            </details>
+          {/if}
         {/if}
       </div>
       <div class="slip slip--controls">
@@ -747,6 +757,12 @@
     cursor: pointer;
     text-decoration: underline wavy color-mix(in srgb, var(--rust-ink) 70%, transparent);
     text-underline-offset: 0.25em;
+  }
+
+  .slip__terms summary {
+    margin-top: 0.4em;
+    cursor: pointer;
+    color: var(--pencil);
   }
 
   .slip__note {

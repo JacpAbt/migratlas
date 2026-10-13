@@ -37,8 +37,8 @@ interface AtlasHook {
 }
 
 interface Words {
-  world: { title: string; lead: string };
-  plates: { name: string; button: string; title: string; lead: string; credit: string; map: string }[];
+  world: { title: string; lead: string; terms: string[] };
+  plates: { name: string; button: string; title: string; lead: string; credit: string; map: string; terms: string }[];
   stills: {
     name: string;
     button: string;
@@ -435,10 +435,9 @@ test("the detectability map brings its key, and most of the world is not detecta
 test("a drawn still map carries its terms, and goes when a place is chosen", async ({ page }) => {
   await ready(page);
   const said = await words(page);
-  // The terms of what is drawn: none drawn, none stated -- an empty "published under" would read as
-  // terms that are missing.
-  await expect(page.locator(".slip--caption .terms")).toHaveCount(0);
+  // A still map's terms are stated while it is drawn, and only then.
   const first = said.stills.find((s) => s.plate === null)!;
+  await expect(page.locator(".slip--caption")).not.toContainText(first.credit);
   await choose(page, first.button);
   await stillIs(page, first.name);
   await expect(page.locator(".slip--caption .terms")).toHaveText(first.credit);
@@ -446,7 +445,7 @@ test("a drawn still map carries its terms, and goes when a place is chosen", asy
   // Pressed again, it goes, and its terms with it.
   await choose(page, first.button);
   await stillIs(page, "");
-  await expect(page.locator(".slip--caption .terms")).toHaveCount(0);
+  await expect(page.locator(".slip--caption")).not.toContainText(first.credit);
 
   // A place chosen while one is drawn puts it away: a plate shows its system and nothing else.
   await choose(page, first.button);
@@ -577,6 +576,22 @@ test("a study card leads back to the claim its evidence feeds", async ({ page })
   await page.locator(".study__claim").first().click();
   await expect(page.locator(".claim__title")).toContainText("Fish are not all moving");
   await expect(page).toHaveURL(/[#&]c=marine-null/);
+});
+
+test("every layer drawn states the terms it was published under", async ({ page }) => {
+  await ready(page);
+  const said = await words(page);
+  // The world draws five layers; their terms are folded behind one line, and all there when opened.
+  const folded = page.locator(".slip--caption .slip__terms");
+  await folded.locator("summary").click();
+  await expect(folded.locator(".terms")).toHaveText(said.world.terms);
+  // Among them the animal layers' safety terms, which must travel with what they generalised.
+  await expect(folded).toContainText("animal safety");
+  // A plate states its own layer's.
+  const herd = said.plates.find((p) => p.name === "svalbard")!;
+  await choose(page, herd.button);
+  await settledOn(page, herd.name);
+  await expect(page.locator(".slip--caption .terms")).toHaveText(herd.terms);
 });
 
 test("on a phone the world is one leaf, the atlas on it, its words in the flap", async ({ page }) => {
