@@ -12,6 +12,7 @@
   import { NightSky } from "./night";
   import { Stage, type StageState } from "./stage";
   import { STATUS_INK, StillMap } from "./still";
+  import { Wave } from "./wave";
 
   /**
    * `spread`: drawn across both pages, as an atlas plate crosses the fold. `leaf`: one phone leaf,
@@ -22,6 +23,7 @@
   let host = $state<HTMLDivElement | null>(null);
   let sheetA = $state<HTMLCanvasElement | null>(null);
   let sheetB = $state<HTMLCanvasElement | null>(null);
+  let sheetWash = $state<HTMLCanvasElement | null>(null);
   let sheetTrails = $state<HTMLCanvasElement | null>(null);
   let sheetLive = $state<HTMLCanvasElement | null>(null);
   let words = $state<Words | null>(null);
@@ -88,10 +90,11 @@
   $effect(() => {
     const canvasA = sheetA;
     const canvasB = sheetB;
+    const wash = sheetWash;
     const trails = sheetTrails;
     const live = sheetLive;
     const root = host;
-    if (!canvasA || !canvasB || !trails || !live || !root) return;
+    if (!canvasA || !canvasB || !wash || !trails || !live || !root) return;
     let gone = false;
     let made: Stage | null = null;
     let cleanup = (): void => {};
@@ -103,13 +106,14 @@
       words = w;
       layerNotes = cast.notes;
       made = new Stage(
-        { A: canvasA, B: canvasB, trails, live },
+        { A: canvasA, B: canvasB, wash, trails, live },
         {
           world: cast.world,
           night: new NightSky(cast.radar),
           journeys: new Journeys(cast.journeys),
           herds: { svalbard: new Herd(cast.herds.svalbard), "ya-ha-tinda": new Herd(cast.herds["ya-ha-tinda"]) },
           ice: new Ice(cast.ice),
+          wave: new Wave(cast.wave),
         },
         w,
         base,
@@ -339,6 +343,7 @@
 <div class="atlas atlas--{layout}" bind:this={host} data-showing={showing} data-moving={now?.moving ? "" : undefined}>
   <canvas class="sheet" bind:this={sheetA} aria-hidden="true"></canvas>
   <canvas class="sheet sheet--over" bind:this={sheetB} aria-hidden="true"></canvas>
+  <canvas class="sheet sheet--wash" bind:this={sheetWash} aria-hidden="true"></canvas>
   <canvas class="sheet" bind:this={sheetTrails} aria-hidden="true"></canvas>
   <canvas class="sheet" bind:this={sheetLive} aria-hidden="true"></canvas>
 
@@ -459,6 +464,7 @@
             <strong>{plate?.lead ?? words.world.lead}</strong>
             {plate?.caption ?? words.world.caption}
           </p>
+          {#if !plate}<p class="slip__note">{words.world.wave}</p>{/if}
           {#if note}<p class="slip__note">{note}</p>{/if}
           {#if plate}
             <p class="slip__note terms">{plate.terms}</p>
@@ -757,6 +763,12 @@
     cursor: pointer;
     text-decoration: underline wavy color-mix(in srgb, var(--rust-ink) 70%, transparent);
     text-underline-offset: 0.25em;
+  }
+
+  /* A wash, not a picture: the cells soften into the paper. The blur is the element's, so it costs
+     nothing per frame; a copy of the sheet puts it back with the 2D filter where that exists. */
+  .sheet--wash {
+    filter: blur(2px);
   }
 
   .slip__terms summary {

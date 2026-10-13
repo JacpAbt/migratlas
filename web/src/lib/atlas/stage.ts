@@ -1,9 +1,9 @@
 /**
  * The atlas's stage: the canvases, the camera and the clock, and every move between places.
  *
- * Four sheets, back to front: `A` the map the camera is looking at, `B` a settled map faded over it
- * when a move ends, `trails` where the radar's strokes dry, and `live` for everything else that
- * moves. The component owns the page around them -- the words, the controls, the callouts -- and
+ * Five sheets, back to front: `A` the map the camera is looking at, `B` a settled map faded over it
+ * when a move ends, `wash` the green wave under everything on the world view, `trails` where the
+ * radar's strokes dry, and `live` for everything else that moves. The component owns the page around them -- the words, the controls, the callouts -- and
  * hears from here through `onState`.
  *
  * A move is a list of steps run by the frame clock. Every move between places is made in one
@@ -42,6 +42,7 @@ import { JOURNEY_DAYS, Journeys } from "./journeys";
 import type { Herd } from "./herd";
 import type { Ice } from "./ice";
 import type { StillDrawn, StillMap } from "./still";
+import type { Wave } from "./wave";
 
 const WORLD_BOX: Box = { west: -180, east: 180, south: -90, north: 90 };
 const FOCUS = 0.4;
@@ -59,6 +60,7 @@ export interface Cast {
   journeys: Journeys;
   herds: Record<string, Herd>;
   ice: Ice;
+  wave: Wave;
 }
 
 /** What the page around the stage needs to know, sent whenever it changes. */
@@ -89,11 +91,15 @@ export interface Drawn {
   dots: number;
   rings: number;
   squares: number;
+  /** The green wave's cells tinted this frame, and their tint-weighted mean latitude. */
+  wave: number;
+  waveLat: number;
 }
 
 interface Sheets {
   A: HTMLCanvasElement;
   B: HTMLCanvasElement;
+  wash: HTMLCanvasElement;
   trails: HTMLCanvasElement;
   live: HTMLCanvasElement;
 }
@@ -158,7 +164,11 @@ export class Stage {
     dots: 0,
     rings: 0,
     squares: 0,
+    wave: 0,
+    waveLat: 0,
   };
+  /** Whether the wash sheet holds a drawing, so leaving the world clears it once and not every frame. */
+  private washed = false;
 
   constructor(
     private readonly sheets: Sheets,
@@ -174,7 +184,13 @@ export class Stage {
       if (!context) throw new Error("no 2D canvas");
       return context;
     };
-    this.ctx = { A: get(sheets.A), B: get(sheets.B), trails: get(sheets.trails), live: get(sheets.live) };
+    this.ctx = {
+      A: get(sheets.A),
+      B: get(sheets.B),
+      wash: get(sheets.wash),
+      trails: get(sheets.trails),
+      live: get(sheets.live),
+    };
     this.week = week;
     // Reduced motion lands on the final state on the first frame: nothing plays, a move is a cut.
     this.still = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -200,6 +216,7 @@ export class Stage {
     }
     this.cache.clear();
     this.stillDrawn.clear();
+    this.cast.wave.reset();
     this.move = null;
     this.settle();
   }
@@ -209,6 +226,7 @@ export class Stage {
     this.pal = pal;
     this.cache.clear();
     this.stillDrawn.clear();
+    this.cast.wave.reset();
     if (!this.move) this.settle();
   }
 
@@ -247,10 +265,14 @@ export class Stage {
     out.height = this.sheets.A.height;
     const c = out.getContext("2d");
     if (!c) return "";
-    for (const sheet of [this.sheets.A, this.sheets.B, this.sheets.trails, this.sheets.live]) {
+    for (const sheet of [this.sheets.A, this.sheets.B, this.sheets.wash, this.sheets.trails, this.sheets.live]) {
       c.globalAlpha = Number(sheet.style.opacity || 1);
+      // The wash is softened by its element's CSS blur, which a copy does not carry; where the 2D
+      // filter exists it is put back, and where it does not (Safari) the copy shows the cells.
+      c.filter = sheet === this.sheets.wash ? `blur(${2 * this.dpr}px)` : "none";
       c.drawImage(sheet, 0, 0);
     }
+    c.filter = "none";
     return out.toDataURL("image/png");
   }
 
@@ -466,7 +488,7 @@ export class Stage {
 
   private opacity(map: number, moving: number): void {
     this.sheets.A.style.opacity = String(map);
-    this.sheets.trails.style.opacity = this.sheets.live.style.opacity = String(moving);
+    this.sheets.wash.style.opacity = this.sheets.trails.style.opacity = this.sheets.live.style.opacity = String(moving);
   }
 
   private full(): number {
@@ -479,7 +501,7 @@ export class Stage {
       r >= this.full()
         ? "none"
         : `radial-gradient(circle at ${x}px ${y}px, #000 ${Math.max(0, r * (1 - feather))}px, transparent ${r}px)`;
-    for (const c of [this.sheets.A, this.sheets.trails, this.sheets.live]) {
+    for (const c of [this.sheets.A, this.sheets.wash, this.sheets.trails, this.sheets.live]) {
       c.style.maskImage = css;
       c.style.setProperty("-webkit-mask-image", css);
     }
@@ -744,8 +766,21 @@ export class Stage {
   private toldAt = 0;
 
   private draw(view: View, shown: string[], comet: boolean, dt: number): void {
-    const { trails, live } = this.ctx;
+    const { trails, live, wash } = this.ctx;
     const world = shown.includes("world");
+
+    // The green wave: the world view's, under everything, and not under a still map, whose ink it
+    // would tint into a second quantity.
+    const washing = world && !this.stillOnSheet("world");
+    if (washing) this.cast.wave.frame(wash, this.week, view, this.pal, this.W, this.H);
+    else if (this.washed) {
+      wash.clearRect(0, 0, wash.canvas.width, wash.canvas.height);
+      this.cast.wave.reset();
+    }
+    this.washed = washing;
+    this.drawn.wave = washing ? this.cast.wave.last.cells : 0;
+    this.drawn.waveLat = washing ? this.cast.wave.last.lat : 0;
+
     trails.save();
     trails.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     if (comet) trails.clearRect(0, 0, this.W, this.H);

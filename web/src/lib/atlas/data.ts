@@ -195,6 +195,46 @@ export async function loadIce(base: string): Promise<IceEdges> {
   return edges;
 }
 
+// --- The green wave ------------------------------------------------------------------------------
+
+/** Each one-degree cell's greenness, half-month by half-month, as `tiles/greenwave.py` writes it. */
+export interface GreenWave {
+  /** Degrees on a side. */
+  size: number;
+  bins: number;
+  lon: Float32Array;
+  lat: Float32Array;
+  /** `bins` values per cell, NDVI in hundredths; NaN where the cell had no vegetated ground. */
+  hm: Float32Array;
+}
+
+export async function loadGreenWave(base: string): Promise<GreenWave> {
+  const grid = await json<{
+    cell_size_deg: number;
+    bins: number;
+    x: number[];
+    y: number[];
+    hm: (number | null)[][];
+  }>(`${base}layers/green-wave.json`);
+  const { x, y, bins, cell_size_deg: size } = grid;
+  if (x.length !== y.length || x.length !== grid.hm.length) {
+    throw new Error(`green wave arrays disagree: x=${x.length} y=${y.length} hm=${grid.hm.length}`);
+  }
+  const lon = new Float32Array(x.length);
+  const lat = new Float32Array(x.length);
+  const hm = new Float32Array(x.length * bins);
+  for (let i = 0; i < x.length; i++) {
+    lon[i] = (x[i]! + 0.5) * size - 180;
+    lat[i] = (y[i]! + 0.5) * size - 90;
+    for (let b = 0; b < bins; b++) {
+      // Null is a half-month with no vegetated ground: absent, never greenness zero.
+      const value = grid.hm[i]?.[b];
+      hm[i * bins + b] = value === null || value === undefined ? Number.NaN : value;
+    }
+  }
+  return { size, bins, lon, lat, hm };
+}
+
 // --- The words -----------------------------------------------------------------------------------
 
 /** Somewhere the camera can go: a system's plate, or the plate of a still map of one region. */
@@ -244,6 +284,8 @@ export interface Words {
     caption: string;
     still: string;
     readout: string;
+    /** What the wash under the world view is, and is not. */
+    wave: string;
     /** The terms of every layer the world view draws. */
     terms: string[];
   };
@@ -340,6 +382,7 @@ export interface Cast {
   journeys: Line[];
   herds: { svalbard: HerdCell[]; "ya-ha-tinda": HerdCell[] };
   ice: IceEdges;
+  wave: GreenWave;
   /** Each published layer's own statement, by layer name, for the caption slip. */
   notes: Record<string, string>;
 }
@@ -366,14 +409,16 @@ export function castOf(base: string): Promise<Cast> {
       loadHerd(base, "svalbard-herd"),
       loadHerd(base, "yahatinda-herd"),
       loadIce(base),
+      loadGreenWave(base),
       json<{ name: string; description: string }[]>(`${base}layers/manifest.json`),
-    ]).then(([words, world, radar, journeys, svalbard, yaHaTinda, ice, manifest]) => ({
+    ]).then(([words, world, radar, journeys, svalbard, yaHaTinda, ice, wave, manifest]) => ({
       words,
       world,
       radar,
       journeys,
       herds: { svalbard, "ya-ha-tinda": yaHaTinda },
       ice,
+      wave,
       notes: Object.fromEntries(manifest.map((layer) => [layer.name, layer.description])),
     }));
     pending.catch(() => casts.delete(base));

@@ -174,7 +174,8 @@ class StillWords:
 
 
 ICE: Final = "sea-ice-edge"
-"""The one layer the world view draws that has no plate of its own."""
+WAVE: Final = "green-wave"
+"""The two layers the world view draws that have no plate of their own."""
 
 DETECTABILITY: Final = "detectability"
 """The one still map that is a report about the lake rather than a published layer."""
@@ -295,9 +296,14 @@ def build() -> dict[str, Any]:
                 "move with the clock."
             ),
             "readout": "choose one to look closer",
+            "wave": (
+                "The faint green under everything is the green wave: how green the land is at this "
+                "point of the year, averaged over every year of the record, so it is no one year's "
+                "spring, and not a response to anything."
+            ),
             # Every layer the world view draws, each with the terms it was published under: the
             # safety generalisation of the animal layers is among them, and is not decoration.
-            "terms": [terms(layer) for layer in [*(words.layer for words in plates()), ICE]],
+            "terms": [terms(layer) for layer in [*(words.layer for words in plates()), ICE, WAVE]],
         },
         "plates": [
             {

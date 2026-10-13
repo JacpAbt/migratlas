@@ -252,8 +252,10 @@
       "Data: Arctic fox Bylot - Argos tracking (CC0 1.0). Generalised for animal safety: coordinates generalised to a 0.001-degree grid; records within 30 days of present withheld. Fuller data may be available from the data owner on request.; drawn from daily median positions snapped to 0.01 degrees, coarser than policy, so no den resolves to a point",
       "Data: Svalbard Reindeer Project - Nordenskiold Land (CC BY-NC 4.0). Generalised for animal safety: coordinates generalised to a 0.01-degree grid; records within 90 days of present withheld; individual identifiers removed. Fuller data may be available from the data owner on request.",
       "Data: Ya Ha Tinda elk project, Banff National Park, 2001-2024 (females) (CC0 1.0). Generalised for animal safety: coordinates generalised to a 0.01-degree grid; records within 90 days of present withheld; individual identifiers removed. Fuller data may be available from the data owner on request.",
-      "Data: Sea Ice Index, version 4 \u2014 monthly median ice edge, 1981\u20132010 (Open access; citation required as a condition of use). Published at source resolution.; unprojected from the product's polar stereographic and split at the antimeridian"
+      "Data: Sea Ice Index, version 4 \u2014 monthly median ice edge, 1981\u20132010 (Open access; citation required as a condition of use). Published at source resolution.; unprojected from the product's polar stereographic and split at the antimeridian",
+      "Data: PKU GIMMS NDVI v1.2 \u2014 global half-monthly vegetation index, 1982\u20132022 (CC BY 4.0). Published at source resolution.; reduced to a 1-degree half-monthly climatology over 1982-2022, vegetated pixels only"
     ],
-    "title": "Where things move, through a year"
+    "title": "Where things move, through a year",
+    "wave": "The faint green under everything is the green wave: how green the land is at this point of the year, averaged over every year of the record, so it is no one year's spring, and not a response to anything."
   }
 }

@@ -28,16 +28,18 @@ interface Drawn {
   dots: number;
   rings: number;
   squares: number;
+  wave: number;
+  waveLat: number;
 }
 
 interface AtlasHook {
   migratlas?: {
-    atlas?: { drawn: Drawn; week: number; day: number; playing: boolean; showing: string };
+    atlas?: { drawn: Drawn; week: number; day: number; playing: boolean; holding: boolean; showing: string };
   };
 }
 
 interface Words {
-  world: { title: string; lead: string; terms: string[] };
+  world: { title: string; lead: string; terms: string[]; wave: string };
   plates: { name: string; button: string; title: string; lead: string; credit: string; map: string; terms: string }[];
   stills: {
     name: string;
@@ -576,6 +578,51 @@ test("a study card leads back to the claim its evidence feeds", async ({ page })
   await page.locator(".study__claim").first().click();
   await expect(page.locator(".claim__title")).toContainText("Fish are not all moving");
   await expect(page).toHaveURL(/[#&]c=marine-null/);
+});
+
+test("the green wave washes the world view, follows the season, and stays off plates and still maps", async ({
+  page,
+}) => {
+  await ready(page);
+  const said = await words(page);
+  await expect(page.locator(".slip--caption")).toContainText(said.world.wave);
+
+  /** Hold the clock at a week and read what the wash drew there. */
+  const at = async (week: number): Promise<Drawn> => {
+    await page.evaluate((w) => {
+      const atlas = (window as unknown as AtlasHook).migratlas!.atlas!;
+      atlas.holding = true;
+      atlas.week = w;
+    }, week);
+    await page.waitForTimeout(300);
+    return drawn(page);
+  };
+  // Mid-July and mid-January: the north's summer and the south's. A climatology, but a season.
+  const july = await at(28);
+  const january = await at(2);
+  expect(july.wave, "the wash tinted nothing").toBeGreaterThan(3000);
+  expect(january.wave).toBeGreaterThan(1000);
+  expect(july.waveLat - january.waveLat, "the green did not move north into the northern summer").toBeGreaterThan(8);
+
+  // And in ink on its own sheet, under the moving marks.
+  const tinted = await page.evaluate(() => {
+    const sheet = document.querySelector<HTMLCanvasElement>(".atlas .sheet--wash")!;
+    const pixels = sheet.getContext("2d")!.getImageData(0, 0, sheet.width, sheet.height).data;
+    let count = 0;
+    for (let i = 3; i < pixels.length; i += 4 * 8) if (pixels[i]! > 8) count += 1;
+    return count;
+  });
+  expect(tinted, "the wash sheet is empty").toBeGreaterThan(5000);
+
+  // Not under a still map, whose ink it would tint, and not on a plate: it is the world view's.
+  const first = said.stills.find((s) => s.plate === null)!;
+  await choose(page, first.button);
+  await stillIs(page, first.name);
+  await expect.poll(async () => (await drawn(page)).wave).toBe(0);
+  const herd = said.plates.find((p) => p.name === "svalbard")!;
+  await choose(page, herd.button);
+  await settledOn(page, herd.name);
+  expect((await drawn(page)).wave).toBe(0);
 });
 
 test("every layer drawn states the terms it was published under", async ({ page }) => {

@@ -137,7 +137,7 @@ def test_every_drawn_layer_states_its_terms() -> None:
 
     for plate in document["plates"]:
         assert stated(plate["terms"], plate["layer"]), plate["name"]
-    drawn = [plate["layer"] for plate in document["plates"]] + [atlas.ICE]
+    drawn = [plate["layer"] for plate in document["plates"]] + [atlas.ICE, atlas.WAVE]
     assert len(document["world"]["terms"]) == len(drawn)
     for text, layer in zip(document["world"]["terms"], drawn, strict=True):
         assert stated(text, layer), layer
