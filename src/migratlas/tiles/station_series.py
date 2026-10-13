@@ -1,18 +1,18 @@
 """Export a station time series as one feature per station with per-week values.
 
-The globe animates by changing a MapLibre filter or paint expression, never by rebuilding a
-layer (ADR 0002). That dictates the shape: a station is one feature, and its 52 weekly values
-are properties on it, so a week change is an expression evaluation rather than a fetch.
+The shape was set by the globe, which animated by changing a MapLibre filter or paint expression
+rather than rebuilding a layer (ADR 0002): a station is one feature, and its 52 weekly values are
+properties on it, so a week change is a lookup rather than a fetch. The atlas that replaced it
+(ADR 0021) reads the same properties in ``web/src/lib/atlas/data.ts``, so the shape stays.
 
-One scalar property per week -- ``w0`` to ``w51`` -- rather than a single array. MapLibre hands
+One scalar property per week -- ``w0`` to ``w51`` -- rather than a single array. MapLibre handed
 array-valued properties to the paint path natively and to the query path as a JSON string, so an
 ``["at", week, ["get", "weeks"]]`` filter passed while drawing and failed while querying: the
-layer rendered 161 stations that queryRenderedFeatures could not see. Scalars round-trip
-identically in both paths. A week with no data omits its key entirely, which makes the filter a
-plain ``["has", "w30"]`` and removes any need to encode null at all.
+layer rendered 161 stations that queryRenderedFeatures could not see. Scalars read the same way
+everywhere. A week with no data omits its key entirely, so "no data" needs no encoding.
 
 Thirty years of nightly values would be ~11,000 properties per station, so the series is
-reduced to a weekly climatology. That is a deliberate loss: the globe shows the seasonal
+reduced to a weekly climatology. That is a deliberate loss: the atlas shows the seasonal
 cycle, and anyone wanting a specific night should be querying the lake, not a map layer.
 
 Anything published *about* the change over time arrives through ``annotations`` rather than
@@ -149,7 +149,7 @@ def export_station_series(  # noqa: PLR0913 -- the clearance and column roles ar
     """Write one feature per station carrying its weekly climatology.
 
     ``annotations`` is an optional frame keyed by ``site``; its remaining columns are copied
-    onto each feature. That is how a trend or a significance flag reaches the globe -- computed
+    onto each feature. That is how a trend or a significance flag reaches the atlas -- computed
     by whoever can justify it, not invented here.
 
     A site's coordinates are generalised when the clearance asks for it. Weather radars come
@@ -206,7 +206,7 @@ def export_station_series(  # noqa: PLR0913 -- the clearance and column roles ar
         weeks = np.full(WEEKS, np.nan)
         weeks[ordered["week"].to_numpy()] = ordered["median"].to_numpy()
         # A missing week omits its key rather than carrying a null, so "no data" and "no
-        # passage" cannot be confused by a reader or by a MapLibre expression. Integral values
+        # passage" cannot be confused by a reader or by the code that draws it. Integral values
         # are written as integers: ".0" on fifty-two keys of a thousand features is kilobytes
         # of payload spent stating that a count is a count.
         values: dict[str, float | int] = {}

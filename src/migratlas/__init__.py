@@ -1,4 +1,4 @@
-"""Migratlas -- a globe of animal movement, and why it's changing."""
+"""Migratlas -- an atlas of animal movement, and why it's changing."""
 
 __version__ = "0.1.0"
 

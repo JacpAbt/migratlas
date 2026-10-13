@@ -83,10 +83,12 @@ Both traps that module closes produce wrong answers rather than errors.
   `visible`, 89% of the rows are positions the data owners already marked wrong.
 - `scan_parquet(hive_partitioning=True).group_by("source_id")` on polars 1.43 returns one row per
   *file*, each carrying the whole source's count. `reader.py` forces the projection; do not remove it.
-- MapLibre must stay in `optimizeDeps.exclude` and its worker imported as `?worker&url`. Get either
-  wrong and the globe renders an empty canvas at 60 fps with nothing in the console — which is why
-  `web/tests/globe.spec.ts` asks the map what it actually drew, and why `scripts/check-build.mjs`
-  exists.
+- A map can look entirely right in the DOM and draw nothing. The MapLibre globe once rendered an
+  empty canvas at 60 fps with nothing in the console, its worker never emitted. The atlas that
+  replaced it (ADR 0021) fails the same way for its own reason, a data file it fetches at runtime
+  missing, which leaves the words over blank paper — so `web/tests/atlas.spec.ts` asks the stage
+  what it drew (`window.migratlas.atlas.drawn` under `?debug=1`) and reads the canvases' pixels,
+  and `scripts/check-build.mjs` fails a build missing any file the atlas draws from.
 - Frontend prose is authored in Python and rendered verbatim. Changing a sentence means editing
   `reports/`, regenerating the JSON, and updating the browser assertions that quote it.
 

@@ -60,7 +60,7 @@ DRIFT_SAMPLE = 5
 
 app = typer.Typer(
     name="migratlas",
-    help="A globe of animal movement, and why it's changing.",
+    help="An atlas of animal movement, and why it's changing.",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -668,7 +668,7 @@ def build_findings(
         "web/public/findings.json"
     ),
 ) -> None:
-    """Compute what the research established, for the globe to render.
+    """Compute what the research established, for the book to render.
 
     Re-runs the analyses rather than reading a written-down number, so a finding on the site is
     the one the pipeline produces. Minutes, not seconds.
@@ -687,7 +687,7 @@ def build_layers(
         "web/public/layers"
     ),
 ) -> None:
-    """Export the globe's published layers from the lake, through the ethics gate."""
+    """Export the atlas's published layers from the lake, through the ethics gate."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     results = tile_layers.build_all(out)
     for result in results:

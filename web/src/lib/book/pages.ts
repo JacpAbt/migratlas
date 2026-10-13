@@ -105,10 +105,11 @@ export type Panel =
   /**
    * The world: its map, its tools, or both on one leaf.
    *
-   * A spread gives the tools the left page and the map the right. A phone cannot: the clock and the
-   * layer switches are controls whose whole purpose is watching the map answer, and on separate
-   * leaves that is not slow, it is pointless -- which ADR 0015 decision 8 left open and named. So
-   * `all` is the phone's: one leaf, the globe filling it, and the tools in a flap over its foot.
+   * On a spread the world's two pages are paper, `apparatus` on the left and `map` on the right,
+   * and the atlas is drawn across both (`Reader`'s `across`). A phone cannot split it: the clock
+   * and the choices are controls whose whole purpose is watching the map answer, and on separate
+   * leaves that is pointless -- which ADR 0015 decision 8 left open and named. So `all` is the
+   * phone's: one leaf, the atlas filling it, and its words in a flap at its foot.
    */
   | { kind: "world"; part: "map" | "apparatus" | "all" }
   /**

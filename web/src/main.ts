@@ -65,7 +65,7 @@ const [ledger, opening, chapterProse, safeguards, dial] = await Promise.all([
   The shell it replaced degraded to a globe with a broken panel, because layers were its subject.
   Here the claims are, so there is nothing to carry on with -- and the honest failure is to state
   what happened rather than to reject unhandled and leave a blank page, which is a mode that is
-  invisible until it happens in production. `globe.spec.ts` asserts it with a 404 for that reason.
+  invisible until it happens in production. `atlas.spec.ts` asserts it with a 404 for that reason.
 
   Written into the DOM rather than mounted as a component: whatever is wrong, this has to work.
 */

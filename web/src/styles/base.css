@@ -61,7 +61,7 @@ body::before {
   background-image: var(--stars), var(--sky);
 }
 
-/* The shell is a fixed viewport with a globe in it, while the preview page is a document that
+/* The book is a fixed viewport on the desk, while the preview page is a document that
    scrolls. Opting in by class rather than setting `overflow: hidden` globally, which would silently
    break the preview and anything else added later. */
 .shell-page,

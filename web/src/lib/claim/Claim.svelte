@@ -45,9 +45,9 @@
 </script>
 
 <!--
-  Wrapped so the card is a container query context. The card lives in three places at three
-  widths -- a 66rem preview page, a 52rem sheet on a globe, and a phone -- and a media query asks
-  about the viewport, not about the room it was given. On a 768px tablet the sheet is 522px while
+  Wrapped so the card is a container query context. The card has lived at very different
+  widths -- a 66rem preview page, the old shell's 52rem sheet over the globe, a book's page and a
+  phone's leaf -- and a media query asks about the viewport, not about the room it was given. On a 768px tablet the sheet is 522px while
   the viewport is comfortably past any breakpoint, so the two-column layout squeezed the claim
   body to 230px and wrapped the hand heading over nine lines.
 -->
@@ -204,8 +204,8 @@
 
   .claim {
     display: grid;
-    /* The margin is narrower here than the token's default, because inside a sheet on a globe there
-       is less room than on a page of its own. Two columns need body + gap + margin to fit, which is
+    /* The margin is narrower here than the token's default, first for the old shell's sheet over
+       the globe and now for a book's page, both with less room than a page of its own. Two columns need body + gap + margin to fit, which is
        what the 46rem breakpoint below is measured from. */
     grid-template-columns: minmax(0, 1fr) minmax(15rem, var(--margin-column));
     column-gap: var(--gap-wide);

@@ -12,13 +12,13 @@
  * the window. Sizing the *labels* in rendered pixels fixed the labels and left the strokes wrong.
  * Here the projection takes the width and returns everything else.
  *
- * **The hand is rough.js, not a second wobble.** `globe/coastline.ts` jitters its geometry because
- * MapLibre draws WebGL and cannot be handed a rough.js path. An SVG plate can, and rough.js already
- * draws every stroke twice with controlled divergence -- which is what a pen does. Applying the
- * globe's jitter here as well would be two hands on one line.
+ * **The hand is rough.js, not a second wobble.** The globe jittered its coastline's geometry
+ * because MapLibre drew WebGL and could not be handed a rough.js path. An SVG plate can, and rough.js
+ * already draws every stroke twice with controlled divergence -- which is what a pen does. A jitter
+ * here as well would be two hands on one line.
  *
- * **The geometry is the basemap the globe uses**, fetched from the same URL rather than baked into a
- * second asset. One copy cannot drift from the other.
+ * **The geometry is the basemap the atlas's world view uses**, fetched from the same URL rather
+ * than baked into a second asset. One copy cannot drift from the other.
  */
 
 import { HAND, mark, pen, seedOf } from "../notebook/ink";
@@ -191,7 +191,7 @@ export function drawPlate(
   const rc = pen(host);
 
   // Graticule first, beneath the land: a reference line belongs under the thing it refers to, which
-  // is the order `globe/graticule.ts` already keeps.
+  // is the order the atlas's `drawMap` keeps too.
   const grid = document.createElementNS("http://www.w3.org/2000/svg", "g");
   for (let lon = -150; lon < 180; lon += 30) {
     grid.append(

@@ -1,4 +1,4 @@
-"""The green wave: a half-monthly NDVI climatology on the globe's own clock.
+"""The green wave: a half-monthly NDVI climatology on the atlas's own clock.
 
 The idea note's headline (`docs/ideas/satellite-drivers-on-the-globe.md`): spring green-up is the
 single most legible driver of northern-hemisphere migration timing, and seeing the wave move

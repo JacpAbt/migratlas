@@ -1,6 +1,7 @@
 # ADR 0002 — MapLibre GL JS v5 globe, and no deck.gl in globe mode
 
-**Status:** accepted · 2026-07-28
+**Status:** superseded by [ADR 0021](0021-the-globe-becomes-a-moving-atlas.md) · accepted
+2026-07-28, superseded 2026-10-12, MapLibre out of the build 2026-10-13
 
 ## Context
 
@@ -39,3 +40,11 @@ Bad: no true 3D terrain, and no pitch on the globe. Flight-altitude data, which 
 have, cannot be shown as literal 3D height on the globe and will need a different encoding.
 
 Revisit if: deck.gl's globe support becomes stable and documented, or a layer genuinely needs 3D.
+
+## Superseded, 2026-10-13
+
+The world chapter is a drawn atlas on 2D canvases (ADR 0021), and MapLibre left the build when the
+last import of it went. Nothing above is edited: it is the reasoning that held for the globe, and the
+choice it made -- MapLibre over deck.gl's globe and CesiumJS -- was not the reason for the change.
+The owner's was that the globe showed where animals were rather than how they moved, and that its
+use was unclear.

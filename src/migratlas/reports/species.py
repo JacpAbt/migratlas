@@ -114,7 +114,7 @@ class SpeciesCard:
     vernacular: str
     realm: str
     drawn: bool
-    """Whether a surface for this taxon exists on the globe. False is a fact, not a gap."""
+    """Whether the atlas has a surface for this taxon. False is a fact, not a gap."""
 
     studies: list[Study] = field(default_factory=list)
 
@@ -491,7 +491,7 @@ def occupancy_studies() -> dict[int, Study]:
 
 
 def _published_taxa(root: Path) -> dict[int, tuple[str, str, str]]:
-    """Every taxon with a surface on the globe: key -> (scientific, vernacular, layer)."""
+    """Every taxon with a surface in the atlas: key -> (scientific, vernacular, layer)."""
     index = json.loads((root / "taxon-index.json").read_text(encoding="utf-8"))
     return {
         int(entry["key"]): (entry["scientific"], entry["vernacular"], entry["layer"])

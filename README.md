@@ -90,26 +90,30 @@ would be quietly mislabelling the signal.
 
 ## Architecture
 
-Static-first. Every heavy computation is a batch job producing immutable tiles; the browser only
-range-requests them. There is no application server to run, secure or pay for.
+Static-first. Every heavy computation is a batch job producing immutable files; the browser only
+fetches them. There is no application server to run, secure or pay for.
 
 ```
 sources ──► ingest ──► evidence lake ──► metrics / models ──► ethics gate ──► tiles ──► CDN
             (Parquet, evidence-typed, realm-tagged)                                      │
                                                                                          ▼
-                                                                    the book (static), and one
-                                                                    MapLibre globe in its back
+                                                                    the book (static), and a
+                                                                    drawn atlas in its back
                                                                     pocket
 ```
 
 Each claim's map is a **drawn plate** rather than a live one — hand-inked coastlines, a graticule and
-a ring on the ground the claim is about, with a key for the three marks it actually carries. That is
-why a chapter of claims boots no GPU: the globe is mounted once, by the chapter whose subject it is.
+a ring on the ground the claim is about, with a key for the three marks it actually carries. The
+moving map is drawn once, by the chapter whose subject it is.
 
-The frontend is **MapLibre GL JS v6 with globe projection, and no deck.gl in globe mode** — an
-evidence-based choice, not a preference. deck.gl's `GlobeView` is still experimental with no basemap
-provider and degrades above zoom 12, and a 2026 ISPRS benchmark measured CesiumJS at ~21,000 ms total
-blocking time on large point data. Reasoning in [`docs/adr/`](docs/adr/).
+That chapter is a **drawn atlas** in the book's ink, on 2D canvases with no WebGL and no tiles, so
+it draws in every browser the book does. It opens on the whole world with everything that moves
+moving at once — the weather radars' nights as pen strokes, the tracked animals a day or a week at a
+time, the sea ice's edge and the green wave — on an equal-area map, and flies into a plate for each
+system; the maps with no time in them are still maps beside them, and any animal with a map or a
+study can be searched. It replaced a MapLibre globe that showed where animals were rather than how
+they moved: [ADR 0021](docs/adr/0021-the-globe-becomes-a-moving-atlas.md), with the reasoning for
+every earlier choice in [`docs/adr/`](docs/adr/).
 
 Python for ingest, ETL, ML and tiling; R for the inferential statistics where the trustworthy
 implementations live. Parquet is the interchange format, so neither language depends on the other's

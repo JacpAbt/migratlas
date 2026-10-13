@@ -67,8 +67,8 @@ export function applySurface(surface: Surface): Surface {
  * Call `whenever` each time the system preference changes, while the choice is "system".
  *
  * Returns its own teardown. Without this, a reader on "system" whose machine dims at sunset gets
- * the paper turning black under a globe that stays parchment, because MapLibre paint expressions
- * are set once in JavaScript rather than resolved from CSS on every frame.
+ * the paper turning black beside a scrollbar that stays parchment, because its drawings are baked
+ * into data URIs once rather than resolved from CSS on every frame.
  */
 export function watchSystem(whenever: () => void): () => void {
   const query = globalThis.matchMedia?.("(prefers-color-scheme: dark)");

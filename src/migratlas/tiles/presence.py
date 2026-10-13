@@ -41,7 +41,7 @@ K_FLOOR: Final = 3
 """Distinct animals a cell-week needs across the record before it may publish."""
 
 VISIBILITY_CELLS: Final = 2.0
-"""Seasonal throw the surface must exceed, in cells, before it earns a place on a globe."""
+"""Seasonal throw the surface must exceed, in cells, before it earns a place on a map."""
 
 KM_PER_DEGREE: Final = 111.32
 

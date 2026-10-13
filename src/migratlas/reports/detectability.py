@@ -339,7 +339,7 @@ class Coverage:
 
 @dataclass(frozen=True, slots=True)
 class Grid:
-    """The compact envelope the globe's surface reader already understands, plus categories."""
+    """The layers' compact grid envelope, plus categories; the atlas draws it as a still map."""
 
     format: str
     cell_size_deg: float
