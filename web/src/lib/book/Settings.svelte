@@ -1,13 +1,9 @@
 <script lang="ts">
-  import { world } from "./pocket.svelte";
   import Surface from "../notebook/Surface.svelte";
   import TypeChoice from "../notebook/TypeChoice.svelte";
   import { drawFurniture } from "../notebook/furniture";
-  import { setPalette } from "../../globe/flavor";
-  import { repaintBasemap } from "../../globe/map";
   import {
     applySurface,
-    isNight,
     storedSurface,
     watchSystem,
     type Surface as SurfaceChoice,
@@ -18,8 +14,7 @@
    * Which paper this is read on.
    *
    * Applied on mount rather than initialised from it: the stored choice has to reach
-   * `document.documentElement` before anything reads a token off it, and the globe's palette is set
-   * from the same value so the sphere and the page can never disagree about what surface it is.
+   * `document.documentElement` before anything reads a token off it.
    */
   let surface = $state<SurfaceChoice>("system");
 
@@ -33,25 +28,24 @@
   });
 
   /*
-    The globe's colours are JavaScript, not CSS, so nothing repaints them on its own, and neither the
-    scrollbar nor MapLibre's buttons can hold a `var()` -- their ink is baked into a data URI. This
-    runs on the stored choice too and not only on a click, otherwise a reader who chose night last
-    week gets a black page around a parchment globe with a parchment scrollbar down the side.
-
-    The map is read out of `pocket.svelte.ts` rather than passed in, because it is the world
-    chapter's and this control is on the desk: the two are never mounted by the same parent, and on
-    every other page of the book there is no map to repaint at all.
+    The scrollbar cannot hold a `var()` -- its ink is baked into a data URI -- so nothing repaints it
+    on its own. This runs on the stored choice too and not only on a click, otherwise a reader who
+    chose night last week gets a black page with a parchment scrollbar down the side. The atlas
+    repaints its own ink when the surface attribute changes, so it needs nothing from here.
   */
   function follow(): void {
-    setPalette(isNight(surface));
     drawFurniture();
-    const map = world.map;
-    if (!map) return;
-    repaintBasemap(map);
-    for (const layer of world.layers) layer.repaint?.();
   }
 
-  $effect(follow);
+  /*
+    Reads `surface`, which is what makes this run again when the paper changes. It used to read it
+    inside the globe's palette call, and when that call went the effect had nothing reactive left in
+    it: it ran once, and the scrollbar stayed in day ink on night paper.
+  */
+  $effect(() => {
+    void surface;
+    follow();
+  });
 
   // And when the machine changes its mind while the choice is "system".
   $effect(() =>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { legendRows, type DetectabilityDocument } from "../../layers/detectability";
+  import { legendRows, type DetectabilityDocument } from "./detectability";
   import Boxed from "../notebook/Boxed.svelte";
 
   let {

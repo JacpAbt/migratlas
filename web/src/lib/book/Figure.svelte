@@ -6,7 +6,7 @@
   import { headlineOf, loadHeadlines, type HeadlineDocument } from "../claim/headline";
   import Rule from "../notebook/Rule.svelte";
   import { FIGURES, figurePages } from "./figures";
-  import { loadDetectability, type DetectabilityDocument } from "../../layers/detectability";
+  import { loadDetectability, type DetectabilityDocument } from "../claim/detectability";
   import type { Finding } from "../ledger";
 
   let {
