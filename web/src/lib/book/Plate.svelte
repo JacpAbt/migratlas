@@ -71,8 +71,8 @@
 <figure class="plate" class:plate--compact={compact}>
   <!--
     The measurement is on the sheet, which is in normal flow, and not on an absolutely positioned
-    child. `Sheet.svelte` binds a flow element for the same reason and works; binding the absolute
-    child here reported clientWidth 531 to the DOM and 0 to the component, so nothing ever drew.
+    child: binding the absolute child here reported clientWidth 531 to the DOM and 0 to the
+    component, so nothing ever drew.
   -->
   <div class="plate__sheet" style="aspect-ratio: {PLATE_RATIO}" bind:clientWidth={width}>
     {#if failed}

@@ -331,47 +331,6 @@ export function tick(host: SVGSVGElement, key: string, size: number, stroke: str
 }
 
 /**
- * The outline of a sheet of paper, torn out along its left edge.
- *
- * Not a rough.js shape: this is a closed path used as a `clip-path`, so it has to be geometry
- * rather than a stroked drawing. Only the left edge is ragged -- a leaf torn from a bound
- * notebook, not hand-made paper with a deckle on four sides. One irregular edge reads as "removed
- * from something"; four read as an effect.
- */
-export function sheetEdge(key: string, width: number, height: number): string {
-  if (width <= 0 || height <= 0) return "";
-  let state = seedOf(key) || 1;
-  const next = (): number => {
-    state = (Math.imul(state, 1103515245) + 12345) >>> 0;
-    return (state / 0xffffffff) * 2 - 1;
-  };
-
-  // A tear is a low-frequency wander with high-frequency nicks in it, and the nicks are what stop
-  // it reading as a wave. Every 9px: at 20 it looks like a coastline, at 4 the path gets long
-  // enough to matter in a clip.
-  const tears: string[] = [];
-  const steps = Math.max(6, Math.round(height / 9));
-  for (let step = steps; step >= 0; step -= 1) {
-    const y = (step / steps) * height;
-    const wander = Math.sin((step / steps) * Math.PI * 1.7) * 1.6;
-    const nick = next() * 1.4 + (step % 3 === 0 ? next() * 1.1 : 0);
-    tears.push(`${Math.max(0, wander + nick + 2).toFixed(1)} ${y.toFixed(1)}`);
-  }
-
-  // A cut edge is straight, and one that is *perfectly* straight beside a torn one gives the card
-  // away as a rectangle with a decoration attached to one side.
-  const cut = (at: number) => (at + next() * 0.35).toFixed(2);
-  return [
-    "M 2 0",
-    `L ${cut(width)} 0`,
-    `L ${cut(width)} ${cut(height)}`,
-    `L 2 ${height.toFixed(1)}`,
-    `L ${tears.join(" L ")}`,
-    "Z",
-  ].join(" ");
-}
-
-/**
  * The instruments.
  *
  * One per evidence shape, because ADR 0007 puts apparatus where an illustration would go whenever

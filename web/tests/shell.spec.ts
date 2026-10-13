@@ -238,32 +238,11 @@ async function refusalOf(page: Page, key: string, asks: RegExp): Promise<void> {
   throw new Error(`no page carries a refusal about ${String(asks)}`);
 }
 
-/** Open a page of the book. `?debug` so the world chapter's map is readable. */
+/** Open a page of the book. `?debug` so the world chapter's atlas reports what it drew. */
 async function open(page: Page, hash = ""): Promise<void> {
   await page.goto(`?debug=1${hash}`);
   await expect(page.locator(".book, .leaves")).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
-}
-
-/** The world chapter, which is where the map, the layers, the clock and the search live. */
-async function explore(page: Page): Promise<void> {
-  await open(page, "#ch=the-world");
-  // Thirty seconds, for the reason `notebook.spec.ts`'s own world helper states at length: this
-  // waits on a WebGL context and ten layers, and the default five is a number about DOM latency.
-  await expect(page.locator(".explore")).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator(".globe canvas")).toBeVisible({ timeout: 30_000 });
-  /*
-    And the layers, which arrive after the canvas does. The debug hook is published once every one of
-    them has loaded, so its existence is the load-complete signal -- the same one `globe.spec.ts`
-    uses and for the same reason: counting them by hand went stale the day the ice layer landed.
-  */
-  await page.waitForFunction(
-    () =>
-      !!(window as unknown as { migratlas?: { loaded?: unknown[] } }).migratlas
-        ?.loaded?.length,
-    undefined,
-    { timeout: 30_000 },
-  );
 }
 
 /**
@@ -294,56 +273,6 @@ async function arrive(page: Page): Promise<void> {
   await open(page);
   // Either container: a spread by desk and a leaf by phone, and this helper serves both.
   await expect(page.locator(".spread, .leaf").first()).toBeVisible();
-}
-
-/**
- * Wait until the camera stops moving, then answer where it is.
- *
- * Two consecutive identical readings, because `flyTo` has no "arrived" event worth trusting and a
- * single sample mid-flight is indistinguishable from a camera that never left.
- */
-async function settled(page: Page): Promise<Camera> {
-  let previous = "";
-  await expect
-    .poll(
-      async () => {
-        // Tolerates the hook not existing yet. It is published only once every layer has loaded,
-        // and the arrival card is visible long before the 50,000-feature assessment finishes -- so a
-        // poll that threw on a missing map reported "the shell must expose one" for a shell that
-        // simply had not got there.
-        const at = await camera(page);
-        if (!at) return false;
-        const now = `${at.lon.toFixed(2)},${at.lat.toFixed(2)},${at.zoom.toFixed(2)}`;
-        const still = now === previous;
-        previous = now;
-        return still;
-      },
-      { timeout: SETTLE_MS, intervals: [250] },
-    )
-    .toBe(true);
-
-  const at = await camera(page);
-  expect(at, "the shell never exposed a map under ?debug").not.toBeNull();
-  return at!;
-}
-
-interface Camera {
-  lon: number;
-  lat: number;
-  zoom: number;
-}
-
-/** Camera state, read from MapLibre rather than inferred from pixels. Null until the hook exists. */
-async function camera(page: Page): Promise<Camera | null> {
-  return page.evaluate(() => {
-    const globe = (window as unknown as { migratlas?: { map?: unknown } })
-      .migratlas?.map as
-      | { getCenter: () => { lng: number; lat: number }; getZoom: () => number }
-      | undefined;
-    if (!globe) return null;
-    const centre = globe.getCenter();
-    return { lon: centre.lng, lat: centre.lat, zoom: globe.getZoom() };
-  });
 }
 
 test("a visitor lands on the story, and its first claim is one turn away", async ({
@@ -768,45 +697,6 @@ for (const [device, width, height] of [
     await expect(page.locator(".bias__finding").first()).toBeVisible();
     await expect(page.locator("details, [hidden]")).toHaveCount(0);
 
-    // Nothing the map owns may be printed *over* the claim, and that is the requirement -- not that
-    // the boxes never touch. The first version compared bounding boxes, which is stricter than what
-    // matters and failed on CI over a few pixels of harmless overlap while the notice was perfectly
-    // readable. Occlusion is the real test: ask the browser what is actually on top at the centre of
-    // each control, and require it to be that control.
-    // Polled, not sampled once. The attribution control registers each source's credit as that
-    // source loads and only then collapses to its compact "i", so a single reading can catch it
-    // spread across the whole width of a 390px phone with its centre under the sheet -- which is
-    // what it did, intermittently, and only under full-suite load. The requirement is about the
-    // settled page; a control that is really buried stays buried and this still fails.
-    await expect
-      .poll(
-        () =>
-          page.evaluate(() => {
-            const hits: string[] = [];
-            for (const selector of [
-              ".maplibregl-ctrl-attrib",
-              ".maplibregl-ctrl-group",
-              ".maplibregl-ctrl-scale",
-            ]) {
-              for (const node of document.querySelectorAll(selector)) {
-                const box = node.getBoundingClientRect();
-                if (box.width === 0 || box.height === 0) continue;
-                const at = document.elementFromPoint(
-                  box.left + box.width / 2,
-                  box.top + box.height / 2,
-                );
-                if (!at || !(node.contains(at) || at.contains(node))) {
-                  hits.push(
-                    `${selector} is under ${at?.className || at?.tagName || "nothing"}`,
-                  );
-                }
-              }
-            }
-            return hits;
-          }),
-        { message: "something the map owns is printed over the claim" },
-      )
-      .toEqual([]);
   });
 }
 

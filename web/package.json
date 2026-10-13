@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@protomaps/basemaps": "^5.7.2",
-    "maplibre-gl": "^6.0.0",
     "pmtiles": "^4.4.1",
     "roughjs": "^4.6.6",
     "three": "^0.186.1"

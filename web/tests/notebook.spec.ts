@@ -168,29 +168,6 @@ async function recordPage(page: Page): Promise<void> {
   await expect(page.locator(".claim__value").first()).toBeVisible();
 }
 
-/**
- * The world chapter, which is where the shell's own furniture went.
- *
- * `Sheet` and the explore panel were not rebuilt for the book -- they are mounted by the chapter
- * that needs them -- so the tests about a torn edge, a clipped ground and a scroll inside the paper
- * follow the component rather than being deleted with the arrival.
- */
-async function world(page: Page): Promise<void> {
-  await page.goto("?debug=1#ch=the-world");
-  /*
-    Thirty seconds, because this waits on a WebGL context and ten layers rather than on a DOM node.
-
-    `.explore` appears only once the globe has reported its layers, and Playwright's default `expect`
-    deadline is five seconds -- which this machine beats and a runner with no GPU does not. Four local
-    gates passed in a row while CI failed five tests on this one line, which is the whole argument for
-    stating a deadline rather than inheriting one: the default is a number nobody chose, and here it
-    was a number about DOM latency applied to a map boot.
-  */
-  await expect(page.locator(".explore")).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator(".globe canvas")).toBeVisible({ timeout: 30_000 });
-  await page.evaluate(() => document.fonts.ready);
-}
-
 /** Open the book on its first claim, which is what most of these tests want. */
 async function ready(page: Page): Promise<void> {
   const spreads = await layout();
@@ -1476,26 +1453,18 @@ test("nothing on the page is still a bordered control", async ({ page }) => {
 });
 
 
-test("the paper turns and the world does not", async ({ page }) => {
+test("the paper turns in three dimensions, with nothing above it to flatten it", async ({ page }) => {
   /*
-    The book's turn is a CSS 3D rotation rather than a view transition, so the assertion changed
-    shape while keeping its subject exactly: whatever the turn captures must not include the globe.
+    The book's turn is a CSS 3D rotation, and the rule ADR 0015 decision 7 states is that no
+    `filter` sits on any ancestor of the leaf, because a filter flattens 3D transforms into a
+    horizontal squash. The turn is measured about the spine in `book.spec.ts`, at three points of
+    the animation's own timeline.
 
-    The root must still be unnameable, and for the reason it always was -- a snapshotted root
-    includes MapLibre's canvas, which freezes into a still image for the length of the turn and says
-    the globe is a picture the card is printed over. What replaces "only the sheet is named" is
-    stronger and is the rule ADR 0015 decision 7 states: no `filter` on any ancestor of the leaf,
-    because a filter flattens 3D transforms. The turn is measured about the spine, which is what
-    `book.spec.ts` does at three points of the animation's own timeline.
+    This also asserted that the root carried no view-transition name, so a snapshot of the page
+    would not freeze MapLibre's canvas mid-turn. The globe is gone (ADR 0021) and nothing in the
+    book starts a view transition any more, so that guard guarded nothing and went with them.
   */
   await ready(page);
-
-  const named = await page.evaluate(
-    () => getComputedStyle(document.documentElement).viewTransitionName,
-  );
-  expect(named, "the root would be snapshotted, freezing the globe").toBe(
-    "none",
-  );
 
   // The leaf rotates in three dimensions, so nothing above it may carry a filter.
   await page.locator('.spread > .page--recto [data-turn="on"]').click();
@@ -1672,17 +1641,14 @@ test("the scrollbar is drawn, and only one of the two APIs is styling it", async
 test("the furniture follows the paper it is drawn on", async ({ page }) => {
   await ready(page);
   // A data URI cannot carry a `var()`, so every one of these has a hex baked into it. That is the
-  // one thing about this approach that can rot: a scrollbar and a set of map buttons still drawn in
-  // day ink down the side of a black page, which is exactly what a token would have prevented.
+  // one thing about this approach that can rot: a scrollbar still drawn in day ink down the side of
+  // a black page, which is exactly what a token would have prevented.
   const read = () =>
     page.evaluate(() => {
       const style = getComputedStyle(document.documentElement);
-      return [
-        "--scroll-track",
-        "--thumb-top",
-        "--ctrl-zoom-in",
-        "--scale-rule",
-      ].map((name) => style.getPropertyValue(name).trim());
+      return ["--scroll-track", "--thumb-top", "--thumb-mid", "--thumb-bottom"].map((name) =>
+        style.getPropertyValue(name).trim(),
+      );
     });
 
   const day = await read();
