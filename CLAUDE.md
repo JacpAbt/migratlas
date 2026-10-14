@@ -96,8 +96,16 @@ Both traps that module closes produce wrong answers rather than errors.
 
 ```bash
 make check      # ruff, ruff format --check, mypy strict over src and tests, pytest
-make web-test   # tsc, vite build + check-build.mjs, Playwright against preview (not dev)
+make web-test   # tsc, svelte-check, vite build + check-build.mjs, Playwright against preview (not dev)
 ```
+
+`svelte-check` is the only thing that type-checks a `.svelte` file -- `tsc` does not read them, and it
+found a tab that never marked its chapter because a string was compared with a number. It lives in
+`web/tools/svelte-check` with its own lockfile: it drives TypeScript's JavaScript API, which
+TypeScript 7 does not have, so it runs on TypeScript 6 while the app compiles with 7. The directory
+holds no Svelte of its own, so it checks against the app's single copy; run through `npx` it brought
+its own and reported three errors that were the two copies disagreeing. `make web-install` installs
+it, and it fails on warnings as well as errors.
 
 CI runs exactly these. `make lake-check` reports schema drift and is not in CI because it needs a
 lake. Open work is tracked in `docs/TASKS.md`.

@@ -1,0 +1,9 @@
+{
+  "name": "migratlas-svelte-check",
+  "private": true,
+  "description": "svelte-check and the TypeScript 6 it drives: the app's TypeScript 7 has no JavaScript API. Apart from the app, with no Svelte of its own, so it checks against the app's one copy.",
+  "devDependencies": {
+    "svelte-check": "4.7.6",
+    "typescript": "6.0.3"
+  }
+}

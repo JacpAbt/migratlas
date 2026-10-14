@@ -64,6 +64,10 @@ jobs:
 
       - run: npm ci
       - run: npm run typecheck
+      # `tsc` does not read a `.svelte` file, so the components' types are checked here. Its own
+      # install, because it needs TypeScript 6 and the app runs 7 (CLAUDE.md, The gates).
+      - run: npm ci --prefix tools/svelte-check
+      - run: npm run check:svelte
       # build runs check-build, which asserts no bundle names an asset that was never
       # emitted. Both typecheck and build passed while the globe rendered nothing at all.
       - run: npm run build

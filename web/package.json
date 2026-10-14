@@ -10,6 +10,7 @@
     "build": "vite build && node scripts/check-build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "check:svelte": "node tools/svelte-check/node_modules/svelte-check/bin/svelte-check --workspace . --tsconfig ./tsconfig.json --fail-on-warnings",
     "check:build": "node scripts/check-build.mjs",
     "test": "playwright test",
     "test:ui": "playwright test --ui"
