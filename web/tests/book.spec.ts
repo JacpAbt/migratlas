@@ -995,6 +995,31 @@ for (const [width, height] of [
   });
 }
 
+/**
+ * What a page that measured over was doing, for the failure to carry.
+ *
+ * The guard failed once at 1024x768 in the dyslexic type -- folio 112 by 50px, a page that sits at
+ * the scale's floor with 12px to spare -- and then not again in some twenty walks under CPU
+ * throttling and parallel load. Unreproduced, the next failure has to explain itself: whether the
+ * overflow was still there half a second later (a page that does not fit) or gone (a measurement
+ * taken before the page was fitted), the scale the fit had set, whether it had set down its
+ * droppable parts, and the state of the faces. It changes no verdict.
+ */
+async function evidence(page: Page, side: "verso" | "recto"): Promise<string> {
+  await page.waitForTimeout(500);
+  return page.evaluate((which) => {
+    const inner = document.querySelector<HTMLElement>(`.spread > .page--${which} .page__inner`);
+    if (!inner) return "[gone half a second later]";
+    const later = inner.scrollHeight - inner.clientHeight;
+    const air = inner.style.getPropertyValue("--fit-air") || "unset";
+    const type = inner.style.getPropertyValue("--fit-type") || "unset";
+    const crowded = inner.hasAttribute("data-crowded") ? ", crowded" : "";
+    const loading = [...document.fonts].filter((face) => face.status === "loading").map((face) => face.family);
+    const faces = loading.length ? `faces loading: ${loading.join(", ")}` : `faces ${document.fonts.status}`;
+    return `[${later}px half a second later; air ${air}, type ${type}${crowded}; ${faces}]`;
+  }, side);
+}
+
 /*
   The guard that makes declared panels worth declaring.
 
@@ -1140,7 +1165,7 @@ for (const [width, height] of [
         if (!cell) continue;
         // Two pixels of slack for sub-pixel layout, and no more: this is a budget, not a target.
         if (cell.over > 2)
-          over.push(`${cell.folio} (${side}) by ${cell.over}px: ${cell.head}`);
+          over.push(`${cell.folio} (${side}) by ${cell.over}px ${await evidence(page, side)}: ${cell.head}`);
         if (cell.under > 2)
           under.push(`${cell.folio} (${side}) by ${cell.under}px: ${cell.head}`);
         if (cell.folio !== null) folios.push(cell.folio);
