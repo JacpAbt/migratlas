@@ -2246,6 +2246,12 @@ test.describe("on a phone", () => {
     const state = await survey(page);
     const opened = leafOpening(await leafLayout(), "what-did-not");
     expect(state.scrollLeft).toBe(state.offsets[opened]);
+
+    // Opened again, it marks the chapter you are in, once. It compared each chapter's slug with the
+    // open leaf's index -- a string with a number -- and so marked none, for sight or for a reader.
+    await thumb.click();
+    await expect(tabs.filter({ hasText: "Elsewhere?" })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator('.fan__tab[aria-current="page"]')).toHaveCount(1);
   });
 
   test("no leaf overflows unless it holds one indivisible thing", async ({

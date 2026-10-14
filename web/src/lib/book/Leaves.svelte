@@ -259,8 +259,8 @@
             type="button"
             class="fan__tab"
             style="{tabStyle(position)}; --i: {position}"
-            class:is-on={chapter.slug === open}
-            aria-current={chapter.slug === open ? "page" : undefined}
+            class:is-on={chapter.slug === here.slug}
+            aria-current={chapter.slug === here.slug ? "page" : undefined}
             onclick={() => pick(chapter.slug)}
           >
             {chapter.tab}
