@@ -58,43 +58,6 @@
     dial,
   });
 
-  /*
-    The same book, arranged twice, and the routing works over whichever one is mounted.
-
-    A spread pads each argument to an even page count and a phone does not, so the two lists are
-    different lengths and a page has a different offset in each -- which is the owner's call: the
-    logic is different and forcing one onto the other is worse than letting each be itself. Both
-    lists have a `chapter` and an `at`, and that is all `show` and `fromUrl` ever needed.
-
-    Both are derived rather than one, because `narrow` can change under a reader who rotates a
-    phone. Deriving the unused one costs a list of objects nobody reads.
-  */
-  /*
-    The reader's type setting, because one of the three paginates differently -- see `spreadsOf`.
-
-    Read from storage here rather than off the attribute `Settings` writes, because `Settings`
-    applies the stored choice in an effect, after this component has already resolved the address
-    against a first pagination: a deep link read against the hand's arrangement lands on a different
-    page of the dyslexia setting's. Followed afterwards through that attribute, which is the thing a
-    choice actually changes.
-  */
-  let typeSetting = $state<TypeChoice>(storedType());
-  const roomy = $derived(ROOMY_TYPES.includes(typeSetting));
-
-  const spreads = $derived(spreadsOf(sources, CHAPTERS, realm, roomy));
-  const leaves = $derived(leavesOf(sources, CHAPTERS, realm));
-
-  /**
-   * The pages of the container that is actually mounted.
-   *
-   * `p` in the URL is an offset within a chapter, and it is read against this -- so the same address
-   * lands on the same chapter on either device and not necessarily the same page of it. `ch` is the
-   * durable half, which is what the comment on `fromUrl` already said and is now load-bearing.
-   */
-  const pages = $derived<readonly { chapter: (typeof CHAPTERS)[number]; at: number }[]>(
-    narrow ? leaves : spreads,
-  );
-
   const of = (key: string): Finding | undefined => findings.find((f) => f.key === key);
 
   /**
@@ -186,6 +149,43 @@
     query.addEventListener("change", watch);
     return () => query.removeEventListener("change", watch);
   });
+
+  /*
+    The same book, arranged twice, and the routing works over whichever one is mounted.
+
+    A spread pads each argument to an even page count and a phone does not, so the two lists are
+    different lengths and a page has a different offset in each -- which is the owner's call: the
+    logic is different and forcing one onto the other is worse than letting each be itself. Both
+    lists have a `chapter` and an `at`, and that is all `show` and `fromUrl` ever needed.
+
+    Both are derived rather than one, because `narrow` can change under a reader who rotates a
+    phone. Deriving the unused one costs a list of objects nobody reads.
+  */
+  /*
+    The reader's type setting, because one of the three paginates differently -- see `spreadsOf`.
+
+    Read from storage here rather than off the attribute `Settings` writes, because `Settings`
+    applies the stored choice in an effect, after this component has already resolved the address
+    against a first pagination: a deep link read against the hand's arrangement lands on a different
+    page of the dyslexia setting's. Followed afterwards through that attribute, which is the thing a
+    choice actually changes.
+  */
+  let typeSetting = $state<TypeChoice>(storedType());
+  const roomy = $derived(ROOMY_TYPES.includes(typeSetting));
+
+  const spreads = $derived(spreadsOf(sources, CHAPTERS, realm, roomy));
+  const leaves = $derived(leavesOf(sources, CHAPTERS, realm));
+
+  /**
+   * The pages of the container that is actually mounted.
+   *
+   * `p` in the URL is an offset within a chapter, and it is read against this -- so the same address
+   * lands on the same chapter on either device and not necessarily the same page of it. `ch` is the
+   * durable half, which is what the comment on `fromUrl` already said and is now load-bearing.
+   */
+  const pages = $derived<readonly { chapter: (typeof CHAPTERS)[number]; at: number }[]>(
+    narrow ? leaves : spreads,
+  );
 
   /**
    * The spread in the URL: a chapter, and how far into it.

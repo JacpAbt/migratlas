@@ -40,7 +40,7 @@
      * hand. The first attempt printed the number twice -- once on the page and once on a separate
      * corner button beside it -- which is how this got noticed.
      */
-    onturn?: () => void;
+    onturn?: (() => void) | undefined;
     /**
      * The turn mark without the control, for a copy of a page whose folio is one.
      *

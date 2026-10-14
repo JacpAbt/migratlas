@@ -23,6 +23,8 @@
 import rough from "roughjs";
 import type { Options } from "roughjs/bin/core";
 
+import type { Instrument } from "../ledger";
+
 /** FNV-1a, 32-bit. rough.js wants a numeric seed and the callers all have a string. */
 export function seedOf(text: string): number {
   let value = 0x811c9dc5;
@@ -359,7 +361,7 @@ function ticks(count: number, from: number, to: number, y: number, height: numbe
   return out;
 }
 
-export const SKETCHES: Record<string, Sketch> = {
+export const SKETCHES: Record<Instrument, Sketch> = {
   radar: {
     strokes: [
       // The dish as a lens: a curved face and the rim behind it.

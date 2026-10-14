@@ -233,7 +233,7 @@
       picture of what these are -- one index for the questions and one for the filter, which is what
       a book with two sets of thumb tabs does.
     -->
-    <div class="tail" style={tabStyle(chapters.indexOf(current.chapter))}>
+    <div class="tail" style={tabStyle(current ? chapters.indexOf(current.chapter) : 0)}>
       <Realms open={realm} onpick={onfilter} />
     </div>
   </div>

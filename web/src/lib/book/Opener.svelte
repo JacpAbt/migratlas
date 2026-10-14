@@ -62,14 +62,14 @@
     <p class="opener__body">{paragraph}</p>
   {/each}
   {#if closes && instruments.length > 0}
-    <figure class="opener__doodles" aria-label="What this chapter's claims were measured with">
+    <div class="opener__doodles" role="group" aria-label="What this chapter's claims were measured with">
       {#each instruments as kind (kind)}
-        <div class="doodle" style="--lean: {LEAN[kind]}deg; --drop: {DROP[kind]}rem">
+        <figure class="doodle" style="--lean: {LEAN[kind]}deg; --drop: {DROP[kind]}rem">
           <Instrument {kind} />
           <figcaption>{SKETCHES[kind].label}</figcaption>
-        </div>
+        </figure>
       {/each}
-    </figure>
+    </div>
   {/if}
 </article>
 
@@ -149,6 +149,7 @@
     align-items: center;
     gap: var(--gap-tight);
     max-width: 12rem;
+    margin: 0;
     transform: rotate(var(--lean)) translateY(var(--drop));
   }
 
