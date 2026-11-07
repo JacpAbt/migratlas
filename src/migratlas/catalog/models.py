@@ -84,6 +84,11 @@ class Source(BaseModel):
     caveats: str = ""
     """Known limitations that would mislead someone who did not read the paper."""
 
+    cartographic: bool = False
+    """Drawn as a map's outline and nothing else: coast, rivers, lakes. Registered so its licence
+    is stated and it is credited, and not counted among the sources a finding can come from --
+    "13 findings from 39 sources" would count three coastlines as measurements."""
+
     added: date
 
     @model_validator(mode="after")
@@ -100,6 +105,9 @@ class Source(BaseModel):
                 f"(it provides evidence) or neither (it provides only drivers). Got "
                 f"evidence_type={self.evidence_type!r}, taxon_scope={self.taxon_scope!r}."
             )
+            raise ValueError(msg)
+        if self.cartographic and self.evidence_type is not None:
+            msg = f"Source {self.id!r} is cartographic and cannot also provide evidence."
             raise ValueError(msg)
         return self
 

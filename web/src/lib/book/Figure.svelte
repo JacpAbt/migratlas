@@ -5,8 +5,8 @@
   import Ribbon from "../claim/Ribbon.svelte";
   import { headlineOf, loadHeadlines, type HeadlineDocument } from "../claim/headline";
   import Rule from "../notebook/Rule.svelte";
-  import { FIGURES, figurePages } from "./figures";
-  import { loadDetectability, type DetectabilityDocument } from "../../layers/detectability";
+  import { FIGURES, figurePages, pageOf } from "./figures";
+  import { loadDetectability, type DetectabilityDocument } from "../claim/detectability";
   import type { Finding } from "../ledger";
 
   let {
@@ -104,9 +104,9 @@
     <h2>{leaf.title}</h2>
     <Rule seed={`${finding.key}-figure`} tone="pencil" />
     {#if figure.kind === "ribbon"}
-      <Ribbon {base} part={leaf.part} at={chart} />
-    {:else if assessment}
-      <Coverage doc={assessment} part={leaf.part} />
+      <Ribbon {base} part={pageOf(figure, at, narrow).part} at={chart} />
+    {:else if figure.kind === "coverage" && assessment}
+      <Coverage doc={assessment} part={pageOf(figure, at, narrow).part} />
     {:else if failed}
       <p class="figure__failure" role="status">The coverage assessment did not load.</p>
     {:else}

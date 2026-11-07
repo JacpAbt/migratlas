@@ -1,32 +1,25 @@
 /**
- * Where the camera goes for each claim, and which layers back it up.
+ * Where in the world each claim is made, for the plate that faces it, and the book's chapters.
  *
- * This is presentation, so it lives here and not in `reports/findings.py`. A camera position is not
- * a finding: putting one in the ledger would mean the science file carried a decision about framing,
- * and the next person to change the framing would be editing a file whose tests are about numbers.
+ * This is presentation, so it lives here and not in `reports/findings.py`. A place to point at is
+ * not a finding: putting one in the ledger would mean the science file carried a decision about
+ * framing, and the next person to change the framing would be editing a file whose tests are about
+ * numbers.
  *
- * Keyed by the ledger's own `key`, with a fallback. `tests/notebook.spec.ts` asserts every published
- * claim has an entry and that every layer named here exists in the manifest -- the same shape as
- * `detectability.RULES`. Both guards earn their place: a claim with no view lands the reader on a
- * default globe with no sign anything is missing, and two of the layer names below were wrong on
- * the first attempt, which shows up as a claim whose evidence simply never appears.
+ * Keyed by the ledger's own `key`, with a fallback. `tests/shell.spec.ts` asserts every published
+ * claim has an entry, because a claim with no view gets the fallback's plate with no sign anything is
+ * missing. The views were the globe's cameras, with a zoom and the layers to show; the plate reads
+ * only the centre and the line, and the rest left with the globe (ADR 0021).
  */
 
 import type { Finding } from "./ledger";
 
 export interface View {
-  /** Longitude, latitude. */
+  /** Longitude, latitude: where the plate marks the claim. */
   center: [number, number];
-  zoom: number;
   /**
-   * Layer names to show while this claim is on screen, by their manifest `name`. Everything else is
-   * hidden: a claim about mid-latitude US radar is not helped by a global marine grid drawn over it.
-   */
-  layers: string[];
-  /**
-   * Why the camera is here, in one line. Shown to the reader, because a globe that flies somewhere
-   * without saying why is a slideshow -- and because writing it down is what caught two of these
-   * pointing at the wrong hemisphere.
+   * Where the claim is made, in one line. Shown to the reader, because a mark with no reason is a
+   * pin -- and because writing it down is what caught two of these pointing at the wrong hemisphere.
    *
    * **It has exactly one reader, and that reader is the plate's caption.** So it describes the
    * *ground*: where in the world this claim is made, and nothing about how any measurement is
@@ -34,25 +27,21 @@ export interface View {
    * count fell, solid where it rose", "as weekly presence on the clock", "the two layers here" --
    * which was true of the globe and false of the sheet it was printed under, and sent a reader
    * looking for marks that are not on the paper. What the plate does draw is keyed in
-   * `Plate.svelte`; what the layers draw belongs beside the layers.
+   * `Plate.svelte`.
    */
   because: string;
 }
 
 const FALLBACK: View = {
-  // The Atlantic, so the Americas and western Europe and Africa are all on the near side.
+  // Open ocean between the Americas, Europe and Africa: a ring there sits on no claim's ground.
   center: [-45, 25],
-  zoom: 1.4,
-  layers: [],
-  because: "No view is recorded for this claim, so the globe stays where it started.",
+  because: "No place is recorded for this claim, so the plate rings the middle of the Atlantic.",
 };
 
 export const VIEWS: Record<string, View> = {
   "autumn-advance": {
     // The claim band itself: 37-50°N, centred on the continental US where the 78 stations are.
     center: [-96, 42],
-    zoom: 3.1,
-    layers: ["aerial-passage"],
     because:
       "The band the claim is made in: the middle of the United States, between 37 and 50 degrees " +
       "north, where the radar stations sit.",
@@ -61,34 +50,26 @@ export const VIEWS: Record<string, View> = {
     // The North Atlantic shelf. FISHGLOB's 29 surveys are North America and Europe by
     // construction, so this frames both sides of the ocean they share rather than one coast.
     center: [-35, 50],
-    zoom: 2.2,
-    layers: ["marine-taxa-recorded"],
     because:
       "Both shores of the North Atlantic, which is where the bottom-trawl surveys are: North " +
       "America and Europe, by construction.",
   },
   "composition-stable": {
     center: [-96, 42],
-    zoom: 3.1,
-    layers: ["aerial-passage"],
     because: "The same band as the timing claim, asked what was flying rather than when.",
   },
   "anthropogenic-share": {
     center: [-96, 42],
-    zoom: 2.6,
-    layers: ["aerial-passage"],
     because: "The same band, pulled back, because the forcing behind it is global.",
   },
   "atlas-no-net-change": {
     // Southern Africa, framed on the atlas footprint itself: South Africa, Lesotho and Eswatini.
     center: [25, -29],
-    zoom: 3.6,
     // The 496 cells the comparison ran on, and only those: the gaps are places nobody atlassed
     // twice rather than places with nothing in them, which is why the surface is not interpolated.
     // What is drawn is the *uncorrected* count of taxa recorded, not the detection-corrected one --
     // `docs/methods/phase1f-atlas-surface.md` §5 registered in advance that a disagreement between
     // the two impeaches the model rather than the count, and the two disagreed.
-    layers: ["atlas-taxa-change"],
     because:
       "The southern African atlas footprint: South Africa, Lesotho and Eswatini, and inside it " +
       "the squares that were atlassed in both epochs.",
@@ -96,16 +77,12 @@ export const VIEWS: Record<string, View> = {
   "transfer-fails": {
     // All three legs at once, which is only possible because they ring one ocean: the radar band
     // over North America, the trawl surveys across the North Atlantic, and the atlas footprint in
-    // southern Africa. Pulled back far enough that the two that agreed are visibly the two
-    // furthest apart -- the frame is the argument here, so it is chosen rather than inherited.
+    // southern Africa.
     //
     // Centred on the point that minimises the worst-case distance to the three, which puts the
     // radar band and the atlas footprint at 65.6° and 65.7° from the middle rather than 59.7° and
-    // 72.6°. Eyeballing it had southern Africa sitting near the limb, where the globe's curvature
-    // squashes it into a sliver and the claim's own southern half is the part that reads worst.
+    // 72.6° -- chosen for the globe, where southern Africa near the limb read worst, and kept.
     center: [-29, 11],
-    zoom: 1.35,
-    layers: ["aerial-passage", "marine-taxa-recorded", "atlas-taxa-change"],
     because:
       "All three records at once, which is the point: the two that turned out to agree are the " +
       "two on opposite sides of the equator.",
@@ -114,8 +91,6 @@ export const VIEWS: Record<string, View> = {
     // The same band as the headline claim, because the two are the same instrument asked
     // opposite questions: the trend is real, and the year-to-year forecast mostly is not.
     center: [-96, 42],
-    zoom: 3.1,
-    layers: ["aerial-passage"],
     because:
       "The same band as the headline claim, asked the opposite question: not whether timing " +
       "drifted over decades, but whether any single year can be predicted.",
@@ -125,18 +100,14 @@ export const VIEWS: Record<string, View> = {
     // 4,700 km apart, and their great-circle midpoint is in the Canadian high Arctic -- so the
     // camera stands there, pulled back until both surfaces are on the near side of the sphere.
     center: [-99, 74],
-    zoom: 2.0,
-    layers: ["yahatinda-herd", "svalbard-herd"],
     because:
       "The two herds the claim is measured from, a continent apart: elk in the Canadian " +
       "Rockies, reindeer on Svalbard.",
   },
   "flight-advance": {
-    // Britain, and no layer: the transects are a series in the lake with no tile behind them, so
-    // the plate carries this claim's evidence and the globe carries only the place.
+    // Britain: the transects are a series in the lake with no map behind them, so the plate is
+    // this claim's only picture of where.
     center: [-2.4, 54.2],
-    zoom: 4.4,
-    layers: [],
     because:
       "Britain, where the same fixed transects are walked every year by volunteers who count " +
       "what crosses them.",
@@ -144,8 +115,6 @@ export const VIEWS: Record<string, View> = {
   "protocol-disagreement": {
     // Sweden, which is the whole claim: one country counted twice, by two programmes, at once.
     center: [16.5, 62.5],
-    zoom: 3.8,
-    layers: [],
     because:
       "Sweden, counted twice over: two national bird-counting programmes have run side by side " +
       "across the same country for decades.",
@@ -154,8 +123,6 @@ export const VIEWS: Record<string, View> = {
     // The claim band, pulled back the way the attribution's view is, because the forcing behind a
     // scenario is global even where the response is 78 stations wide.
     center: [-96, 42],
-    zoom: 2.6,
-    layers: ["aerial-passage"],
     because:
       "The same band the response was fitted in, which is the only band any of it may be " +
       "projected into.",
@@ -167,65 +134,23 @@ export const VIEWS: Record<string, View> = {
     // Bering Sea, the two Gulf of Mexico series, the Scotian shelf and the European surveys in one
     // frame, which is the comparison.
     center: [-70, 45],
-    zoom: 1.6,
     // The same survey-footprint layer `marine-null` draws, because it is the same 2.8 million rows
     // and it shows where the eighteen segments are. It does not draw the heterogeneity: no tile
     // does, and the plate carries that.
-    layers: ["marine-taxa-recorded"],
     because:
       "North America with an ocean on each side, because the finding is that these seas disagree " +
       "with one another -- framing one of them would argue against the sentence.",
   },
   "coverage-bias": {
-    // Deliberately the southern hemisphere, and deliberately far out. This claim is about what the
-    // project cannot see, so the camera points at the emptiness rather than at the data.
+    // Deliberately the southern hemisphere. This claim is about what the project cannot see, so the
+    // mark points at the emptiness rather than at the data.
     center: [20, -30],
-    zoom: 1.5,
-    layers: ["marine-space-use", "marine-taxa-recorded"],
     because: "The hemisphere this project can measure almost nothing in.",
   },
 };
 
 export function viewFor(finding: Finding): View {
   return VIEWS[finding.key] ?? FALLBACK;
-}
-
-/**
- * The view for "just let me explore": every layer, pulled back to the whole sphere.
- *
- * Both halves are the point. Keeping the last claim's layer subset would mean a reader who asked for
- * the map got the map with one claim's evidence still filtered onto it -- which is what shipped on
- * the first attempt, and it reads as a bug rather than as a choice. Pulling back to the world is the
- * other half: the reader asked to stop being led somewhere.
- *
- * `layers` comes from what the globe actually loaded rather than from a list here, so a layer added
- * to the manifest appears in explore mode without anyone remembering to add it.
- */
-/**
- * The zoom at which the sphere just fills a box.
- *
- * MapLibre's globe draws the world `512 * 2 ** zoom` pixels around, so the sphere's diameter is that
- * over pi -- which inverts to this. Written as arithmetic rather than chosen, because the number that
- * was chosen has been wrong everywhere since it was written: `zoom: 1.4` is a 430px sphere at every
- * window size, which was small in the shell's 1600x900 and is small again in a 677px page. The owner
- * called the globe badly implemented and this is the half of that which is measurable.
- *
- * The margin leaves the sphere off the page edges, where the map's own controls and its licence
- * notice sit.
- */
-export function sphereZoom(width: number, height: number, margin = 0.92): number {
-  const diameter = Math.min(width, height) * margin;
-  if (!Number.isFinite(diameter) || diameter <= 0) return 1.4;
-  return Math.log2((diameter * Math.PI) / 512);
-}
-
-export function exploreView(available: string[], zoom = 1.4): View {
-  return {
-    center: [-45, 25],
-    zoom,
-    layers: available,
-    because: "Every published layer, and no argument on top of it.",
-  };
 }
 
 /**
@@ -257,7 +182,7 @@ export function exploreView(available: string[], zoom = 1.4): View {
  * average`, `Cannot see` -- were the titles' subjects, and a first reading of the book took them
  * for riddles: nothing on a tab said what a reader would find behind it. The chapters are asked as
  * questions, so each tab now carries the question's own word and its question mark, and the two
- * chapters that are not questions carry what they are: the way in, and the globe.
+ * chapters that are not questions carry what they are: the way in, and the atlas.
  *
  * **Two claims moved house and the move is the argument.** `anthropogenic-share` leaves the timing
  * chapter for the one that asks what moved the clock, because attribution is the answer to *why*.
@@ -328,7 +253,7 @@ export const CHAPTERS: readonly Chapter[] = [
     tab: "Blind spots",
     keys: ["coverage-bias", "protocol-disagreement"],
   },
-  { slug: "the-world", title: "The world", tab: "The globe", keys: [] },
+  { slug: "the-world", title: "The world", tab: "The atlas", keys: [] },
 ];
 
 /** The chapter carrying a claim, or undefined -- which the build guard turns into a failure. */

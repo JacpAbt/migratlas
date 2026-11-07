@@ -75,6 +75,11 @@ export class TaxonIndex {
     return this.#entries.length;
   }
 
+  /** How many animals, not rows: a taxon with a map in two sources has a row for each. */
+  get animals(): number {
+    return new Set(this.#entries.map((entry) => entry.key)).size;
+  }
+
   /** The entry for one GBIF key, for a caller that arrives with a key rather than a name. */
   byKey(key: number): TaxonHit | null {
     const entry = this.#entries.find((candidate) => candidate.key === key);

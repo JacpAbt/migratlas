@@ -1,13 +1,15 @@
 /**
- * Assert the built output has no dangling asset references.
+ * Assert the built output has no dangling references: no bundle naming a file that was not emitted,
+ * no data file the atlas draws from left out, no asset path built for the wrong base.
  *
- * Written after shipping a globe that never rendered. MapLibre's Web Worker was referenced
- * but never emitted, so it 404ed at runtime — and MapLibre's failure mode is silent: no
- * console error, no map error event, a healthy 60 fps, and an empty canvas. `tsc` passed and
- * `vite build` passed. CI was green throughout.
+ * Written after shipping a globe that never rendered. MapLibre's Web Worker was referenced but never
+ * emitted, so it 404ed at runtime -- and the failure was silent: no console error, a healthy 60 fps,
+ * an empty canvas. `tsc` passed and `vite build` passed. CI was green throughout. MapLibre left the
+ * build with ADR 0021; the atlas that replaced it fails the same way for a different reason, a data
+ * file it fetches at runtime that is not there, which is what the second check is for.
  *
- * This cannot replace a browser smoke test, but it is free and catches the specific class:
- * an emitted bundle naming a sibling file that does not exist.
+ * This cannot replace a browser smoke test, but it is free and catches the specific class: an
+ * emitted build naming a sibling file that does not exist.
  */
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -26,14 +28,7 @@ const DIST = "dist";
 const ASSETS = join(DIST, "assets");
 
 /** Files a bundle may reference that live outside assets/ or are provided at runtime. */
-const IGNORED = [
-  /^https?:\/\//,
-  /^data:/,
-  /^blob:/,
-  // MapLibre embeds both worker names as strings for its own runtime branch; the one it
-  // actually uses is overridden by setWorkerUrl, so a bare mention is not a reference.
-  /^maplibre-gl-worker(-dev)?\.mjs$/,
-];
+const IGNORED = [/^https?:\/\//, /^data:/, /^blob:/];
 
 function fail(message) {
   console.error(`check-build: ${message}`);
@@ -48,23 +43,10 @@ if (!statSync(DIST, { throwIfNoEntry: false })) {
 const assetNames = new Set(readdirSync(ASSETS));
 const jsFiles = [...assetNames].filter((name) => name.endsWith(".js") || name.endsWith(".mjs"));
 
-// 1. A worker asset must exist. MapLibre cannot parse a single tile without it, and its
-//    absence is invisible at runtime.
-const workers = [...assetNames].filter((name) => /worker/i.test(name));
-if (workers.length === 0) {
-  fail(
-    "no worker asset in dist/assets — MapLibre will 404 its worker and render nothing, " +
-      "silently. Import it with ?worker&url and pass it to setWorkerUrl.",
-  );
-} else {
-  console.log(`check-build: worker asset present (${workers.join(", ")})`);
-}
-
-// 2. Every hashed sibling a bundle names must have been emitted. A dangling name is answered
-//    by a dev server's SPA fallback with index.html and a 200, so the browser parses HTML as
-//    JavaScript — which is exactly how this failed before.
-// Must begin with an alphanumeric: MapLibre embeds the bare suffix "-dev.mjs" to branch on
-// its own filename, and that is a string comparison rather than a reference to anything.
+// 1. Every hashed sibling a bundle names must have been emitted. A dangling name is answered by a
+//    dev server's SPA fallback with index.html and a 200, so the browser parses HTML as JavaScript
+//    -- which is exactly how the globe failed. A name must begin with an alphanumeric, so a bare
+//    suffix compared as a string is not read as a reference.
 const referencePattern = /["'`]([A-Za-z0-9][A-Za-z0-9._-]*\.(?:mjs|js))["'`]/g;
 let dangling = 0;
 for (const file of jsFiles) {
@@ -80,18 +62,30 @@ for (const file of jsFiles) {
 }
 if (dangling === 0) console.log(`check-build: no dangling asset references in ${jsFiles.length} bundles`);
 
-// 3. The worker must be self-contained. Vite's ?worker&url inlines its dependencies; a plain
-//    file copy does not, and the difference is invisible until runtime.
-for (const worker of workers) {
-  const body = readFileSync(join(ASSETS, worker), "utf8");
-  const imports = [...body.matchAll(/\bfrom\s*["']([^"']+)["']/g)].map(([, target]) => target);
-  const external = imports.filter((target) => target.startsWith(".") || target.startsWith("/"));
-  if (external.length > 0) {
-    fail(`${worker} still imports ${external.join(", ")} — use ?worker&url so deps are bundled`);
-  }
+// 2. Every file the atlas draws from must be in the build. It fetches them at runtime, and a missing
+//    one leaves it waiting on a promise that rejects into the console: the page and its words are
+//    there, and the map is blank paper. Named by the documents the atlas reads -- each plate's map
+//    and each still map's cells in `atlas.json`, each layer in the manifest -- and the world's
+//    outline, which `lib/atlas/data.ts` names itself.
+const read = (path) => JSON.parse(readFileSync(join(DIST, path), "utf8"));
+const atlas = read("atlas.json");
+const manifest = read("layers/manifest.json");
+const EXTENSION = { geojson: ".geojson", grid: ".grid.json", json: ".json" };
+const wanted = [
+  "basemap/land.geojson",
+  "basemap/borders.geojson",
+  ...atlas.plates.map((plate) => plate.map),
+  ...atlas.stills.flatMap((still) => [still.data, ...(still.plate ? [still.plate.map] : [])]),
+  ...manifest.map((layer) => `layers/${layer.name}${EXTENSION[layer.format] ?? ".json"}`),
+];
+const missing = wanted.filter((path) => !statSync(join(DIST, path), { throwIfNoEntry: false }));
+if (missing.length > 0) {
+  fail(`the atlas draws from ${missing.join(", ")}, which the build does not contain`);
+} else {
+  console.log(`check-build: all ${wanted.length} files the atlas draws from are in the build`);
 }
 
-// 4. index.html must reference its assets at the base it was built for. A subpath deploy that
+// 3. index.html must reference its assets at the base it was built for. A subpath deploy that
 //    rebuilds without VITE_BASE emits /assets/index.js instead of /migratlas/assets/index.js:
 //    every asset 404s, the page is blank, and the deploy is green. That shipped once.
 const html = readFileSync(join(DIST, "index.html"), "utf8");

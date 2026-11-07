@@ -52,6 +52,7 @@ from migratlas.reports import (
     species,
 )
 from migratlas.tiles import layers as tile_layers
+from migratlas.tiles import plates as tile_plates
 from migratlas.tiles import species as tile_species
 
 DRIFT_SAMPLE = 5
@@ -59,7 +60,7 @@ DRIFT_SAMPLE = 5
 
 app = typer.Typer(
     name="migratlas",
-    help="A globe of animal movement, and why it's changing.",
+    help="An atlas of animal movement, and why it's changing.",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -667,7 +668,7 @@ def build_findings(
         "web/public/findings.json"
     ),
 ) -> None:
-    """Compute what the research established, for the globe to render.
+    """Compute what the research established, for the book to render.
 
     Re-runs the analyses rather than reading a written-down number, so a finding on the site is
     the one the pipeline produces. Minutes, not seconds.
@@ -686,7 +687,7 @@ def build_layers(
         "web/public/layers"
     ),
 ) -> None:
-    """Export the globe's published layers from the lake, through the ethics gate."""
+    """Export the atlas's published layers from the lake, through the ethics gate."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     results = tile_layers.build_all(out)
     for result in results:
@@ -710,6 +711,32 @@ def build_layers(
     if species.too_small:
         print(f"  {species.too_small} below the {tile_species.MIN_CELLS}-cell floor")
     print(f"search index -> {index} ({size / 1024:.0f} KiB)")
+
+
+@app.command("build-atlas")
+def build_atlas() -> None:
+    """Publish the atlas's words -> web/public/atlas.json.
+
+    Titles, callouts, captions and the running readout of the world chapter (ADR 0021), authored in
+    `reports/atlas.py` and rendered verbatim. Every count in them is read from the published layers'
+    metadata, so `build-layers` comes first.
+    """
+    from migratlas.reports import atlas  # noqa: PLC0415 -- one command needs it
+
+    path = atlas.write()
+    print(f"atlas words -> {path}")
+
+
+@app.command("build-plates")
+def build_plates(
+    out: Annotated[Path, typer.Option(help="Destination directory for the plates' maps.")] = Path(
+        "web/public/basemap/plates"
+    ),
+) -> None:
+    """Cut each atlas plate's coast, rivers and lakes from their sources, through the gate."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
+    for export in tile_plates.build_plates(out):
+        print(f"{export.features:>7,} features  {export.bytes / 1024:>8.0f} KiB  {export.path}")
 
 
 @report_app.command("phase1d-tracks")

@@ -33,7 +33,7 @@ export interface SpeciesCard {
   scientific: string;
   vernacular: string;
   realm: string;
-  /** Whether a surface exists on the globe. `false` is a fact about the data, not a gap. */
+  /** Whether the atlas has a surface to draw. `false` is a fact about the data, not a gap. */
   drawn: boolean;
   studies: Study[];
 }
@@ -68,7 +68,7 @@ export class SpeciesStudies {
    *
    * Null rather than a thrown error: a species with no card is a state the page has to render
    * anyway, and it is not distinguishable to a reader from a species whose card says there is no
-   * study. A failed fetch is the same -- the globe still drew the animal, and losing the page
+   * study. A failed fetch is the same -- the atlas still drew the animal, and losing the page
    * should cost the page rather than the selection.
    */
   async get(taxonKey: number): Promise<SpeciesCard | null> {

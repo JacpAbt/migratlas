@@ -1,4 +1,4 @@
-"""The sea ice's median edge, monthly, on the globe's own clock.
+"""The sea ice's median edge, monthly, on the atlas's own clock.
 
 The first driver drawn rather than regressed (`docs/ideas/satellite-drivers-on-the-globe.md`):
 twelve monthly median ice-edge polylines per hemisphere from the Sea Ice Index, 1981-2010, a few
@@ -182,7 +182,7 @@ def _read_lines(shp: Path) -> list[Any]:
 
 
 def _split_antimeridian(run: list[tuple[float, float]]) -> list[list[tuple[float, float]]]:
-    """Break a run wherever it crosses ±180°, or the globe draws the crossing as a streak.
+    """Break a run wherever it crosses ±180°, or a map draws the crossing as a streak.
 
     A polar line unprojects into longitudes that jump from one side of the antimeridian to the
     other between neighbouring vertices; drawn naively, each jump is a horizontal line across

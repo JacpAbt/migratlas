@@ -67,9 +67,9 @@
   --line-counterfactual: #3d6b85;
   --line-scatter: #8b7a68;
   /*
-    The detectability choropleth, and the one set here that a reader has no words for. A legend
-    names each class, but a cell on the globe is a colour and nothing else, so these are the pairs
-    the colour-vision test holds to a floor -- see `notebook.spec.ts`.
+    The detectability assessment's classes, as the coverage figure's legend swatches them: there a
+    class is a colour beside its words, and these are the pairs the colour-vision test holds to a
+    floor -- see `notebook.spec.ts`.
 
     The three "cannot be measured here" greys are alike on purpose and are exempt from it: they are
     26, 34 and 57 apart in ordinary vision, because a reader does not need to tell no-data from
@@ -82,10 +82,8 @@
   --detect-yes: #b4522e;
   --detect-unknown: #b5afa3;
 
-  /* On the globe rather than on the paper. */
+  /* On the atlas rather than on the paper: the sea ice's edge. */
   --night-shade: #41566b;
-  --selection-halo: #fdf8f0;
-  --shadow-sheet: 0 2px 24px rgb(38 48 42 / 16%);
 
   /*
     Paper, and this time it is paper.
@@ -173,9 +171,12 @@
   --attrib: 3.25rem;
   --radius: 3px;
 
-  /* The table the book lies on. The scene is `desk/scene.ts`; this painted wood is what shows if
-     it cannot be drawn. `--candle-lit` is read by the scene: 1 at night, when a match lights the
-     candle and the room is lit by it alone. */
+  /* The table the book lies on. The scene is `desk/scene.ts`. `--table-tone` is the scene's own
+     average colour, measured on its open wood, and fills the margin for the moment before the first
+     frame, so the table arrives without a change of colour; `--wood` is the painted walnut shown
+     where the scene cannot be drawn. `--candle-lit` is read by the scene: 1 at night, when a match
+     lights the candle and the room is lit by it alone. */
+  --table-tone: #683120;
   --wood: #8f6340;
   --wood-light: 26%;
   --candle-lit: 0;
@@ -248,12 +249,13 @@
  * them is rendered with the word it means beside it. That is asserted rather than assumed.
  *
  * Written twice because a media query cannot join a selector list, and `light-dark()` would break
- * `layers/detectability.ts`, which reads these tokens with `getPropertyValue` and would receive
- * unresolved function text rather than a colour MapLibre can parse. A test asserts the two blocks
- * resolve identically.
+ * every reader of these tokens through `getPropertyValue` -- the scrollbar's drawings, the coverage
+ * legend's swatches -- which would receive unresolved function text rather than a colour. A test
+ * asserts the two blocks resolve identically.
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-surface="day"]) {
+    --table-tone: #110503;
     --wood: #4a3220;
     --wood-light: 0%;
     --candle-lit: 1;
@@ -286,8 +288,6 @@
     --detect-unknown: #5b6675;
 
     --night-shade: #8fa6bd;
-    --selection-halo: #0d131e;
-    --shadow-sheet: 0 2px 28px rgb(0 0 0 / 60%);
 
     --grain: url("../assets/paper/rough.webp");
     --grain-blend: soft-light;
@@ -307,6 +307,7 @@
 }
 
 :root[data-surface="night"] {
+  --table-tone: #110503;
   --wood: #4a3220;
   --wood-light: 0%;
   --candle-lit: 1;
@@ -339,8 +340,6 @@
   --detect-unknown: #5b6675;
 
   --night-shade: #8fa6bd;
-  --selection-halo: #0d131e;
-  --shadow-sheet: 0 2px 28px rgb(0 0 0 / 60%);
 
   --grain: url("../assets/paper/rough.webp");
   --grain-blend: soft-light;

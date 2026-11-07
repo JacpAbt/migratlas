@@ -1,0 +1,261 @@
+{
+  "controls": {
+    "clock": "time of year",
+    "fast": "fast",
+    "journey": "day of each journey",
+    "normal": "normal",
+    "pause": "pause",
+    "play": "play",
+    "show": "show",
+    "slow": "slow",
+    "stills": "still maps",
+    "terms": "the terms of what is drawn",
+    "world": "the whole world"
+  },
+  "plates": [
+    {
+      "button": "all that flies by night",
+      "callout": "all that flies by night",
+      "caption": "of what a weather radar saw above it that week: it starts in the air the radar sampled, within 50 km of it, and runs on at the heading and ground speed the radar measured, carried for 8 hours \u2014 an assumption, so a stroke reads as a flight. More strokes, more of it. Not one night and not one kind of animal: the radar cannot tell birds from bats from insects.",
+      "centre": [
+        -96.0,
+        38.0
+      ],
+      "clock": "year",
+      "credit": "Map: Natural Earth \u2014 1:10m land, coastline and rivers (Public domain).",
+      "frame": [
+        -126.0,
+        -65.0,
+        23.5,
+        50.5
+      ],
+      "layer": "aerial-passage",
+      "lead": "Each stroke is one night's flight",
+      "map": "basemap/plates/north-america.geojson",
+      "name": "north-america",
+      "terms": "Data: Dark Ecology Dataset \u2014 daily time series of aerial biomass, 1995\u20132025 (CC BY 4.0). Published at source resolution.",
+      "title": "The night sky over North America",
+      "under": "161 weather radars \u00b7 not one species"
+    },
+    {
+      "button": "Arctic fox",
+      "callout": "Arctic foxes",
+      "caption": "by 170 foxes, drawn a day at a time from its daily median position, the red nib where it has got to in its own journey. All of them start together on day one: the published tracks carry no dates, so this is no one season. A few journeys run off the plate.",
+      "centre": [
+        -77.0,
+        70.0
+      ],
+      "clock": "journey",
+      "credit": "Map: Natural Earth \u2014 1:10m land, coastline and rivers (Public domain).",
+      "frame": [
+        -87.0,
+        -66.0,
+        64.5,
+        75.5
+      ],
+      "layer": "bylot-journeys",
+      "lead": "Each line is one of 217 journeys",
+      "map": "basemap/plates/bylot.geojson",
+      "name": "bylot",
+      "terms": "Data: Arctic fox Bylot - Argos tracking (CC0 1.0). Generalised for animal safety: coordinates generalised to a 0.001-degree grid; records within 30 days of present withheld. Fuller data may be available from the data owner on request.; drawn from daily median positions snapped to 0.01 degrees, coarser than policy, so no den resolves to a point",
+      "title": "Arctic foxes from Bylot Island",
+      "under": "170 animals, a position a day"
+    },
+    {
+      "button": "Svalbard reindeer",
+      "callout": "Svalbard reindeer",
+      "caption": "were recorded that week, the dashed ones the weeks before. Each stroke joins a place reached this week to the nearest place held the week before: the shift between two weekly maps, not an animal's path. One 0.01\u00b0 cell is the unit, so an animal crossing three cells is in all three.",
+      "centre": [
+        15.4,
+        77.97
+      ],
+      "clock": "year",
+      "credit": "Map: Annual coastlines for Svalbard \u2014 Norwegian Polar Institute, 2022 (CC BY 4.0).",
+      "frame": [
+        13.4,
+        17.4,
+        77.6,
+        78.36
+      ],
+      "layer": "svalbard-herd",
+      "lead": "The inked outline is where collared reindeer",
+      "map": "basemap/plates/svalbard.geojson",
+      "name": "svalbard",
+      "terms": "Data: Svalbard Reindeer Project - Nordenskiold Land (CC BY-NC 4.0). Generalised for animal safety: coordinates generalised to a 0.01-degree grid; records within 90 days of present withheld; individual identifiers removed. Fuller data may be available from the data owner on request.",
+      "title": "Svalbard reindeer",
+      "under": "the herd's year, week by week"
+    },
+    {
+      "button": "elk",
+      "callout": "elk, the Ya Ha Tinda herd",
+      "caption": "were recorded that week, the dashed ones the weeks before. Each stroke joins a place reached this week to the nearest place held the week before: the shift between two weekly maps, not an animal's path. One 0.01\u00b0 cell is the unit, so an animal crossing three cells is in all three.",
+      "centre": [
+        -115.75,
+        51.64
+      ],
+      "clock": "year",
+      "credit": "Map: Natural Earth \u2014 1:10m land, coastline and rivers (Public domain); National Hydro Network (NHN), GeoBase series \u2014 Natural Resources Canada (Open Government Licence \u2013 Canada).",
+      "frame": [
+        -116.75,
+        -114.75,
+        51.22,
+        52.06
+      ],
+      "layer": "yahatinda-herd",
+      "lead": "The inked outline is where collared elk",
+      "map": "basemap/plates/ya-ha-tinda.geojson",
+      "name": "ya-ha-tinda",
+      "terms": "Data: Ya Ha Tinda elk project, Banff National Park, 2001-2024 (females) (CC0 1.0). Generalised for animal safety: coordinates generalised to a 0.01-degree grid; records within 90 days of present withheld; individual identifiers removed. Fuller data may be available from the data owner on request.",
+      "title": "The Ya Ha Tinda elk, Alberta",
+      "under": "the herd's year, week by week"
+    }
+  ],
+  "readout": {
+    "air": {
+      "compass": [
+        "north",
+        "north-east",
+        "east",
+        "south-east",
+        "south",
+        "south-west",
+        "west",
+        "north-west"
+      ],
+      "every_way": "heading every way",
+      "fair": "a fair amount in the air",
+      "great": "a great deal in the air",
+      "heading": "most of it heading",
+      "little": "little in the air"
+    },
+    "herd": {
+      "cells": "cells",
+      "in": "collared animals in",
+      "reached": "newly reached"
+    },
+    "journey": {
+      "day": "day",
+      "each": "of each journey",
+      "going": "still going",
+      "of": "of"
+    }
+  },
+  "schema_version": 1,
+  "search": {
+    "animals": "animals, by Latin or English name",
+    "away": "put it away",
+    "cells": "cells",
+    "drawn": "drawn from",
+    "label": "find an animal",
+    "missing": "This source's map of it was not published, so nothing is drawn.",
+    "nowhere": "Measured here, and drawn nowhere: what is known about it is below.",
+    "study": "studied, not drawn",
+    "unread": "The list of animals could not be read."
+  },
+  "stills": [
+    {
+      "button": "where tracked sea animals went",
+      "caption": "The more of them, the larger the dot, over the whole period at once and on a logarithmic scale, so a cell with a thousand is not drawn a thousand times the size of one. It shows where animals were tagged and followed, which is where researchers worked, as much as where animals go.",
+      "credit": "Data: MegaMove \u2014 global space use of marine megafauna (CC0 1.0). Published at source resolution.",
+      "data": "layers/marine-space-use.grid.json",
+      "key": [],
+      "lead": "Each dot is a one-degree cell where tracked animals were.",
+      "name": "marine-space-use",
+      "plate": null,
+      "title": "Where tracked sea animals went",
+      "unit": "tracked animals"
+    },
+    {
+      "button": "kinds of sea animal recorded",
+      "caption": "It counts what people have seen and reported, so the busiest cells are the best surveyed, and a blank cell is one with no record of these animals, not one with nothing in it.",
+      "credit": "Data: OBIS speciesgrids \u2014 gridded marine species distributions (H3 level 7) (CC BY 4.0). Published at source resolution.",
+      "data": "layers/marine-taxa-recorded.grid.json",
+      "key": [],
+      "lead": "Each dot is a one-degree cell, larger where more kinds of moving sea animal have at least one record.",
+      "name": "marine-taxa-recorded",
+      "plate": null,
+      "title": "How many kinds of sea animal have been recorded",
+      "unit": "kinds recorded"
+    },
+    {
+      "button": "southern Africa's two atlases",
+      "caption": "The larger the mark, the larger the change. A before and an after, not a trend, and a hole is a place nobody atlassed twice.",
+      "credit": "Data: Southern African Bird Atlas Project (SABAP1) \u2014 atlas cards, 1987\u20131991 (CC BY 4.0). Published at source resolution.",
+      "data": "layers/atlas-taxa-change.grid.json",
+      "key": [
+        {
+          "means": "more kinds recorded",
+          "value": "gain"
+        },
+        {
+          "means": "fewer kinds recorded",
+          "value": "loss"
+        }
+      ],
+      "lead": "A solid dot is a quarter-degree cell where the second atlas recorded more kinds than the first, a ring one where it recorded fewer.",
+      "name": "atlas-taxa-change",
+      "plate": {
+        "centre": [
+          25.2,
+          -28.4
+        ],
+        "credit": "Map: Natural Earth \u2014 1:10m land, coastline and rivers (Public domain).",
+        "frame": [
+          16.5,
+          34.0,
+          -35.4,
+          -21.4
+        ],
+        "map": "basemap/plates/southern-africa.geojson",
+        "name": "southern-africa"
+      },
+      "title": "Southern Africa's two atlases: more kinds recorded, or fewer",
+      "unit": ""
+    },
+    {
+      "button": "where a change can be measured",
+      "caption": "Inked does not mean a change was found, only that one could be, and a blank place is one the records say nothing about.",
+      "credit": "Worked out by this project from every source it holds, so no upstream licence applies; the finest thing it states about anywhere is a one-degree cell.",
+      "data": "detectability.json",
+      "key": [
+        {
+          "means": "a long enough series, with effort accounted for",
+          "value": "detectable"
+        },
+        {
+          "means": "a repeated protocol, not yet long enough",
+          "value": "too-short"
+        },
+        {
+          "means": "records, but no measure of how hard anyone looked",
+          "value": "effort-not-measured"
+        },
+        {
+          "means": "one pooled period, nothing to trend",
+          "value": "no-time-axis"
+        }
+      ],
+      "lead": "Inked where some source has a long enough series with its effort measured, pencilled where something stops it.",
+      "name": "detectability",
+      "plate": null,
+      "title": "Where a change could be measured at all",
+      "unit": ""
+    }
+  ],
+  "world": {
+    "caption": "The weather radars' night sky, three tracked animals, the sea ice's edge and the green wave, each through its own year.",
+    "lead": "Choose one to look closer.",
+    "readout": "choose one to look closer",
+    "still": "A still map has one value for each place over its whole period, so it does not move with the clock.",
+    "terms": [
+      "Data: Dark Ecology Dataset \u2014 daily time series of aerial biomass, 1995\u20132025 (CC BY 4.0). Published at source resolution.",
+      "Data: Arctic fox Bylot - Argos tracking (CC0 1.0). Generalised for animal safety: coordinates generalised to a 0.001-degree grid; records within 30 days of present withheld. Fuller data may be available from the data owner on request.; drawn from daily median positions snapped to 0.01 degrees, coarser than policy, so no den resolves to a point",
+      "Data: Svalbard Reindeer Project - Nordenskiold Land (CC BY-NC 4.0). Generalised for animal safety: coordinates generalised to a 0.01-degree grid; records within 90 days of present withheld; individual identifiers removed. Fuller data may be available from the data owner on request.",
+      "Data: Ya Ha Tinda elk project, Banff National Park, 2001-2024 (females) (CC0 1.0). Generalised for animal safety: coordinates generalised to a 0.01-degree grid; records within 90 days of present withheld; individual identifiers removed. Fuller data may be available from the data owner on request.",
+      "Data: Sea Ice Index, version 4 \u2014 monthly median ice edge, 1981\u20132010 (Open access; citation required as a condition of use). Published at source resolution.; unprojected from the product's polar stereographic and split at the antimeridian",
+      "Data: PKU GIMMS NDVI v1.2 \u2014 global half-monthly vegetation index, 1982\u20132022 (CC BY 4.0). Published at source resolution.; reduced to a 1-degree half-monthly climatology over 1982-2022, vegetated pixels only"
+    ],
+    "title": "Where things move, through a year",
+    "wave": "The faint green under everything is the green wave: how green the land is at this point of the year, averaged over every year of the record, so it is no one year's spring, and not a response to anything."
+  }
+}

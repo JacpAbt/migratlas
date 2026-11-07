@@ -345,7 +345,7 @@ test("the plate is drawn, and its marks are named", async ({ page }) => {
   await expect(page.locator(".plate__key li")).toHaveCount(marks.length);
   // The measurement is not on this sheet, and the plate says where it is instead of implying it is.
   await expect(page.locator(".plate__elsewhere")).toContainText(
-    "drawn on the globe",
+    "drawn in the atlas",
   );
 });
 
@@ -820,7 +820,7 @@ test("no chapter but the world boots a map", async ({ page }) => {
   );
   await openBook(page, drawn.at);
   await expect(page.locator(`.page--${drawn.side} .plate`)).toHaveCount(1);
-  await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
+  await expect(page.locator(".atlas canvas")).toHaveCount(0);
 });
 
 test("a claim reads what, then how, then the picture, then the numbers", async ({
@@ -995,6 +995,31 @@ for (const [width, height] of [
   });
 }
 
+/**
+ * What a page that measured over was doing, for the failure to carry.
+ *
+ * The guard failed once at 1024x768 in the dyslexic type -- folio 112 by 50px, a page that sits at
+ * the scale's floor with 12px to spare -- and then not again in some twenty walks under CPU
+ * throttling and parallel load. Unreproduced, the next failure has to explain itself: whether the
+ * overflow was still there half a second later (a page that does not fit) or gone (a measurement
+ * taken before the page was fitted), the scale the fit had set, whether it had set down its
+ * droppable parts, and the state of the faces. It changes no verdict.
+ */
+async function evidence(page: Page, side: "verso" | "recto"): Promise<string> {
+  await page.waitForTimeout(500);
+  return page.evaluate((which) => {
+    const inner = document.querySelector<HTMLElement>(`.spread > .page--${which} .page__inner`);
+    if (!inner) return "[gone half a second later]";
+    const later = inner.scrollHeight - inner.clientHeight;
+    const air = inner.style.getPropertyValue("--fit-air") || "unset";
+    const type = inner.style.getPropertyValue("--fit-type") || "unset";
+    const crowded = inner.hasAttribute("data-crowded") ? ", crowded" : "";
+    const loading = [...document.fonts].filter((face) => face.status === "loading").map((face) => face.family);
+    const faces = loading.length ? `faces loading: ${loading.join(", ")}` : `faces ${document.fonts.status}`;
+    return `[${later}px half a second later; air ${air}, type ${type}${crowded}; ${faces}]`;
+  }, side);
+}
+
 /*
   The guard that makes declared panels worth declaring.
 
@@ -1105,12 +1130,12 @@ for (const [width, height] of [
             .querySelector(`.spread > .page--${side} .page__folio`)
             ?.getBoundingClientRect();
           /*
-            The world's page is the one exception, and it is deliberate: the map fills that leaf
-            absolutely and `Page.svelte` gives the folio `z-index: 3` so the corner stays legible
-            over it. Its scale bar and its attribution sit low on the map by design, so measuring
-            them against the folio would be asking the globe to behave like a page of prose.
+            The world's pages are the one exception, and it is deliberate: they are paper the atlas is
+            drawn over (ADR 0021), filled edge to edge by one element that carries no words. The
+            atlas's own words sit on the spread above them and keep clear of the folios themselves --
+            measuring the page's paper against its folio would be asking a map to behave like prose.
           */
-          const fullBleed = inner.querySelector("canvas") !== null;
+          const fullBleed = inner.querySelector(".world") !== null;
           return {
             over: inner.scrollHeight - inner.clientHeight,
             under:
@@ -1140,7 +1165,7 @@ for (const [width, height] of [
         if (!cell) continue;
         // Two pixels of slack for sub-pixel layout, and no more: this is a budget, not a target.
         if (cell.over > 2)
-          over.push(`${cell.folio} (${side}) by ${cell.over}px: ${cell.head}`);
+          over.push(`${cell.folio} (${side}) by ${cell.over}px ${await evidence(page, side)}: ${cell.head}`);
         if (cell.under > 2)
           under.push(`${cell.folio} (${side}) by ${cell.under}px: ${cell.head}`);
         if (cell.folio !== null) folios.push(cell.folio);
@@ -1785,6 +1810,11 @@ test("the candle on the table is out by day and lit by a match at night, and the
   await expect(table, "the table was never drawn").toHaveAttribute("data-candle", "out", {
     timeout: 20_000,
   });
+  // Shown at once, in the frame it is ready, over nothing painted: the owner saw the painted wood
+  // for a second and then the table fade in over it.
+  expect(await table.evaluate((node) => getComputedStyle(node).visibility)).toBe("visible");
+  expect(await table.evaluate((node) => getComputedStyle(node).transitionDuration)).toBe("0s");
+  await expect(page.locator(".desk-painted")).toHaveCount(0);
 
   await page.locator(".surface").getByRole("radio", { name: "Night", exact: true }).check();
   await expect(table).toHaveAttribute("data-candle", "lighting");
@@ -1792,6 +1822,21 @@ test("the candle on the table is out by day and lit by a match at night, and the
     timeout: 30_000,
   });
   expect(await table.evaluate((node) => getComputedStyle(node).pointerEvents)).toBe("none");
+});
+
+test("where the table cannot be drawn, the painted walnut stands in for it", async ({ page }) => {
+  /*
+    Without `?desk=3d` the runner's software WebGL is detected and no scene is made: the painted
+    walnut is the table, and the canvas never shows. Until the scene is ready the margin is only the
+    table's flat colour, so this is the one case in which the painted wood is drawn at all.
+  */
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("#ch=how-to-read&p=0");
+  await expect(page.locator(".book")).toBeVisible();
+  const table = page.locator("canvas.desk-scene");
+  await expect(table).toHaveAttribute("data-candle", "software");
+  await expect(page.locator(".desk-painted")).toHaveCount(1);
+  expect(await table.evaluate((node) => getComputedStyle(node).visibility)).toBe("hidden");
 });
 
 test("a monitor gets the spread and only the spread", async ({ page }) => {
@@ -2226,6 +2271,12 @@ test.describe("on a phone", () => {
     const state = await survey(page);
     const opened = leafOpening(await leafLayout(), "what-did-not");
     expect(state.scrollLeft).toBe(state.offsets[opened]);
+
+    // Opened again, it marks the chapter you are in, once. It compared each chapter's slug with the
+    // open leaf's index -- a string with a number -- and so marked none, for sight or for a reader.
+    await thumb.click();
+    await expect(tabs.filter({ hasText: "Elsewhere?" })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator('.fan__tab[aria-current="page"]')).toHaveCount(1);
   });
 
   test("no leaf overflows unless it holds one indivisible thing", async ({

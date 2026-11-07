@@ -1,4 +1,4 @@
-"""Build the globe's published layers from the lake.
+"""Build the atlas's published layers from the lake.
 
 Each layer resolves its source in the registry, asks the gate for a clearance, and hands
 that clearance to the exporter. There is no path from lake to web that skips the gate.
@@ -125,7 +125,7 @@ LAYERS: Final[tuple[LayerSpec, ...]] = (
             "from OBIS. Not species richness: it counts what has been observed and reported, "
             "so it maps survey effort and coastal accessibility at least as much as biology."
         ),
-        # OBIS is H3 level 7, roughly 5 km, which is far finer than anything a globe shows and
+        # OBIS is H3 level 7, roughly 5 km, which is far finer than anything the atlas shows and
         # far finer than the effort behind it justifies. Pooled onto a one-degree grid, stated.
         cell_size_deg=1.0,
         pool=Pooling.COUNT_TAXA,
@@ -255,7 +255,7 @@ def _passage_shift(nights: pl.DataFrame) -> pl.DataFrame:
     numbers Phase 1 could defend. The spring trend sits inside its own permutation null and
     flips sign across break specifications; a magnitude trend runs straight across the
     NEXRAD dual-polarisation upgrade with nothing to separate the instrument from the
-    animals. Publishing either on a globe would be publishing noise attractively.
+    animals. Publishing either on a map would be publishing noise attractively.
     """
     quantiles = passage_quantiles(
         nights,

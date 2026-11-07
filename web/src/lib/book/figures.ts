@@ -25,29 +25,30 @@
  * third one added upstream fails the build rather than falling off the end of the book.
  */
 
+/** The slices `Ribbon.svelte` draws, and those `Coverage.svelte` draws. */
+export type RibbonPart = "chart" | "reading" | "gap" | "precise" | "caveat" | "notes";
+export type CoveragePart = "measured" | "summary" | "sources" | "held" | "held-first" | "held-more";
+
 /** One page of a multi-page figure. */
-export interface FigurePage {
+export interface FigurePage<Part extends string = RibbonPart | CoveragePart> {
   /** Which slice of the figure component to render. */
-  part:
-    | "chart"
-    | "reading"
-    | "gap"
-    | "precise"
-    | "caveat"
-    | "notes"
-    | "measured"
-    | "summary"
-    | "sources"
-    | "held"
-    | "held-first"
-    | "held-more";
+  part: Part;
   /** The heading on that page. */
   title: string;
 }
 
-export interface FigureKind {
-  kind: "ribbon" | "coverage" | "headline";
-  pages: readonly FigurePage[];
+/**
+ * A figure, its pages typed by its kind: a ribbon's pages name only the ribbon's slices, so a
+ * coverage slice handed to the ribbon is a type error rather than a page that renders nothing.
+ */
+export type FigureKind =
+  | FigureOf<"ribbon", RibbonPart>
+  | FigureOf<"coverage", CoveragePart>
+  | FigureOf<"headline", "chart">;
+
+interface FigureOf<Kind extends string, Part extends string> {
+  kind: Kind;
+  pages: readonly FigurePage<Part>[];
   /**
    * The same figure for a 375px column, where two of these pages do not fit.
    *
@@ -60,7 +61,7 @@ export interface FigureKind {
    * Absent where the wide list already fits a narrow leaf, which is most figures -- a plate is one
    * page either way.
    */
-  narrow?: readonly FigurePage[];
+  narrow?: readonly FigurePage<Part>[];
 }
 
 /*
@@ -138,6 +139,16 @@ export const FIGURES: Readonly<Record<string, FigureKind>> = {
 export const RIBBON_CHARTS = FIGURES["anthropogenic-share"]!.pages.filter(
   (page) => page.part === "chart",
 ).length;
+
+/** One figure's page at `at`, in the arrangement given, typed by that figure's kind. */
+export function pageOf<Part extends string>(
+  figure: { pages: readonly FigurePage<Part>[]; narrow?: readonly FigurePage<Part>[] },
+  at: number,
+  narrow: boolean,
+): FigurePage<Part> {
+  const pages = (narrow && figure.narrow) || figure.pages;
+  return pages[at] ?? pages[0]!;
+}
 
 /** The pages this claim's figure needs. A plate is one page and has no slice. */
 export function figurePages(key: string, narrow = false): readonly FigurePage[] {

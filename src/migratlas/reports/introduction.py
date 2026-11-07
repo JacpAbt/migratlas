@@ -70,7 +70,7 @@ def counts() -> tuple[int, int, int]:
     """
     findings = _findings()
     realms = {str(finding["realm"]) for finding in findings} - {EVERYWHERE}
-    return len(findings), len(realms), len(catalog.load())
+    return len(findings), len(realms), len(catalog.measured())
 
 
 def realm_words() -> list[str]:
@@ -204,7 +204,7 @@ def build() -> Introduction:
                     "nothing, whether next year can be predicted, and what we cannot see. Or take "
                     "the tabs in any order — each chapter stands alone, and any of them can be "
                     "read one place at a time from the small tabs at the foot: the air, the sea "
-                    "or the land. Or go straight to the globe at the back of the book and look at "
+                    "or the land. Or go straight to the atlas at the back of the book and look at "
                     "the records yourself, with nothing argued over the top."
                 ),
             ),

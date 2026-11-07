@@ -24,7 +24,9 @@ def test_the_counts_are_the_published_ones() -> None:
     findings = ledger["findings"]
 
     assert published == len(findings)
-    assert sources == len(catalog.load())
+    # A map's outline is registered for its licence, not counted as somewhere findings came from.
+    assert sources == len(catalog.measured())
+    assert sources == sum(not source.cartographic for source in catalog.load().values())
     # `all` is the realm a cross-realm finding carries. It is not a place and must not be counted
     # as one: counting it would inflate the number in the most prominent sentence on the site.
     assert realms == len({f["realm"] for f in findings} - {"all"})

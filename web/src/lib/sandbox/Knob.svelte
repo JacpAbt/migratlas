@@ -5,7 +5,8 @@
 
   let { knob }: { knob: Knob } = $props();
 
-  let chosen = $state(knob.default);
+  // Writable: the reader's choice, starting at the published value and reset if the knob changes.
+  let chosen = $derived(knob.default);
 
   const variant = $derived(
     knob.variants.find((candidate) => candidate.key === chosen) ?? knob.variants[0]!,

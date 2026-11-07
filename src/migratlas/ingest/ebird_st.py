@@ -3,7 +3,7 @@
 **This source may never be published.** Its Terms permit analysis and permit reporting results;
 they forbid serving the products or anything derived from them. The registry records
 ``redistribution.allowed: false`` and the gate refuses a clearance for it, so the enforcement is
-structural rather than a note. Nothing here reaches the globe.
+structural rather than a note. Nothing here reaches the atlas.
 
 Fifty species, because the Terms cap non-peer-reviewed use at fifty. That is why the list below
 is a fixed constant and not a query: a cap you can accidentally exceed is not a cap.

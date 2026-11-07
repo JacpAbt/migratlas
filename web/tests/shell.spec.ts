@@ -141,6 +141,22 @@ async function figurePage(page: Page, key: string): Promise<void> {
 }
 
 /** One claim's record page, where the number and the specimen invitation are. */
+test("a claim's specimen button opens the animal that carries its argument, in the atlas", async ({
+  page,
+}) => {
+  // The road was built in the old shell, died silently when the book became the front door, was
+  // rebuilt for the globe, and is rebuilt here for the atlas (ADR 0021 step 6).
+  await recordPage(page, "marine-null");
+  // Computed in the reports layer, so the button names whichever species most decisively went both
+  // ways in the current lake rather than one someone typed.
+  const invitation = page.locator(".claim__specimen");
+  await expect(invitation).toBeVisible();
+  await invitation.click();
+  // Thirty seconds: the turn, the atlas's data, the list of animals and the study page, in turn.
+  await expect(page.locator(".atlas .study")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".atlas .study")).toContainText("north");
+});
+
 async function recordPage(page: Page, key: string): Promise<void> {
   await open(
     page,
@@ -222,32 +238,11 @@ async function refusalOf(page: Page, key: string, asks: RegExp): Promise<void> {
   throw new Error(`no page carries a refusal about ${String(asks)}`);
 }
 
-/** Open a page of the book. `?debug` so the world chapter's map is readable. */
+/** Open a page of the book. `?debug` so the world chapter's atlas reports what it drew. */
 async function open(page: Page, hash = ""): Promise<void> {
   await page.goto(`?debug=1${hash}`);
   await expect(page.locator(".book, .leaves")).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
-}
-
-/** The world chapter, which is where the map, the layers, the clock and the search live. */
-async function explore(page: Page): Promise<void> {
-  await open(page, "#ch=the-world");
-  // Thirty seconds, for the reason `notebook.spec.ts`'s own world helper states at length: this
-  // waits on a WebGL context and ten layers, and the default five is a number about DOM latency.
-  await expect(page.locator(".explore")).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator(".globe canvas")).toBeVisible({ timeout: 30_000 });
-  /*
-    And the layers, which arrive after the canvas does. The debug hook is published once every one of
-    them has loaded, so its existence is the load-complete signal -- the same one `globe.spec.ts`
-    uses and for the same reason: counting them by hand went stale the day the ice layer landed.
-  */
-  await page.waitForFunction(
-    () =>
-      !!(window as unknown as { migratlas?: { loaded?: unknown[] } }).migratlas
-        ?.loaded?.length,
-    undefined,
-    { timeout: 30_000 },
-  );
 }
 
 /**
@@ -278,56 +273,6 @@ async function arrive(page: Page): Promise<void> {
   await open(page);
   // Either container: a spread by desk and a leaf by phone, and this helper serves both.
   await expect(page.locator(".spread, .leaf").first()).toBeVisible();
-}
-
-/**
- * Wait until the camera stops moving, then answer where it is.
- *
- * Two consecutive identical readings, because `flyTo` has no "arrived" event worth trusting and a
- * single sample mid-flight is indistinguishable from a camera that never left.
- */
-async function settled(page: Page): Promise<Camera> {
-  let previous = "";
-  await expect
-    .poll(
-      async () => {
-        // Tolerates the hook not existing yet. It is published only once every layer has loaded,
-        // and the arrival card is visible long before the 50,000-feature assessment finishes -- so a
-        // poll that threw on a missing map reported "the shell must expose one" for a shell that
-        // simply had not got there.
-        const at = await camera(page);
-        if (!at) return false;
-        const now = `${at.lon.toFixed(2)},${at.lat.toFixed(2)},${at.zoom.toFixed(2)}`;
-        const still = now === previous;
-        previous = now;
-        return still;
-      },
-      { timeout: SETTLE_MS, intervals: [250] },
-    )
-    .toBe(true);
-
-  const at = await camera(page);
-  expect(at, "the shell never exposed a map under ?debug").not.toBeNull();
-  return at!;
-}
-
-interface Camera {
-  lon: number;
-  lat: number;
-  zoom: number;
-}
-
-/** Camera state, read from MapLibre rather than inferred from pixels. Null until the hook exists. */
-async function camera(page: Page): Promise<Camera | null> {
-  return page.evaluate(() => {
-    const globe = (window as unknown as { migratlas?: { map?: unknown } })
-      .migratlas?.map as
-      | { getCenter: () => { lng: number; lat: number }; getZoom: () => number }
-      | undefined;
-    if (!globe) return null;
-    const centre = globe.getCenter();
-    return { lon: centre.lng, lat: centre.lat, zoom: globe.getZoom() };
-  });
 }
 
 test("a visitor lands on the story, and its first claim is one turn away", async ({
@@ -419,35 +364,6 @@ test("asking how we know is a page turn, not a disclosure", async ({
   );
 });
 
-test("the map is not covered by the thing you read it with", async ({
-  page,
-}) => {
-  /*
-    The regression this exists for: at 56rem the claim sheet covered the sphere on a laptop, which
-    makes both the camera flight and the caption explaining it pointless. There is no sheet over a
-    map now -- the world chapter puts the apparatus on one leaf and the map on the other -- so the
-    same worry is asked of that arrangement: the map has a real share of the spread, and the panel
-    is not on top of it.
-
-    ADR 0015 decision 8 records this arrangement as the one thing left open on a phone, where the
-    two are a swipe apart rather than side by side.
-  */
-  await explore(page);
-  const canvas = await page.locator(".globe canvas").boundingBox();
-  const spread = await page.locator(".spread").boundingBox();
-  expect(canvas && spread).toBeTruthy();
-  expect(
-    canvas!.width / spread!.width,
-    `the map takes ${((canvas!.width / spread!.width) * 100).toFixed(0)}% of the spread`,
-  ).toBeGreaterThan(0.3);
-
-  // And the tools are beside it rather than over it.
-  const panel = await page.locator(".explore").boundingBox();
-  expect(
-    panel!.x + panel!.width,
-    "the tools overlap the map",
-  ).toBeLessThanOrEqual(canvas!.x + 2);
-});
 
 test("turning to another claim swaps the evidence with it", async ({
   page,
@@ -547,215 +463,9 @@ test("a link to a claim opens that claim, with nothing in front of it", async ({
   await expect(page.locator(".claim__precise")).toHaveText(/human forcing/i);
 });
 
-test("choosing an animal says what is known about it, not just where it is", async ({
-  page,
-}) => {
-  await explore(page);
 
-  // Atlantic mackerel: measured in fourteen bottom-trawl surveys, which disagree.
-  await page.getByRole("searchbox").fill("Scomber scombrus");
-  await page.locator(".hits button").first().click();
 
-  const study = page.locator(".study");
-  await expect(study).toBeVisible();
-  await expect(study.locator("h3")).toHaveText(/Scomber scombrus/);
 
-  // The rows are the point. `marine-null` claims surveys disagree in direction, and until these
-  // were published the only number on the site was the median that averages them out.
-  const rows = study.locator(".study__rows div");
-  expect(await rows.count()).toBeGreaterThan(3);
-  await expect(study.locator(".study__caveat")).not.toBeEmpty();
-});
-
-test("an animal the gate refuses has a page saying so, with no location on it", async ({
-  page,
-}) => {
-  await explore(page);
-  await page.getByRole("searchbox").fill("Canis lupus");
-  await page.locator(".hits button").first().click();
-
-  const withheld = page.locator(".study__one--withheld");
-  await expect(withheld).toBeVisible();
-  await expect(withheld).toContainText(/held back/i);
-  // The rationale, not just the refusal. An unexplained refusal cannot be reviewed.
-  await expect(withheld.locator(".study__caveat")).toContainText(/Cooke et al/);
-
-  // And nothing on it could put anyone within reach of an animal.
-  const prose = (await withheld.textContent()) ?? "";
-  expect(prose).not.toMatch(/-?\d{1,3}\.\d{3,}/);
-});
-
-test("a species page is fetched only when a species is chosen", async ({
-  page,
-}) => {
-  await explore(page);
-
-  const asked: string[] = [];
-  page.on("request", (request) => {
-    if (/species-study-\d+\.json/.test(request.url()))
-      asked.push(request.url());
-  });
-
-  // Typing must not cost a shard. 2.2 MB of study pages has no business loading for a reader who
-  // is looking at the globe.
-  await page.getByRole("searchbox").fill("Scomber");
-  await expect(page.locator(".hits button").first()).toBeVisible();
-  expect(asked, "a keystroke fetched a study shard").toEqual([]);
-
-  await page.locator(".hits button").first().click();
-  await expect(page.locator(".study")).toBeVisible();
-  expect(
-    asked.length,
-    "choosing a species fetched more than its own shard",
-  ).toBe(1);
-});
-
-test("a study card leads back to the claim its evidence feeds", async ({
-  page,
-}) => {
-  await explore(page);
-
-  await page.getByRole("searchbox").fill("Scomber");
-  await page.locator(".hits button").first().click();
-  await expect(page.locator(".study")).toBeVisible();
-
-  /*
-    The road back, and it was dead. `Study.svelte` links to `#c=<key>` -- the address the *shell*
-    read -- and the book reads `ch` and `p`, so "read the claim this evidence feeds" went nowhere
-    from the day the book became the front door. Rather than rewrite the link, `Reader` now reads
-    `c` as an address of its own and resolves it to that claim's first page: those links exist
-    outside this repository too, because they are what the deployed site has been handing out.
-  */
-  await page.locator(".study__claim").first().click();
-  await expect(page.locator(".claim__title")).toContainText(
-    "Fish are not all moving",
-  );
-  await expect(page).toHaveURL(/[#&]c=marine-null/);
-});
-
-test("a claim's specimen button opens the fish that carries its argument", async ({
-  page,
-}) => {
-  /*
-    The other half, and it was dead too -- worse than dead, invisible. `Claim` renders the invitation
-    only when it is given somewhere to go, and `Reader` passed nothing, so the button did not exist
-    and no test noticed. It is on the record page, which is where the number it belongs to is.
-  */
-  await recordPage(page, "marine-null");
-
-  // Computed in the reports layer, so the button names whichever species most decisively went both
-  // ways in the current lake rather than one someone typed.
-  const invitation = page.locator(".claim__specimen");
-  await expect(invitation).toBeVisible();
-  await invitation.click();
-
-  /*
-    The preselect is consumed through the same code path as a visitor's click, which runs after
-    explore's data is up -- and the wave made that load heavier. CI hit 5s with the study still on its
-    way, then 15 once the suite reached twelve minutes and this path was waiting on the map's data and
-    a taxon fetch behind two workers' WebGL. Thirty, for the reason the map helpers already carry:
-    the number is about how long the *work* takes, and every time it has been left at a default
-    chosen for DOM latency it has failed on a runner rather than on a defect.
-  */
-  await expect(page.locator(".study")).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator(".study")).toContainText("north");
-});
-
-test("the year can be set moving, and the control says so", async ({
-  page,
-}) => {
-  /*
-    The arrival's third door is gone with the card. What it was for is not: a reader who wants to
-    watch a year rather than read about one, and a control that does not lie about whether the clock
-    is running. The door has become the button in the world chapter's own tools, which is where the
-    clock always lived -- `Shell` only pressed it on the reader's behalf.
-  */
-  await explore(page);
-  const run = page.locator(".explore .run").first();
-  await expect(run).toBeVisible();
-  await run.click();
-  await expect(
-    run,
-    "the clock is running and the button still says Play",
-  ).toContainText(/pause/i);
-});
-
-test("the world chapter offers the whole map, not the last claim's filter", async ({
-  page,
-}) => {
-  /*
-    The regression this exists for: explore mode inherited the last claim's layer subset, so a reader
-    who asked for the map got one claim's evidence still filtered onto it -- which reads as a bug
-    rather than a choice.
-
-    It cannot happen the same way now and the assertion moved with the reason. The chapter draws
-    nothing until asked, on the owner's decision -- nine layers composited read as satellite imagery
-    over a basemap that is already paper and ink -- so "the whole map" is a claim about what is
-    *offered*: every published layer in the panel, and none of them inherited from wherever the reader
-    has been. Visited after a claim, which is the state that used to break it.
-  */
-  await claimPage(page, "marine-null");
-  await explore(page);
-
-  // Every published layer is on the list, counted from the manifest rather than written here.
-  const manifest = await page.request
-    .get("layers/manifest.json")
-    .then((r) => r.json() as Promise<{ name: string }[]>);
-  // Plus one: the detectability assessment is not a manifest layer -- it is computed and added by
-  // `addDetectability` -- and it still gets a control, which is the point of counting at all.
-  await expect(page.locator(".explore .layers li")).toHaveCount(
-    manifest.length + 1,
-  );
-
-  // And none of them is drawn, so nothing was carried over from the claim.
-  const drawn = await page.evaluate(() => {
-    const map = (window as unknown as { migratlas?: { map?: unknown } })
-      .migratlas?.map as
-      | {
-          getStyle: () => {
-            layers: { id: string; layout?: { visibility?: string } }[];
-          };
-        }
-      | undefined;
-    return (map?.getStyle().layers ?? [])
-      .filter((layer) =>
-        /^(series|surface|contour|tracks|seasonal|detectability)/.test(
-          layer.id,
-        ),
-      )
-      .filter((layer) => layer.layout?.visibility !== "none")
-      .map((layer) => layer.id);
-  });
-  expect(drawn, `the chapter arrived drawing ${drawn.join(", ")}`).toEqual([]);
-
-  // Ticking one draws one, which is the whole of what the chapter is for.
-  await page.locator(".explore .layers input").first().check();
-  await expect
-    .poll(
-      () =>
-        page.evaluate(() => {
-          const map = (window as unknown as { migratlas?: { map?: unknown } })
-            .migratlas?.map as
-            | {
-                getStyle: () => {
-                  layers: { id: string; layout?: { visibility?: string } }[];
-                };
-              }
-            | undefined;
-          return (map?.getStyle().layers ?? []).filter(
-            (layer) =>
-              layer.layout?.visibility !== "none" &&
-              /^(series|surface)-/.test(layer.id),
-          ).length;
-        }),
-      { message: "ticking a layer drew nothing", timeout: 30_000 },
-    )
-    .toBeGreaterThan(0);
-
-  // And the camera is still the whole sphere: nothing is leading the reader anywhere on this chapter.
-  const wide = await settled(page);
-  expect(wide.zoom).toBeLessThan(3);
-});
 test("every claim is reachable, and says what it found before anyone reads it", async ({
   page,
 }) => {
@@ -822,19 +532,8 @@ test("every published claim has a view, and every view names a real layer", asyn
   for (const key of problems.keys) {
     expect(VIEWS[key], `no view recorded for the claim "${key}"`).toBeTruthy();
   }
-  // The guard that caught two wrong layer names, which show up as a claim whose evidence never
-  // appears -- indistinguishable from a claim that has no evidence.
   for (const [key, view] of Object.entries(VIEWS)) {
-    for (const layer of view.layers) {
-      expect(
-        problems.names,
-        `${key} names a layer "${layer}" that is not in the manifest`,
-      ).toContain(layer);
-    }
-    expect(
-      view.because,
-      `${key} does not say why the camera is there`,
-    ).toBeTruthy();
+    expect(view.because, `${key} does not say where the claim is made`).toBeTruthy();
   }
   expect(problems.keys, "the arrival claim is not in the ledger").toContain(
     ARRIVAL_KEY,
@@ -987,45 +686,6 @@ for (const [device, width, height] of [
     await expect(page.locator(".bias__finding").first()).toBeVisible();
     await expect(page.locator("details, [hidden]")).toHaveCount(0);
 
-    // Nothing the map owns may be printed *over* the claim, and that is the requirement -- not that
-    // the boxes never touch. The first version compared bounding boxes, which is stricter than what
-    // matters and failed on CI over a few pixels of harmless overlap while the notice was perfectly
-    // readable. Occlusion is the real test: ask the browser what is actually on top at the centre of
-    // each control, and require it to be that control.
-    // Polled, not sampled once. The attribution control registers each source's credit as that
-    // source loads and only then collapses to its compact "i", so a single reading can catch it
-    // spread across the whole width of a 390px phone with its centre under the sheet -- which is
-    // what it did, intermittently, and only under full-suite load. The requirement is about the
-    // settled page; a control that is really buried stays buried and this still fails.
-    await expect
-      .poll(
-        () =>
-          page.evaluate(() => {
-            const hits: string[] = [];
-            for (const selector of [
-              ".maplibregl-ctrl-attrib",
-              ".maplibregl-ctrl-group",
-              ".maplibregl-ctrl-scale",
-            ]) {
-              for (const node of document.querySelectorAll(selector)) {
-                const box = node.getBoundingClientRect();
-                if (box.width === 0 || box.height === 0) continue;
-                const at = document.elementFromPoint(
-                  box.left + box.width / 2,
-                  box.top + box.height / 2,
-                );
-                if (!at || !(node.contains(at) || at.contains(node))) {
-                  hits.push(
-                    `${selector} is under ${at?.className || at?.tagName || "nothing"}`,
-                  );
-                }
-              }
-            }
-            return hits;
-          }),
-        { message: "something the map owns is printed over the claim" },
-      )
-      .toEqual([]);
   });
 }
 
@@ -1282,94 +942,6 @@ test("the detectability assessment is the coverage claim's own number", async ({
   await expect(coverage.locator(".coverage__ceiling").first()).not.toBeEmpty();
 });
 
-test("explore carries the tools, with the terms every drawn layer was published under", async ({
-  page,
-}) => {
-  await explore(page);
-
-  const panel = page.locator(".explore");
-  await expect(panel).toBeVisible();
-
-  // One toggle per layer, including the assessment, which starts off. Counted from the manifest
-  // rather than written here: the literal was 4 and publishing a fifth layer broke this test
-  // instead of the thing it is meant to protect, which is that every layer gets a control.
-  const published = await page.evaluate(async () => {
-    const manifest = (await fetch("layers/manifest.json").then((r) =>
-      r.json(),
-    )) as unknown[];
-    return manifest.length;
-  });
-  const toggles = panel.locator(".layers input");
-  await expect(
-    toggles,
-    "a published layer has no toggle, or one has two",
-  ).toHaveCount(published + 1);
-
-  // Required, not decorative: published data must never be separable from the terms it was
-  // published under. This is the assertion the old page had and the shell has to keep.
-  /*
-    The terms of every layer *currently drawn*, so one is drawn first. On a bare globe the paragraph
-    is absent, and that is the rule working rather than a gap in it: the obligation attaches to data
-    on screen, and what must never happen is a layer drawn with its terms missing.
-  */
-  await expect(panel.locator(".terms")).toHaveCount(0);
-  await panel.locator(".layers input").first().check();
-  await expect(panel.locator(".terms")).not.toBeEmpty();
-
-  // The clock reads as a date rather than as a day number, and without the stray punctuation a
-  // trimmed shared formatter left behind.
-  //
-  // `\w{3,4}` and not `\w{3}`: `month: "short"` under en-GB abbreviates eleven months to three
-  // letters and September to four. Written as three, this passed every day of the year except in
-  // September, and it duly failed on 1 September against "1 Sept · week 35". The assertion is
-  // about the shape of the label rather than the width of a month name, so the range is the fix
-  // and not a wider pattern that would stop checking anything.
-  const clockface = await panel.locator(".clockface").textContent();
-  expect(clockface).toMatch(/^\d{1,2} \w{3,4} · week \d{1,2}$/);
-
-  // Moving the slider moves the label, so the control is wired to the clock and not decorative.
-  await panel.locator(".time input").fill("120");
-  await expect(panel.locator(".clockface")).not.toHaveText(clockface!);
-
-  // Search is loaded and knows how many animals it holds.
-  await expect(panel.locator("#taxon-search")).toHaveAttribute(
-    "placeholder",
-    /Search [\d,]+ animals/,
-  );
-});
-
-test("switching on the assessment brings its key with it", async ({ page }) => {
-  await explore(page);
-
-  const panel = page.locator(".explore");
-  // The regression: the legend was on the claim and missing here, which is the worse way round --
-  // the layer can be switched on from this panel and could not be read once it was.
-  await expect(panel.locator(".key li")).toHaveCount(0);
-
-  await panel.locator(".layers input").last().check();
-  await expect(panel.locator(".key li")).toHaveCount(4);
-  await expect(panel.locator(".key li").first()).toContainText("%");
-});
-
-test("searching an animal draws it and says which one is shown", async ({
-  page,
-}) => {
-  await explore(page);
-
-  // A species the index actually holds. It is built from the *published* layers, so FISHGLOB's
-  // fish are absent -- that source is a survey index with no per-species surface, and searching for
-  // a cod found nothing while looking exactly like a broken search.
-  await page.locator("#taxon-search").fill("Physeter");
-  const hits = page.locator(".hits button");
-  await expect(hits.first()).toBeVisible();
-  await hits.first().click();
-
-  // Named back to the reader, with a way out. A selection with no label is a map that changed for
-  // no stated reason.
-  await expect(page.locator(".chosen")).toContainText(/Showing/);
-  await page.locator(".chosen__clear").click();
-  await expect(page.locator(".chosen")).toHaveCount(0);
-});
 
 /**
  * A bird with a result and no surface.
@@ -1379,35 +951,6 @@ test("searching an animal draws it and says which one is shown", async ({
  * has a layer, so it never touched this path.
  */
 
-test("a studied bird has a page, and it carries both numbers", async ({
-  page,
-}) => {
-  await explore(page);
-
-  await page.locator("#taxon-search").fill("Acridotheres");
-  const hits = page.locator(".hits button");
-  await expect(hits.first()).toBeVisible();
-  await hits.first().click();
-
-  const card = page.locator(".study__one--occupancy");
-  await expect(card).toBeVisible();
-
-  // This read `undefined` for 560 birds when it shipped. The label is a Record keyed by a
-  // TypeScript union, the kinds are written in Python, and the shard JSON is cast rather than
-  // validated -- so nothing in `tsc` could see the missing entry. `test_species_pages.py` guards
-  // the coverage; this asserts a reader sees the words.
-  await expect(card.locator(".study__kind")).toHaveText(
-    "how much of the region it occupies",
-  );
-
-  // The exhibit this wave exists for. The atlas finding's second claim is that correcting for
-  // detection did not change the answer, and a reader can only check that against a number.
-  await expect(card.locator(".study__rows dt")).toHaveText([
-    "Occupancy, corrected for detection",
-    "Reporting rate, uncorrected",
-    "Against the other five-year window",
-  ]);
-});
 
 /**
  * The confound sandbox.

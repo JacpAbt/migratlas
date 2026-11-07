@@ -9,7 +9,7 @@
 <!--
   One animal's page.
 
-  The globe could already draw a species and could say nothing about it, which is a range map --
+  The atlas can draw a species and could say nothing about it, which is a range map --
   what every other biodiversity site has. This is the half that is ours: a per-species result, with
   the same furniture every claim on this site carries, because a number about one fish deserves the
   audit a number about two thousand of them gets.

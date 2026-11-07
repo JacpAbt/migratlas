@@ -204,9 +204,9 @@
         <Page side={sideOf(index)} fill folio={leaf.folio}>
           <!--
             The leaf you can see and the one either side of it. A rule about leaves and not about
-            chapters, because it is a swipe that has to land on something: the world's map is a live
-            MapLibre context and a phone should not be running one two chapters away, but it has to
-            be running already when the leaf before it is on screen.
+            chapters, because it is a swipe that has to land on something: the world's atlas is a running
+            canvas and a phone should not be drawing it two chapters away, but it has to be running
+            already when the leaf before it is on screen.
           -->
           {#if Math.abs(index - at) <= 1}
             {@render page(leaf.panel, sideOf(index))}
@@ -259,8 +259,8 @@
             type="button"
             class="fan__tab"
             style="{tabStyle(position)}; --i: {position}"
-            class:is-on={chapter.slug === open}
-            aria-current={chapter.slug === open ? "page" : undefined}
+            class:is-on={chapter.slug === here.slug}
+            aria-current={chapter.slug === here.slug ? "page" : undefined}
             onclick={() => pick(chapter.slug)}
           >
             {chapter.tab}

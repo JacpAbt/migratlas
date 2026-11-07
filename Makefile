@@ -193,6 +193,14 @@ ingest-era5-uk:  ## ERA5 monthly temperature at the butterfly transects -> lake 
 build-findings:  ## Recompute what the research established, for the globe to render
 	$(RUN) migratlas build-findings
 
+.PHONY: atlas
+atlas:  ## Publish the atlas's words -> web/public/atlas.json
+	$(RUN) migratlas build-atlas
+
+.PHONY: plates
+plates:  ## Cut the atlas plates' coast, rivers and lakes -> web/public/basemap/plates
+	$(RUN) migratlas build-plates --out web/public/basemap/plates
+
 .PHONY: build-layers
 build-layers:  ## Export the globe's layers from the lake, through the ethics gate
 	$(RUN) migratlas build-layers --out web/public/layers
@@ -321,8 +329,8 @@ report-phase3h:  ## Predict a region rather than a station: does the pooled resp
 # Frontend (runs on Windows -- node lives there)
 # ---------------------------------------------------------------------------
 .PHONY: web-install
-web-install:  ## npm install for the globe
-	cd web && npm install
+web-install:  ## npm install for the book, and svelte-check's own TypeScript 6 beside it
+	cd web && npm install && npm ci --prefix tools/svelte-check
 
 .PHONY: web-dev
 web-dev:  ## Vite dev server
@@ -333,8 +341,8 @@ web-build:  ## Production build
 	cd web && npm run build
 
 .PHONY: web-test
-web-test:  ## Browser smoke test -- asks the map what it actually drew
-	cd web && npm test
+web-test:  ## tsc, svelte-check, then the browser suite -- which asks the atlas what it drew
+	cd web && npm run typecheck && npm run check:svelte && npm test
 
 .PHONY: clean
 clean:  ## Remove build/test caches (never touches the data lake)

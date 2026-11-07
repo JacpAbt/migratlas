@@ -7,13 +7,15 @@
   import Opener from "./Opener.svelte";
   import Settings from "./Settings.svelte";
   import World from "./World.svelte";
+  import Atlas from "../atlas/Atlas.svelte";
+  import { castOf } from "../atlas/data";
   import Claim from "../claim/Claim.svelte";
   import How from "../claim/How.svelte";
   import Margin from "../claim/Margin.svelte";
   import Response from "../sandbox/Response.svelte";
   import Sandbox from "../sandbox/Sandbox.svelte";
   import { openerOf, type ChaptersDocument } from "./chapters";
-  import { leavesOf, openingOf, placeOf, ROOMY_TYPES, spreadsOf, type Panel } from "./pages";
+  import { leavesOf, openingOf, placeOf, ROOMY_TYPES, spreadsOf, type Panel, type Spread } from "./pages";
   import { world as pocket } from "./pocket.svelte";
   import type { IntroductionDocument } from "./introduction";
   import type { ResponseDocument } from "../sandbox/response";
@@ -55,43 +57,6 @@
     safeguards,
     dial,
   });
-
-  /*
-    The same book, arranged twice, and the routing works over whichever one is mounted.
-
-    A spread pads each argument to an even page count and a phone does not, so the two lists are
-    different lengths and a page has a different offset in each -- which is the owner's call: the
-    logic is different and forcing one onto the other is worse than letting each be itself. Both
-    lists have a `chapter` and an `at`, and that is all `show` and `fromUrl` ever needed.
-
-    Both are derived rather than one, because `narrow` can change under a reader who rotates a
-    phone. Deriving the unused one costs a list of objects nobody reads.
-  */
-  /*
-    The reader's type setting, because one of the three paginates differently -- see `spreadsOf`.
-
-    Read from storage here rather than off the attribute `Settings` writes, because `Settings`
-    applies the stored choice in an effect, after this component has already resolved the address
-    against a first pagination: a deep link read against the hand's arrangement lands on a different
-    page of the dyslexia setting's. Followed afterwards through that attribute, which is the thing a
-    choice actually changes.
-  */
-  let typeSetting = $state<TypeChoice>(storedType());
-  const roomy = $derived(ROOMY_TYPES.includes(typeSetting));
-
-  const spreads = $derived(spreadsOf(sources, CHAPTERS, realm, roomy));
-  const leaves = $derived(leavesOf(sources, CHAPTERS, realm));
-
-  /**
-   * The pages of the container that is actually mounted.
-   *
-   * `p` in the URL is an offset within a chapter, and it is read against this -- so the same address
-   * lands on the same chapter on either device and not necessarily the same page of it. `ch` is the
-   * durable half, which is what the comment on `fromUrl` already said and is now load-bearing.
-   */
-  const pages = $derived<readonly { chapter: (typeof CHAPTERS)[number]; at: number }[]>(
-    narrow ? leaves : spreads,
-  );
 
   const of = (key: string): Finding | undefined => findings.find((f) => f.key === key);
 
@@ -185,6 +150,43 @@
     return () => query.removeEventListener("change", watch);
   });
 
+  /*
+    The same book, arranged twice, and the routing works over whichever one is mounted.
+
+    A spread pads each argument to an even page count and a phone does not, so the two lists are
+    different lengths and a page has a different offset in each -- which is the owner's call: the
+    logic is different and forcing one onto the other is worse than letting each be itself. Both
+    lists have a `chapter` and an `at`, and that is all `show` and `fromUrl` ever needed.
+
+    Both are derived rather than one, because `narrow` can change under a reader who rotates a
+    phone. Deriving the unused one costs a list of objects nobody reads.
+  */
+  /*
+    The reader's type setting, because one of the three paginates differently -- see `spreadsOf`.
+
+    Read from storage here rather than off the attribute `Settings` writes, because `Settings`
+    applies the stored choice in an effect, after this component has already resolved the address
+    against a first pagination: a deep link read against the hand's arrangement lands on a different
+    page of the dyslexia setting's. Followed afterwards through that attribute, which is the thing a
+    choice actually changes.
+  */
+  let typeSetting = $state<TypeChoice>(storedType());
+  const roomy = $derived(ROOMY_TYPES.includes(typeSetting));
+
+  const spreads = $derived(spreadsOf(sources, CHAPTERS, realm, roomy));
+  const leaves = $derived(leavesOf(sources, CHAPTERS, realm));
+
+  /**
+   * The pages of the container that is actually mounted.
+   *
+   * `p` in the URL is an offset within a chapter, and it is read against this -- so the same address
+   * lands on the same chapter on either device and not necessarily the same page of it. `ch` is the
+   * durable half, which is what the comment on `fromUrl` already said and is now load-bearing.
+   */
+  const pages = $derived<readonly { chapter: (typeof CHAPTERS)[number]; at: number }[]>(
+    narrow ? leaves : spreads,
+  );
+
   /**
    * The spread in the URL: a chapter, and how far into it.
    *
@@ -236,6 +238,20 @@
     settled = true;
     open = fromUrl();
   });
+
+  /*
+    The atlas's data, asked for before the reader reaches it (see `castOf`): when its chapter is
+    within two pages, or a pointer is on its tab. Not from the front door, because it is 400 KB that
+    a reader of the claims may never open. The last chapter is the world's, as in `spreadsOf`.
+  */
+  const ATLAS = CHAPTERS[CHAPTERS.length - 1]!.slug;
+  const atlasNear = $derived(pages.slice(open, open + 3).some((page) => page.chapter.slug === ATLAS));
+  $effect(() => {
+    if (atlasNear) void castOf(base);
+  });
+  const aim = (slug: string): void => {
+    if (slug === ATLAS) void castOf(base);
+  };
 
   /*
     The page goes in the URL for the reason `state/route.ts` gives about claims: a page you cannot
@@ -357,6 +373,12 @@
   keeps that a choice of *container* rather than a second authored version of the book: there is
   nowhere for the two to drift apart, because there is only one of them.
 -->
+{#snippet across(spread: Spread)}
+  {#if spread.verso.kind === "world" && spread.recto.kind === "world"}
+    <Atlas {base} layout="spread" />
+  {/if}
+{/snippet}
+
 {#snippet leaf(panel: Panel, _side: "verso" | "recto")}
   {#if panel.kind === "opening"}
     <Introduction document_={opening} opening />
@@ -374,7 +396,7 @@
   {:else if panel.kind === "intro"}
     <Introduction document_={opening} from={panel.from} to={panel.to} />
   {:else if panel.kind === "world"}
-    <World {base} part={panel.part} />
+    <World {base} part={panel.part} side={_side} />
   {:else if panel.kind === "absent"}
     <Absent chapter={panel.chapter} realm={panel.realm} />
   {:else if panel.kind === "blank"}
@@ -455,6 +477,8 @@
     onopen={show}
     onfilter={filter}
     page={leaf}
+    {across}
+    onaim={aim}
   />
 {/if}
 

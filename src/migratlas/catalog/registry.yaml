@@ -1459,3 +1459,79 @@ sources:
       Countryside Butterfly Survey squares and targeted single-species surveys together, which are
       three different protocols sharing one site table.
     added: 2026-08-20
+
+  # --- A map's outline ---------------------------------------------------------------------------
+  # The atlas's plates (ADR 0021, ADR 0005's 2026-10-12 amendment) come down to twenty kilometres
+  # across, where the bundled 1:110m outline is a few straight lines. These are registered so their
+  # terms are stated and their makers credited, and marked cartographic so the count of sources the
+  # findings come from does not grow by three coastlines.
+
+  - id: natural_earth
+    title: Natural Earth — 1:10m land, coastline and rivers
+    realm: terrestrial
+    cartographic: true
+    landing_page: https://www.naturalearthdata.com/
+    download_uri: https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson
+    licence: Public domain
+    licence_url: https://www.naturalearthdata.com/about/terms-of-use/
+    citation: >-
+      Made with Natural Earth. Free vector and raster map data at naturalearthdata.com.
+    redistribution:
+      allowed: true
+      attribution_required: false
+      commercial_use: true
+    default_sensitivity: not_sensitive
+    caveats: >-
+      A generalised world map: at 1:10m a coast is right to about a kilometre and a river is its
+      main stem. Rivers are named by their system, so the Bow is labelled South Saskatchewan and the
+      Red Deer is missing, which is why the Ya Ha Tinda plate takes the National Hydro Network
+      instead. Fetched from the project's GitHub master, which has no release for these files, so
+      the files are pinned by checksum and a changed upstream fails the build rather than drifting.
+    added: 2026-10-12
+
+  - id: npi_svalbard_coastlines
+    title: Annual coastlines for Svalbard — Norwegian Polar Institute, 2022
+    realm: terrestrial
+    cartographic: true
+    landing_page: https://data.npolar.no/dataset/21565514-ab3a-432a-ae42-2587bea95a97
+    doi: 10.21334/npolar.2021.21565514
+    download_uri: https://api.npolar.no/dataset/21565514-ab3a-432a-ae42-2587bea95a97/_file
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    citation: >-
+      Moholdt, G., Maton, J., Majerska, M. & Kohler, J. (2021). Annual coastlines for Svalbard.
+      Norwegian Polar Institute. https://doi.org/10.21334/npolar.2021.21565514
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+    default_sensitivity: not_sensitive
+    caveats: >-
+      The S100 coastline of 2008-2012 with each year's glacier calving fronts, from the Copernicus
+      Glacier Service, accurate to a few tens of metres. The 2022 coast is drawn, while the herd it
+      sits under is the typical week of 2009-2022, so a glacier front can stand where it did not in
+      the years the animals were recorded.
+    added: 2026-10-12
+
+  - id: nrcan_national_hydro_network
+    title: National Hydro Network (NHN), GeoBase series — Natural Resources Canada
+    realm: terrestrial
+    cartographic: true
+    landing_page: https://open.canada.ca/data/en/dataset/a4b190fe-e090-4e6d-881e-b87956c07977
+    download_uri: https://ftp.maps.canada.ca/pub/nrcan_rncan/vector/geobase_nhn_rhn/shp_en/05
+    licence: Open Government Licence – Canada
+    licence_url: https://open.canada.ca/en/open-government-licence-canada
+    citation: >-
+      Natural Resources Canada. National Hydro Network – NHN – GeoBase Series. Contains information
+      licensed under the Open Government Licence – Canada.
+    redistribution:
+      allowed: true
+      attribution_required: true
+      commercial_use: true
+    default_sensitivity: not_sensitive
+    caveats: >-
+      Five work units only -- 05BA, 05BB, 05CA, 05DA and 05DB, the basins round the Ya Ha Tinda --
+      and of them only the named watercourses and the lakes are drawn: the unnamed streams are
+      thousands of kilometres and drew the plate solid. Work units were captured at different dates
+      and scales, so the network's density changes at their seams.
+    added: 2026-10-12

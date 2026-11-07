@@ -71,8 +71,8 @@
 <figure class="plate" class:plate--compact={compact}>
   <!--
     The measurement is on the sheet, which is in normal flow, and not on an absolutely positioned
-    child. `Sheet.svelte` binds a flow element for the same reason and works; binding the absolute
-    child here reported clientWidth 531 to the DOM and 0 to the component, so nothing ever drew.
+    child: binding the absolute child here reported clientWidth 531 to the DOM and 0 to the
+    component, so nothing ever drew.
   -->
   <div class="plate__sheet" style="aspect-ratio: {PLATE_RATIO}" bind:clientWidth={width}>
     {#if failed}
@@ -106,9 +106,9 @@
 
     <span class="plate__scope">{finding.scope}</span>
     <!-- Where the measurement itself is, since this sheet carries none of it. The plates exist so a
-         claim chapter need not boot a globe, and that trade is only honest if the globe is named. -->
+         claim chapter need not draw the atlas, and that trade is only honest if the atlas is named. -->
     <span class="plate__elsewhere"
-      >The records themselves are drawn on the globe, in the last chapter.</span
+      >The records themselves are drawn in the atlas, in the last chapter.</span
     >
   </figcaption>
 </figure>

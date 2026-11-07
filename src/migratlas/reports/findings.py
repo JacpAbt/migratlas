@@ -1,4 +1,4 @@
-"""What the research established, as a document the globe can render.
+"""What the research established, as a document the book renders.
 
 The site showed three raw layers and no results, which is the wrong way round: the layers are
 the input to the work, not the output. This is the output.

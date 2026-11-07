@@ -50,6 +50,9 @@ each source carries its own terms.
 | [CMIP6 ScenarioMIP — near-surface air temperature under four SSPs, 2015–2100](https://pcmdi.llnl.gov/CMIP6/) | driver only | `aerial` | CMIP6 terms of use (unrestricted research use, citation and acknowledgement required) | permitted |
 | [UK Butterfly Monitoring Scheme — flight-period phenology, 1976–2021](https://catalogue.ceh.ac.uk/documents/0c59eb20-26e3-4066-86f5-418afae18769) | `survey_index` | `terrestrial` | Open Government Licence | permitted |
 | [UK Butterfly Monitoring Scheme — transect site locations, 2021 v2](https://catalogue.ceh.ac.uk/documents/1cfdcd20-afb8-4b58-9ab2-604b90f5242d) | driver only | `terrestrial` | Open Government Licence | permitted |
+| [Natural Earth — 1:10m land, coastline and rivers](https://www.naturalearthdata.com/) | map outline | `terrestrial` | Public domain | permitted |
+| [Annual coastlines for Svalbard — Norwegian Polar Institute, 2022](https://data.npolar.no/dataset/21565514-ab3a-432a-ae42-2587bea95a97) | map outline | `terrestrial` | CC BY 4.0 | permitted |
+| [National Hydro Network (NHN), GeoBase series — Natural Resources Canada](https://open.canada.ca/data/en/dataset/a4b190fe-e090-4e6d-881e-b87956c07977) | map outline | `terrestrial` | Open Government Licence – Canada | permitted |
 
 ## Dark Ecology Dataset — daily time series of aerial biomass, 1995–2025
 
@@ -729,3 +732,55 @@ Landed 2026-08-20: 627,752 rows, 3,144 sites, 59 taxa. **The span is 1973-2021, 
 **Caveats**
 
 **The publisher excludes the locations of sites it classes as sensitive**, with a request route for the rest that this project is not taking; see docs/ETHICS.md and task #50. So the join against ukbms_phenology is deliberately incomplete and its rate is a graded prediction in phase1j-fourth-leg.md rather than an assumption. Covers standard UKBMS transects, Wider Countryside Butterfly Survey squares and targeted single-species surveys together, which are three different protocols sharing one site table.
+
+## Natural Earth — 1:10m land, coastline and rivers
+
+- **id** `natural_earth`
+- **a map's outline**, drawn under the layers and never measured · **realm** `terrestrial`
+- **landing page** https://www.naturalearthdata.com/
+- **licence** [Public domain](https://www.naturalearthdata.com/about/terms-of-use/)
+- **redistribution** permitted
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> Made with Natural Earth. Free vector and raster map data at naturalearthdata.com.
+
+**Caveats**
+
+A generalised world map: at 1:10m a coast is right to about a kilometre and a river is its main stem. Rivers are named by their system, so the Bow is labelled South Saskatchewan and the Red Deer is missing, which is why the Ya Ha Tinda plate takes the National Hydro Network instead. Fetched from the project's GitHub master, which has no release for these files, so the files are pinned by checksum and a changed upstream fails the build rather than drifting.
+
+## Annual coastlines for Svalbard — Norwegian Polar Institute, 2022
+
+- **id** `npi_svalbard_coastlines`
+- **a map's outline**, drawn under the layers and never measured · **realm** `terrestrial`
+- **landing page** https://data.npolar.no/dataset/21565514-ab3a-432a-ae42-2587bea95a97
+- **DOI** [10.21334/npolar.2021.21565514](https://doi.org/10.21334/npolar.2021.21565514)
+- **licence** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **redistribution** permitted, attribution required
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> Moholdt, G., Maton, J., Majerska, M. & Kohler, J. (2021). Annual coastlines for Svalbard. Norwegian Polar Institute. https://doi.org/10.21334/npolar.2021.21565514
+
+**Caveats**
+
+The S100 coastline of 2008-2012 with each year's glacier calving fronts, from the Copernicus Glacier Service, accurate to a few tens of metres. The 2022 coast is drawn, while the herd it sits under is the typical week of 2009-2022, so a glacier front can stand where it did not in the years the animals were recorded.
+
+## National Hydro Network (NHN), GeoBase series — Natural Resources Canada
+
+- **id** `nrcan_national_hydro_network`
+- **a map's outline**, drawn under the layers and never measured · **realm** `terrestrial`
+- **landing page** https://open.canada.ca/data/en/dataset/a4b190fe-e090-4e6d-881e-b87956c07977
+- **licence** [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada)
+- **redistribution** permitted, attribution required
+- **sensitivity** `not_sensitive` by default
+
+**Cite as**
+
+> Natural Resources Canada. National Hydro Network – NHN – GeoBase Series. Contains information licensed under the Open Government Licence – Canada.
+
+**Caveats**
+
+Five work units only -- 05BA, 05BB, 05CA, 05DA and 05DB, the basins round the Ya Ha Tinda -- and of them only the named watercourses and the lakes are drawn: the unnamed streams are thousands of kilometres and drew the plate solid. Work units were captured at different dates and scales, so the network's density changes at their seams.

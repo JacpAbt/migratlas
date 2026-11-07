@@ -34,7 +34,7 @@ def test_status_line_counts_are_the_computed_ones() -> None:
     realms = {str(finding["realm"]) for finding in findings} - {"all"}
     expected = (
         f"{len(findings)} findings published and recomputed from the lake on every build, "
-        f"across {len(realms)} realms and {len(catalog.load())} registered sources"
+        f"across {len(realms)} realms and {len(catalog.measured())} registered sources"
     )
     assert expected in _readme_flat()
 

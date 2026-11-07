@@ -154,14 +154,6 @@
     overflow: visible;
   }
 
-  .margin__spine path {
-    fill: none;
-    stroke: var(--rule);
-    stroke-width: 1.2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
   .margin__body {
     display: flex;
     flex-direction: column;
